@@ -223,6 +223,14 @@
       isGroupActive: function (gi) { return state[gi] === 1; },
       respawnCount: function (gi) { return rc[gi]; },
       respawnAtOf: function (gi) { return state[gi] === 2 ? respawnAt[gi] : 0; },
+      // R4 D1 (quiet-stretch pity): the cooling group nearest to (px, py) inside the activation radius respawns at the next update.
+      // Returns its index, or -1 when none is cooling there. Pure: only the group's respawn time changes.
+      hurry: function (px, py) {
+        let best = -1, bd = R2;
+        for (let gi = 0; gi < G; gi++) { if (state[gi] !== 2) continue; const dx = gx[gi] - px, dy = gy[gi] - py, d2 = dx * dx + dy * dy; if (d2 <= bd) { bd = d2; best = gi; } }
+        if (best >= 0) respawnAt[best] = Math.min(respawnAt[best], now);
+        return best;
+      },
       // ---- boss sites as events: ready when never killed or the zone cooldown elapsed ----
       bossReady: function (site, tNow) { const t = bosses[site.x + ',' + site.y]; return t === undefined || tNow >= t; },
       bossDefeated: function (site, tNow) { bosses[site.x + ',' + site.y] = tNow + T.BOSS.cooldown[clampZone(site.zone)]; },

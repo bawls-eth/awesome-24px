@@ -6,14 +6,13 @@
 //  3. three.js unreachable: the cave says it could not load, no pageerror, and the next try (network back) works
 //  4. no "three.min.js ... deprecated" console warning
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const THREE_RE = /cdn\.jsdelivr\.net\/npm\/three@/;
 
 async function open(browser, blockThree) {
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-s08 */' }));
+  const db = await offlineStub(ctx);
   await ctx.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');

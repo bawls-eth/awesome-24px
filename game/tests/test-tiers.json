@@ -256,6 +256,22 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "cyc0-art-black-sand.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc0-art-creature-finish.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc0-art-isle-detail.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc0-art-hub-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "hub-home.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -505,6 +521,10 @@
     "tier": "smoke"
   },
   "shared-mm-gift.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc0-d-quest-level-hint.test.js": {
     "class": "node",
     "tier": "smoke"
   },
@@ -1786,6 +1806,241 @@
     "tier": "full"
   },
   "beta-s08-town-three-lazy.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b02-08-stats-delta.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b08-shore-survival.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b05-05-oakback-food.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-r4-b08-touch-words.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-o07-stalk-neighbour-cap.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-r4-b11-09-lantern-name.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b10-15-tour-card.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b09-12-pop-hud-fit.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b11-12-creative-goals.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-statue.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-isles.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-o04-backup.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-r4-o04-town-hub-backup.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-realm-rotate.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-deepdelve-prewarm.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-soak.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 900
+  },
+  "beta-r4-deepdelve-touch-lock.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-r4-doors.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-d4-town.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-d4-mobile.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-d4-a11y.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-d4-arcade.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-arcane-soon.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-r4-replay-realm.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "beta-r4-replay-town.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "beta-r4-replay-saves.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-replay-doors.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "beta-r4-replay-backup-cross.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "beta-r4-b08-passive-2min.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 600
+  },
+  "beta-r4-ftue-day-sweep.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 3600
+  },
+  "beta-r4-b08-10-home-footer.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-weed-reach.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-r4-dungeon-pad.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-realm-density.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-hour-windows.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-concert-once.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-shard-tick-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-cooldown-clock.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-destroy-listeners.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-save-medal-write.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "town-streak-clock.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cave-frame-alloc.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-hint-lookups.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-frame-lookups.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc0-town-interact-shadow.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-ghost.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc0-isles-leash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-ui-town-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-ui-arena-cards.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-ui-realm-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-danger-meter.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-quest-zone-rewards.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc1-isles-wall-slide.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-art-isles-hitflash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-art-realm-fields.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-art-town-buildings.test.js": {
     "class": "browser",
     "tier": "full"
   }

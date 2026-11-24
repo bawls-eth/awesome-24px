@@ -8,7 +8,7 @@
 const KNOWN = { realm: 'mad-maze.js:577 AXM.prefs.load(localStorage) outside try (World+Graphics slot)' };
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-s10-storage-throws.test.js   (ONLY=<name> runs one page)
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const G = ORIGIN + '/game/';
 // [name, url, root selector, primary button selector (first visible match is clicked)]
@@ -33,8 +33,7 @@ const PAGES = [
   for (const [name, url, rootSel, btnSel] of PAGES) {
     if (only && only.indexOf(name) < 0) continue;
     const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-    const db = await blockDb(ctx);
-    await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-s10 */' }));
+    const db = await offlineStub(ctx);
     if (process.env.S10_DEBUG) await ctx.addInitScript(() => { window.__s10dbg = 1; });
     await ctx.addInitScript(() => {
       Object.defineProperty(window, 'localStorage', { configurable: true, get() { if (window.__s10dbg) throw new Error('blocked-ls'); throw new DOMException('The operation is insecure.', 'SecurityError'); } });

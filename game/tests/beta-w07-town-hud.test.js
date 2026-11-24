@@ -3,21 +3,20 @@
 // Never chats, never writes to Firebase (0 DB requests, 0 sockets).
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-w07-town-hud.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb, expandPanel } = require('./helpers');
+const { check, done, expandPanel, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SHOTS = process.env.SHOTS || null;
 
 async function open(browser, viewport) {
   const ctx = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-w07-town-hud.test.js */' }));
+  const db = await offlineStub(ctx);
   const sockets = [];
   const page = await ctx.newPage();
   page.on('websocket', (ws) => sockets.push(ws.url()));
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   await page.route('**/main.js*', async (route) => { const resp = await route.fetch(); const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);'); route.fulfill({ response: resp, body }); });
-  await page.goto(BASE);
+  await page.goto(BASE + '?hud=online'); // U-01: offline hides quick chat / Hold to talk; this measures the online HUD layout
   await page.fill('#name-input', 'ADMINw07');
   await page.click('.species-tab'); await page.click('.avatar-choice');
   await page.click('button:has-text("Join Town")');

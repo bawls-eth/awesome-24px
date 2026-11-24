@@ -9,7 +9,8 @@
   // MMZones is not loaded (node). Quest ids, seeds and progress are unchanged, so a stored `quests` state stays valid.
   const CANON = ['Shore', 'Midlands', 'Highlands', 'Godlands'];
   const ZONES = CANON.map((n, i) => { try { const z = MMZones && MMZones.TABLES && MMZones.TABLES.ZONES && MMZones.TABLES.ZONES[i]; return z && typeof z.name === 'string' && z.name ? z.name : n; } catch (e) { return n; } }); // zone 0..3
-  const BIOMES = ['warren', 'bramble', 'meadow', 'crypt'];
+  const REC_LV = [1, 5, 10, 15]; // MMZones.TABLES.ZONES[i].recLv: the hero level a zone is made for (cycle 0 D: shown on the quest board, text and seeds unchanged)
+  const BIOMES =['warren', 'bramble', 'meadow', 'crypt'];
   const BAGS = ['brown', 'pink', 'purple']; // bag tier by quest kind; matches the b15 bag art ids bag_<colour>
   const NPC = 'npc_quest_giver', ORACLE_NPC = 'npc_ghost_guide'; // b21 ids (no oracle art exists, the ghost guide stands in)
   const MAX_PROGRESS = 9999;
@@ -17,6 +18,11 @@
   const isInt = (v) => typeof v === 'number' && Number.isFinite(v);
 
   function pad(date) { return MMDaily.cleanDate(date); }
+  // ID-03 (cycle 1 S): the kill quest pays by the zone's recommended level, so a Highlands or Godlands quest is worth the trip:
+  // 30 + need + 8 x recLv -> Shore 46-58, Midlands 82-94, Highlands 126-138, Godlands 170-182 (was 30 + 10 x zone + need: 38-92).
+  // Every zone pays more than the whole zone before it. Only the number changes: the rolls (zone, need, biome), ids and texts are untouched.
+  const KILL_PER_REC = 8, SHARD_CAP = 1000;
+  function killShards(zone, need) { const z = zone >= 0 && zone <= 3 ? zone | 0 : 0; return Math.min(SHARD_CAP, 30 + (need | 0) + KILL_PER_REC * REC_LV[z]); }
 
   // quests(dateUtc) -> 3 frozen quest descriptors, or [] for an invalid date.
   function quests(dateUtc) {
@@ -27,8 +33,8 @@
     const need = 8 + r.int(0, 6) * 2 + zone * 4; // 8..32, grows with zone
     const biome = BIOMES[r.int(0, 3)];
     return [
-      { id: 'kill_zone', kind: 'kill', zone: zone, need: need, text: 'Defeat ' + need + ' creatures in the ' + ZONES[zone], reward: { shards: 30 + zone * 10 + need, bag: BAGS[0] }, npc: NPC },
-      { id: 'kill_boss', kind: 'boss', zone: null, need: 1, text: 'Defeat a boss', reward: { shards: 120 + r.int(0, 4) * 10, bag: BAGS[2] }, npc: NPC },
+      { id: 'kill_zone', kind: 'kill', zone: zone, rec: REC_LV[zone], need: need, text: 'Defeat ' + need + ' creatures in the ' + ZONES[zone], reward: { shards: killShards(zone, need), bag: BAGS[0] }, npc: NPC },
+      { id: 'kill_boss', kind: 'boss', zone: null, rec: REC_LV[1], need: 1, text: 'Defeat a boss', reward: { shards: 120 + r.int(0, 4) * 10, bag: BAGS[2] }, npc: NPC },
       { id: 'open_portal', kind: 'portal', biome: biome, need: 1, text: 'Open a portal', reward: { shards: 60 + r.int(0, 3) * 10, bag: BAGS[1] }, npc: NPC },
     ].map((q) => Object.freeze(Object.assign(q, { reward: Object.freeze(q.reward) })));
   }
@@ -119,7 +125,8 @@
   // summary(state, dateUtc): rows for a board UI (descriptors + progress + status).
   function summary(state, dateUtc) {
     const d = pad(dateUtc), s = clean(state, d);
-    return quests(d).map((x) => ({ id: x.id, kind: x.kind, zone: x.zone === undefined ? null : x.zone, text: x.text, need: x.need, p: s.q[x.id].p, done: s.q[x.id].done, claimed: s.q[x.id].claimed, reward: x.reward })); // G-06: + kind, zone (additive)
+    return quests(d).map((x) => ({ id: x.id, kind: x.kind, rec: x.rec, zone: x.zone === undefined ? null : x.zone, text: x.text, need: x.need, p: s.q[x.id].p, done: s.q[x.id].done, claimed: s.q[x.id].claimed, reward: x.reward })); // G-06: + kind, zone (additive)
   }
-  return { ZONES, BIOMES, BAGS, NPC, ORACLE_NPC, quests, fresh, clean, progress, claim, rewardBag, oracle, summary };
+  function levelHint(q) { return q && Number.isInteger(q.rec) && q.rec > 1 ? 'Lv ' + q.rec + '+' : ''; }
+  return { levelHint, killShards, REC_LV, ZONES, BIOMES, BAGS, NPC, ORACLE_NPC, quests, fresh, clean, progress, claim, rewardBag, oracle, summary };
 });

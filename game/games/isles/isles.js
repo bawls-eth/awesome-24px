@@ -292,6 +292,12 @@
     const c = cv.getContext('2d');
     // 8B: the code-drawn terrain gets seeded detail pixels (8 tile variants) and stepped edges, once per chunk bake
     if (code && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.detail) window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
+    // cycle 0 art (b06-r2-06 flat start terrain): on an art bake (meadow b35 / jungle b30) the tiles WITHOUT a PNG (grass, sand, water,
+    // flowers...) were flat palette fields; they now get the same seeded detail pixels and stepped edges. The art terrains are left out of
+    // the palette, so their PNG pixels (and the b35 edge masks) are never painted over. ?tdetail=0 = flat as before
+    else if (!code && !GFX_LOW && T_DETAIL && IA && IA.active() && window.MMIsleArt && window.MMIsleArt.detail) detailBaked += window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: artFreePal(), tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
+    // cycle 0 art (b12-r2-09): warm volcanic black sand drawn over the baked b30 / code tiles (overlay; the PNGs stay as delivered). ?warmsand=0
+    if (WARM_SAND && window.MMIsleArt && window.MMIsleArt.warmSand) sandWarmed += window.MMIsleArt.warmSand(c, world.terrain, W, cx, cy, { names: NAMES, tile: TILE, ch: CH });
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
     const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
     for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
@@ -306,6 +312,16 @@
     return cv;
   }
   const propsBaked = { png: 0, code: 0 }; // test handle counters (bake time only)
+  const WARM_SAND = Q.get('warmsand') !== '0';
+  const T_DETAIL = Q.get('tdetail') !== '0';
+  let detailBaked = 0, artFree = null; // cycle 0 art: tiles detailed on art bakes; the palette without the PNG terrains (built once)
+  function artFreePal() {
+    if (artFree) return artFree;
+    const set = window.MMIsleArt.SETS && window.MMIsleArt.SETS[IA.pack], skip = set ? set.terrains : [];
+    artFree = {}; Object.keys(PAL).forEach((k) => { if (skip.indexOf(k) < 0) artFree[k] = PAL[k]; });
+    return artFree;
+  }
+  let sandWarmed = 0; // black-sand tiles re-lit by the warm overlay (bake time only)
   function chunkCanvas(cx, cy) {
     return chunkCache.get(cx + ',' + cy, () => { if (bakesLeft <= 0) return null; bakesLeft--; return ART ? bakeArt(cx, cy) : bakeFlat(cx, cy); });
   }
@@ -347,7 +363,7 @@
     specCache[key] = s;
     return s;
   }
-  const baker = CD.makeBaker(mk, 64);
+  const baker = CD.makeBaker(mk, 64, { finish: Q.get('pxfinish') !== '0' }); // cycle 0 art: pixel finish (outline + crisp alpha); ?pxfinish=0 = soft vector bake
   // b31a / b32 PNG strips: loaded once (the jungle loads all five species, other isles only the species in your stable), baked to native
   // size; a creature without a complete set (or ?art=0) keeps the code-drawn MMCreatureDraw bake above.
   const STRIP_KINDS = MS ? MS.kindsFor(PACK_ID, tames.roster.map((t) => t.sp)) : [];
@@ -356,6 +372,20 @@
   const stState = { dying: false, ko: false, eating: false, ph: '', moving: false }; // reused every frame
   const seat = { x: 0, y: 0 };
   // the strip a creature shows now (null -> code bake). Updates c.dir / c.act / c.at0 in place; no allocation.
+  // Cycle 1 art (G): the hit flash was a white circle laid over the creature (a round blob over outlined pixel art, wider than thin
+  // bodies). It is now the creature's own silhouette in white, faded over the 0.12 s flash: a white copy of the strip / code frame,
+  // built once on the first hit (cached per source canvas) and drawn with the same geometry. ?hitflash=0 = the old circle.
+  const HITFLASH = !/[?&]hitflash=0(&|$)/.test(location.search);
+  const hitFx = { sil: 0, silPng: 0, silCode: 0, circle: 0, built: 0, ms: 0 };
+  const whiteCache = new WeakMap();
+  function whiteOf(src) {
+    let w = whiteCache.get(src);
+    if (w) return w;
+    w = document.createElement('canvas'); w.width = src.width; w.height = src.height;
+    const wg = w.getContext('2d'); wg.drawImage(src, 0, 0); wg.globalCompositeOperation = 'source-in'; wg.fillStyle = '#fff'; wg.fillRect(0, 0, w.width, w.height);
+    whiteCache.set(src, w); hitFx.built++;
+    return w;
+  }
   function stripOf(c, moving) {
     if (!STRIPS || !c.sk || !STRIPS.has(c.sk)) return null;
     if (c.ph === 'wind' || c.ph === 'strike') c.dir = MS.dirCode(Math.cos(c.ang), Math.sin(c.ang), c.dir, 0.01);
@@ -390,6 +420,8 @@
   const groupState = world.spawnGroups.map(() => ({ alive: 0, until: 0 }));
   const CAP = LOW ? 12 : 24, BIG_CAP = 4;
   const SPAWN_R = 22, DESPAWN_R = 34, LEASH = 14 * TILE;
+  const SLIDE = Q.get('slide') !== '0'; // cycle 1 S: wall-slide steering (steer); ?slide=0 = the old straight aim
+  const LEASH_BACK = 4 * TILE, LEASH_GIVEUP = 8; // cyc0-S: a leashed creature walks back to within 4 tiles of home (or gives up after 8 s)
   let creatures = [];
   let uid = 0, simT = 0;
   const rng = RNG.create('isles|' + PACK_ID + '|' + SEED + '|ai');
@@ -444,6 +476,61 @@
     return c;
   }
   let bigN = 0;
+  let howtoHide = null; // set while the first-visit how-to card is open
+  // R4-D2 (b06-r2-09): the card covered the centre during first fights and boss intros. It now closes as soon as a hostile creature is
+  // within 9 tiles or a boss lair is in sight (the fight needs the screen), checked on the 0.5 s spawn tick.
+  function howtoTick() {
+    if (!howtoHide) return;
+    const near = creatures.some((c) => c.hostile && Math.hypot(c.x - hero.x, c.y - hero.y) < 9 * TILE)
+      || (world.bossSites || []).some((b) => Math.hypot((b.x + 0.5) * TILE - hero.x, (b.y + 0.5) * TILE - hero.y) <= BOSS_SEE_R);
+    if (near) { howtoHide(); howtoStat.auto++; }
+  }
+  const howtoStat = { auto: 0 };
+  // R4-D2 (b06-r2-05): islands put the nearest group up to 20+ tiles from the arrival point (meadow: 22), so the first screen was empty.
+  // When nothing is within 8 tiles after the first tick, 2-3 creatures of the nearest CALM small species (never hostile, never L / XL)
+  // stand 8.5-11 tiles above or below the hero (|dx| <= 3): on screen on a phone (portrait) and on desktop, but outside the 8-tile
+  // sighting radius, so arriving never fires a journal toast over the arrival / redirect toast; the first sighting happens when the
+  // player walks up. Ordinary wild creatures with no group (gi -1), despawned by distance.
+  // ON by default (?firstfill=0 turns it off). R4 D1: three tameable greeters pulled a new player (and the isles-first-ten bot) into a
+  // feeding stall before any gather (jungle firstGather 113 s vs the 60 s gate). Now ONE greeter, preferably one you cannot feed yet,
+  // standing beyond the nearest gather node, and only on an empty meadow / jungle start.
+  const ARRIVAL_N = 1; // D1 (b06-r2-05 + first-ten gate): ONE calm creature greets you. Three tameable ones in a row made a 2-minute tame-only stall before the first gather (jungle 113 s)
+  const arrival = { n: 0, sp: '' };
+  function arrivalFill(htx, hty) {
+    if (creatures.length > 0 || (PACK_ID !== 'meadow' && PACK_ID !== 'jungle')) return; // D1: only a really empty start on the open warm isles (b06-r2-05: meadow 0, jungle 0; tundra already starts with 2; reef / mars are not open-field starts)
+    // D1: prefer a calm small creature you cannot feed yet from what you carry (or one that is not tameable at all): it fills the first
+    // screen and shows in the journal, and its food is something you gather, so the first thing to do is still gather (no tame-first stall).
+    // Only when the island has no such creature does a feedable one come (one of them, ARRIVAL_N).
+    const calms = O.nearestSpawnGroups(world, htx, hty, 80).filter((gr) => { const s = specOf(gr.creature, IC.kindOf(gr.creature, -1)); return s.mood !== 'hostile' && s.size !== 'L' && s.size !== 'XL'; });
+    const feedNow = (gr) => { try { const d = CR.get(IC.kindOf(gr.creature, -1)) || CR.get(gr.creature); if (!d || !d.tame) return false; const f = foodOf(d); return !!(f && f.have); } catch (e) { return true; } };
+    const calm = calms.find((gr) => !feedNow(gr)) || calms[0];
+    if (!calm) return;
+    const r = RNG.create('isles|' + SEED + '|arrival');
+    // D1: stand the greeter BEYOND the nearest gather node (2-6 tiles away), so walking over to say hello crosses the node: the first thing
+    // a new player does on the way is a gather, not a long feeding stall. No node that close: the old seeded spot above / below.
+    let lead = null, ld = 6.5;
+    try { const now = clock.now(); for (let i = 0; i < nodes.length; i++) { const n = nodes[i]; if (n.sparkle || n.until > now) continue; const d = Math.hypot(n.x - htx, n.y - hty); if (d >= 2 && d < ld) { ld = d; lead = n; } } } catch (e) { lead = null; }
+    if (lead) {
+      const ux = (lead.x - htx) / ld, uy = (lead.y - hty) / ld;
+      for (let k = 0; k < 9 && arrival.n < ARRIVAL_N && creatures.length < CAP; k++) {
+        const dist = 9.5 + (k % 3) * 0.5, side = [0, 1, -1][Math.floor(k / 3)];
+        const ax = Math.round(htx + ux * dist - uy * side), ay = Math.round(hty + uy * dist + ux * side), d = Math.hypot(ax - htx, ay - hty);
+        if (d < 8.5 || d > 11 || !walkableAt(ax, ay)) continue;
+        addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n, RNG.create('isles|' + SEED + '|arrival|ai|' + arrival.n));
+        arrival.n++; arrival.lead = lead.kind;
+      }
+    }
+    for (let t = 0; t < 40 && arrival.n < ARRIVAL_N && creatures.length < CAP; t++) {
+      const ax = htx + r.int(-3, 3), ay = hty + (r.next() < 0.5 ? -1 : 1) * r.int(9, 10), d = Math.hypot(ax - htx, ay - hty);
+      if (d < 8.5 || d > 11 || !walkableAt(ax, ay)) continue;
+      addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n, RNG.create('isles|' + SEED + '|arrival|ai|' + arrival.n)); // own AI stream: the shared one (and every other creature's rolls) stays as before
+      arrival.n++;
+    }
+    arrival.sp = calm.creature;
+  }
+  // R4-D2 (b06-r2-05 empty first screen): groups closer than 7 tiles never pop in, so the spawn view stayed empty (meadow 0, jungle 0).
+  // The FIRST tick after an island loads runs arrivalFill below (on by default, ?firstfill=0 off). Groups keep the 7-tile rule.
+  let firstFill = Q.get('firstfill') !== '0';
   function spawnTick() {
     const htx = tileOf(hero.x), hty = tileOf(hero.y), now = clock.now();
     const near = O.nearestSpawnGroups(world, htx, hty, SPAWN_R);
@@ -453,9 +540,9 @@
       const gr = near[k], gi = groupIdx.get(gr), st = groupState[gi];
       if (st.alive > 0 || st.until > now) continue;
       const dd = Math.hypot(gr.x - htx, gr.y - hty);
-      if (dd < 7) continue; // never pop in on top of the hero
       const s = specOf(gr.creature, IC.kindOf(gr.creature, gi));
       const bigG = s.size === 'L' || s.size === 'XL';
+      if (dd < 7) continue; // never pop in on top of the hero
       if (bigG && bigN >= BIG_CAP) continue;
       const gr2 = RNG.create('isles|' + SEED + '|g' + gi + '|' + Math.floor(now / 1000));
       const n = Math.min(bigG ? Math.min(gr.count, BIG_CAP - bigN) : gr.count, CAP - creatures.length);
@@ -467,6 +554,8 @@
         if (bigG) bigN++;
       }
     }
+    if (firstFill) arrivalFill(htx, hty);
+    firstFill = false;
     rareTick(htx, hty);
     // despawn far creatures (their group can come back later, nothing is lost)
     creatures = creatures.filter((c) => {
@@ -496,6 +585,25 @@
   function startAttack(c, s, dx, dy) {
     c.ph = 'wind'; c.pt = s.atk.windup; c.ang = Math.atan2(dy, dx); c.ox = c.x; c.oy = c.y; c.vx = 0; c.vy = 0; c.hitDone = false; c.tgAt = simT;
   }
+  // Cycle 1 S: wall-slide steering for creatures that chase the hero or walk back home after the leash (curious / befriended walkers keep
+  // the straight aim: they move slowly and the taming pacing of isles-first-ten is tuned on it). Movement is per
+  // axis, so a creature aimed straight at a wall used to bump it (vx flipped) and re-aim 0.1 s later: pinned on a cliff with the hero
+  // just behind it. Now, when the straight heading is blocked a short probe ahead, it turns 45/90/135 degrees to one side (the side the
+  // target lies on first, then the other) and keeps that side while the straight line stays blocked, so it slides along the wall and
+  // round its end. Straight line free again = straight at the target. Deterministic (no randomness), ?slide=0 = the old straight aim.
+  function steer(c, dx, dy, speed) {
+    const d = Math.hypot(dx, dy) || 1, a0 = Math.atan2(dy, dx);
+    const go = (a) => { c.vx = Math.cos(a) * speed; c.vy = Math.sin(a) * speed; };
+    if (!SLIDE) { c.vx = dx / d * speed; c.vy = dy / d * speed; return; }
+    const pr = Math.min(d, (c.rad || 8) + TILE * 0.6);
+    const free = (a) => !creatureSolid(c, tileOf(c.x + Math.cos(a) * pr), tileOf(c.y + Math.sin(a) * pr));
+    if (free(a0)) { c.slide = 0; go(a0); return; }
+    // the first side to try: the one kept from the last think, else the side the current motion already leans to, else +1
+    const lean = Math.cos(a0) * (c.vy || 0) - Math.sin(a0) * (c.vx || 0);
+    const sides = c.slide ? [c.slide, -c.slide] : lean < 0 ? [-1, 1] : [1, -1];
+    for (let si = 0; si < 2; si++) for (let k = 1; k <= 3; k++) { const a = a0 + sides[si] * k * Math.PI / 4; if (free(a)) { c.slide = sides[si]; go(a); return; } }
+    c.slide = 0; go(a0); // boxed in: the old straight aim (the per-axis step still slides where it can)
+  }
   function think(c) {
     const s = specOf(c.sp, c.kind);
     // taming clock (10 Hz with the accumulated time)
@@ -506,7 +614,15 @@
     // befriending: it stays and watches you; IF1: when you drift off a little it pads after you (so a short step back never loses it)
     if (c.calm) { if (POUCH && d > 1.8 * TILE && d < 6 * TILE && !hero.dead) { c.vx = dx / d * s.speed * 0.5; c.vy = dy / d * s.speed * 0.5; } else { c.vx = 0; c.vy = 0; } return; }
     const home = Math.hypot(c.x - c.hx, c.y - c.hy);
-    if (home > LEASH) { c.angry = 0; const hd = home || 1; c.vx = (c.hx - c.x) / hd * s.speed; c.vy = (c.hy - c.y) / hd * s.speed; return; }
+    // cyc0-S leash: a creature that hits the leash walks all the way back (to LEASH_BACK of home) before it may chase again. It used
+    // to turn round one think after crossing the ring, so a hostile one hovered on the ring forever, a few tiles from a hero standing
+    // just outside it (free shots, never reaching). A return blocked by terrain gives up after LEASH_GIVEUP s and settles where it is.
+    if (c.ret || home > LEASH) {
+      c.angry = 0; c.ret = (c.ret || 0) + 0.1;
+      if (home > LEASH_BACK && c.ret < LEASH_GIVEUP) { steer(c, c.hx - c.x, c.hy - c.y, s.speed); return; }
+      if (home > LEASH_BACK) { c.hx = c.x; c.hy = c.y; }
+      c.ret = 0; c.vx = 0; c.vy = 0; return;
+    }
     // IF1 mercy: a badly hurt hero (<= 1/3 HP) who has not shot for a second is left alone by wild creatures (they break off the chase;
     // an attack already winding up still lands). Never in a boss fight. Shooting again ends it.
     // A rest spot (dock, campfire, hot spring, dome, home) is a safe room: nothing starts a chase or an attack on you while you stand there.
@@ -514,7 +630,7 @@
     const chase = !hero.dead && !mercy && s.dmg > 0 && c.mood !== 'shy' && (c.angry > 0 || (c.mood === 'hostile' && d < s.aggroR));
     if (chase) {
       if (c.cd <= 0 && d < c.rad + HERO_R + s.atk.reach * 0.8) { startAttack(c, s, dx, dy); return; }
-      c.vx = dx / d * s.speed * 1.15; c.vy = dy / d * s.speed * 1.15; return;
+      steer(c, dx, dy, s.speed * 1.15); return;
     }
     // shy creatures flee when startled (hit, or the hero shooting nearby); with ?tame=0 they flee whenever the hero is close (B8)
     if (c.mood === 'shy' && d < 4 * TILE && (!TAME || !c.tm || c.angry > 0 || hero.shotT > 0)) { c.vx = -dx / d * s.speed * 1.2; c.vy = -dy / d * s.speed * 1.2; return; }
@@ -853,7 +969,15 @@
     return every > 0 ? every - (c.tm.t + (c.tmAcc || 0) - c.tm.lastFeed) : 0;
   }
   let feedLbl = '', feedChew = false;
+  let chewToast = null; // b05-08: the creature an early-tap toast is about, so the toast's "ready in N s" stays the button's number
+  function chewToastText(c, nm) { const left = chewLeft(c); return left > 0.05 ? nm + ' is still chewing: ready in ' + Math.max(1, Math.ceil(left)) + ' s.' : nm + ' is ready to eat again.'; }
+  function chewToastSync() {
+    if (!chewToast) return;
+    const el = $('toast'); if (!el || !el.classList.contains('on') || el.textContent.indexOf(chewToast.nm + ' is ') !== 0) { chewToast = null; return; }
+    const t = chewToastText(chewToast.c, chewToast.nm); if (el.textContent !== t) el.textContent = t;
+  }
   function feedHud(ft) {
+    chewToastSync();
     if (btn.feed.hidden) { feedChew = false; return; }
     let lbl = 'Feed', p = 1;
     if (ft && ft.tm && ft.tm.need > 0) {
@@ -885,7 +1009,7 @@
       else pouch[f.id] = Math.max(0, pouch[f.id] - 1);
       c.eatT = 0.8;
     }
-    if (ev.indexOf('toofast') >= 0) toast(nm + ' is still chewing: ready in ' + Math.max(1, Math.ceil(chewLeft(c))) + ' s.'); // BB: honest, no guessing
+    if (ev.indexOf('toofast') >= 0) { chewToast = { c, nm }; toast(chewToastText(c, nm)); } // BB: honest, no guessing; b05-08: the toast then counts down with the button
     if (ev.indexOf('refused') >= 0) toast(nm + ' turns its nose up.');
     if (c.tm.st === 'tamed') { finishTame(c); return { ok: true, tamed: true, events: ev }; }
     syncTame(c, ev);
@@ -1070,7 +1194,7 @@
     if (tames.mount !== mountEnt.id) { TAMES.setMount(tames, mountEnt.id); TAMES.write(S, tames); }
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
     abilityMount(def);
-    toast('Riding ' + (mountEnt.nm || def.name) + '. R to get off.');
+    toast('Riding ' + (mountEnt.nm || def.name) + (document.body.classList.contains('touch') ? '. Tap Ride to get off.' : '. R to get off.'));
     logEvent('ride');
     return true;
   }
@@ -1081,12 +1205,11 @@
     ride = null; rideArt = null; rideKind = null; rideDrawn = ''; saddleDrawn = '';
     // off a swim mount in open water: step ashore onto the nearest walkable tile
     const land = nearestWalkable(hero.x, hero.y);
-    if (land) { hero.x = (land.x + 0.5) * TILE; hero.y = (land.y + 0.5) * TILE; lastShore = land; }
+    if (land) { hero.x = (land.x + 0.5) * TILE; hero.y = (land.y + 0.5) * TILE; }
     hero.scale = moveScaleAt(tileOf(hero.x), tileOf(hero.y));
     if (tames.party.indexOf(id) >= 0) spawnCompanion(TAMES.find(tames, id), hero.x + 36, hero.y + 12);
     return true;
   }
-  let lastShore = null;
   // X4 saddles: the saddle id a mount needs (null for saddle:null mounts and with ?saddles=0); a saddle is kept, not used up
   const saddleNeed = (def) => (SADDLES && def && def.ride && def.ride.saddle ? def.ride.saddle : null);
   const hasSaddle = (id) => !!id && has(save.inv, id) && save.inv[id] > 0;
@@ -1557,21 +1680,29 @@
       if (st) {
         const a = c.art;
         if (a && a.shadow && GFX.shadows) { const w0 = a.w / a.dpr, w = Math.min(w0, st.w * 0.8, st.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, sx - w / 2, sy - h / 2, w, h); } // AW2 / AW3: shadow no wider than the body
-        STRIPS.draw(g, st, stripFrame(c), sx, sy, 1, MS.flipFor(c.act, c.dir));
+        const sf = stripFrame(c), sfl = MS.flipFor(c.act, c.dir);
+        STRIPS.draw(g, st, sf, sx, sy, 1, sfl);
+        if (HITFLASH && c.flash > 0 && st.src) { const t0 = performance.now(); g.globalAlpha = Math.min(1, c.flash / 0.12) * 0.8; STRIPS.draw(g, Object.assign({}, st, { src: whiteOf(st.src) }), sf, sx, sy, 1, sfl); g.globalAlpha = 1; hitFx.sil++; hitFx.silPng++; hitFx.ms += performance.now() - t0; c.flashSil = true; }
         c.drawn = st.id; c.src = 'png';
         top = Math.min(top, sy - (st.ay - st.top) - 2);
       } else if (c.art) {
         const a = c.art, act = c.moving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, c.t)];
         const w = a.w / a.dpr, h = a.h / a.dpr;
         if (a.shadow && GFX.shadows) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
-        if (c.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
-        else g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr, w, h);
+        const cfx = HITFLASH && c.flash > 0, t0 = cfx ? performance.now() : 0;
+        for (let pass = 0; pass < (cfx ? 2 : 1); pass++) {
+          const im = pass ? whiteOf(fr) : fr; if (pass) g.globalAlpha = Math.min(1, c.flash / 0.12) * 0.8;
+          if (c.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(im, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
+          else g.drawImage(im, sx - w / 2, sy - a.ay / a.dpr, w, h);
+        }
+        if (cfx) { g.globalAlpha = 1; hitFx.sil++; hitFx.silCode++; hitFx.ms += performance.now() - t0; c.flashSil = true; }
         c.drawn = a.id; c.src = 'code';
       } else {
         g.fillStyle = MOOD_COL[c.mood] || '#ccc'; g.beginPath(); g.arc(sx, sy - c.rad * 0.6, c.rad, 0, Math.PI * 2); g.fill();
         c.drawn = ''; c.src = 'plain';
       }
-      if (c.flash > 0) { g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(sx, sy - c.rad, c.rad, 0, Math.PI * 2); g.fill(); }
+      if (c.flash > 0 && !c.flashSil) { g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(sx, sy - c.rad, c.rad, 0, Math.PI * 2); g.fill(); hitFx.circle++; }
+      c.flashSil = false;
       if (c.hp < c.maxHp) { const bw = Math.max(20, c.rad * 1.6); g.fillStyle = '#2a1b1b'; g.fillRect(sx - bw / 2, top - 6, bw, 4); g.fillStyle = MOOD_COL[c.mood] || '#e0604a'; g.fillRect(sx - bw / 2, top - 6, bw * Math.max(0, c.hp / c.maxHp), 4); }
       if (c.tm) drawTameState(c, sx, sy, top);
     }
@@ -1658,7 +1789,7 @@
   // PI2: reduced motion = the OS setting or the shared "screen flashes off" pref (MMSideAccess sets data-reduce-motion on <html>)
   const REDUCED = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })() || !!(window.MMSideAccess && window.MMSideAccess.reduced());
   const STILL = REDUCED || !GFX.terrainAnim; // still terrain decor: reduced motion, or the low graphics tier (telegraphs keep their own rule)
-  let sparkLeft = 0, sparksDrawn = 0, drawCalls = 0;
+  let sparkLeft = 0, sparksDrawn = 0;
   // the wind-up telegraph: the full shape outlined, filled as the wind-up runs out (big creatures: thicker, hotter colour)
   function drawTelegraph(c, sx, sy) {
     const s = specOf(c.sp, c.kind), a = s.atk;
@@ -2561,7 +2692,9 @@
     g.globalAlpha = 0.6 + 0.3 * p; g.fillStyle = '#080a1c'; g.fillRect(0, 0, VW, VH); g.globalAlpha = 1;
     g.fillStyle = '#f4f8ff';
     for (let i = 0; i < STARS.length; i++) g.fillRect(Math.round(STARS[i][0] * VW), Math.round(STARS[i][1] * VH), STARS[i][2], STARS[i][2]);
-    const cx = Math.round(VW / 2), pad = Math.round(VH * 0.78);
+    // R4-D2 (b06-r2-08): the pad sits at 60% of the view (was 78%: the rocket rose from under the dock hint, toasts and the Sail / Decor
+    // buttons), and every overlay but the skip toast is hidden while it plays (body.launching)
+    const cx = Math.round(VW / 2), pad = Math.round(VH * 0.6);
     g.fillStyle = '#8a8e92'; g.fillRect(cx - 46, pad, 92, 10); g.fillStyle = '#c8ccd0'; g.fillRect(cx - 40, pad - 4, 80, 5);
     g.fillStyle = '#5a5e62'; g.fillRect(cx - 34, pad - 70, 6, 70);
     const shake = t < 0.6 && !REDUCED ? Math.round(Math.sin(t * 60)) : 0, by = Math.round(pad - 6 - ease * (VH * 0.9)) + shake;
@@ -2599,7 +2732,7 @@
     // TD1: to mars, a short lift-off first (never with reduced motion or ?launch=0; a tap or a key skips it). Nothing is used up.
     if (id === 'mars' && !REDUCED && Q.get('launch') !== '0') {
       if (panelKind) closePanel();
-      launch.on = true; launch.t = 0; launch.url = url; launch.n++;
+      launch.on = true; launch.t = 0; launch.url = url; launch.n++; document.body.classList.add('launching'); if (howtoHide) howtoHide();
       logEvent('launch');
       toast('Lift-off! Tap to skip.');
       return true;
@@ -2628,7 +2761,7 @@
       if (ISL.noteBoss(save, b.boss)) { dirty = true; toast('You spotted the lair of the ' + b.boss.replace(/_/g, ' ') + '.'); checkMedals(); }
     });
   }
-  const firstVisit = ISL.noteVisit(save, ISLE); // saved by the first save tick
+  ISL.noteVisit(save, ISLE); // saved by the first save tick
   // ground layer drawn each frame from cached canvases: decor, pen guests, gather sparkles
   function drawGround() {
     if (HOME) {
@@ -3164,7 +3297,7 @@
     if (nearPedestal() && !bossAlive()) return document.body.classList.contains('touch') ? 'The trophy pedestal. Tap Trophies to look, or for a rematch.' : 'The trophy pedestal. Press P or Trophies to look, or for a rematch.';
     if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
-    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.' +
+    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + (document.body.classList.contains('touch') ? '. Tap Ride to get off.' : '. Press R or Ride to get off.') +
       (abil ? (document.body.classList.contains('touch') ? ' Tap ' : ' F or ') + abilDef.name + ': ' + abilDef.desc.charAt(0).toLowerCase() + abilDef.desc.slice(1) : '');
     { const fx = tileOf(hero.x + hero.face.x * TILE * 1.2), fy = tileOf(hero.y + hero.face.y * TILE * 1.2); if (swimAt(fx, fy) && !solidAt(fx, fy)) return 'Open water. Ride a Tidesteed or Skimray to swim across.'; }
     if (!TAME) return '';
@@ -3317,14 +3450,21 @@
     const box = $('howto');
     if (!FIRST_VISIT) return;
     box.hidden = false;
-    const hide = () => { box.hidden = true; };
-    setTimeout(hide, 9000);
+    const hide = () => { box.hidden = true; howtoHide = null; };
+    howtoHide = hide; // R4-D2 (b06-r2-09): also closed by a boss lair / a hostile creature in view and by the lift-off (howtoTick)
+    setTimeout(hide, 7000);
     const x = $('howto-close'); if (x) x.addEventListener('click', hide); // W-18 (b15-14): a real close control (44 px), keyboard / screen reader reachable
     window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
     window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
   })();
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
+  if (document.body.classList.contains('touch')) { // b08-r2-09: touch words on a phone, never key names
+    const li = document.querySelectorAll('#howto-list li');
+    if (li[0]) li[0].textContent = 'Move: the stick.';
+    if (li[1]) li[1].textContent = 'Attack: the big button.';
+    const hp = $('help'); if (hp) hp.textContent = 'Touch: the stick moves, the big button attacks. Feed, Soothe, Ride and Gather buttons appear when you can use them. Pack holds party, craft, log and help.';
+  }
   // PI2: one-thumb layout. On touch the mount ability button moves next to the move stick (the same thumb reaches both); off, it goes
   // back to its place in the action column. The DOM moves only when the mode changes.
   const actsEl = $('acts'), touchEl = $('touch');
@@ -3379,7 +3519,7 @@
     if (!GFX.fogHz) revealFog(); else if ((fogAcc += dt) >= 1 / GFX.fogHz - 1e-9) { fogAcc = 0; revealFog(); }
     nodeTick();
     spawnT -= dt;
-    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); sparkTick(); }
+    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); sparkTick(); howtoTick(); }
     stepCreatures(dt);
     if (bz.st) bossStep(dt);
     if (ENV_ON) envStep(dt);
@@ -3496,13 +3636,39 @@
       creatures: () => creatures.map((c) => ({ uid: c.uid, sp: c.sp, kind: c.kind, base: c.base, x: c.x, y: c.y, hp: c.hp, maxHp: c.maxHp, mood: c.mood, size: c.size, art: !!c.art,
         ph: c.ph, tg: c.ph === 'wind' ? { shape: specOf(c.sp, c.kind).atk.shape, left: c.pt, windup: specOf(c.sp, c.kind).atk.windup, big: specOf(c.sp, c.kind).atk.big } : null,
         ko: c.ko, calm: c.calm, hostile: c.hostile, lv: c.lv, st: c.tm ? c.tm.st : null, torpor: c.tm ? c.tm.torpor : 0, torporMax: c.tm ? c.tm.torporMax : 0,
-        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir, rare: !!c.rare, variant: c.variant || '' })),
+        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir, rare: !!c.rare, variant: c.variant || '', ret: c.ret > 0, home: Math.hypot(c.x - c.hx, c.y - c.hy) })),
       // PNG creature strips (b31a / b32) and b33 props: readiness, what was drawn, death strips shown, props baked from PNG vs code
       stripsReady: () => (STRIPS ? STRIPS.ready.then(() => ({ on: true, kinds: STRIPS.kinds.filter((k) => STRIPS.has(k)), count: STRIPS.count() })) : { on: false, kinds: [], count: 0 }),
       // a baked strip's drawn size in native px (AW3 size-class checks), or null when that creature has no PNG set
       stripSize: (kind, act, dir) => { const s = STRIPS && STRIPS.has(kind) ? STRIPS.get(kind, act || 'idle', dir | 0) : null; return s ? { id: s.id, w: s.w, h: s.h, ax: s.ax, ay: s.ay, top: s.top, span: s.span } : null; },
       propsReady: () => (IA ? IA.ready.then(() => ({ props: IA.propsActive() ? Object.keys(IA.props()).sort() : [], tiles: IA.active() })) : { props: [], tiles: false }),
       propsBaked: () => Object.assign({}, propsBaked),
+      sandWarmed: () => ({ on: WARM_SAND, tiles: sandWarmed }), // cycle 0 art
+      detailBaked: () => ({ on: T_DETAIL, tiles: detailBaked }), // cycle 0 art
+      // cycle 0 art: distinct colours and an FNV hash of the baked pixels of terrain `name` in the chunk under the hero
+      tileStats: (name) => {
+        const id = NAMES.indexOf(name), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
+        const cv = chunkCache.get(cx + ',' + cy, () => null); if (!cv || id < 0) return null;
+        const c = cv.getContext('2d'), cols = new Set(); let h = 2166136261, n = 0;
+        for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+          if (O.tileAt(world, cx * CH + tx, cy * CH + ty) !== id) continue;
+          const d = c.getImageData(tx * TILE, ty * TILE, TILE, TILE).data; n++;
+          for (let i = 0; i < d.length; i += 4) { cols.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]); h = Math.imul(h ^ d[i] ^ (d[i + 1] << 8) ^ (d[i + 2] << 16), 16777619); }
+        }
+        return n ? { tiles: n, colors: cols.size, hash: h >>> 0 } : null;
+      },
+      // cycle 0 art: mean colour of the baked black-sand tiles in the chunk under the hero (null when none baked there)
+      sandColor: () => {
+        const id = NAMES.indexOf('black_sand'), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
+        const cv = chunkCache.get(cx + ',' + cy, () => null); if (!cv || id < 0) return null;
+        const c = cv.getContext('2d'); let r = 0, g = 0, b = 0, n = 0;
+        for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+          if (O.tileAt(world, cx * CH + tx, cy * CH + ty) !== id) continue;
+          const d = c.getImageData(tx * TILE, ty * TILE, TILE, TILE).data;
+          for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+        }
+        return n ? { r: r / n, g: g / n, b: b / n, px: n } : null;
+      },
       craftIcons: () => Object.keys(craftIcon).sort(),
       isleArt: () => (IA ? IA.ready.then(() => ({ pack: IA.pack, tiles: IA.active(), props: IA.propsActive() ? Object.keys(IA.props()).sort() : [] })) : { pack: '', tiles: false, props: [] }),
       deathsShown: () => deathsShown,
@@ -3511,6 +3677,7 @@
       heroDraw: () => Object.assign({}, heroDraw), setMoving: (on) => { heroMoving = !!on; return heroMoving; }, // W-12 hooks
       spawn: (sp, tx, ty) => (SPAWNABLE.indexOf(sp) >= 0 && creatures.length < CAP ? addCreature(sp, (tx + 0.5) * TILE, (ty + 0.5) * TILE, -1).uid : null),
       flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS, saddles: SADDLES }),
+      hitFlash: (id) => { if (id === 'all') creatures.forEach((c) => { c.flash = 0.12; }); else if (id !== undefined) { const c = creatures.find((x) => x.uid === id); if (c) c.flash = 0.12; } return Object.assign({ on: HITFLASH }, hitFx); }, // cycle 1 art: flash one creature / read the counters
       anger: (id) => { const c = creatures.find((x) => x.uid === id); if (c) c.angry = 30; return !!c; },
       soothe: (on) => { if (!TAME) return false; soothe = on !== false; setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); return soothe; },
       feed: () => feed(),
@@ -3551,7 +3718,7 @@
       hint: () => hintText(TAME ? feedTarget() : null),
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
-      spawnTick: () => { spawnTick(); return creatures.length; },
+      spawnTick: () => { spawnTick(); return creatures.length; }, howto: () => ({ open: !$('howto').hidden, auto: howtoStat.auto }), arrival: () => Object.assign({}, arrival), launchPad: () => Math.round(VH * 0.6), // R4-D2 hooks
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },
       // PI2: the graphics tier and the access state (sparks = glints drawn in the last frame, -1 when uncapped)
       gfx: () => ({ tier: GFX.tier, low: GFX_LOW, dpr: DPR, sparks: GFX.sparks === Infinity ? null : GFX.sparks, ghosts: deadPool.length, terrainAnim: GFX.terrainAnim,

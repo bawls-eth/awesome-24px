@@ -10,13 +10,12 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 
 async function open(browser, viewport, touch, qs) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-bugbash.test.js */' }));
+  const db = await offlineStub(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -44,7 +43,7 @@ async function open(browser, viewport, touch, qs) {
 
   const browser = await chromium.launch();
   {
-    const p = await open(browser, { width: 390, height: 844 }, true);
+    const p = await open(browser, { width: 390, height: 844 }, true, '?hud=online') /* U-01: measure the online HUD (walkie pill) */;
     const r = await p.page.evaluate(() => {
       const s = window.__g.scene.getScene('Town');
       const P = { cx: 260, cy: 600, rx: 150, ry: 90 }; // MAIN_POND
@@ -142,7 +141,7 @@ async function open(browser, viewport, touch, qs) {
     check('a11y: the town view is a main landmark with one heading and a labelled canvas', a.main && a.h1.length === 1 && /Hearthvale/.test(a.canvas), JSON.stringify(a));
     check('a11y: the idle walkie pill is fully opaque dark ink (was 2.45:1)', a.op === '1' && a.color === 'rgb(95, 87, 79)', JSON.stringify(a));
     check('phone: 0 console errors', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
-    check('phone: 0 database requests', p.db.count() === 0);
+    check('phone: 0 database requests', p.db.attempts() === 0);
     await p.ctx.close();
   }
   {

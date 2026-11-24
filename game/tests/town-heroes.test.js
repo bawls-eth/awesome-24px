@@ -4,7 +4,7 @@
 // Firebase SDK is answered with an empty stub and the player enters through "Play offline". 0 DB requests, never chats, never writes.
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/town-heroes.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const H = require('../shared/mm-town-heroes.js');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SAVE_KEY = 'pixeltown-save-v1';
@@ -13,8 +13,7 @@ const LEGACY_SHEET_RE = /\/i\/(coolcats|punks|pudgypenguins|doge|apes|zombies|mo
 
 async function open(browser, viewport, touch, seedSave, opts) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-heroes.test.js */' }));
+  const db = await offlineStub(ctx);
   if (seedSave) await ctx.addInitScript((v) => { if (!sessionStorage.heroSeeded) { sessionStorage.heroSeeded = '1'; localStorage.setItem('pixeltown-save-v1', v); } }, seedSave);
   const page = await ctx.newPage();
   const errors = [];
@@ -66,7 +65,8 @@ const townTex = (page) => page.evaluate(() => {
       check(`${label}: hero buttons are >= 44px targets`, grid.every((g) => g.w >= 44 && g.h >= 44), JSON.stringify(grid.map((g) => [g.w, g.h])));
       check(`${label}: default pick is the ranger`, grid.filter((g) => g.sel).map((g) => g.hero).join() === 'ranger');
       const tabs = await p.page.evaluate(() => [...document.querySelectorAll('#species-tabs .species-tab')].map((b) => b.textContent));
-      check(`${label}: no old species tabs`, tabs.length === 1 && tabs[0] === 'Heroes', JSON.stringify(tabs));
+      // R4 D4 (b07-r2-04, intentional): the lone 'Heroes' tab became the '🎲 Surprise me' random-hero chip
+      check(`${label}: no old species tabs (only the Surprise me chip)`, tabs.length === 1 && tabs[0] === '🎲 Surprise me', JSON.stringify(tabs));
       await p.page.fill('#name-input', 'ADMINhero');
       await tap('#avatar-grid .avatar-choice[data-hero="druid"]');
       const cap = await p.page.evaluate(() => (document.getElementById('avatar-grid-hero-caption') || {}).textContent || '');
@@ -106,7 +106,7 @@ const townTex = (page) => page.evaluate(() => {
       const freed = await p.page.evaluate(() => !window.__g.scene.getScene('Town').textures.exists('htatlas'));
       check(`${label}: the atlas texture is freed after the bake`, freed);
       check(`${label}: 0 console errors`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
-      check(`${label}: 0 database requests`, p.db.count() === 0, JSON.stringify({ http: p.db.http.slice(0, 2), ws: p.db.ws.slice(0, 2) }));
+      check(`${label}: 0 database requests`, p.db.attempts() === 0, JSON.stringify({ http: p.db.http.slice(0, 2), ws: p.db.ws.slice(0, 2) }));
       await p.ctx.close();
     }
     // 2) Legacy save: species 'goldenpunks' frame 5 renders as its mapped hero; the stored value is never rewritten.
@@ -134,7 +134,7 @@ const townTex = (page) => page.evaluate(() => {
       check(`${label}: legacy/junk/hero remote keys all resolve to hero textures`, remote.every((k) => /^hero_/.test(k)) && remote[0] === 'hero_' + H.classFor('punkettes', 2) && remote[3] === 'hero_mage', JSON.stringify(remote));
       check(`${label}: legacy save: no request to the old sheets`, p.legacy.length === 0, p.legacy.slice(0, 3).join(','));
       check(`${label}: legacy save: 0 console errors`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
-      check(`${label}: legacy save: 0 database requests`, p.db.count() === 0);
+      check(`${label}: legacy save: 0 database requests`, p.db.attempts() === 0);
       await p.ctx.close();
     }
   }

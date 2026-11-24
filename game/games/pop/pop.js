@@ -52,15 +52,10 @@
   let base = JSON.parse(JSON.stringify(save));
   function writeSave() {
     const M = window.MMSaveMerge;
-    if (!M) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; }
+    if (!M || !M.writeMedalSave) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; } // no module (or a cached older one): plain write
     const raw = readRaw(), mine = Object.assign({}, save);
-    const v = M.merge(raw, base, mine, M.SPECS[KEY]);
-    Object.assign(v, clean(v), { medals: Array.isArray(v.medals) ? v.medals.slice(0, 200) : [] }); // ids a newer build added stay stored
-    localStorage.setItem(KEY, JSON.stringify(v)); // throws on a full storage: save / base stay as they were, the next write retries
-    Object.assign(save, clean(v)); base = JSON.parse(JSON.stringify(save));
-    let mk = null;
-    try { const s = localStorage.getItem(MKEY); mk = typeof s === 'string' && s.length < 20000 ? JSON.parse(s) : null; } catch (e) { mk = null; }
-    localStorage.setItem(MKEY, JSON.stringify(Object.assign(M.merge(mk, null, { v: 1, m: save.medals.slice() }, M.SPECS.medals), { v: 1 })));
+    // one shared block for dash / echo / pop / stack (cycle1 L-15). It throws on a full storage: save / base stay as they were, the next write retries
+    M.writeMedalSave(localStorage, KEY, MKEY, raw, base, mine, clean, (c) => { Object.assign(save, c); base = JSON.parse(JSON.stringify(save)); });
   }
   const hubSync = () => { try { if (window.MMHubProfile && MMHubProfile.sync) MMHubProfile.sync(localStorage, 'pop', save.medals.slice()); } catch (e) { /* hub map progress is optional */ } };
   if (save.medals.length) hubSync(); // medals won before the arcade map group existed reach the Hub map too
@@ -73,6 +68,11 @@
   // ---------- board ----------
   const canvas = $('board'), g = canvas.getContext('2d');
   canvas.width = CW; canvas.height = CH;
+  const COARSE = (() => { try { return (window.matchMedia && matchMedia('(pointer: coarse)').matches) || params.get('touch') === '1'; } catch (e) { return false; } })();
+  if (COARSE) { // b08-r2-09: a phone player reads touch words, never key names
+    const kp = $('keys'); if (kp) kp.textContent = 'Tap two or more touching twins to pop them. Free to play: no timers outside a round, nothing to buy.';
+    canvas.setAttribute('aria-label', 'Pixel Pop board: tap two or more touching twins.');
+  }
   let rng = null, nextId = 1;
   let grid = []; // grid[c][r] = {v, id, y, s, wob}
   const run = { state: 'ready', seed: '', score: 0, time: ROUND, maxTile: 0, bestChain: 0, pops: 0, newMedals: [] };
@@ -438,7 +438,17 @@
   $('play').textContent = save.hint ? 'Play' : 'Got it, play';
   rng = MMRng.create('pixel-pop:preview'); fill(); run.maxTile = 0;
   medalList($('i-medals'));
-  try { $('play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  // R4 D4 (b15-r2-17): Play is no longer auto-focused (that made Tab go Play -> Menu -> off the page before Sound). Focus
+  // starts at the top, so Tab runs Menu, Sound, board, Play in screen order; Enter / Space with nothing focused still
+  // presses Play while the start card is up, so keyboard players start as fast as before.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae !== document.documentElement && ae.id !== 'board') return; // the focused board starts the round too
+    const pb = $('play');
+    if (!pb || pb.offsetParent === null || pb.disabled || (window.MMNav && MMNav.isOpen && MMNav.isOpen())) return;
+    ev.preventDefault(); pb.click();
+  });
   hud();
   requestAnimationFrame(frame);
 

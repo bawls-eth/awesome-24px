@@ -544,3 +544,51 @@ each by id with today's art as the fallback.
 - Both are one recoloured yeti-like humanoid today. `frost_dragon` XL128 (winged ice dragon, frost breath in attack_b, wings in the silhouette) and
   `red_titan` XL128 (hulking red-rock giant, magma seams, ground slam in attack_b). Boss strips: down only, idle 4, move 6, attack_a 6, attack_b 6,
   hit 2, death 8. Plus `arena_ring_tundra`, `arena_ring_mars` (boss arena ring, 256 native; today a code ring).
+
+
+## UPDATE 2026-11-24 (Round 4, Claude D2): what is still MISSING, in priority order
+Everything below WAITS ON CODEX (Claude cannot draw production art). A code-drawn fallback in the established style is live for each one
+today, so nothing looks broken while it waits; the fallback is named so you can see what you replace. Same rules as the top of this file
+(4x native cells, 1 px colour-matched outline, 3-4 tone ramps, top-left light, no smiley faces, true down / up / right, side-by-side panel
+next to b04 `puffcap_idle_down`, `node game/tools/art-audit/run.js` with 0 needs-redo). Branch names `codex/<id>-<label>`.
+
+| # | Id | What | Size / format | Fallback live today | Why (beta id) |
+|---|----|------|---------------|---------------------|---------------|
+| 1 | B-03 / B-04 | Tundra species (glacier_shellback, icicle_bat, shagtusk, sabrefang) and Mars species (regolith_roly, bubblemoth, dust_devil, scrapper_drone, rustbeetle, crater_strider, void_grazer) | spec above (S48 / M64 / L96 / XL128, enemy strip set x 3 dirs) | code-drawn recolour templates (mm-creature-draw.js) | b06-r2-01, b06-r2-02 (P2), W-17 |
+| 2 | B-05 | `frost_dragon`, `red_titan` boss strips + `arena_ring_tundra / _mars` | XL128, boss strip set | one recoloured humanoid | b06-r2-03 (P2), W-17 / W-18 |
+| 3 | T-STATUE (new) | `statue_founder` for the Town Founder's Statue (owner decision O-10): a heroic adventurer in carved stone (cloak, raised lantern or sword) standing on its own 3-step plinth. NOT an ape, not a real person. Down view, 1 frame, plus `statue_founder_shadow` | 24x40 native (96x160 cell), feet anchor (48,156); Town pixel scale is 1x = hero 24 px | stone-tinted hero alias (`mooncats` frame 0) on a code-drawn 3-step plinth with a bronze plaque (main.js drawStatue) | b12-r2-05, b07-05, O-10 |
+| 4 | B-01 | Nexus plaza floor + kerb + portal pad | spec above | code flagstones with a mosaic ring (realm-world.js nxFloor), square 8-bit frame | b12-r2-08 (P2) |
+| 5 | R01 redo | Realm overworld terrain. The R01 delivery was REJECTED in game (TEAM-BOARD 2026-11-24): 92-98% of every grass / sand tile is one colour, and the grass is a muted teal that clashes with the b10t tall grass next to it. Redo with at least 15% detail pixels per tile (blades, pebbles, 2-3 tone noise), in the Realm palette (grass #3f7f33, tall grass #336f2a, sand #b9a676), all 8 variants visibly different | 32 native, a-h, edge_00..15 + icorner | b10t + code smoothing / inner-corner fill / organic shade noise (R4-D2) | b04-01, b04-03 |
+| 6 | R01b (new) | Highlands / Godlands inner corners: `tile_snow_icorner_{ne,nw,se,sw}`, `tile_lava_rock_icorner_*`, `tile_dry_grass_icorner_*`, `tile_gravel_icorner_*`, plus a `tile_dry_grass_edge_*` set without the dashed yellow rim. The b11a edge tiles draw a notch in every open corner; code now paints it back when the diagonal matches (fillInnerCorners) | 32 native | code corner fill (realm-world.js) | b12-r2-04, b04-03 |
+| 7 | R02 redo | Isles home / meadow ground. REJECTED: 97-98% one colour per tile and grass #5d8b50 instead of Hearth Isle's #6cbf55 ramp (the b35 edges, props and creatures are tuned to it). Redo in the island ramp with detail pixels | spec R02 | code pattern fill | b06-r2-06 (flat start terrain) |
+| 8 | Black sand | `tile_black_sand_a..d` for the jungle beach: b30 is 95% #323039 blue-black and reads as a void block next to the jungle start; staged R04 made it light tan (no longer black sand). Wanted: warm volcanic sand, base ~#5a4e45 with darker / lighter grains | 32 native | b30 unchanged (tests/isle-art-bake.test.js pins exact b30 pixels) | b12-r2-09 |
+| 9 | W-06 scale | Scale table the code uses now (draw to these sizes, never upscale in the PNG): Town hero 24 px = 1.0; Town NPCs and statue 1.0; Town wildlife insects / frogs 14, birds / snakes / crabs 16-18, fox / otter / owl 22-27, deer / caribou / goat / shark 30-32 (0.45 x the old SVG size, 14..32). Isles per scales.json (S 32-48, M 64, L 96, XL 128 native, drawn at 1/4 of the 4x cell); hero 48 native | table | main.js ffDisplaySize / npcScale; scales.json | b12-r2-05, W-06 |
+| 10 | R09 redo | Jungle core (chompbill, fernraptor, glimmerfrog). REJECTED: blob silhouettes with the face on the belly, 2 flat tones, death strips stand upright (the last 2 frames must lie down), fernraptor does not read as a raptor | spec R09 | b31a / b31af stay live | ART-QUALITY-BAR 1 |
+| 11 | M02 skimray fix | `skimray_idle_down` / `_move_down`: lowest opaque row 271-275 vs anchor.y 347 (floats 72-76 px, audit needs-redo). Fix the rows; then it wires with no code change | 384 cell | b38c skimray | art audit |
+| 12 | M03 bug safari redo | REJECTED: all 9 bugs share one red body template (antlion = beetle = cricket), no side-by-side panel. Each bug needs its own silhouette and colour | spec m03 | code bugs | R17 |
+| 13 | R13 | HUD icon set (emoji glyphs on the Hub cards) | spec R13 | emoji | b12-r2-11 (P3) |
+
+Merged and waiting on CODE or a test decision (not on Codex): M01 isleback turtle (rider seats must be re-measured on the new shell before
+wiring), M03 rimewolf (accepted, a one-line path switch in mm-creature-strips.js, but tests/shared-mm-creature-strips.test.js pins the b40c
+url), R04 jungle and R05 tundra ground (staged, unregistered; R05 tiles are 79-94% one colour, so check against the R01 rejection first),
+m02 angler fish and t10 / t13 Town fauna (staged, unregistered: their strips carry no class key and tests/art-integration.test.js counts
+that as "missing").
+
+## UPDATE 2026-11-24 (cycle 0, Claude G): status of the list above + new asks
+Code changes this cycle (they are fallbacks; a delivery replaces each by id, same rules as above):
+- #1 / #2 (tundra + mars species, Frost Dragon / Red Titan): the code templates now have a colour-matched outline and crisp alpha, and the
+  two bosses have their own features (dragon wings / tail / snout / horns, titan spines / shoulder rocks / horns / lava seams). Still
+  placeholders: the strips are still wanted, top priority.
+- #7 (R02 Isles ground): grass / sand on Hearth Isle now get code detail pixels and stepped edges; the large interiors still read calm.
+  The R02 redo is still wanted.
+- #8 (black sand): an overlay pass re-lights b30 black sand into a warm volcanic ramp in game. A real `tile_black_sand_a..d` (base
+  ~#5a4e45) is still welcome and will replace the overlay (`?warmsand=0`).
+- #13 (R13 HUD / Hub icons): the Hub cards now use code-drawn 16x16 icons (`shared/mm-pixel-icons.js`). A 24x24 set in the b19 / M08
+  style (ids `hub_town, hub_realm, hub_isles, hub_lantern, hub_pop, hub_dash, hub_stack, hub_echo, hub_jam, hub_angler, hub_bugs,
+  hub_stalk, hub_deepdelve`) would replace them; lower priority now.
+
+New:
+| # | Id | What | Size / format | Fallback live today | Why |
+|---|----|------|---------------|---------------------|-----|
+| 14 | T-BLD (new) | Town buildings: house (pink), Able Sisters shop, turnip stand, shop front. Flat fills with no outline today next to outlined trees / statue / workbench | down view, 1 frame each, Town 1x scale (hero 24 px) | code rectangles | cycle 0 audit #5 |
+| 15 | R03b (new) | `prop_tree_medium` (and small): break the round canopy edge (3-4 leaf clumps, a notch or two), keep cell / anchor | as R03 | R03 as delivered | R03 review nit, cycle 0 audit #7 |

@@ -13,6 +13,7 @@
   const HERE = 'game/hub/index.html';
   const qs = location.search.slice(1);
   const mapParam = /(?:^|&)map=1(?:&|$)/.test(qs);
+  const PXI = !/(?:^|&)pxicons=0(?:&|$)/.test(qs) && window.MMPixelIcons ? window.MMPixelIcons : null;
 
   function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function readKey(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -68,6 +69,8 @@
         a.setAttribute('href', href);
         a.dataset.place = id;
         const ic = el('span', 'hc-ico', p.icon); ic.setAttribute('aria-hidden', 'true');
+        // cycle 0 art (b12-r2-11): a code-drawn 16x16 pixel icon at 2x replaces the emoji (kept as hidden fallback text); ?pxicons=0 = emoji
+        if (PXI) PXI.apply(ic, id, 32, p.icon);
         a.appendChild(ic);
         const t = el('span', 'hc-txt');
         t.appendChild(el('span', 'hc-name', p.name));
@@ -152,6 +155,7 @@
       next = { key: 'first-realm', place: 'realm' };
       a.setAttribute('href', FIXED.realm); a.dataset.key = 'first-realm'; a.dataset.place = 'realm';
       $('home-next-ico').textContent = '⚔️';
+      if (PXI) PXI.apply($('home-next-ico'), 'realm', 16, '⚔️');
       $('home-next-txt').textContent = 'Next: the guided adventure (Realm)';
       a.setAttribute('aria-label', 'Next step: the guided adventure in the Realm. A coach shows you moving, shooting and loot.');
       a.hidden = false;
@@ -167,6 +171,7 @@
     a.setAttribute('href', nav.urlFor(s.url, HERE));
     a.dataset.key = s.key; a.dataset.place = s.place;
     $('home-next-ico').textContent = s.icon;
+    if (PXI && PXI.has(s.place)) PXI.apply($('home-next-ico'), s.place, 16, s.icon);
     $('home-next-txt').textContent = 'Next: ' + s.title + ' (' + s.gameName + ')';
     a.setAttribute('aria-label', 'Next step: ' + s.title + ' in ' + s.gameName + '. ' + s.text);
     a.hidden = false;
@@ -237,12 +242,24 @@
     try { if (window.MMAccess && MMAccess.prefs && MMAccess.prefs.load(localStorage).lowGfx) return true; } catch (e) { /* defaults */ }
     return false;
   }
+  let moonY = 6;
   function sizeSky() {
     const w = Math.max(40, Math.ceil(home.clientWidth / PX)), h = Math.max(40, Math.ceil(home.clientHeight / PX));
     if (sky.width !== w || sky.height !== h) { sky.width = w; sky.height = h; }
+    // R4 D4 (b15-r2-18): on narrow screens (200% zoom, ~195 px) the logo reaches the top-right corner and the moon sat on
+    // "TOWN". There the moon drops just below the title row instead.
+    moonY = 6;
+    try {
+      const t = $('home-title');
+      if (t && home.clientWidth < 360) {
+        const hr = home.getBoundingClientRect(), tr = t.getBoundingClientRect();
+        if (tr.right > hr.left + (w - 16) * PX) moonY = Math.max(6, Math.ceil((tr.bottom - hr.top) / PX) + 2);
+      }
+    } catch (e) { moonY = 6; }
   }
   function drawSky() {
     const W = sky.width, H = sky.height;
+    window.__homeMoon = { x: (W - 15) * PX, y: moonY * PX, w: 8 * PX, h: 6 * PX }; // test hook (css px inside #home)
     const band = Math.ceil(H * 0.7 / SKY.length);
     SKY.forEach((col, i) => { sc.fillStyle = col; sc.fillRect(0, i * band, W, band + 1); });
     sc.fillStyle = SKY[SKY.length - 1]; sc.fillRect(0, SKY.length * band, W, H);
@@ -253,7 +270,8 @@
       sc.fillRect(x, y, 1, 1);
     }
     // moon
-    sc.fillStyle = '#ffec27'; sc.fillRect(W - 14, 6, 6, 6); sc.fillRect(W - 15, 7, 8, 4); sc.fillStyle = SKY[0]; sc.fillRect(W - 12, 6, 3, 3);
+    const my = moonY;
+    sc.fillStyle = '#ffec27'; sc.fillRect(W - 14, my, 6, 6); sc.fillRect(W - 15, my + 1, 8, 4); sc.fillStyle = SKY[Math.min(SKY.length - 1, Math.floor(my / band))]; sc.fillRect(W - 12, my, 3, 3);
     HILLS.forEach((L, li) => {
       const off = skyT * L.sp;
       sc.fillStyle = L.col;
@@ -293,6 +311,9 @@
     toggle.setAttribute('aria-label', homeOn ? 'Show the world map' : 'Back to the home screen');
     toggle.setAttribute('aria-pressed', homeOn ? 'false' : 'true');
     setUrl(!homeOn);
+    // b08-r2-10: on Home the footer keeps Daily gift + Map only. "<- Town" duplicated the Town card and PLAY, and "Open" acts on a map
+    // node that Home does not show; both stay on the map view (nothing removed).
+    ['hub-town', 'open-btn'].forEach((id) => { const b = $(id); if (b) b.style.display = homeOn ? 'none' : ''; });
     try { window.dispatchEvent(new Event('resize')); } catch (e) { /* map keeps its size */ }
     if (homeOn) startSky();
     if (focus) { const f = homeOn ? $('home-play') : $('map'); if (f) try { f.focus(); } catch (e) { /* ignore */ } }

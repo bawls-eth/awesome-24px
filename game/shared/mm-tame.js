@@ -34,7 +34,6 @@
     MAX_SPECIES_OWNED: 2,   // a third duplicate of a species gives bond seeds instead
   };
   const STATES = ['wild', 'ko', 'calm', 'taming', 'tamed', 'dead', 'escaped'];
-  const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
   const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
   function fin(v, d, lo, hi) { const n = typeof v === 'number' && isFinite(v) ? v : d; return clamp(n, lo, hi); }

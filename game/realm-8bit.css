@@ -79,6 +79,9 @@ html body #realm-abilities .realm-ab .cd { color: #fff1e8; }
 html body #realm-abilities .realm-ab.locked .cd { color: #c2c3c7; }
 html body #realm-abilities .realm-ab .key { color: var(--r8-yel, #ffec27); opacity: 1; }
 /* ---- bug bash (a11y sweep): a page heading for screen readers only; the play field is a keyboard stop with a visible ring ---- */
+/* cyc0-ui: the Realm's one heading stays inside the viewport (1 px, clipped) like the Town's #town-h1; with margin -1px at
+   left/top 0 it sat wholly off screen (right/bottom 0), so tools that skip off-screen nodes found no h1. */
+#realm-overlay > h1.rm-sr-only { top: 0; left: 0; margin: 0 !important; color: #fff1e8; }
 .rm-sr-only { font-size: calc(12px * var(--mm-hud-scale, 1)); position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 html body #realm-canvas-wrap:focus { outline: none; }
 html body #realm-canvas-wrap:focus-visible { outline: 3px solid var(--r8-yel, #ffec27); outline-offset: -3px; }

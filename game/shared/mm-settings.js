@@ -178,14 +178,19 @@
       try { win.dispatchEvent(new win.CustomEvent('mm-settings-change', { detail: { id: id, value: now } })); } catch (e) { /* ignore */ }
       if (typeof o.onChange === 'function') { try { o.onChange(id, now); } catch (e) { /* page bug must not break settings */ } }
     }
-    GROUPS.forEach((g) => {
+    // R4 D4 (b07-r2-09): in the peaceful Town the combat toggles only matter in the Realm arena behind the Realm Gate, so
+    // there the group is titled "Realm combat", says where it applies, and sits after See / Hear instead of first.
+    const town = o.page === 'town';
+    const groups = town ? GROUPS.filter((g) => g.id !== 'play' && g.id !== 'help').concat(GROUPS.filter((g) => g.id === 'play'), GROUPS.filter((g) => g.id === 'help')) : GROUPS;
+    groups.forEach((g) => {
       if (g.id === 'play' && o.play === false) return;
       const sec = el('section', 'mmset-group');
       sec.setAttribute('data-group', g.id);
-      const h = el('h3', 'mmset-gh', g.title);
+      const h = el('h3', 'mmset-gh', town && g.id === 'play' ? 'Realm combat' : g.title);
       h.id = 'mmset-g-' + g.id;
       sec.setAttribute('aria-labelledby', h.id);
       sec.appendChild(h);
+      if (town && g.id === 'play') sec.appendChild(el('p', 'mmset-hint mmset-gnote', 'Only used in the Realm arena (Realm Gate). Nothing here changes the Town.'));
       ITEMS.filter((it) => it.group === g.id).forEach((it) => {
         if (it.type === 'toggle') {
           const b = el('button', 'mmset-row mmset-toggle');

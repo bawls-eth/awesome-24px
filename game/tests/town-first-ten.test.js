@@ -182,7 +182,7 @@ const WALKER = `(spawn) => {
     // the interact action: the real A button on a phone, the E key on desktop (the A button is phone-only); then a few sim frames
     const act = async () => { taps++; if (prof.touch) { await page.tap('#interact-btn'); await page.evaluate(() => window.__qt.idle(0.3)); } else { await page.keyboard.down('e'); await page.evaluate(() => window.__qt.idle(0.1)); await page.keyboard.up('e'); await page.evaluate(() => window.__qt.idle(0.2)); } };
     const t0 = Date.now();
-    await page.goto(BASE);
+    await page.goto(BASE + '?hud=online'); // U-01: online HUD pieces (walkie) stay in the overlap checks
     await page.waitForSelector('#name-input', { state: 'visible', timeout: 10000 });
     const joinShown = Date.now() - t0;
     await page.fill('#name-input', 'ADMINftue'); // typing the name is not a tap

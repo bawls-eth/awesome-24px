@@ -964,8 +964,16 @@ class UndergroundWorld {
     this._raf = requestAnimationFrame(this._loop);
   };
 
+  // Scratch objects reused every frame / block edit instead of new Vector3 / Euler / Matrix4 each time (cycle1 L-10).
+  // Nothing may keep a reference to one of them: copy if a value must outlive the call.
+  _scratch() {
+    return this._scr || (this._scr = { fwd: new THREE.Vector3(), euler: new THREE.Euler(0, 0, 0, 'YXZ'), flat: new THREE.Vector3(), right: new THREE.Vector3(), dir: new THREE.Vector3(), m4: new THREE.Matrix4() });
+  }
+
+  // The look direction, in a shared scratch vector (valid until the next call).
   _forwardVector() {
-    return new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
+    const sc = this._scratch();
+    return sc.fwd.set(0, 0, -1).applyEuler(sc.euler.set(this.pitch, this.yaw, 0, 'YXZ'));
   }
 
   // Walking physics (A2): gravity, jump, voxel collision with auto-jump up a one-block ledge,
@@ -995,9 +1003,10 @@ class UndergroundWorld {
       this.inWater = this._inWaterCell();
       this.inLava = this._inLavaCell();
       const fluid = this.inWater || this.inLava; // both slow you and cancel fall damage
-      const flatFwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(-1);
-      const right = new THREE.Vector3(flatFwd.z, 0, -flatFwd.x);
-      const dir = new THREE.Vector3().addScaledVector(flatFwd, fwd).addScaledVector(right, strafe);
+      const sc = this._scratch();
+      const flatFwd = sc.flat.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(-1);
+      const right = sc.right.set(flatFwd.z, 0, -flatFwd.x);
+      const dir = sc.dir.set(0, 0, 0).addScaledVector(flatFwd, fwd).addScaledVector(right, strafe);
       const moving = dir.lengthSq() > 0;
       if (moving) dir.normalize();
       const speed = this.flying ? UG_FLY : fluid ? UG_SWIM : UG_WALK;
@@ -1160,7 +1169,7 @@ class UndergroundWorld {
       this.occupied.delete(t.key);
     } else {
       const mesh = t.entry.mesh;
-      mesh.setMatrixAt(t.entry.instanceId, new THREE.Matrix4().makeTranslation(0, -9999, 0));
+      mesh.setMatrixAt(t.entry.instanceId, this._scratch().m4.makeTranslation(0, -9999, 0));
       mesh.instanceMatrix.needsUpdate = true;
       this.lookup.delete(t.key);
       this.occupied.delete(t.key);
@@ -1406,7 +1415,7 @@ class UndergroundWorld {
   }
 
   _hidePlacedInstance(pool, instanceId) {
-    pool.mesh.setMatrixAt(instanceId, new THREE.Matrix4().makeTranslation(0, -9999, 0));
+    pool.mesh.setMatrixAt(instanceId, this._scratch().m4.makeTranslation(0, -9999, 0));
     pool.mesh.instanceMatrix.needsUpdate = true;
     pool.mesh.boundingSphere = null;
     pool.free.push(instanceId);
@@ -1451,7 +1460,7 @@ class UndergroundWorld {
     const pool = this.pools[poolName];
     const slot = pool.free.length ? pool.free.pop() : (pool.next < pool.capacity ? pool.next++ : null);
     if (slot === null) return false;
-    pool.mesh.setMatrixAt(slot, new THREE.Matrix4().makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK));
+    pool.mesh.setMatrixAt(slot, this._scratch().m4.makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK));
     pool.mesh.instanceMatrix.needsUpdate = true;
     pool.mesh.boundingSphere = null; // three caches it from the all-hidden pool; without this a placed block can never be hit by the ray
     this.lookup.set(key, { mesh: pool.mesh, instanceId: slot, kind: 'placed', pool: poolName });

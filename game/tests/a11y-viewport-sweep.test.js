@@ -11,7 +11,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, blockDb, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:9438/game/index.html';
 const ORIGIN = new URL(BASE).origin;
 const ALLOW_FILE = path.join(__dirname, 'fixtures', 'a11y-allow.json');
@@ -102,6 +102,9 @@ const AUDIT = () => {
       inter.forEach((e) => {
         if (e === nav || nav.contains(e) || e.contains(nav) || e.closest('#mm-nav-root')) return;
         const b = e.getBoundingClientRect();
+        // R4 D4: a focusable full-screen game view (canvas, role=application, >= half the viewport, the Menu wholly on top of it) is the
+        // backdrop every HUD control sits on, not a competing tap target (Isles #view became a Tab stop for keyboard users, b15-10)
+        if (e.tagName === 'CANVAS' && e.getAttribute('role') === 'application' && b.width * b.height >= 0.5 * vw * vh && b.left <= r.left && b.top <= r.top && b.right >= r.right && b.bottom >= r.bottom) return;
         const ox = Math.min(r.right, b.right) - Math.max(r.left, b.left), oy = Math.min(r.bottom, b.bottom) - Math.max(r.top, b.top);
         if (ox > 2 && oy > 2) add('menu', 'overlap:' + sel(e), `overlaps ${sel(e)} by ${Math.round(ox)}x${Math.round(oy)}`);
       });
@@ -201,7 +204,9 @@ const AUDIT = () => {
   return { offenders: out, stats: { measured, unknownBg, interactive: inter.length, textNodes: nodes } };
 };
 
-// text-size probe: mean font-size over text nodes (for the 150% / 200% prefs)
+// text-size probe: mean RENDERED font-size over text nodes (for the 150% / 200% prefs). cyc0-ui: the computed font-size times the
+// element's effective CSS zoom (currentCSSZoom), because the Town / Realm HUDs grow with zoom: var(--hud-scale), which getComputedStyle
+// alone reports unchanged. Text that is neither resized nor zoomed still counts at its plain size.
 const PROBE = () => {
   let sum = 0, n = 0;
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -212,7 +217,7 @@ const PROBE = () => {
     if (!p || !t.textContent.trim() || /^(SCRIPT|STYLE)$/.test(p.tagName)) continue;
     const r = p.getBoundingClientRect();
     if (r.width === 0) continue;
-    sum += parseFloat(getComputedStyle(p).fontSize); n++;
+    sum += parseFloat(getComputedStyle(p).fontSize) * (p.currentCSSZoom || 1); n++;
   }
   return n ? sum / n : 0;
 };
@@ -245,8 +250,7 @@ async function openPage(browser, page, vp, extraSeed, mediaOpts) {
   const ctxOpts = vp.touch ? { viewport: { width: vp.w, height: vp.h }, hasTouch: true, isMobile: true } : { viewport: { width: vp.w, height: vp.h } };
   if (mediaOpts) Object.assign(ctxOpts, mediaOpts);
   const ctx = await browser.newContext(ctxOpts);
-  const db = await blockDb(ctx);
-  if (page.town) await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by a11y-viewport-sweep */' }));
+  const db = page.town ? await offlineStub(ctx) : await blockDb(ctx); // Town: database blocked + Firebase SDK answered empty
   const seed = Object.assign({}, SEED, extraSeed || {});
   await ctx.addInitScript((s) => {
     if (!sessionStorage.a11ySeeded) { sessionStorage.a11ySeeded = '1'; Object.keys(s).forEach((k) => { try { localStorage.setItem(k, s[k]); } catch (e) { /* storage blocked */ } }); }
@@ -344,7 +348,7 @@ async function keyboardPass(p, page, vpId) {
         const res = await run.p.evaluate(AUDIT);
         res.offenders.forEach((o) => record(pg, o.check, o.key, o.detail, vp.id));
         run.errors.forEach((er) => record(pg, 'console-error', er.replace(/\s+/g, ' ').slice(0, 90), er.slice(0, 200), vp.id));
-        check(L + ' db requests blocked, none escaped as page traffic', run.db.attempts() >= 0);
+        check(L + ' no database request attempted', run.db.attempts() === 0, String(run.db.attempts()));
         if (vp.id === '1920x1080' || vp.id === '390x844') await keyboardPass(run.p, pg, vp.id);
         summary.push(`${pg.id} ${vp.id}: ${res.offenders.length} offenders, ${res.stats.measured} contrast samples (${res.stats.unknownBg} gradient/image bg skipped)`);
       } catch (e) { check(L + ' audit runs', false, String(e.message).slice(0, 200)); }
@@ -357,7 +361,9 @@ async function keyboardPass(p, page, vpId) {
       { id: 'reduced-motion', media: { reducedMotion: 'reduce' }, seed: {} },
       { id: 'pref-reduce-motion', media: {}, seed: { 'mm-reduce-motion': '1', 'pixeltown-access-v1': JSON.stringify({ v: 1, flashes: false }) } },
       { id: 'text-150', media: {}, seed: { 'pixeltown-access-v1': JSON.stringify({ v: 1, hudScale: 1.5 }) } },
-      { id: 'text-200', media: {}, seed: { 'pixeltown-access-v1': JSON.stringify({ v: 1, hudScale: 1.5 }) }, css: 'html{zoom:2}' },
+      // cyc0-ui: 200% browser zoom the way a browser does it (half the CSS viewport at device scale 2, so media queries see
+      // 195 px), not html{zoom:2}, which kept the 390 px media queries and missed the real 200% Town (bag bar over the Menu).
+      { id: 'text-200', media: { deviceScaleFactor: 2 }, seed: { 'pixeltown-access-v1': JSON.stringify({ v: 1, hudScale: 1.5 }) }, vp: { id: '195x422', w: 195, h: 422, touch: true } },
       { id: 'high-contrast', media: {}, seed: { 'mm-high-contrast': '1' } }
     ];
     let baseSize = 0;
@@ -365,7 +371,7 @@ async function keyboardPass(p, page, vpId) {
     for (const pf of PREFS) {
       const L = `[${pg.id} ${pf.id}]`;
       let run;
-      try { run = await openPage(browser, pg, vp, pf.seed, pf.media); } catch (e) { check(L + ' page opens', false, String(e.message).slice(0, 160)); continue; }
+      try { run = await openPage(browser, pg, pf.vp || vp, pf.seed, pf.media); } catch (e) { check(L + ' page opens', false, String(e.message).slice(0, 160)); continue; }
       try {
         if (pf.css) { await run.p.addStyleTag({ content: pf.css }); await run.p.waitForTimeout(400); }
         const key = 'pref:' + pf.id;
@@ -424,7 +430,7 @@ async function keyboardPass(p, page, vpId) {
   }
   const ranPages = new Set(pages.map((p) => p.id));
   const fresh = [...all.values()].filter((o) => !(o.id in allow));
-  const stale = Object.keys(allow).filter((k) => ranPages.has(k.split('|')[0]) && !all.has(k) && full);
+  const stale = Object.keys(allow).filter((k) => ranPages.has(k.split('|')[0]) && !all.has(k) && !VP_F); // cyc0-ui: a PAGES-only run covers every check of those pages
   fresh.forEach((o) => check(`new a11y offender [${o.lane}] ${o.id}`, false, `${o.detail} @ ${[...o.vps].join(',')}`));
   stale.forEach((k) => check(`allow-list entry no longer occurs (delete it: the allow-list only shrinks) ${k}`, false, ''));
   check(`no new accessibility offenders beyond the allow-list (${Object.keys(allow).length} allowed, ${all.size} seen)`, fresh.length === 0);

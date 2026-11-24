@@ -64,13 +64,13 @@ const prep = (page) => page.evaluate(() => {
   check('live effects are capped at 16 (60 plays)', cap === 16, String(cap));
 
   const red = await R.page.evaluate(() => {
-    const a = window.__mm.arena, keep = a._readReduced; a._readReduced = () => {}; a._reduced = true;
+    const a = window.__mm.arena, keep = a._readReduced, keepF = a._readReducedFrame; a._readReduced = () => {}; a._readReducedFrame = () => {}; a._reduced = true; // L-18: the per-frame read is _readReducedFrame now; freeze both
     a._fxPool.forEach((q) => { q.active = false; });
     const rec = [], proto = CanvasRenderingContext2D.prototype, orig = proto.drawImage;
     proto.drawImage = function (img, ...r) { if (r.length === 8 && img && img.src && /fx_levelup/.test(img.src)) rec.push(r[0]); return orig.call(this, img, ...r); };
     a.fxPlay('fx_levelup', a.player.x, a.player.y, { follow: true });
     for (let i = 0; i < 30; i++) { a._update(1 / 60); a._draw(); }
-    proto.drawImage = orig; a._reduced = false; a._readReduced = keep;
+    proto.drawImage = orig; a._reduced = false; a._readReduced = keep; a._readReducedFrame = keepF;
     return { distinct: Array.from(new Set(rec)).length, n: rec.length };
   });
   check('reduce-motion: a single frame (fading), still drawn', red.distinct === 1 && red.n >= 3, JSON.stringify(red));

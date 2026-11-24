@@ -68,15 +68,10 @@
   let base = JSON.parse(JSON.stringify(save));
   function writeSave() {
     const M = window.MMSaveMerge;
-    if (!M) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; }
+    if (!M || !M.writeMedalSave) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; } // no module (or a cached older one): plain write
     const raw = readRaw(), mine = Object.assign({}, save);
-    const v = M.merge(raw, base, mine, M.SPECS[KEY]);
-    Object.assign(v, clean(v), { medals: Array.isArray(v.medals) ? v.medals.slice(0, 200) : [] }); // ids a newer build added stay stored
-    localStorage.setItem(KEY, JSON.stringify(v)); // throws on a full storage: save / base stay as they were, the next write retries
-    Object.assign(save, clean(v)); base = JSON.parse(JSON.stringify(save));
-    let mk = null;
-    try { const s = localStorage.getItem(MKEY); mk = typeof s === 'string' && s.length < 20000 ? JSON.parse(s) : null; } catch (e) { mk = null; }
-    localStorage.setItem(MKEY, JSON.stringify(Object.assign(M.merge(mk, null, { v: 1, m: save.medals.slice() }, M.SPECS.medals), { v: 1 })));
+    // one shared block for dash / echo / pop / stack (cycle1 L-15). It throws on a full storage: save / base stay as they were, the next write retries
+    M.writeMedalSave(localStorage, KEY, MKEY, raw, base, mine, clean, (c) => { Object.assign(save, c); base = JSON.parse(JSON.stringify(save)); });
   }
   function persist() {
     try { writeSave(); } catch (e) { /* storage refused: play on */ }
@@ -279,7 +274,6 @@
     floats.forEach((f) => { f.y -= 24 * dt; f.t -= dt; });
     floats = floats.filter((f) => f.t > 0);
   }
-  function petal(x, y, s, c) { g.fillStyle = c; g.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
   function ptext(str, x, y, scale, color, align) {
     if (window.MM8) { MM8.text(g, str, x, y, scale, color, { align: align || 'left' }); return; }
     g.font = 'bold ' + (8 * scale) + 'px monospace'; g.textAlign = align || 'left'; g.textBaseline = 'top'; g.fillStyle = color; g.fillText(str, x, y);
@@ -390,7 +384,17 @@
   $('play').textContent = save.hint ? 'Play' : 'Got it, play';
   rng = MMRng.create('echo-garden:preview'); makeSeq();
   medalList($('i-medals'));
-  try { $('play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  // R4 D4 (b15-r2-17): Play is no longer auto-focused (that made Tab go Play -> Menu -> off the page before Sound). Focus
+  // starts at the top, so Tab runs Menu, Sound, board, Play in screen order; Enter / Space with nothing focused still
+  // presses Play while the start card is up, so keyboard players start as fast as before.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae !== document.documentElement && ae.id !== 'board') return; // the focused board starts the round too
+    const pb = $('play');
+    if (!pb || pb.offsetParent === null || pb.disabled || (window.MMNav && MMNav.isOpen && MMNav.isOpen())) return;
+    ev.preventDefault(); pb.click();
+  });
   try { if (save.medals.length && window.MMHubProfile) MMHubProfile.sync(localStorage, 'echo', save.medals.slice()); } catch (e) { /* optional */ }
   hud();
   requestAnimationFrame(frame);

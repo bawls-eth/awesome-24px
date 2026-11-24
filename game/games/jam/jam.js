@@ -703,7 +703,12 @@
     return 'Timing: you averaged ' + how + ' over ' + res.hits + ' hits (offset ' + fmtOff(SG.offsetOf(save)) + ').';
   }
   // G-18 (b10-05): the play HUD (score, combo, accuracy, judgement, song, progress) only shows during a song, never stale over the menu / results
-  function hudShown(on) { var h = document.getElementById('hud'); if (h) h.style.visibility = on ? '' : 'hidden'; }
+  // R4 D4 (b10-r2-07 nit): the song progress bar is part of that HUD too: hidden (and emptied) on the menu and the results card
+  function hudShown(on) {
+    var h = document.getElementById('hud'); if (h) h.style.visibility = on ? '' : 'hidden';
+    var pg = document.getElementById('progress'); if (pg) pg.style.visibility = on ? '' : 'hidden';
+    if (!on) { var pb = document.getElementById('progress-bar'); if (pb) pb.style.width = '0%'; }
+  }
   function showMenu() {
     hudShown(false);
     mode = 'menu'; run = null; chart = null; paused = false; concert = null; practice = null; relax = false; assistRun = false; document.body.dataset.assist = '0'; document.body.dataset.practice = '0'; document.body.dataset.relax = '0';

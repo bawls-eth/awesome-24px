@@ -4,7 +4,7 @@
 // OFFLINE ONLY: blockDb (route + routeWebSocket) and the Firebase SDK answered with an empty stub; joins via "Play offline". No chat, no writes.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-g01-gift.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ORIGIN = BASE.replace(/\/game\/index\.html.*$/, '');
 const GK = 'pixeltown-gift-v1', SK = 'pixeltown-save-v1';
@@ -12,15 +12,14 @@ const HUB = ORIGIN + '/game/hub/index.html?test=1&gdate=2026-11-21';
 
 async function open(browser, seed, viewport) {
   const ctx = await browser.newContext({ viewport: viewport || { width: 1000, height: 760 } });
-  await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-g01-gift.test.js */' }));
+  const db = await offlineStub(ctx);
   if (seed) await ctx.addInitScript((s) => { if (sessionStorage.seeded) return; sessionStorage.seeded = '1'; Object.keys(s).forEach((k) => localStorage.setItem(k, s[k])); }, seed);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   await page.goto(HUB);
   await page.waitForFunction(() => window.__hub);
-  return { ctx, page, errors };
+  return { ctx, page, errors, db };
 }
 const ls = (page, k) => page.evaluate((x) => localStorage.getItem(x), k);
 async function openCard(page) { await page.click('#gift-btn'); await page.waitForSelector('#gift-card:not([hidden])'); }
@@ -56,6 +55,7 @@ async function openCard(page) { await page.click('#gift-btn'); await page.waitFo
   const sv2 = JSON.parse(await ls(s.page, SK));
   check('after joining the Town offline the gift shards are still in realm.shards', sv2.name === 'ADMINgift' && sv2.realm && sv2.realm.shards === amount, JSON.stringify({ name: sv2.name, realm: sv2.realm }));
   check('no page errors (fresh flow)', s.errors.length === 0, s.errors.join(' | '));
+  check('no database traffic', s.db.attempts() === 0, String(s.db.attempts()));
   await s.ctx.close();
 
   // 4: corrupt town save: byte-identical, gift key not written, button still enabled
@@ -64,6 +64,7 @@ async function openCard(page) { await page.click('#gift-btn'); await page.waitFo
   check('corrupt town save: the raw string is byte-identical, the gift key is not written, Claim still enabled',
     (await ls(s.page, SK)) === 'not json' && (await ls(s.page, GK)) === null && !(await s.page.locator('#gift-claim').isDisabled()));
   check('corrupt town save: the note says "Could not save the gift. Nothing was claimed."', (await s.page.textContent('#gift-note')) === 'Could not save the gift. Nothing was claimed.');
+  check('no database traffic', s.db.attempts() === 0, String(s.db.attempts()));
   await s.ctx.close();
 
   // 5: two fast clicks pay once
@@ -74,6 +75,7 @@ async function openCard(page) { await page.click('#gift-btn'); await page.waitFo
   await s.page.locator('#gift-claim').dblclick({ force: true }).catch(() => {});
   const sv3 = JSON.parse(await ls(s.page, SK)); const gs = JSON.parse(await ls(s.page, GK));
   check('two fast clicks (and a dblclick) pay once: shards + one gift, days = 1', sv3.realm.shards === 100 + amt && gs.days === 1, JSON.stringify([sv3.realm, gs]));
+  check('no database traffic', s.db.attempts() === 0, String(s.db.attempts()));
   await s.ctx.close();
 
   await browser.close();

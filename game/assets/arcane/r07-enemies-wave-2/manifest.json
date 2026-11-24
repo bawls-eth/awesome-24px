@@ -1,0 +1,2454 @@
+{
+  "batch": "r07",
+  "label": "enemies-wave-2",
+  "assets": [
+    {
+      "id": "ghoul_idle_down",
+      "path": "enemies/ghoul/ghoul_idle_down.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_move_down",
+      "path": "enemies/ghoul/ghoul_move_down.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_attack_down",
+      "path": "enemies/ghoul/ghoul_attack_down.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_death_down",
+      "path": "enemies/ghoul/ghoul_death_down.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_idle_up",
+      "path": "enemies/ghoul/ghoul_idle_up.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_move_up",
+      "path": "enemies/ghoul/ghoul_move_up.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_attack_up",
+      "path": "enemies/ghoul/ghoul_attack_up.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_death_up",
+      "path": "enemies/ghoul/ghoul_death_up.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_idle_right",
+      "path": "enemies/ghoul/ghoul_idle_right.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_move_right",
+      "path": "enemies/ghoul/ghoul_move_right.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_attack_right",
+      "path": "enemies/ghoul/ghoul_attack_right.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ghoul_death_right",
+      "path": "enemies/ghoul/ghoul_death_right.png",
+      "category": "enemy",
+      "enemy": "ghoul",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_idle_down",
+      "path": "enemies/harpy/harpy_idle_down.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_move_down",
+      "path": "enemies/harpy/harpy_move_down.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_attack_down",
+      "path": "enemies/harpy/harpy_attack_down.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_death_down",
+      "path": "enemies/harpy/harpy_death_down.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_idle_up",
+      "path": "enemies/harpy/harpy_idle_up.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_move_up",
+      "path": "enemies/harpy/harpy_move_up.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_attack_up",
+      "path": "enemies/harpy/harpy_attack_up.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_death_up",
+      "path": "enemies/harpy/harpy_death_up.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_idle_right",
+      "path": "enemies/harpy/harpy_idle_right.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_move_right",
+      "path": "enemies/harpy/harpy_move_right.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_attack_right",
+      "path": "enemies/harpy/harpy_attack_right.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "harpy_death_right",
+      "path": "enemies/harpy/harpy_death_right.png",
+      "category": "enemy",
+      "enemy": "harpy",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_idle_down",
+      "path": "enemies/minotaur/minotaur_idle_down.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_move_down",
+      "path": "enemies/minotaur/minotaur_move_down.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_attack_down",
+      "path": "enemies/minotaur/minotaur_attack_down.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_death_down",
+      "path": "enemies/minotaur/minotaur_death_down.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_idle_up",
+      "path": "enemies/minotaur/minotaur_idle_up.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_move_up",
+      "path": "enemies/minotaur/minotaur_move_up.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_attack_up",
+      "path": "enemies/minotaur/minotaur_attack_up.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_death_up",
+      "path": "enemies/minotaur/minotaur_death_up.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_idle_right",
+      "path": "enemies/minotaur/minotaur_idle_right.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_move_right",
+      "path": "enemies/minotaur/minotaur_move_right.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_attack_right",
+      "path": "enemies/minotaur/minotaur_attack_right.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "minotaur_death_right",
+      "path": "enemies/minotaur/minotaur_death_right.png",
+      "category": "enemy",
+      "enemy": "minotaur",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_idle_down",
+      "path": "enemies/ogre/ogre_idle_down.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_move_down",
+      "path": "enemies/ogre/ogre_move_down.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_attack_down",
+      "path": "enemies/ogre/ogre_attack_down.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_death_down",
+      "path": "enemies/ogre/ogre_death_down.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_idle_up",
+      "path": "enemies/ogre/ogre_idle_up.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_move_up",
+      "path": "enemies/ogre/ogre_move_up.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_attack_up",
+      "path": "enemies/ogre/ogre_attack_up.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_death_up",
+      "path": "enemies/ogre/ogre_death_up.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_idle_right",
+      "path": "enemies/ogre/ogre_idle_right.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_move_right",
+      "path": "enemies/ogre/ogre_move_right.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_attack_right",
+      "path": "enemies/ogre/ogre_attack_right.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "ogre_death_right",
+      "path": "enemies/ogre/ogre_death_right.png",
+      "category": "enemy",
+      "enemy": "ogre",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_idle_down",
+      "path": "enemies/wraith_knight/wraith_knight_idle_down.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_move_down",
+      "path": "enemies/wraith_knight/wraith_knight_move_down.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_attack_down",
+      "path": "enemies/wraith_knight/wraith_knight_attack_down.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_death_down",
+      "path": "enemies/wraith_knight/wraith_knight_death_down.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_idle_up",
+      "path": "enemies/wraith_knight/wraith_knight_idle_up.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_move_up",
+      "path": "enemies/wraith_knight/wraith_knight_move_up.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_attack_up",
+      "path": "enemies/wraith_knight/wraith_knight_attack_up.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_death_up",
+      "path": "enemies/wraith_knight/wraith_knight_death_up.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_idle_right",
+      "path": "enemies/wraith_knight/wraith_knight_idle_right.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_move_right",
+      "path": "enemies/wraith_knight/wraith_knight_move_right.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_attack_right",
+      "path": "enemies/wraith_knight/wraith_knight_attack_right.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wraith_knight_death_right",
+      "path": "enemies/wraith_knight/wraith_knight_death_right.png",
+      "category": "enemy",
+      "enemy": "wraith_knight",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_idle_down",
+      "path": "enemies/fire_elemental/fire_elemental_idle_down.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_move_down",
+      "path": "enemies/fire_elemental/fire_elemental_move_down.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_attack_down",
+      "path": "enemies/fire_elemental/fire_elemental_attack_down.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_death_down",
+      "path": "enemies/fire_elemental/fire_elemental_death_down.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_idle_up",
+      "path": "enemies/fire_elemental/fire_elemental_idle_up.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_move_up",
+      "path": "enemies/fire_elemental/fire_elemental_move_up.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_attack_up",
+      "path": "enemies/fire_elemental/fire_elemental_attack_up.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_death_up",
+      "path": "enemies/fire_elemental/fire_elemental_death_up.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_idle_right",
+      "path": "enemies/fire_elemental/fire_elemental_idle_right.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_move_right",
+      "path": "enemies/fire_elemental/fire_elemental_move_right.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_attack_right",
+      "path": "enemies/fire_elemental/fire_elemental_attack_right.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fire_elemental_death_right",
+      "path": "enemies/fire_elemental/fire_elemental_death_right.png",
+      "category": "enemy",
+      "enemy": "fire_elemental",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_idle_down",
+      "path": "enemies/water_elemental/water_elemental_idle_down.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_move_down",
+      "path": "enemies/water_elemental/water_elemental_move_down.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_attack_down",
+      "path": "enemies/water_elemental/water_elemental_attack_down.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_death_down",
+      "path": "enemies/water_elemental/water_elemental_death_down.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_idle_up",
+      "path": "enemies/water_elemental/water_elemental_idle_up.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_move_up",
+      "path": "enemies/water_elemental/water_elemental_move_up.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_attack_up",
+      "path": "enemies/water_elemental/water_elemental_attack_up.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_death_up",
+      "path": "enemies/water_elemental/water_elemental_death_up.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_idle_right",
+      "path": "enemies/water_elemental/water_elemental_idle_right.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_move_right",
+      "path": "enemies/water_elemental/water_elemental_move_right.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_attack_right",
+      "path": "enemies/water_elemental/water_elemental_attack_right.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "water_elemental_death_right",
+      "path": "enemies/water_elemental/water_elemental_death_right.png",
+      "category": "enemy",
+      "enemy": "water_elemental",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_idle_down",
+      "path": "enemies/wind_sprite/wind_sprite_idle_down.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_move_down",
+      "path": "enemies/wind_sprite/wind_sprite_move_down.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_attack_down",
+      "path": "enemies/wind_sprite/wind_sprite_attack_down.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_death_down",
+      "path": "enemies/wind_sprite/wind_sprite_death_down.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_idle_up",
+      "path": "enemies/wind_sprite/wind_sprite_idle_up.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_move_up",
+      "path": "enemies/wind_sprite/wind_sprite_move_up.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_attack_up",
+      "path": "enemies/wind_sprite/wind_sprite_attack_up.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_death_up",
+      "path": "enemies/wind_sprite/wind_sprite_death_up.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_idle_right",
+      "path": "enemies/wind_sprite/wind_sprite_idle_right.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_move_right",
+      "path": "enemies/wind_sprite/wind_sprite_move_right.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_attack_right",
+      "path": "enemies/wind_sprite/wind_sprite_attack_right.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "wind_sprite_death_right",
+      "path": "enemies/wind_sprite/wind_sprite_death_right.png",
+      "category": "enemy",
+      "enemy": "wind_sprite",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_idle_down",
+      "path": "enemies/thorn_vine/thorn_vine_idle_down.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_move_down",
+      "path": "enemies/thorn_vine/thorn_vine_move_down.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_attack_down",
+      "path": "enemies/thorn_vine/thorn_vine_attack_down.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_death_down",
+      "path": "enemies/thorn_vine/thorn_vine_death_down.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_idle_up",
+      "path": "enemies/thorn_vine/thorn_vine_idle_up.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_move_up",
+      "path": "enemies/thorn_vine/thorn_vine_move_up.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_attack_up",
+      "path": "enemies/thorn_vine/thorn_vine_attack_up.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_death_up",
+      "path": "enemies/thorn_vine/thorn_vine_death_up.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_idle_right",
+      "path": "enemies/thorn_vine/thorn_vine_idle_right.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_move_right",
+      "path": "enemies/thorn_vine/thorn_vine_move_right.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_attack_right",
+      "path": "enemies/thorn_vine/thorn_vine_attack_right.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "thorn_vine_death_right",
+      "path": "enemies/thorn_vine/thorn_vine_death_right.png",
+      "category": "enemy",
+      "enemy": "thorn_vine",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_idle_down",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_idle_down.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_move_down",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_move_down.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_attack_down",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_attack_down.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_death_down",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_death_down.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_idle_up",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_idle_up.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_move_up",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_move_up.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_attack_up",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_attack_up.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_death_up",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_death_up.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_idle_right",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_idle_right.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_move_right",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_move_right.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_attack_right",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_attack_right.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "giant_spider_queen_death_right",
+      "path": "enemies/giant_spider_queen/giant_spider_queen_death_right.png",
+      "category": "enemy",
+      "enemy": "giant_spider_queen",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_idle_down",
+      "path": "enemies/golem_lava/golem_lava_idle_down.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_move_down",
+      "path": "enemies/golem_lava/golem_lava_move_down.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_attack_down",
+      "path": "enemies/golem_lava/golem_lava_attack_down.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_death_down",
+      "path": "enemies/golem_lava/golem_lava_death_down.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_idle_up",
+      "path": "enemies/golem_lava/golem_lava_idle_up.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_move_up",
+      "path": "enemies/golem_lava/golem_lava_move_up.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_attack_up",
+      "path": "enemies/golem_lava/golem_lava_attack_up.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_death_up",
+      "path": "enemies/golem_lava/golem_lava_death_up.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_idle_right",
+      "path": "enemies/golem_lava/golem_lava_idle_right.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_move_right",
+      "path": "enemies/golem_lava/golem_lava_move_right.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_attack_right",
+      "path": "enemies/golem_lava/golem_lava_attack_right.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "golem_lava_death_right",
+      "path": "enemies/golem_lava/golem_lava_death_right.png",
+      "category": "enemy",
+      "enemy": "golem_lava",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_idle_down",
+      "path": "enemies/crab_giant/crab_giant_idle_down.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_move_down",
+      "path": "enemies/crab_giant/crab_giant_move_down.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_attack_down",
+      "path": "enemies/crab_giant/crab_giant_attack_down.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_death_down",
+      "path": "enemies/crab_giant/crab_giant_death_down.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_idle_up",
+      "path": "enemies/crab_giant/crab_giant_idle_up.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_move_up",
+      "path": "enemies/crab_giant/crab_giant_move_up.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_attack_up",
+      "path": "enemies/crab_giant/crab_giant_attack_up.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_death_up",
+      "path": "enemies/crab_giant/crab_giant_death_up.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_idle_right",
+      "path": "enemies/crab_giant/crab_giant_idle_right.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_move_right",
+      "path": "enemies/crab_giant/crab_giant_move_right.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_attack_right",
+      "path": "enemies/crab_giant/crab_giant_attack_right.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "crab_giant_death_right",
+      "path": "enemies/crab_giant/crab_giant_death_right.png",
+      "category": "enemy",
+      "enemy": "crab_giant",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    }
+  ]
+}

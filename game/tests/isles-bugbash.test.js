@@ -77,6 +77,12 @@ const KO = (I) => {
     '1c: right after a feed the button says "Chewing Ns" with a fill bar and an honest label', { f1, chewing });
   const early = await ev(d.page, (I) => { const r = I.feed(); return { r, toast: document.getElementById('toast').textContent }; });
   ck(!early.r.ok && /still chewing: ready in \d+ s\./.test(early.early || early.toast), '1d: an early tap says exactly how long is left (nothing lost)', early);
+  // round 4 b05-08: the toast is not one tick behind the button: 1.3 s later both still name the same number of seconds
+  await ev(d.page, (I, uid) => { I.step(0, 0, 1.3); I.nextTo(uid, -30); }, k.uid);
+  await hudTick(d.page);
+  const sync = await d.page.evaluate(() => ({ btn: document.getElementById('btn-feed').textContent, toast: document.getElementById('toast').textContent }));
+  const bn = (/Chewing (\d+)s/.exec(sync.btn) || [])[1], tn = (/ready in (\d+) s/.exec(sync.toast) || [])[1];
+  ck(!!bn && bn === tn, '1d2 (b05-08): while the early-tap toast shows, its "ready in N s" matches the button "Chewing Ns"', sync);
   await ev(d.page, (I, uid) => { I.step(0, 0, 6.5); I.nextTo(uid, -30); }, k.uid);
   await hudTick(d.page);
   const after = await ev(d.page, (I) => ({ lbl: I.feedLabel(), sounds: I.sounds() }));

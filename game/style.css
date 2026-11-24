@@ -131,6 +131,11 @@ html, body {
 }
 
 #join-overlay.hidden { display: none; }
+/* b08-r2 (round 4): the join card has the compass Menu top-left like every page, and a disabled Join says why */
+.join-top { display: flex; justify-content: flex-start; margin: -12px -16px 4px; }
+.join-menu-btn { min-width: 44px; min-height: 44px; padding: 6px 12px; border-radius: 12px; border: 2px solid var(--ac-border); background: var(--ac-panel); color: var(--ac-text); font: 700 14px system-ui, sans-serif; cursor: pointer; }
+.join-hint { margin: 6px 0 0; font-size: 13px; color: var(--ac-text); text-align: center; }
+.join-hint.hidden { display: none; }
 
 #join-decor {
   position: absolute;
@@ -2276,17 +2281,17 @@ body.touch-device .key-hint { display: none; }
 }
 
 @media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
-  /* 28px close buttons were too small to tap reliably: 40px hit area. */
+  /* 28px close buttons were too small to tap reliably: 44px hit area (R4 D4: was 40, WCAG 2.5.5 / Apple HIG want 44). */
   [id$="-overlay"] button[id$="close-btn"] {
-    width: 40px !important;
-    height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
     top: 6px !important;
     right: 6px !important;
     font-size: 16px;
   }
   /* ...and keep the (now bigger) close button off the card title. */
   [id$="-overlay"] [class$="-card"] > h1,
-  [id$="-overlay"] [class$="-card"] > h2 { padding-right: 44px; }
+  [id$="-overlay"] [class$="-card"] > h2 { padding-right: 48px; }
   /* The "What's new" banner grew to ~450px tall at 360px wide and covered the
      chat bar and HUD: cap it and scroll inside. */
   #whats-new-banner {
@@ -2968,4 +2973,87 @@ body:has(#emote-popup:not(.hidden)) #quick-chat-row { visibility: hidden; }
 @media (max-width: 900px), (pointer: coarse) {
   #settings-section button, #settings-section select, #settings-section a { min-height: 44px; box-sizing: border-box; }
   #settings-section #town-settings-btn { min-width: 44px; width: 100%; }
+}
+
+/* O-01: arcade door "Coming soon" card (44 px touch targets, safe-area aware) */
+#door-soon-overlay { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: var(--ac-scrim); padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); box-sizing: border-box; }
+#door-soon-overlay.hidden { display: none; }
+#door-soon-overlay .join-card { position: relative; max-height: 90vh; overflow-y: auto; }
+#door-soon-close-btn { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); cursor: pointer; }
+#door-soon-ok-btn { min-height: 44px; min-width: 120px; }
+
+/* R4 D4 (b07-r2-04): the hero picker's single slot is a "Surprise me" chip, not a one-option tab */
+.species-tab.hero-random-tab { flex: 0 0 auto; min-height: 44px; padding: 6px 14px; text-transform: none; color: var(--ac-text); }
+
+/* R4 D4 (b15-06): with the "Home" pill shown the join card starts below it (it covered the island icon at 320 px), and the
+   pill itself is a 44 px target. The hero grid wraps instead of spilling past the card at 320 / 260 px (5 x 48 px + gaps
+   did not fit); buttons stay >= 44 px. */
+#back-to-map-pill { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+body.has-back-pill #join-overlay { padding-top: calc(56px + env(safe-area-inset-top, 0px)); box-sizing: border-box; }
+body.has-back-pill #join-overlay > .join-card { max-height: calc(100vh - 64px - env(safe-area-inset-top, 0px)); max-height: calc(100dvh - 64px - env(safe-area-inset-top, 0px)); }
+#avatar-grid, #outfit-avatar-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 48px)); justify-content: center; }
+@media (max-width: 360px) {
+  #join-overlay .join-card, #outfit-overlay .join-card { padding-left: 14px; padding-right: 14px; }
+  #avatar-grid, #outfit-avatar-grid { gap: 4px; }
+  .avatar-choice { width: 100%; min-width: 44px; height: auto; aspect-ratio: 1 / 1; }
+}
+
+/* R4 D4 (b15-05): landscape phones (short, touch). The quick-chat row floated over the middle of the world at y~108 and
+   "Hold to talk" sat on the Shop / Able Sisters labels. Both now share the bottom strip between the joystick (left) and the
+   action buttons (right): quick chat on the left of the strip, Hold to talk on its right. */
+@media (max-height: 500px) and (pointer: coarse) {
+  body.touch-device #chat-panel {
+    top: auto;
+    left: calc(150px + env(safe-area-inset-left, 0px));
+    right: calc(270px + env(safe-area-inset-right, 0px));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
+  }
+  body.touch-device #quick-chat-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  body.touch-device #walkie-panel { left: auto; right: calc(146px + env(safe-area-inset-right, 0px)); transform: none; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* cyc0-ui: Text size (hudScale) on phones. The bag bar and the people panel are zoomed by --hud-scale but kept their
+   46vw caps, so at 150% (and at 200% browser zoom) the bag bar spread over Where to? / the Menu. Cap the zoomed width so
+   both still fit side by side, and scale the action buttons (A / C / Emotes / Tools) with the rest of the HUD. */
+@media (max-width: 720px) {
+  body.a11y-hud-scaled #inventory-panel, body.a11y-hud-scaled.touch-device #player-list-panel { max-width: calc(46vw / var(--hud-scale)); }
+}
+body.a11y-hud-scaled #action-buttons { zoom: var(--hud-scale); }
+/* cyc0-ui: 200% browser zoom on a phone (<= 300 css px wide). Browser zoom already doubles everything, so the Text size zoom
+   on top made the bag bar cover Where to? (the Town Menu) and the action buttons ride over the stick. Here the people panel
+   with Where to? spans the top, the bag bar sits under it at full width, and no second zoom is applied. */
+@media (max-width: 300px) {
+  body.touch-device #player-list-panel, body.a11y-hud-scaled.touch-device #player-list-panel { zoom: 1; left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); max-width: none; }
+  #inventory-panel, body.a11y-hud-scaled #inventory-panel { zoom: 1; left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); max-width: none; top: calc(124px + env(safe-area-inset-top, 0px)); }
+  body.a11y-hud-scaled #action-buttons { zoom: 1; }
+}
+
+/* Cycle 1 U-01 (b08-r2-07): offline town (Play offline) - quick chat and Hold to talk only answer "Chat needs the online town",
+   so they leave the HUD. The chat log stays (system lines) and the input says why. Test-only ?hud=online keeps them (main.js enterTown). */
+body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: none !important; }
+
+/* Cycle 1 U-02: phone bag bar = ONE row (the bag + the 3 most recently changed counts, most recent first); the bag is a
+   44 px button that expands every count (bag-open) and folds them again. main.js setupBagBar sets the classes. */
+@media (max-width: 720px) {
+  #inventory-panel.bag-compact { flex-wrap: nowrap; }
+  #inventory-panel.bag-compact.bag-open { flex-wrap: wrap; }
+  #inventory-panel.bag-compact #bag-icon { order: 0; min-width: 44px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px 0 0; cursor: pointer; touch-action: manipulation; }
+  #inventory-panel.bag-compact #bag-icon::after { content: "\25B8"; font-size: 11px; margin-left: 2px; }
+  #inventory-panel.bag-compact.bag-open #bag-icon::after { content: "\25BE"; }
+  #inventory-panel.bag-compact #bag-icon:focus-visible { outline: 3px solid var(--tb-ink, #222); outline-offset: 1px; }
+  #inventory-panel.bag-compact:not(.bag-open) > span:not(#bag-icon):not(.bag-recent) { display: none; }
+  #inventory-panel.bag-compact:not(.bag-open) > span.bag-recent { order: var(--bag-order, 9); white-space: nowrap; }
+}
+/* Cycle 1 U-03: 160x284 (a 320x568 phone at 200% zoom). Under the people panel the bag bar sat on the stick and the action
+   buttons (128 px stick from y 144). Here the folded bag is just the 44 px bag button in the top-right corner beside the
+   people panel (which gives up 52 px of width); tapping it drops every count below the panel (the player asked for it). */
+@media (max-width: 300px) and (max-height: 420px) {
+  body.touch-device #player-list-panel.collapsed, body.a11y-hud-scaled.touch-device #player-list-panel.collapsed { right: calc(66px + env(safe-area-inset-right, 0px)); }
+  #inventory-panel.bag-compact:not(.bag-open), body.a11y-hud-scaled #inventory-panel.bag-compact:not(.bag-open) { top: calc(8px + env(safe-area-inset-top, 0px)); left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); padding: 0 2px; }
+  #inventory-panel.bag-compact:not(.bag-open) > span:not(#bag-icon) { display: none; }
+  #inventory-panel.bag-compact:not(.bag-open) #bag-icon { padding: 0; border-right: 0; }
+  #inventory-panel.bag-compact:not(.bag-open) #bag-icon::after { content: none; }
+  #inventory-panel.bag-compact.bag-open, body.a11y-hud-scaled #inventory-panel.bag-compact.bag-open { z-index: 12; top: calc(140px + env(safe-area-inset-top, 0px)); }
+  /* the narrower people chip / Where to? wrap their words instead of clipping them */
+  body.touch-device #player-list-panel.collapsed #panel-toggle, body.touch-device #player-list-panel.collapsed #where-to-btn { white-space: normal; overflow-wrap: normal; height: auto; min-height: 44px; line-height: 1.15; padding-top: 3px; padding-bottom: 3px; }
 }

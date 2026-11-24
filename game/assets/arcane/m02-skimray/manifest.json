@@ -1,0 +1,486 @@
+{
+  "batch": "m02",
+  "label": "skimray",
+  "assets": [
+    {
+      "id": "skimray_idle_down",
+      "path": "creatures/skimray/skimray_idle_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_move_down",
+      "path": "creatures/skimray/skimray_move_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_idle_up",
+      "path": "creatures/skimray/skimray_idle_up.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_move_up",
+      "path": "creatures/skimray/skimray_move_up.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_idle_right",
+      "path": "creatures/skimray/skimray_idle_right.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "skimray_move_right",
+      "path": "creatures/skimray/skimray_move_right.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 180
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 192
+        },
+        {
+          "x": 184,
+          "y": 196
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_idle_down",
+      "path": "creatures/skimray/skimray_saddle_idle_down.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_move_down",
+      "path": "creatures/skimray/skimray_saddle_move_down.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_idle_up",
+      "path": "creatures/skimray/skimray_saddle_idle_up.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_move_up",
+      "path": "creatures/skimray/skimray_saddle_move_up.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_idle_right",
+      "path": "creatures/skimray/skimray_saddle_idle_right.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_move_right",
+      "path": "creatures/skimray/skimray_saddle_move_right.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 180
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 192
+        },
+        {
+          "x": 184,
+          "y": 196
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    }
+  ]
+}

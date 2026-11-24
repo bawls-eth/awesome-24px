@@ -63,6 +63,12 @@ html[data-dd-world="creative"] .bar h1 { color:#9ff0d8; }
 /* Dive runs: hidden touch buttons stay hidden (.btn display beat [hidden]), combo meter, ore pops, dive summary */
 .tb[hidden], .btn[hidden] { display:none; }
 #hud-dive { color:#bfe6ff; }
+#hud-bank { color:#9fb3c2; } /* same size as the HUD (>= 12 px at every text size) */
+#hud-bank[data-armed="1"] { color:#ffd36a; }
+#hud-bank:empty { display:none; }
+/* cyc0-S: on a phone the HUD stays ~6 lines: while a dive is under way the goal line folds away (it is in the Goals panel and
+   comes back at the surface), so the dive + bank lines take its place instead of growing the box */
+@media (max-width: 480px) { #hud[data-diving="1"] #hud-goal, #hud:not([data-diving="1"]) #hud-bank { display:none; } }
 #combo { position:absolute; left:50%; top:calc(44% + 48px); transform:translateX(-50%); padding:2px 12px; border-radius:12px; background:rgba(7,13,18,.7); color:var(--acc); font-weight:800; font-size:calc(18px * var(--ui-scale,1)); pointer-events:none; }
 #combo:empty { display:none; }
 #combo.hot { color:#ff9a2e; }

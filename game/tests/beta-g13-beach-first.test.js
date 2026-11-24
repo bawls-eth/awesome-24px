@@ -3,14 +3,13 @@
 // "Play offline", ADMIN* name; no chat, no Firebase writes.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-g13-beach-first.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
-  await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-g13-beach-first.test.js */' }));
+  const db = await offlineStub(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -70,6 +69,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
   });
   check('4. while fishing ("Reel it in!") the "E: log" label is hidden; idle it shows', r4.st !== 'idle' && r4.fishingVis === false && r4.idleVis === true, JSON.stringify(r4));
   check('no page errors', errors.length === 0, errors.join(' | '));
+  check('no database traffic', db.attempts() === 0, String(db.attempts()));
   await ctx.close(); await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

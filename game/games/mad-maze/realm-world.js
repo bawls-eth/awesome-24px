@@ -155,6 +155,34 @@
     const WW = world.w * TILE; const WH = world.h * TILE;
     const ww = world.w; const wh = world.h;
     const terrain = world.terrain; const solid = world.solid;
+    // R4-D2 (b12-r2-04, b04-03): the DRAWN terrain. The generator thresholds a detail noise, which leaves 1-tile holes inside snow (the
+    // "snow frames with square holes") and plus / cross shaped lava specks. A cardinal-majority filter, on walkable land
+    // tiles only (never water, roads or solid tiles, so the drawn ground always matches collision): a tile with 3-4 neighbours of one other
+    // terrain, or with no same-terrain neighbour, draws as that neighbour terrain (repeated until stable, at most 4 passes). Gameplay terrain (speed, zone, spawns) is untouched.
+    // ?smooth=0 draws the raw generator terrain.
+    const SMOOTH = !/[?&]smooth=0(&|$)/.test(qs0);
+    const drawT = new Uint8Array(terrain);
+    const smoothStat = { changed: 0 };
+    if (SMOOTH) {
+      const keep = (t) => t === T.deep_water || t === T.shallow_water || t === T.dirt_road;
+      for (let pass = 0, moved = 1; pass < 4 && moved; pass++) { // until stable (at most 4 passes)
+        const src = new Uint8Array(drawT); moved = 0;
+        for (let y = 1; y < wh - 1; y++) for (let x = 1; x < ww - 1; x++) {
+          const i = y * ww + x; const t = src[i];
+          if (solid[i] || keep(t)) continue;
+          const nb = [src[i - ww], src[i + 1], src[i + ww], src[i - 1]];
+          let same = 0; for (let k = 0; k < 4; k++) if (nb[k] === t) same++;
+          if (same >= 2) continue;
+          let best = -1, bestN = 0;
+          for (let k = 0; k < 4; k++) {
+            const o = nb[k]; if (o === t || keep(o)) continue;
+            let n = 0; for (let j = 0; j < 4; j++) if (nb[j] === o) n++;
+            if (n > bestN) { bestN = n; best = o; }
+          }
+          if (best >= 0 && (bestN >= 3 || (same === 0 && bestN >= 2))) { drawT[i] = best; smoothStat.changed++; moved = 1; }
+        }
+      }
+    }
 
     // ---------- collision: every solid tile blocks walking; deep water lets bolts fly over it ----------
     let slowUntil = 0; // zone gradient: a brief slow on the first crossing into a zone above the hero's level (arena clock, s)
@@ -179,7 +207,11 @@
     world.structures.forEach((s) => { if (s.kind !== 'event_site') return; const k = Math.floor(s.y / CH) * ccols + Math.floor(s.x / CH); (propsBy[k] = propsBy[k] || []).push({ x: s.x, y: s.y, kind: 'event_ring' }); });
 
     // ---------- optional terrain art: tile_<terrain>_a..d from any registered batch (none delivered yet: code fallback) ----------
-    const tileArt = Object.create(null); // terrain id -> fixed a-d slots
+    const tileArt = Object.create(null); // terrain id -> fixed a-h slots
+    // R4-D2: batches load in parallel, so a remake must win BY RANK, not by load order: r01 (Codex R01 realm terrain remake, 8 variants a-h,
+    // organic transitions) beats the older b10t / b11a / b11b art for the same id; any terrain or blend r01 lacks keeps its old art.
+    const tileRank = new Map(); // image bank slot -> rank of the batch that filled it
+    const TILE_RANK = (folder) => (/^r01-/.test(folder) && !/[?&]r01=0(&|$)/.test(qs0) ? 2 : /^r01-/.test(folder) ? -1 : 1);
     const edgeArt = Object.create(null); // terrain id -> blend id -> mask slots
     let artTiles = 0;
     function loadTileArt(root) {
@@ -191,10 +223,11 @@
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
           if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id)) return null;
+          const rank = TILE_RANK(id); if (rank < 0) return null;
           return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
-              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d]|edge_\d{2})$/.exec(a.id) : null;
+              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-h]|edge_\d{2})$/.exec(a.id) : null;
               if (!mt || !Object.prototype.hasOwnProperty.call(T, mt[1]) || !okPath(a.path)) return null;
               const tid = T[mt[1]];
               const variant = mt[2].length === 1;
@@ -207,8 +240,11 @@
                   if (img.naturalWidth === TILE && img.naturalHeight === TILE) {
                     const banks = variant ? tileArt : (edgeArt[tid] ||= Object.create(null));
                     const bank = (banks[variant ? tid : T[a.blend]] ||= []);
+                    const rk = tileRank.get(bank) || []; if (!variant) tileRank.set(bank, rk);
+                    if (variant) { const vr = tileRank.get(banks) || {}; tileRank.set(banks, vr); const cur = vr[tid] || 0; if (rank < cur) { res(); return; } if (rank > cur) { if (bank.length) { artTiles -= bank.filter(Boolean).length; bank.length = 0; } vr[tid] = rank; } }
+                    else if ((rk[slot] || 0) > rank) { res(); return; }
                     if (!bank[slot]) artTiles++;
-                    bank[slot] = img;
+                    bank[slot] = img; if (!variant) rk[slot] = rank;
                   }
                   res();
                 };
@@ -225,7 +261,7 @@
       const blends = edgeArt[t];
       if (!blends || x === 0 || y === 0 || x === ww - 1 || y === wh - 1) return null;
       const i = y * ww + x;
-      const neighbours = [terrain[i - ww], terrain[i + 1], terrain[i + ww], terrain[i - 1]];
+      const neighbours = [drawT[i - ww], drawT[i + 1], drawT[i + ww], drawT[i - 1]];
       let mask = 0;
       let blend = null;
       for (let dir = 0; dir < neighbours.length; dir++) {
@@ -314,7 +350,11 @@
     const GOD_LOOK = TILE_DETAIL && !/[?&]godlook=0(&|$)/.test(qs0); // W-03: ?godlook=0 = the old grey ash
     const edgeStat = { drawn: 0, skipped: 0 }, shadeStat = { dithered: 0, ash: 0 }; // bake counters (test hooks)
     // W-03 (b04-01): a patch side that borders a different shade class fades out over 8 px as a 2-colour checker (baked), not a hard seam.
-    const shadeOf = (wx, wy) => { const v = (h2(wx >> 2, wy >> 2, 501) + h2((wx + 2) >> 2, (wy + 2) >> 2, 502)) * 0.5; return v < 0.32 ? -1 : v > 0.72 ? 1 : 0; };
+    // R4-D2 (b04-01): the shade classes came from two offset 4x4-tile grids, so every patch was an axis-aligned rectangle (the quilt look).
+    // Now a smooth value noise (bilinear, smoothstep, 5-tile cells, two octaves): patches follow organic tile-step outlines instead.
+    const vnoise = (x, y, s) => { const xi = Math.floor(x), yi = Math.floor(y); let fx = x - xi, fy = y - yi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+      const a = h2(xi, yi, s), b = h2(xi + 1, yi, s), c = h2(xi, yi + 1, s), d = h2(xi + 1, yi + 1, s); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
+    const shadeOf = (wx, wy) => { const v = vnoise(wx / 5.3, wy / 5.3, 501) * 0.7 + vnoise(wx / 2.1, wy / 2.1, 502) * 0.3; return v < 0.33 ? -1 : v > 0.68 ? 1 : 0; };
     function shadePatch(g, wx, wy, px, py, col) {
       const sc = shadeOf(wx, wy); const n = shadeOf(wx, wy - 1) === sc, s = shadeOf(wx, wy + 1) === sc, w = shadeOf(wx - 1, wy) === sc, e = shadeOf(wx + 1, wy) === sc;
       const x0 = w ? 0 : 8, x1 = e ? TILE : TILE - 8, y0 = n ? 0 : 8, y1 = s ? TILE : TILE - 8;
@@ -338,7 +378,59 @@
         rect(g, r < 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.10)', sx, sy, r < 0.25 ? 3 : 2, 2);
       }
     }
+    // Cycle 1 art (G): open grass fields on a phone read calm (one flat green per screen). A seeded, sparse pass adds tiny flowers
+    // (a 3x3 plus of one petal colour round a yellow / white centre), pebbles (2x2 grey with a 1 px light and dark pixel) and darker
+    // grass tufts on grass / tall grass / meadow / dark grass ground. Square pixel clusters only (bullets stay the only bright round
+    // shapes), never on solid or water tiles, baked once per chunk. ?fielddetail=0 = off.
+    const FIELD_DETAIL = TILE_DETAIL && !/[?&]fielddetail=0(&|$)/.test(qs0);
+    const fieldStat = { flowers: 0, pebbles: 0, tufts: 0, ms: 0, chunks: 0, maxMs: 0, cur: 0, chunkMs: 0, chunkMaxMs: 0 };
+    const FIELD_PETALS = ['#f4f1e6', '#ffd23f', '#e86a92', '#9fc6ff', '#c9a7ff'];
+    function fieldDetail(g, t, wx, wy, px, py) {
+      const kind = t === T.flower_meadow ? 2 : t === T.dark_grass ? 1 : 0; // meadow: more flowers; dark grass: no flowers, more tufts
+      const r = h2(wx, wy, 701);
+      const fx = px + 3 + Math.floor(h2(wx, wy, 702) * (TILE - 8)), fy = py + 3 + Math.floor(h2(wx, wy, 703) * (TILE - 8));
+      if (kind !== 1 && r < (kind === 2 ? 0.34 : 0.1)) {
+        const pc = FIELD_PETALS[Math.floor(h2(wx, wy, 704) * FIELD_PETALS.length)];
+        rect(g, 'rgba(0,0,0,0.18)', fx, fy + 2, 3, 1); // tiny ground shadow
+        rect(g, pc, fx + 1, fy - 1, 1, 3); rect(g, pc, fx, fy, 3, 1);
+        rect(g, pc === '#ffd23f' ? '#f4f1e6' : '#ffd23f', fx + 1, fy, 1, 1);
+        fieldStat.flowers++;
+      } else if (r < (kind === 2 ? 0.4 : 0.17)) {
+        rect(g, '#7d8580', fx, fy, 2, 2); rect(g, '#b7bdb4', fx, fy, 1, 1); rect(g, '#4b524f', fx + 1, fy + 1, 1, 1);
+        fieldStat.pebbles++;
+      } else if (r < (kind === 1 ? 0.4 : 0.3)) {
+        const c = 'rgba(16,40,20,0.34)'; rect(g, c, fx, fy, 1, 3); rect(g, c, fx + 2, fy - 1, 1, 4); rect(g, c, fx + 4, fy + 1, 1, 2);
+        fieldStat.tufts++;
+      }
+    }
+    // R4-D2 (b12-r2-04 "snow frames with square holes"): the b10t / b11 edge tiles draw a notch of the blend terrain in every corner whose
+    // two cardinal sides are open, because the 4-bit mask cannot see diagonals. Inside a 2x2 (or larger) patch the four notches meet and
+    // read as a square hole. When the diagonal neighbour is the same terrain too, the notch is painted back with the terrain's own
+    // variant art (or its base colour), so only real concave corners keep the notch.
+    const CORNER = 10;
+    const cornerStat = { filled: 0 };
+    function fillInnerCorners(g, wx, wy, t, px, py, art, pal) {
+      if (wx < 1 || wy < 1 || wx >= ww - 1 || wy >= wh - 1) return;
+      const at = (x, y) => drawT[y * ww + x] === t;
+      const src = art && art.length ? art[Math.floor(h2(wx, wy, 91) * art.length)] : null;
+      const C = [[0, -1, 1, 0, 1, -1, TILE - CORNER, 0], [0, 1, 1, 0, 1, 1, TILE - CORNER, TILE - CORNER], [0, 1, -1, 0, -1, 1, 0, TILE - CORNER], [0, -1, -1, 0, -1, -1, 0, 0]];
+      for (let k = 0; k < 4; k++) {
+        const c = C[k];
+        if (!at(wx + c[0], wy + c[1]) || !at(wx + c[2], wy + c[3]) || !at(wx + c[4], wy + c[5])) continue;
+        if (src) g.drawImage(src, c[6], c[7], CORNER, CORNER, px + c[6], py + c[7], CORNER, CORNER);
+        else rect(g, pal[0], px + c[6], py + c[7], CORNER, CORNER);
+        cornerStat.filled++;
+      }
+    }
     function buildChunk(cx, cy) {
+      // fieldStat: ms / maxMs = the field pass alone (its added bake cost); chunkMs / chunkMaxMs = the whole chunk bake, for scale
+      const ft0 = performance.now(); fieldStat.cur = 0;
+      const out = buildChunk0(cx, cy);
+      const all = performance.now() - ft0;
+      if (fieldStat.cur > 0) { fieldStat.chunks++; fieldStat.ms += fieldStat.cur; fieldStat.maxMs = Math.max(fieldStat.maxMs, fieldStat.cur); fieldStat.chunkMs += all; fieldStat.chunkMaxMs = Math.max(fieldStat.chunkMaxMs, all); }
+      return out;
+    }
+    function buildChunk0(cx, cy) {
       chunkBuilds++;
       const cv = document.createElement('canvas'); cv.width = CPX; cv.height = CPX;
       const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
@@ -347,17 +439,18 @@
       for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
         const wx = x0 + tx; const wy = y0 + ty; const px = tx * TILE; const py = ty * TILE;
         if (wx >= ww || wy >= wh) { rect(g, PAL.deep_water[0], px, py, TILE, TILE); continue; }
-        const i = wy * ww + wx; const t = terrain[i]; const pal = PAL[TN[t]] || PAL.grass;
+        const i = wy * ww + wx; const t = drawT[i]; const pal = PAL[TN[t]] || PAL.grass;
         const art = variants[t];
         if (t === T.deep_water || t === T.shallow_water) water = true;
         const transition = transitionAt(wx, wy, t);
-        if (transition) g.drawImage(transition, px, py, TILE, TILE);
+        if (transition) { g.drawImage(transition, px, py, TILE, TILE); fillInnerCorners(g, wx, wy, t, px, py, art, pal); }
         else if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
         else {
           rect(g, pal[0], px, py, TILE, TILE);
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
         }
         if (TILE_DETAIL && t !== T.deep_water && t !== T.shallow_water && !solid[i]) tileDetail(g, wx, wy, px, py);
+        if (FIELD_DETAIL && !solid[i] && (t === T.grass || t === T.tall_grass || t === T.flower_meadow || t === T.dark_grass)) { const f0 = performance.now(); fieldDetail(g, t, wx, wy, px, py); fieldStat.cur += performance.now() - f0; }
         if (GOD_LOOK && t === T.godland_ash) { // W-03 (b04-02): ash gets a dark ember wash and sparse ember specks (palette lava_rock accent)
           rect(g, 'rgba(36,8,18,0.42)', px, py, TILE, TILE);
           if (h2(wx, wy, 601) < 0.22) { const ex = px + 3 + Math.floor(h2(wx, wy, 602) * (TILE - 8)), ey = py + 3 + Math.floor(h2(wx, wy, 603) * (TILE - 8)); rect(g, '#ff7a2a', ex, ey, 2, 2); rect(g, 'rgba(255,122,42,0.35)', ex - 1, ey + 2, 4, 1); }
@@ -369,7 +462,7 @@
         // W-03 (b12-03): one edge per border. A neighbour that draws a transition tile (b10t edge art) already paints this boundary, so the
         // 2 px line is skipped there (it used to run parallel to the blend, one tile away: the double outline).
         const e = pal[3];
-        const edgeTo = (nx, ny) => { const nt = terrain[ny * ww + nx]; if (nt === t) return false; if (transitionAt(nx, ny, nt)) { edgeStat.skipped++; return false; } edgeStat.drawn++; return true; };
+        const edgeTo = (nx, ny) => { const nt = drawT[ny * ww + nx]; if (nt === t) return false; if (transitionAt(nx, ny, nt)) { edgeStat.skipped++; return false; } edgeStat.drawn++; return true; };
         if (wx + 1 < ww && edgeTo(wx + 1, wy)) rect(g, e, px + TILE - 2, py, 2, TILE);
         if (wx > 0 && edgeTo(wx - 1, wy)) rect(g, e, px, py, 2, TILE);
         if (wy + 1 < wh && edgeTo(wx, wy + 1)) rect(g, e, px, py + TILE - 2, TILE, 2);
@@ -383,7 +476,7 @@
       }
       if (artOn) {
         const al = chunkProps(cx, cy);
-        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id] || (al[k].base ? wArt[al[k].base] : null); if (a && al[k].id !== al[k].base && B26_SET[al[k].id] && wArt[al[k].id]) artDraws.b26++; if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
+        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id] || (al[k].base ? wArt[al[k].base] : null); if (a && al[k].id !== al[k].base && B26_SET[al[k].id] && wArt[al[k].id]) artDraws.b26++; if (a && TREE_FIX && TREE_FIX_IDS[al[k].id] && !al[k].dim) { const fa = treeFixOf(al[k].id, a); if (fa !== a) { a = fa; treeFixStat.draws++; } } if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
       }
       let wcv = null;
       if (water) { // a sparse highlight layer, faded / nudged per frame for a cheap shimmer
@@ -391,7 +484,7 @@
         const wg = wcv.getContext('2d');
         for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
           const wx = x0 + tx; const wy = y0 + ty; if (wx >= ww || wy >= wh) continue;
-          const t = terrain[wy * ww + wx]; if (t !== T.deep_water && t !== T.shallow_water) continue;
+          const t = drawT[wy * ww + wx]; if (t !== T.deep_water && t !== T.shallow_water) continue;
           for (let k = 0; k < 2; k++) rect(wg, 'rgba(220,240,255,0.55)', tx * TILE + Math.floor(h2(wx, wy, 31 + k) * 22), ty * TILE + Math.floor(h2(wx, wy, 41 + k) * 28), 8, 2);
         }
       }
@@ -442,6 +535,111 @@
       if (!B26_ON || !B26_CODE[p.kind] || p.x < 0 || p.y < 0 || p.x >= ww || p.y >= wh || GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] !== 1) return null;
       return wArt[b26Pick(B26_CODE[p.kind], p.x, p.y)] || null;
     }
+    // Cycle 1 art (G): the R03 prop_tree_medium / prop_tree_small canopies read as one round ball on a stick at 1x (and the medium one
+    // floats 4 px above its trunk). At bake time, once per strip (cached), the canopy rows are re-drawn from an original clump map:
+    // 4-6 overlapping leaf clumps with dark seams, lit top-left, a scalloped outline, the medium canopy reaching down to its trunk.
+    // Colours come from the strip itself (outline = its darkest px, then dark / mid / light leaf by brightness), so the palette stays
+    // R03's. Only rows above the trunk are replaced; a strip of another size is left alone. ?treefix=0 = the R03 pixels.
+    // Map letters: A outline, B light leaf, C dark leaf, D mid leaf, '.' transparent.
+    const TREE_FIX = !/[?&]treefix=0(&|$)/.test(qs0);
+    const TREE_MAPS = {
+      prop_tree_medium: { w: 32, h: 64, rows: [
+        '................................',
+        '................................',
+        '................................',
+        '..........AAAAA...AAAAAA........',
+        '.........ABBBDDA.ABBBDDDA.......',
+        '........ABBBDDDDABBBDDDDDA......',
+        '.......ABBBDDDDDBBBDDDDDDDA.....',
+        '......ABBBDDDDDDBBDDDDDDDDA.....',
+        '......ABBDDDDDDCCDDDDDDDDCCA....',
+        '......ABDDDDDDBBBDDDDDDDCCCA....',
+        '......ADDDDDBBBBDDDDDDDCCCA.....',
+        '.....AADCDDBBBBDDDDDDDCCCCDA....',
+        '....ABBBCDBBBBDDDDDDDDDCCDDDA...',
+        '...ABBBBDCBBBDDDDDDDDDDCDDDDDA..',
+        '..ABBBBDDDCBDDDDDDDDDDCDDDDDDDA.',
+        '..ABBBDDDCCDDDDDDDDDDCCCDDDDDDA.',
+        '..ABBDDDDDCDDDDDDDDDCCCDDDDDDCCA',
+        '.ABBDDDDDDCDDDDDDDDCCCCDDDDDCCCA',
+        '..ADDDDDDDCCDDDDDDCCCCCDDDDCCCA.',
+        '..ADDDDDDDDCCDDDDCCCCCDDDDCCCCA.',
+        '..ADDDDDDDCCCCCCCCCCCDDDDCCCCA..',
+        '...ADDDDDCCCCCCCCCCDCCDDCCCCA...',
+        '....ACCCCCCCCDDDDDDDDCCCCCCA....',
+        '.....AABCCBDDDDDDDDDDDDDCCA.....',
+        '......ABBBDDDDDDDDDDDDDCCCA.....',
+        '......ABBDDDDDDDDDDDDDCCCCA.....',
+        '......ABDDDDDDDDDDDDDCCCCCA.....',
+        '......ADDDDDDDDDDDDDCCCCCCA.....',
+        '.......ADDDDDDDDDDDCCCCCCA......',
+        '.......ADDDDDDDDDDCCCCCCCA......',
+        '........ADDDDDDDDCCCCCCCA.......',
+        '.........ADDDDDDCCCCCCCA........',
+        '..........AACCCCCCCCCAA.........',
+        '............AACCCCCAA...........'] },
+      prop_tree_small: { w: 32, h: 32, rows: [
+        '................................',
+        '..............AAAAA.............',
+        '............AABBBDDAA...........',
+        '...........ABBBBDDDDDA..........',
+        '.....AAAAAAABBBDDDDDDA..........',
+        '....ABBBDDDABBDDDDDDCA.AAAA.....',
+        '...ABBBDDDDCBDDDDDDCCCABBBDAA...',
+        '..ABBBDDDDDDCDDDDDCCCBBBBDDDDA..',
+        '..ABBDDDDDDDCDDDDCCCCBBBDDDDDDA.',
+        '.ABBDDDDDDDDCDDDCCCCBBBDDDDDDDA.',
+        '.ABDDDDDDDDCCCCCCCCABBDDDDDDDCA.',
+        '..ADDDDDDDCCCBBBDDDDCDDDDDDDCCA.',
+        '..ADDDDDDCCCCBBDDDDDCDDDDDDCCCA.',
+        '...ADDDDCCCCBBDDDDDDCCDDDDCCCCA.',
+        '....ACCCCCCBBDDDDDDDDCCDDCCCCA..',
+        '.....AAAABBBDDDDDDDDDDDCCCCAA...',
+        '........ABBDDDDDDDDDDDCCAAA.....',
+        '........ABDDDDDDDDDDDCCCA.......',
+        '........ADDDDDDDDDDDCCCCA.......',
+        '........ADDDDDDDDDDCCCCCA.......',
+        '.........ADDDDDDDDCCCCCA........',
+        '..........ADDDDDDCCCCCA.........',
+        '...........ACCCCCCCCCA..........',
+        '............AACCCCCAA...........'] },
+    };
+    const TREE_FIX_IDS = { prop_tree_medium: 1, prop_tree_small: 1 };
+    const treeFixStat = { built: 0, draws: 0, ms: 0 };
+    const treeFixed = {};
+    function treeFixOf(id, a) {
+      const map = TREE_MAPS[id];
+      if (!TREE_FIX || !map || !a || a.frames !== 1 || a.fw !== map.w || a.fh !== map.h) return a;
+      if (treeFixed[id] && treeFixed[id].src === a) return treeFixed[id].out;
+      const t0 = performance.now(); let out = a;
+      try {
+        const W = a.fw, H = a.fh, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const g = cv.getContext('2d'); g.drawImage(a.img, 0, 0, W, H, 0, 0, W, H);
+        const im = g.getImageData(0, 0, W, H), d = im.data, R = map.rows.length;
+        let ol = null; const leaves = {};
+        for (let i = 0; i < W * R * 4; i += 4) {
+          if (d[i + 3] < 128) continue; const l = d[i] + d[i + 1] + d[i + 2];
+          if (!ol || l < ol[3]) ol = [d[i], d[i + 1], d[i + 2], l];
+          if (d[i + 1] > d[i] + 8 && d[i + 1] >= d[i + 2]) leaves[d[i] + ',' + d[i + 1] + ',' + d[i + 2]] = l;
+        }
+        if (ol) delete leaves[ol[0] + ',' + ol[1] + ',' + ol[2]]; // the outline is a dark teal, not a leaf colour
+        const lv = Object.keys(leaves).sort((p, q) => leaves[p] - leaves[q]).map((k) => k.split(',').map(Number));
+        if (ol && lv.length >= 3) {
+          const P = { A: ol, C: lv[0], D: lv[Math.floor(lv.length / 2)], B: lv[lv.length - 1] };
+          for (let y = 0; y < R; y++) for (let x = 0; x < W; x++) {
+            const ch = map.rows[y][x], i = (y * W + x) * 4, c = P[ch];
+            if (c) { d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; } else d[i + 3] = 0;
+          }
+          g.putImageData(im, 0, 0);
+          out = Object.assign({}, a, { img: cv, treeFix: true });
+          treeFixStat.built++;
+        }
+      } catch (e) { out = a; }
+      treeFixStat.ms += performance.now() - t0;
+      treeFixed[id] = { src: a, out };
+      return out;
+    }
+    function treeFixApi() { return { on: TREE_FIX, built: treeFixStat.built, draws: treeFixStat.draws, ms: treeFixStat.ms, art: (id) => { const a = wArt[id]; if (!a) return null; return { src: a.src, orig: a.img, fixed: treeFixOf(id, a).img, fw: a.fw, fh: a.fh }; } }; }
     let wArtLoading = false;
     function drawArt(g, a, f, x, y) { g.drawImage(a.img, f * a.fw, 0, a.fw, a.fh, Math.round(x - a.ax), Math.round(y - a.ay), a.fw, a.fh); }
     function frameOf(a, tt, reduced) { return reduced || a.frames < 2 ? 0 : Math.floor(tt * a.fps) % a.frames; } // time-sliced, reduce-motion = frame 0
@@ -456,7 +654,9 @@
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-          if (!/^(b1[2345]|b2[26])-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
+          if (!/^(b1[2345]|b2[26]|r03)-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
+          // R4-D2: r03 (Codex R03 nature props remake: same ids, cells and anchors as b12, outlined and shaded) wins over b12 by rank, not load order. ?r03=0: b12.
+          const rank = /^r03-/.test(id) ? (/[?&]r03=0(&|$)/.test(qs0) ? -1 : 2) : 1; if (rank < 0) return null;
           return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
@@ -468,7 +668,7 @@
               const ax = an && Number.isFinite(an.x) ? an.x : fw / 2; const ay = an && Number.isFinite(an.y) ? an.y : fh - 2;
               return new Promise((res) => {
                 const img = new Image();
-                img.onload = () => { if (img.naturalWidth === fw * frames && img.naturalHeight === fh) { wArt[a.id] = { img, frames, fw, fh, fps: Number(a.fps) > 0 ? Math.min(Number(a.fps), 24) : 8, ax, ay }; got++; } res(); };
+                img.onload = () => { if (img.naturalWidth === fw * frames && img.naturalHeight === fh && !(wArt[a.id] && wArt[a.id].rank > rank)) { wArt[a.id] = { img, frames, fw, fh, fps: Number(a.fps) > 0 ? Math.min(Number(a.fps), 24) : 8, ax, ay, rank, src: id }; got++; } res(); };
                 img.onerror = () => res();
                 img.src = join(join(root, id), a.path);
               });
@@ -547,6 +747,33 @@
     zoneEl.innerHTML = '<div class="rw-zname"></div><div class="rw-zsub"><span class="rw-arrow" aria-hidden="true">➤</span> <span class="rw-coords"></span></div>';
     const ov = document.getElementById('realm-overlay') || document.body;
     ov.appendChild(mini); ov.appendChild(zoneEl);
+    // ---------- ID-02 zone danger meter (cycle 1 S; markup + classes: design/beta/cycle1-ui.md). MMDanger turns the smooth
+    // MMOverworld.difficultyAt under the hero into an area level and compares it with the hero level: comfortable / tough / too hot.
+    // Text label + icon + bar (colour is never the only cue), written once a second from goalTick and only when it changes. ?danger=0 = off.
+    const DANGER_ON = !/[?&]danger=0(&|$)/.test(qs0) && !!window.MMDanger && typeof O.difficultyAt === 'function';
+    const dangerEl = document.createElement('span'); dangerEl.id = 'rw-danger'; dangerEl.className = 'rw-danger hidden';
+    dangerEl.innerHTML = '<span class="rw-danger-ico" aria-hidden="true"></span><span class="rw-danger-bar" aria-hidden="true"><span class="rw-danger-fill"></span></span><span class="rw-danger-txt"></span>';
+    const dIco = dangerEl.querySelector('.rw-danger-ico'); const dFill = dangerEl.querySelector('.rw-danger-fill'); const dTxt = dangerEl.querySelector('.rw-danger-txt');
+    let dangerKey = ''; let dangerNow = null;
+    if (DANGER_ON) zoneEl.appendChild(dangerEl);
+    function dangerTick(hide) {
+      if (!DANGER_ON) return;
+      try {
+        const p = arena.player; const lv = Math.max(1, (arena.save && arena.save.level) | 0);
+        const r = MMDanger.rate(lv, O.difficultyAt(world, p.x / TILE, p.y / TILE), world.bands || 'classic');
+        dangerNow = r; if (nxOpen) hide = true; // the Nexus plaza covers the world: no danger reading there
+        const key = r.id + '|' + r.area + '|' + r.hero + '|' + r.fill;
+        if (key !== dangerKey) {
+          dangerKey = key;
+          dangerEl.dataset.level = r.id; dangerEl.dataset.area = String(r.area);
+          dangerEl.setAttribute('aria-label', r.text); dangerEl.title = r.text;
+          dFill.style.setProperty('--rw-danger', String(r.fill));
+          if (dIco.textContent !== r.icon) dIco.textContent = r.icon;
+          if (dTxt.textContent !== r.label) dTxt.textContent = r.label; // the word changes only with the bucket: no aria-live spam
+        }
+        dangerEl.classList.toggle('hidden', !!hide);
+      } catch (e) { dangerEl.classList.add('hidden'); }
+    }
     // ---------- 'Next goal' line (bug bash): ONE short HUD line from the existing goal sources, no new state: an unclaimed daily quest reward,
     // else the first open daily quest (MMQuests) with its progress, else the next zone inland (MMZones recLv), else a boss altar.
     // textContent only, refreshed at most once a second, hidden while the first-run coach talks or a phone panel covers the corner. ?goal=0 = off.
@@ -568,12 +795,14 @@
         }
         const zs = (Z.TABLES && Z.TABLES.ZONES) || []; const z = zi && zi.zone >= 0 && zi.zone <= 3 ? zi.zone : 0;
         const next = zs[z + 1]; const lv = arena.save && arena.save.level | 0;
-        if (next && next.name) return lv >= (next.recLv | 0) ? `Head inland to the ${next.name}` : `Reach Lv ${next.recLv} for ${next.name} (Lv ${lv})`;
+        // cyc1 U-05: no "(Lv N)" suffix: the hero's level is already on the info line right above, and the suffix wrapped the goal onto a 2nd phone line
+        if (next && next.name) return lv >= (next.recLv | 0) ? `Head inland to the ${next.name}` : `Reach Lv ${next.recLv} for the ${next.name}`;
         return 'Find a boss altar and defeat its guardian';
       } catch (e) { return ''; }
     }
     function goalTick(zi, force) {
       goalT -= 0.25; if (goalT > 0 && !force) return; goalT = 1;
+      dangerTick(panelHid || !!bossRect() || (RUSH_ON && rush.on));
       zonePlace();
       if (!GOAL_ON) return;
       const coach = document.getElementById('mm-coach');
@@ -660,6 +889,26 @@
       if (!EXPLORE_ON || arena.state !== 'play' || typeof arena._gainXp !== 'function' || typeof rmXpNeeded !== 'function') return;
       const xp = Math.max(1, Math.round(n * EXPLORE_PCT * rmXpNeeded(arena.save.level || 1)));
       exploreXp += xp; arena._gainXp(xp);
+    }
+    // R4 D1 quiet-stretch pity (first-ten world-shore-f: a 62 s stretch with no reward on some days): when nothing has paid (no xp, no kill,
+    // no shards, no item) for QUIET_AFTER s and no enemy is alive within QUIET_R, the nearest cleared group in range respawns now instead of
+    // waiting out its zone timer (Shore 60 s), and the nearest live enemy is provoked and comes over; again every QUIET_AGAIN s while it stays quiet. ?quietpity=0 turns it off.
+    const QUIET_ON = !/[?&]quietpity=0(&|$)/.test(qs0); const QUIET_AFTER = 15; const QUIET_AGAIN = 6; const QUIET_R = 14 * TILE;
+    let quietSig = ''; let quietT = 0; let quietNudges = 0;
+    function quietTick(dt) {
+      if (!QUIET_ON || !zones || arena.state !== 'play' || typeof zones.hurry !== 'function') return;
+      const sv = arena.save || {}; const sig = (sv.level | 0) + '|' + (sv.xp | 0) + '|' + kills + '|' + (sv.shards | 0) + '|' + (sv.items ? sv.items.length : 0) + '|' + (sv.nextUid | 0);
+      if (sig !== quietSig) { quietSig = sig; quietT = 0; return; }
+      if ((quietT += dt) < QUIET_AFTER) return;
+      quietT = QUIET_AFTER - QUIET_AGAIN; // still quiet: nudge again every QUIET_AGAIN s until something pays
+      const p = arena.player; let near = false;
+      live.forEach((e) => { if (!near && e.active && Math.hypot(e.x - p.x, e.y - p.y) < QUIET_R) near = true; });
+      if (near) return;
+      if (zones.hurry(p.x, p.y) >= 0) quietNudges++; // a cleared group in range respawns now
+      // and the nearest live enemy (the live groups may stand out of reach, e.g. across water) is provoked and comes to the hero
+      let best = null, bd = Infinity;
+      live.forEach((e) => { if (!e.active) return; const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; best = e; } });
+      if (best) { best.provT = Math.max(best.provT || 0, 12); quietNudges++; }
     }
     function buildMiniBase() {
       const c = document.createElement('canvas'); c.width = ww; c.height = wh;
@@ -1668,7 +1917,6 @@
     const NX_TALL = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth * 1.3;
     const NX_VW = NX_TALL ? 400 : 640; const NX_VH = NX_TALL ? 540 : 480; const NX_R = 10; // walk view (world px) and the hero's collision radius
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
-    const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern vault', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
     // Shown name of a Nexus portal (display only; MMNexus keeps its ids and labels): the vault says where it leads (NAV-AUDIT 4.1 renames).
     const nxPortalName = (q) => (q && q.id === 'vault' ? 'Lantern vault' : q ? q.label : '');
     const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
@@ -1682,7 +1930,7 @@
       + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
       + '#rw-nexus .nx-head{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}#rw-nexus h2{margin:0;font-size:18px;flex:1;min-width:120px}'
       + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
-      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;flex:0 0 auto;width:min(100%,max(320px,calc((100vh - 230px)*4/3)));max-width:760px;aspect-ratio:4/3;margin:0 auto;border:2px solid #3a2f66;border-radius:10px;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
+      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;flex:0 0 auto;width:min(100%,max(320px,calc((100vh - 230px)*4/3)));max-width:760px;aspect-ratio:4/3;margin:0 auto;border:4px solid #2a2150;border-radius:0;box-shadow:0 0 0 2px #7a63c9,4px 4px 0 2px #000;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
       + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
       + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
@@ -1704,12 +1952,40 @@
       img.src = opts.assetRoot.replace(/\/+$/, '') + '/b21-npcs-and-vendors/enemies/' + id + '/' + id + '_idle_down.png';
     }
     const nxLabels = []; // W-04 test hook: portal label rects in plaza px (rebuilt per plaza draw)
+    const NX_FLOOR_CLASSIC = /[?&]nxfloor=classic(&|$)/.test(qs0);
+    const nxFloorStat = { tiles: 0, ring: 0 };
+    function nxFloor(g, L) {
+      const STONE = ['#4a4460', '#524b69', '#5a5372'], RING = ['#6a5468', '#735c70', '#7c6578'], MORTAR = '#2c2740', HI = 'rgba(255,255,255,0.10)', SH = 'rgba(0,0,0,0.22)';
+      const cx = L.spawn.x / TILE, cy = L.spawn.y / TILE;
+      for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) {
+        const px = tx * TILE, py = ty * TILE, d = Math.hypot(tx + 0.5 - cx, ty + 0.5 - cy), ring = d >= 2.2 && d <= 3.6;
+        const ramp = ring ? RING : STONE, v = h2(tx, ty, 911);
+        g.fillStyle = MORTAR; g.fillRect(px, py, TILE, TILE);
+        if (ring) { // four cut stones per tile
+          for (let k = 0; k < 4; k++) { const sx = px + (k & 1) * 16 + 1, sy = py + (k >> 1) * 16 + 1; g.fillStyle = ramp[Math.floor(h2(tx * 2 + (k & 1), ty * 2 + (k >> 1), 913) * 3)]; g.fillRect(sx, sy, 14, 14); g.fillStyle = HI; g.fillRect(sx, sy, 14, 1); g.fillRect(sx, sy, 1, 14); g.fillStyle = SH; g.fillRect(sx, sy + 13, 14, 1); g.fillRect(sx + 13, sy, 1, 14); }
+          nxFloorStat.ring++;
+        } else {
+          const off = (ty & 1) ? 8 : 0; // running bond: every other row shifts the joint
+          g.fillStyle = ramp[Math.floor(v * 3)]; g.fillRect(px + 2, py + 2, TILE - 2, TILE - 2);
+          g.fillStyle = MORTAR; g.fillRect(px + 2 + off + 12, py + 2, 2, TILE - 2); // one vertical joint inside the slab
+          g.fillStyle = HI; g.fillRect(px + 2, py + 2, TILE - 2, 1); g.fillRect(px + 2, py + 2, 1, TILE - 2);
+          g.fillStyle = SH; g.fillRect(px + 2, py + TILE - 1, TILE - 2, 1); g.fillRect(px + TILE - 1, py + 2, 1, TILE - 2);
+          if (v > 0.86) { g.fillStyle = MORTAR; const kx = px + 6 + Math.floor(h2(tx, ty, 915) * 16); for (let k = 0; k < 4; k++) g.fillRect(kx + k, py + 8 + k * 3, 1, 3); } // crack
+          else if (v < 0.07) { g.fillStyle = '#3f6a48'; g.fillRect(px + 3, py + TILE - 5, 4, 2); g.fillRect(px + 5, py + TILE - 7, 2, 2); } // moss in the joint
+        }
+        nxFloorStat.tiles++;
+      }
+    }
     function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
       if (!nxDom) return; nxLabels.length = 0;
       const L = NX.layout(); const c = nxDom.plaza; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
       g.fillStyle = '#2e2742'; g.fillRect(0, 0, L.w * TILE, L.h * TILE); g.fillStyle = '#3d3457'; for (let i = 0; i < L.w; i++) { g.fillRect(i * TILE + 2, 2, TILE - 4, TILE - 6); g.fillRect(i * TILE + 2, (L.h - 1) * TILE + 2, TILE - 4, TILE - 6); } for (let j = 1; j < L.h - 1; j++) { g.fillRect(2, j * TILE + 2, TILE - 4, TILE - 6); g.fillRect((L.w - 1) * TILE + 2, j * TILE + 2, TILE - 4, TILE - 6); } // W-04: a stone kerb ring, never a void band
-      for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
+      // R4-D2 (b12-r2-08): flagstone plaza instead of the flat purple checkerboard. Per tile a seeded stone tone (3-step ramp), a dark
+      // mortar line on the top / left, a 1 px top-left highlight, a bottom-right shade, rare cracks and moss; a warm mosaic ring of
+      // smaller cut stones around the spawn. All baked once per open (nxDrawPlaza). ?nxfloor=classic: the old checkerboard.
+      if (NX_FLOOR_CLASSIC) { for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); } }
+      else nxFloor(g, L);
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
       const pad = wArt.spawn_pad; const sp = L.spawn;
       if (pad) drawArt(g, pad, 0, sp.x, sp.y + 16); else { g.fillStyle = '#7a63c9'; g.beginPath(); g.arc(sp.x, sp.y, 20, 0, 7); g.fill(); g.fillStyle = '#a98bff'; g.beginPath(); g.arc(sp.x, sp.y, 13, 0, 7); g.fill(); }
@@ -1734,13 +2010,13 @@
       });
       if (RUSH_ON && L.trial) { // RE2: the Trial gate, code-drawn (no art id): a gold ring and its name
         const q = L.trial; g.save(); g.globalAlpha = 0.3; g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#ffd45a'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); g.restore();
-        g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#ffe27a'; g.fillText(q.label, q.x, q.y - 38);
+        g.font = 'bold 20px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#ffe27a'; g.fillText(q.label, q.x, q.y - 38);
       }
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
         if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
         else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
-        g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 1, y + 37); g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
+        g.font = 'bold 18px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 2, y + 38); /* R4-D2: pixel (mono) font like the portal labels */ g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
       });
     }
     function nxMutOf(q) { // DV1: the seeded mutator of a Nexus dungeon portal (same seed as nxUrl), or null
@@ -2051,6 +2327,23 @@
       }
       nxSyncPrompt();
     }
+    // R4-D2 (b04-14): the Nexus hero fallback in the established style: 16x24 native at 2x, dark colour-matched outline, 3-tone cloak,
+    // top-left light, facing the move direction (side view mirrored for left, back view when walking up). No face dots on the back.
+    const nxHeroStat = { code: 0 };
+    function nxCodeHero(g, h) {
+      const P = 2, up = h.my < -0.3 && Math.abs(h.my) >= Math.abs(h.mx), side = Math.abs(h.mx) > Math.abs(h.my), flip = side && h.mx < 0;
+      const step = h.moving ? (Math.floor(performance.now() / 140) & 1) : 0;
+      const ox = Math.round(h.x) - 8 * P, oy = Math.round(h.y) - 18 * P;
+      const px = (x, y, w, hh, c) => { g.fillStyle = c; g.fillRect(ox + (flip ? 16 - x - w : x) * P, oy + y * P, w * P, hh * P); };
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(h.x, h.y + 12, 12, 5, 0, 0, Math.PI * 2); g.fill();
+      const OUT = '#1b1430', C1 = '#3d5aa8', C2 = '#5274c4', C3 = '#7a9be0', SKIN = '#f0c9a0', SKIN2 = '#c99a78', BOOT = '#4a3020';
+      px(4, 1, 8, 8, OUT); px(3, 8, 10, 11, OUT); px(4, 18, 3, 5, OUT); px(9, 18, 3, 5, OUT); // outline silhouette
+      px(5, 2, 6, 6, C1); px(5, 2, 5, 1, C3); px(5, 2, 1, 5, C2); // hood: dark / mid / light from the top-left
+      if (!up) { px(side ? 8 : 6, 4, side ? 3 : 4, 3, SKIN); px(side ? 8 : 6, 6, side ? 3 : 4, 1, SKIN2); px(side ? 10 : 7, 5, 1, 1, OUT); if (!side) px(8, 5, 1, 1, OUT); }
+      px(4, 9, 8, 9, C1); px(4, 9, 7, 1, C3); px(4, 9, 1, 8, C2); px(5, 13, 6, 1, '#c9a24a'); // cloak + belt
+      px(5, 18, 2, 4 - step, BOOT); px(9, 18, 2, 3 + step, BOOT); // boots (walk alternates)
+      nxHeroStat.code++;
+    }
     function nxWalkDraw() {
       const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
       const cl = (v, lo, hi) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v))); // W-04 (b04-05): the view stays on the floor (ring excluded); a plaza smaller than the view is centred
@@ -2064,7 +2357,7 @@
         try { ok = !!arena._drawHero(g, h); } catch (e) { ok = false; }
         arena._mx = m0; arena._my = m1;
       }
-      if (!ok) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(h.x, h.y + 12, 12, 5, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(h.x, h.y, 12, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2a2150'; g.beginPath(); g.arc(h.x + h.mx * 5, h.y + h.my * 5, 4, 0, Math.PI * 2); g.fill(); }
+      if (!ok) nxCodeHero(g, h); // R4-D2 (b04-14): a code-drawn pixel adventurer, not the yellow dot (hero art missing / no hero yet)
       g.restore();
     }
     function nxWalkFrame(now) {
@@ -2275,7 +2568,7 @@
       bx.style.cssText = 'float:right;min-height:44px;min-width:44px'; bx.addEventListener('click', () => b.classList.add('hidden')); b.insertBefore(bx, h);
       MMQuests.summary(save.quests, questDate()).forEach((q) => {
         const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
-        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎' + (QBAG_ON && q.reward.bag ? ' · ' + q.reward.bag + ' bag' : ''); t.appendChild(r);
+        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎' + (QBAG_ON && q.reward.bag ? ' · ' + q.reward.bag + ' bag' : '') + (MMQuests.levelHint && MMQuests.levelHint(q) ? ' · ' + MMQuests.levelHint(q) : ''); t.appendChild(r);
         if (!q.claimed) { const bar = document.createElement('i'); bar.className = 'nx-bar'; bar.setAttribute('aria-hidden', 'true'); const fill = document.createElement('i'); fill.style.width = Math.round(100 * Math.min(1, q.p / Math.max(1, q.need))) + '%'; bar.appendChild(fill); t.appendChild(bar); } // PLAYTEST-REVIEW-2 #8: progress in the row
         row.appendChild(t);
         if (q.claimed) { const d = document.createElement('span'); d.textContent = 'Claimed'; d.style.flex = '0 0 auto'; row.appendChild(d); }
@@ -2402,7 +2695,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); rushTick();
+        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick();
         if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
@@ -2470,13 +2763,13 @@
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
-      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, terrain[ty * ww + tx]), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
-      slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
+      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, fieldStats: () => Object.assign({ on: FIELD_DETAIL }, fieldStat), treeFix: () => treeFixApi(), bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
+      slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, danger: () => ({ on: DANGER_ON, now: dangerNow, hidden: dangerEl.classList.contains('hidden'), el: dangerEl.isConnected }), zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
       syncHud, loadTileArt, loadWorldArt,
-      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim, base: q.base || null })),
+      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artSrc: (id) => (wArt[id] ? wArt[id].src : null), tileSrcRank: () => { const o = {}; const vr = tileRank.get(tileArt) || {}; Object.keys(vr).forEach((k) => { o[TN[k]] = vr[k]; }); return o; }, tileVariants: (name) => (tileArt[T[name]] || []).filter(Boolean).length, artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim, base: q.base || null })),
       b26: () => ({ on: B26_ON, ids: Object.keys(B26_SET), loaded: Object.keys(B26_SET).filter((id) => !!wArt[id]), draws: artDraws.b26, codeProps: world.props.filter((p) => b26Code(p)).length, codeCandidates: world.props.filter((p) => B26_CODE[p.kind] && GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] === 1).length, codeIds: Array.from(new Set(world.props.filter((p) => b26Code(p)).map((p) => b26Pick(B26_CODE[p.kind], p.x, p.y)))) }), propsClassic: () => PROPS_CLASSIC, godPropPalette: () => godPropPalette(), chunkGrid: () => ({ cols: ccols, rows: crows }),
       panelHidden: () => panelHid,
       // minimap fog (slice A1)
@@ -2508,11 +2801,11 @@
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
-      ttk: { on: TTK_ON }, firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
+      ttk: { on: TTK_ON }, quiet: () => ({ on: QUIET_ON, nudges: quietNudges }), firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
-        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), floor: () => Object.assign({ classic: NX_FLOOR_CLASSIC }, nxFloorStat), codeHero: () => nxHeroStat.code, tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
           place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },

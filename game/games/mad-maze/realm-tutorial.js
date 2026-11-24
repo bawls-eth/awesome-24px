@@ -63,7 +63,6 @@
       }
     }
     // G-15 (b08-04): the 'bag' step guarantees a bag within 6 tiles of the hero (one tutorial bag, dropped two tiles ahead) and says where it is
-    let tuBag = null;
     function bagNear() {
       const p = arena.player; if (!p || !Array.isArray(arena.bags)) return null;
       let best = null, bd = 6 * 32;
@@ -73,7 +72,7 @@
     function ensureBag() {
       if (bagNear() || !arena.player || typeof arena.dropBag !== 'function' || arena.state !== 'play') return;
       const p = arena.player; const b = arena.dropBag(p.x + 140, p.y, 0, 'heartcharm'); // 4.4 tiles: inside 6, outside the 110 px pickup drift, so the hero walks to it
-      if (b) { b.id = 'heartcharm'; b.vx = 0; b.vy = 0; b.tutorial = true; tuBag = b; }
+      if (b) { b.id = 'heartcharm'; b.vx = 0; b.vy = 0; b.tutorial = true; }
     }
     function bagWhere() {
       const b = bagNear(), p = arena.player; if (!b || !p) return '';
@@ -136,10 +135,46 @@
         if (world.nexus && world.nexus.isOpen && world.nexus.isOpen()) event('nexusOpened');
       } catch (e) { /* never break the page for a coach mark */ }
     }
-    const iv = setInterval(() => { poll(); if (rec.s.finished) { clearInterval(iv); } }, 120);
+    // b08-r2-04: early-game survival. While the coach teaches, the first minute of play is gentle: hits do 40% (rising to full by 2 min),
+    // the hero cannot fall in the first minute (HP stops at 1), and after 3 s with no hit the hero heals 5% max HP a second. A one-time
+    // toast says how to heal / escape the first time HP drops under half. Skipping or finishing the coach ends it (normal rules).
+    // R4 D1b (D5 replay: a zero-input hero still fell at ~60 s on 2 of 3 seeds): until the player has ACTED (the coach is still on its
+    // first step, 'move'), the hero is shielded: hits do 25% and never take HP below half. The 40%-to-full schedule and the 1 HP floor
+    // of the first minute count from the moment the player first acts, not from page load.
+    const G = { full: 60, end: 120, mult: 0.4, idleMult: 0.25, idleFloor: 0.5, regenWait: 3, regen: 0.05 };
+    const guard = { playT: 0, lastHit: -1e9, acc: 0, warned: false, last: 0, actedAt: null };
+    function acted() { if (guard.actedAt === null && MT.realmCurrent(rec.s) !== 'move') guard.actedAt = guard.playT; return guard.actedAt !== null; }
+    function sinceAct() { return acted() ? guard.playT - guard.actedAt : 0; }
+    function guardOn() { return !rec.s.finished && MT.realmCurrent(rec.s) !== 'done' && sinceAct() < G.end; }
+    function guardMult() { if (!acted()) return G.idleMult; const t = sinceAct(); return t <= G.full ? G.mult : G.mult + (1 - G.mult) * Math.min(1, (t - G.full) / (G.end - G.full)); }
+    arena.hurtGuard = function () {
+      if (!guardOn()) return null;
+      guard.lastHit = guard.playT;
+      const mx = arena.stats && arena.stats.maxHp > 0 ? arena.stats.maxHp : 0;
+      if (!acted()) return { mult: G.idleMult, floor: Math.max(1, Math.ceil(mx * G.idleFloor)) };
+      return { mult: guardMult(), floor: sinceAct() < G.full ? 1 : 0 };
+    };
+    function guardTick() {
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+      const dt = guard.last ? Math.min(0.5, Math.max(0, now - guard.last)) : 0; guard.last = now;
+      const p = arena.player;
+      if (!arena.active || arena.paused || arena.state !== 'play' || !p) return;
+      guard.playT += dt;
+      if (!guardOn()) return;
+      const mx = arena.stats && arena.stats.maxHp > 0 ? arena.stats.maxHp : 0; if (!mx) return;
+      if (!guard.warned && p.hp > 0 && p.hp <= mx * 0.5) {
+        guard.warned = true;
+        say(coarse ? 'Low HP! Walk away from enemies with the left stick. Nothing hits you for 3 s = you heal.' : 'Low HP! Walk away from enemies. Nothing hits you for 3 s = you heal.');
+      }
+      if (guard.playT - guard.lastHit >= G.regenWait && p.hp < mx) {
+        guard.acc += mx * G.regen * dt;
+        if (guard.acc >= 1) { const n = Math.floor(guard.acc); guard.acc -= n; p.hp = Math.min(mx, p.hp + n); if (arena._syncHud) arena._syncHud(); }
+      } else guard.acc = 0;
+    }
+    const iv = setInterval(() => { poll(); try { guardTick(); } catch (e) { /* never break the page */ } if (rec.s.finished) { clearInterval(iv); } }, 120);
     window.addEventListener('pagehide', () => { try { if (portals() > rec.p0 || world.lastPortalUrl) event('portalEntered'); } catch (e) { /* ignore */ } });
     render();
-    const api = { state: () => JSON.parse(JSON.stringify(rec)), current: () => MT.realmCurrent(rec.s), event, poll, KEY, root };
+    const api = { state: () => JSON.parse(JSON.stringify(rec)), current: () => MT.realmCurrent(rec.s), event, poll, KEY, root, guard: () => ({ on: guardOn(), mult: guardMult(), playT: Math.round(guard.playT * 10) / 10, acted: acted(), sinceAct: Math.round(sinceAct() * 10) / 10, warned: guard.warned }), guardAdvance: (s) => { guard.playT += Math.max(0, Number(s) || 0); } };
     window.__mmTutorial = api;
     return api;
   }

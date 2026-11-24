@@ -9,7 +9,7 @@
 // Offline: blockDb + every WebSocket closed (the Town page joins with "Play offline"), no chat, nothing written to Firebase.
 // Run: BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/gear-save-fixes.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers'); // blockDb: DB hosts aborted / closed (the Town page tries to connect, nothing reaches it)
+const { check, done, blockDb, offlineStub } = require('./helpers'); // blockDb: DB hosts aborted / closed (the Town page tries to connect, nothing reaches it)
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ORIGIN = BASE.replace(/\/game\/index\.html.*$/, '');
 const MAZE = ORIGIN + '/game/games/mad-maze/index.html?test=1&offline=1';
@@ -223,7 +223,7 @@ const stored = (page) => page.evaluate((k) => { try { return JSON.parse(localSto
 
   // ================= F4 (Town): the classic Realm gate starts from the CURRENT stored realm, not the scene's load-time copy =================
   { const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-    const db = await blockDb(ctx);
+    const db = await offlineStub(ctx);
     const page = await ctx.newPage(); const terr = [];
     page.on('pageerror', (e) => terr.push('pageerror: ' + e.message));
     await page.route('**/main.js*', async (route) => { const resp = await route.fetch(); const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);'); route.fulfill({ response: resp, body }); });
@@ -247,7 +247,7 @@ const stored = (page) => page.evaluate((k) => { try { return JSON.parse(localSto
       return { mem0, stored: st.items.filter((x) => x.id === 'sparkwand').map((x) => x.n + ':r' + x.r).join(','), offline: s.net && s.net.offline === true };
     });
     check('F4 Town: the gate arena starts from the current stored realm and its first write keeps ONE r2 item (no r1 duplicate)', t.mem0 === '5:r2' && t.stored === '5:r2', JSON.stringify(t));
-    check('F4 Town: played offline, every DB request was blocked before it left the browser', t.offline && db.http.every((u) => db.hosts.test(u)) && db.ws.every((u) => db.hosts.test(u)), JSON.stringify({ http: db.http.length, ws: db.ws.length }));
+    check('F4 Town: played offline, no database request was even attempted (offline stub)', t.offline && db.attempts() === 0, JSON.stringify({ http: db.http.length, ws: db.ws.length }));
     errs.push(...terr); await ctx.close(); }
 
   check('no page errors', errs.length === 0, JSON.stringify(errs.slice(0, 6)));

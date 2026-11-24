@@ -1,26 +1,24 @@
 // Town polish (TP1): offline-join card fits 1280x720, PTT pill clear of the inventory bar, access prefs mirrored.
-// Every database host is blocked, so this never touches the live town.
+// OFFLINE: helpers.offlineStub (every database host blocked, Firebase SDK answered empty), so this never touches the live town.
 // Run: BASE=http://localhost:8665/game/index.html NODE_PATH=$(npm root -g) node game/tests/town-polish.test.js
 const { chromium } = require('playwright');
-const { check, done } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
-const DB_HOST = /firebaseio\.com|firebasedatabase\.app|identitytoolkit|securetoken/;
 const overlap = (a, b) => a && b && a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
 async function open(browser, viewport, touch, prefs) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  await ctx.route(DB_HOST, (r) => r.abort());
-  await ctx.routeWebSocket(DB_HOST, () => {});
+  const db = await offlineStub(ctx); // database blocked + Firebase SDK answered empty (the join still ends on "Can't reach the town server")
   if (prefs) await ctx.addInitScript((v) => { try { localStorage.setItem('pixeltown-access-v1', v); } catch (e) {} }, prefs);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   const real = () => errors.filter((e) => !/ERR_FAILED|ERR_BLOCKED|net::|WebSocket|firebase|FIREBASE|Failed to load resource|ERR_INTERNET|ERR_NAME|Can't reach/i.test(e));
-  return { ctx, page, real };
+  return { ctx, page, real, db };
 }
 async function joinOffline(page) {
-  await page.goto(BASE);
+  await page.goto(BASE + '?hud=online'); // U-01: offline hides Hold to talk; this measures the online HUD (PTT pill vs bag bar)
   await page.fill('#name-input', 'ADMINpolish');
   await page.click('.species-tab');
   await page.click('.avatar-choice');
@@ -31,7 +29,7 @@ async function joinOffline(page) {
 (async () => {
   const browser = await chromium.launch();
   for (const [label, vp, touch] of [['1280x720', { width: 1280, height: 720 }, false], ['phone 390x844', { width: 390, height: 844 }, true]]) {
-    const { page, real, ctx } = await open(browser, vp, touch);
+    const { page, real, ctx, db } = await open(browser, vp, touch);
     await joinOffline(page);
     const b = await page.locator('#join-offline-btn').boundingBox();
     check(`[${label}] Play offline fully inside the viewport`, b && b.x >= 0 && b.y >= 0 && b.x + b.width <= vp.width && b.y + b.height <= vp.height, JSON.stringify(b));
@@ -48,6 +46,7 @@ async function joinOffline(page) {
     const sw = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
     check(`[${label}] no horizontal scroll`, sw.sw <= sw.iw, JSON.stringify(sw));
     check(`[${label}] no console errors`, real().length === 0, real().join(' | '));
+    check(`[${label}] no database traffic`, db.attempts() === 0, String(db.attempts()));
     await ctx.close();
   }
   let t = await open(browser, { width: 1280, height: 720 }, false, JSON.stringify({ v: 1, hudScale: 1.5, flashes: false }));

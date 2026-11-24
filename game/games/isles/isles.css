@@ -256,3 +256,8 @@ h1.hud-isle { text-transform: none; letter-spacing: normal; font-family: inherit
 body:has(#howto:not([hidden])) #toast { top: 64%; }
 /* W-18 (b06-07, b05-10): on phones the hero and island names wrap to a second line instead of 'Wanderer - ...' / 'Frostfang Tund...' */
 @media (max-width: 600px) { #hud .hud-hero, #hud .hud-isle { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; } }
+body.launching .hint, body.launching .howto, body.launching #acts, body.launching .boss-bar { visibility: hidden; } /* R4-D2 b06-r2-08: the lift-off owns the screen */
+
+
+/* R4 D4 (b15-10): the island view is a Tab stop now; show where focus is */
+#view:focus-visible { outline: 3px solid #ffec27; outline-offset: -3px; }

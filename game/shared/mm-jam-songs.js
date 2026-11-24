@@ -8,7 +8,7 @@
   const TIERS = ['easy', 'normal', 'hard'];
   const RANK_LIST = ['S', 'A', 'B', 'C', 'D'];
   const STAR_AT = [0.5, 0.75, 0.9]; // accuracy needed for 1 / 2 / 3 stars
-  const FC_MIN_COMBO = 20, OFFSET_MAX = Jam.OFFSET_MAX || 200;
+  const FC_MIN_COMBO = 20;
   const MAX_SCORE = 999999, MAX_COMBO = 9999, MAX_PLAYS = 999999;
   const LEAD_BEATS = 4;
   // Tier shape: which eighth-note slots of a bar may hold a note, how dense, hold chance, notes-per-second cap.

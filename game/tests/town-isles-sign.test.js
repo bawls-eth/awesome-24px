@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SAVE_KEY = 'pixeltown-save-v1';
 const SIGN = { x: 505, y: 560 };
@@ -16,8 +16,7 @@ const ISLES_NAV = JSON.stringify({ v: 1, last: { id: 'isles', sub: 'Coral Reef',
 
 async function open(browser, viewport, touch, seedNav) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-isles-sign.test.js */' }));
+  const db = await offlineStub(ctx);
   await ctx.route(/\/games\/isles\/index\.html/, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><meta charset="utf-8"><title>isles stub</title><p>isles stub</p>' }));
   if (seedNav) await ctx.addInitScript((v) => { if (!sessionStorage.navSeeded) { sessionStorage.navSeeded = '1'; localStorage.setItem('pixeltown-nav-v1', v); } }, seedNav);
   const page = await ctx.newPage();
@@ -75,7 +74,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const L = (s) => `[${label}] ${s}`;
     const t = await open(browser, viewport, touch);
     const { page, tap } = t;
-    await page.goto(BASE);
+    await page.goto(BASE + '?hud=online'); // U-01: online HUD pieces (walkie) stay in the overlap checks
     await joinOffline(page, tap);
     check(L('joined the town offline'), await page.evaluate(() => window.__g.scene.getScene('Town').net.offline === true));
     const plain = await pos(page);

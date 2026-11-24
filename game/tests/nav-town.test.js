@@ -5,7 +5,7 @@
 // path. The test asserts 0 database requests and 0 sockets, never chats and never writes to Firebase.
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/nav-town.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const NAV_KEY = 'pixeltown-nav-v1';
 const PTR_KEY = 'pixeltown-gate-pointer-v1';
@@ -17,9 +17,8 @@ const IDS = 'town,realm,isles,lantern,map,pop,dash,stack,echo,jam,angler,bugs,st
 
 async function open(browser, viewport, touch, seedNav) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
+  const db = await offlineStub(ctx);
   // The SDK never loads: no firebase global, so the join try fails at once and offers "Play offline".
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by nav-town.test.js */' }));
   const sockets = [];
   if (seedNav) await ctx.addInitScript((v) => { if (!sessionStorage.navSeeded) { sessionStorage.navSeeded = '1'; localStorage.setItem('pixeltown-nav-v1', v); } }, seedNav);
   const page = await ctx.newPage();
@@ -72,7 +71,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
     const L = (s) => `[${label}] ${s}`;
     const { ctx, page, db, sockets, errors } = await open(browser, viewport, touch, ISLES);
     const tap = (sel) => (touch ? page.tap(sel) : page.click(sel));
-    await page.goto(BASE);
+    await page.goto(BASE + '?hud=online'); // U-01: online HUD pieces (walkie) stay in the overlap checks
     await page.waitForTimeout(400);
 
     // ---- join screen: Continue (offline-safe) + species tabs ----

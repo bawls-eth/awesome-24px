@@ -516,7 +516,8 @@ class RealmArena {
     this._bakeSprites();
     this._bindInput();
     this._resize();
-    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', (e) => { if (!e.key || e.key === RM_SAVE_KEY) this.resyncSave(); });
+    this._onStorage = (e) => { if (!e.key || e.key === RM_SAVE_KEY) this.resyncSave(); }; // kept on the instance so destroy() can remove it (cycle0 L-11)
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', this._onStorage);
     // Review F16: hot paths (a kill, a partner's kill reward) mark the save dirty (saveSoon) and ONE coalesced persist runs RM_SAVE_SOON_MS later; every
     // explicit onSave (pickup, death, wave, shop, exit ...) persists at once and clears the pending one. Flushed on stop (exit / death screen leave),
     // menu open, `visibilitychange: hidden` and `pagehide`, so closing or hiding the tab never loses a kill's shards.
@@ -734,9 +735,30 @@ class RealmArena {
     this._readReduced();
   }
 
-  // Reduce-motion is read live (cheap), so flipping the OS setting mid-run takes effect on the next frame.
+  // Reduce-motion, full read: the stored override ('1' / '0', MMMotion.KEY) wins, else the OS setting. Same rule as MMMotion.reduced,
+  // but the MediaQueryList is built once and kept (its .matches is live), so the frame loop allocates nothing (cycle1 L-18).
   _readReduced() {
-    try { this._reduced = typeof MMMotion !== 'undefined' && MMMotion.reduced(window, localStorage); } catch (e) { this._reduced = false; }
+    try {
+      if (typeof MMMotion === 'undefined') { this._reduced = false; return; }
+      let v = null; try { v = localStorage.getItem(MMMotion.KEY); } catch (e) { v = null; }
+      this._rmOv = v === '1' ? true : (v === '0' ? false : null);
+      this._rmAt = performance.now();
+      this._reduced = this._rmOv !== null ? this._rmOv : this._rmOs();
+    } catch (e) { this._reduced = false; }
+  }
+  _rmOs() {
+    try {
+      if (this._rmQ === undefined) this._rmQ = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+      return !!(this._rmQ && this._rmQ.matches);
+    } catch (e) { return false; }
+  }
+  // Per frame: the OS setting is still followed on the very next frame (one property read); the stored override is re-read at most
+  // every 50 ms (it used to be a localStorage read and a new matchMedia object on every frame). A clock that does not move
+  // (tests that freeze time) reads the store each frame, as before.
+  _readReducedFrame() {
+    const t = performance.now(); const still = t === this._rmT; this._rmT = t; // still: no time passed since the last frame
+    if (still || this._rmAt === undefined || t - this._rmAt >= 50 || t < this._rmAt) { this._readReduced(); return; }
+    this._reduced = this._rmOv !== null ? this._rmOv : this._rmOs();
   }
 
   setAimAssist(on) {
@@ -2142,7 +2164,15 @@ class RealmArena {
     window.addEventListener('pointerup', this.onPointerUp);
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    this.onResize = () => { if (this.active) this._resize(); }; // synchronous but cheap: _resize returns early when nothing changed
+    // R4 (b13-07 rotate storm): events are coalesced to one _resize per frame, and the canvas backing store (the costly part:
+    // a re-allocation + full redraw) follows 150 ms after the LAST event; meanwhile the old backing is CSS-scaled. Frames within
+    // 1 s of a resize do not feed the perf guard, so a storm cannot drop the render quality to 0.75.
+    this.onResize = () => {
+      if (!this.active) return;
+      this._rzAt = performance.now();
+      if (this._rzRaf) return;
+      this._rzRaf = requestAnimationFrame(() => { this._rzRaf = 0; if (this.active) this._resize(false, true); });
+    };
     window.addEventListener('resize', this.onResize);
     window.addEventListener('orientationchange', this.onResize);
     if (window.visualViewport) { window.visualViewport.addEventListener('resize', this.onResize); window.visualViewport.addEventListener('scroll', this.onResize); }
@@ -2295,7 +2325,7 @@ class RealmArena {
   // 1400, so the world aspect matches the viewport and nothing is stretched. Only beyond aspect 0.386..2.59 (or a fixed dungeon
   // room) is the canvas letterboxed: fitted inside the viewport and centred. The backing store is min(dpr, 2) capped at 1.5
   // per logical unit and never more than the CSS size needs, times the perf-guard quality (1 or 0.75).
-  _resize(force) {
+  _resize(force, storm) {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     const ov = this.container.parentElement;
     let w; let h;
@@ -2333,7 +2363,11 @@ class RealmArena {
       this._cvKey = ckey; const cs = this.canvas.style;
       cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`; this.canvas.classList.toggle('rm-dv', !!this._dv); // page CSS may seat the dungeon view (mad-maze.css: above the phone sticks)
     }
-    this._applyBacking(); this._stAnchorT = -1e9; // the HUD rects moved
+    if (storm) {
+      clearTimeout(this._bkT);
+      this._bkT = setTimeout(() => { this._bkT = 0; if (this.active) { this._applyBacking(); this._stAnchorT = -1e9; } }, 150);
+    } else { clearTimeout(this._bkT); this._bkT = 0; this._applyBacking(); }
+    this._stAnchorT = -1e9; // the HUD rects moved
     const p = this.player; const bw = this._bw(); const bh = this._bh();
     p.x = Math.max(RM_PLAYER.r, Math.min(bw - RM_PLAYER.r, p.x || bw / 2));
     p.y = Math.max(RM_PLAYER.r, Math.min(bh - RM_PLAYER.r, p.y || bh / 2));
@@ -2435,7 +2469,7 @@ class RealmArena {
 
   destroy() {
     this.stop();
-    if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('pagehide', this._onHide);
+    if (typeof window !== 'undefined' && window.removeEventListener) { window.removeEventListener('pagehide', this._onHide); window.removeEventListener('storage', this._onStorage); }
     if (typeof document !== 'undefined' && document.removeEventListener) document.removeEventListener('visibilitychange', this._onVis);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
@@ -2443,6 +2477,7 @@ class RealmArena {
     ['keydown', 'pointerdown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.removeEventListener(ev, this._onGesture, { capture: true }));
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('resize', this.onResize);
+    if (this._rzRaf) { cancelAnimationFrame(this._rzRaf); this._rzRaf = 0; } clearTimeout(this._bkT); this._bkT = 0;
     window.removeEventListener('orientationchange', this.onResize);
     if (window.visualViewport) { window.visualViewport.removeEventListener('resize', this.onResize); window.visualViewport.removeEventListener('scroll', this.onResize); }
     if (this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
@@ -2464,7 +2499,7 @@ class RealmArena {
     if (!this.active) return;
     const raw = now - this._lastT; const dt = Math.min(raw / 1000, 0.05);
     this._lastT = now;
-    this._perfFeed(raw);
+    if (!(this._rzAt && now - this._rzAt < 1000)) this._perfFeed(raw); // R4: frames within 1 s of a resize / rotation are not render cost
     this._update(dt);
     if (this.world || this._dv) this._camStep(dt);
     this._draw();
@@ -2694,9 +2729,8 @@ class RealmArena {
   // ---------- simulation ----------
 
   _update(dt) {
-    this._readReduced(); this._readLowGfx();
+    this._readReducedFrame(); this._readLowGfx();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
-    const p = this.player;
     this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
     if (this.state === 'play') this._cacheAliveT = (this._cacheAliveT || 0) + dt; // G-09: time alive since the last Survivor's cache
     this._accT += dt; if (this._accT >= 1) { this._accT = 0; this.refreshAccess(); }
@@ -2706,7 +2740,7 @@ class RealmArena {
       const d = this.save.shards - this.displayShards;
       this.displayShards += Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * Math.min(1, dt * 6)));
       if (Math.sign(this.save.shards - this.displayShards) !== Math.sign(d)) this.displayShards = this.save.shards;
-      this._syncHud();
+      this._syncShards(); // cycle0 L-04: only the counter changes here; a full _syncHud every frame of the tick rewrote the whole HUD (about 25 lookups, 15 DOM writes)
     }
 
     // Particles and floating numbers keep animating in every state.
@@ -3265,7 +3299,9 @@ class RealmArena {
     let tk = this.buffTaken > 0 && this.buffTaken < 1 ? this.buffTaken : 1; // additive timed buff (world shrine of Warding)
     if (p._stm) tk = Math.max(0.5, Math.min(1.5, tk * p._stm.taken)); // status mods (armored / armorBroken / curse), capped 0.5..1.5
     if (tk !== 1) dmg = Math.max(1, Math.round(dmg * tk));
-    p.hp = Math.max(0, p.hp - dmg);
+    let hpFloor = 0; // b08-r2-04: the first-run coach may soften hits ({ mult, floor }) so a new player never falls before they have played
+    if (typeof this.hurtGuard === 'function') { let g = null; try { g = this.hurtGuard(dmg); } catch (e) { g = null; } if (g) { if (g.mult > 0 && g.mult < 1) dmg = Math.max(1, Math.round(dmg * g.mult)); if (g.floor > 0) hpFloor = Math.min(p.hp, g.floor); } }
+    p.hp = Math.max(hpFloor, p.hp - dmg);
     this._heroHurtAt = performance.now() / 1000; this._gHurtT = this._stT; // _gHurtT: game time of the last hit (G8 regen waits 3 s)
     this._snd('hurt');
     p.iframes = this.stats.iframes;
@@ -4609,7 +4645,9 @@ class RealmArena {
   // Every id the old panel had is kept; nothing is removed, only regrouped. The open tab is remembered for this page only.
   bpTab(name) {
     if (name === 'gear' || name === 'stats' || name === 'relics') {
+      const was = this._bpTabName || 'gear';
       this._bpTabName = name;
+      if (was !== name && this._bpDeltaUid) { this._bpHoverUid = 0; this.bpShowDelta(0); } // b02-08: a Gear-tab compare never lingers on another tab
       const root = document.getElementById('realm-backpack-body');
       if (root) {
         root.querySelectorAll('[data-bp-tab]').forEach((b) => { const on = b.dataset.bpTab === name; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; b.classList.toggle('on', on); });
@@ -5158,6 +5196,13 @@ class RealmArena {
     return 'the Realm';
   }
 
+  // The shard counter text alone (it ticks toward save.shards over a few frames, see _update). Returns the element.
+  _syncShards() {
+    const shards = document.getElementById('realm-shards');
+    if (shards) { const t = `💎 ${Math.floor(this.displayShards)}`; if (shards.textContent !== t) shards.textContent = t; }
+    return shards;
+  }
+
   _syncHud(force) {
     const hp = document.getElementById('realm-hp-fill');
     if (hp) hp.style.width = `${Math.max(0, this.player.hp) / this.stats.maxHp * 100}%`;
@@ -5167,8 +5212,7 @@ class RealmArena {
     const wave = document.getElementById('realm-wave');
     if (wave && !wc) wave.textContent = this.team && this.team.isPvp ? this.team.duelLabel() : this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready'; // world mode: the world writes the zone here
     else if (wave && /wave|get ready/i.test(wave.textContent)) wave.textContent = '';
-    const shards = document.getElementById('realm-shards');
-    if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
+    const shards = this._syncShards();
     let de = shards ? document.getElementById('realm-dust') : null;
     if (shards && (de || (this.save.dust || 0) > 0) && this.forgeOn()) { // GW: forge dust, calm (no animation), only once there is some
       if (!de) { de = document.createElement('span'); de.id = 'realm-dust'; de.style.marginLeft = '6px'; shards.insertAdjacentElement('afterend', de); }

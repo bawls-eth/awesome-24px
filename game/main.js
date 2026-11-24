@@ -155,6 +155,35 @@ function cleanCount(v) {
   return Number.isFinite(v) && v > 0 ? Math.min(v, 1e9) : 0;
 }
 
+// One step of a day streak (login, selling). Dates are UTC day keys 'YYYY-MM-DD'. Returns the streak to show, the date to keep,
+// counted (a new day was counted: pay its bonus) and write (store streak + date).
+//  same day: nothing. Yesterday: +1. Older, missing or unreadable: a new streak of 1 (as always).
+// cycle1 L-07: a stored date in the FUTURE means the device clock was ahead when it was written and has been put right since.
+// That used to reset the streak to 1. Now the streak is never lost for it, and never paid twice:
+//  1 or 2 days ahead: that day is already counted, so wait for it (nothing written, nothing paid; it continues from there);
+//  more than 2 days ahead: the stored date is ignored: the streak restarts its count from today (date = today, no bonus today),
+//  so a clock that was a month ahead cannot freeze the streak for a month.
+// And a device date before STREAK_CLOCK_FLOOR (earlier than this rule existed, e.g. a dead clock battery showing 1970 or 2000)
+// is a wrong clock for certain: an existing streak is left exactly as it is until the clock is right again.
+const STREAK_FUTURE_DAYS = 2;
+const STREAK_CLOCK_FLOOR = '2026-11-01';
+function streakDayNumber(key) {
+  if (typeof key !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return NaN;
+  const t = Date.parse(key + 'T00:00:00Z');
+  return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === key ? Math.round(t / 86400000) : NaN;
+}
+function streakStep(lastDate, streak, today) {
+  streak = cleanCount(streak);
+  if (lastDate === today) return { streak, date: today, counted: false, write: false };
+  const was = streakDayNumber(lastDate); const now = streakDayNumber(today);
+  if (streak > 0 && Number.isFinite(was) && !(now >= streakDayNumber(STREAK_CLOCK_FLOOR))) return { streak, date: lastDate, counted: false, write: false };
+  if (streak > 0 && Number.isFinite(was) && Number.isFinite(now) && was > now) {
+    if (was - now <= STREAK_FUTURE_DAYS) return { streak, date: lastDate, counted: false, write: false };
+    return { streak, date: today, counted: false, write: true };
+  }
+  return { streak: was === now - 1 ? streak + 1 : 1, date: today, counted: true, write: true };
+}
+
 // Beta S-01: true from the moment a Restore writes the save until the page reloads, so no other writer (a timer, the
 // cross-tab listener, a late gather) can put the old in-memory state back over the restored file.
 let SAVE_RESTORING = false;
@@ -456,6 +485,52 @@ const SPARKLE_CATCH_RADIUS = 26;
 
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 if (IS_TOUCH) document.body.classList.add('touch-device');
+// Cycle 1 U-02: on phones (<= 720 px) the bag bar is ONE row: the bag + the 3 most recently changed counts (style.css
+// #inventory-panel.bag-compact). Tapping the bag expands every count; tapping again folds it. Recency is watched on the
+// count text itself (any code path that updates a count), this tab only, never saved. Desktop keeps the full bar.
+(function setupBagBar() {
+  const panel = document.getElementById('inventory-panel'); const bag = document.getElementById('bag-icon');
+  if (!panel || !bag || typeof MutationObserver === 'undefined') return;
+  const chips = () => Array.from(panel.children).filter((e) => e !== bag && e.querySelector('b'));
+  const last = new Map(); let recent = chips().slice(0, 3);
+  chips().forEach((c) => last.set(c, c.textContent));
+  // At big Text size the capped one-row bar fits fewer counts: drop the oldest of the 3 until the row fits (never below 1).
+  const paint = () => {
+    let show = recent.slice();
+    for (;;) {
+      chips().forEach((c) => c.classList.toggle('bag-recent', show.includes(c)));
+      show.forEach((c, i) => c.style.setProperty('--bag-order', String(i + 1)));
+      if (show.length <= 1 || !panel.classList.contains('bag-compact') || panel.classList.contains('bag-open') || panel.scrollWidth <= panel.clientWidth + 1) break;
+      show = show.slice(0, -1);
+    }
+  };
+  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+  const sync = () => {
+    const on = !!(phone && phone.matches);
+    panel.classList.toggle('bag-compact', on);
+    if (on) { bag.setAttribute('role', 'button'); bag.tabIndex = 0; bag.setAttribute('aria-controls', 'inventory-panel'); bag.setAttribute('aria-label', 'Bag: show every count'); bag.setAttribute('aria-expanded', String(panel.classList.contains('bag-open'))); }
+    else { ['role', 'tabindex', 'aria-controls', 'aria-label', 'aria-expanded'].forEach((a) => bag.removeAttribute(a)); panel.classList.remove('bag-open'); }
+  };
+  const toggle = () => { if (!panel.classList.contains('bag-compact')) return; const open = panel.classList.toggle('bag-open'); bag.setAttribute('aria-expanded', String(open)); bag.setAttribute('aria-label', open ? 'Bag: show only recent counts' : 'Bag: show every count'); paint(); };
+  bag.addEventListener('click', toggle);
+  bag.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) toggle(); } });
+  new MutationObserver(() => {
+    let moved = false;
+    chips().forEach((c) => { const t = c.textContent; if (last.get(c) !== t) { last.set(c, t); if (!c.classList.contains('hidden')) { recent = [c].concat(recent.filter((x) => x !== c)).slice(0, 3); moved = true; } } });
+    if (moved) paint();
+  }).observe(panel, { subtree: true, characterData: true, childList: true });
+  const resync = () => { sync(); paint(); };
+  if (phone) { if (phone.addEventListener) phone.addEventListener('change', resync); else if (phone.addListener) phone.addListener(resync); }
+  // the bar first gets a size when the HUD shows (join) or Text size changes: refit then (one rAF, no loop: paint is stable)
+  let fitQ = 0; const refit = () => { if (fitQ) return; fitQ = requestAnimationFrame(() => { fitQ = 0; paint(); }); };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(refit).observe(panel);
+  window.addEventListener('resize', refit);
+  sync(); paint();
+})();
+if (IS_TOUCH) { // b08-r2-09: the join card's tip uses touch words on a phone, never key names
+  const jt = document.querySelector('#join-overlay .join-tip');
+  if (jt) jt.textContent = 'Drag the stick to walk · tap A to interact (fish, chop, mine, catch bugs) · tap C to chat · more in the menu';
+}
 
 // Shared accessibility prefs (pixeltown-access-v1, written by the Realm settings): the town only mirrors them
 // as body classes + a CSS variable. Reading never throws; missing/corrupt prefs fall back to defaults.
@@ -715,6 +790,19 @@ const SEASON_DECOR_SPOTS = [
   { x: 1050, y: 1100 }, { x: 1900, y: 350 },
 ];
 const STATUE_POS = { x: 1450, y: 600 };
+// R4-D2 W-06 / b12-r2-05: ONE pixel scale for every hero-shaped sprite in the Town. Resident NPCs (Professor Byte, the dock resident,
+// the travelling merchant, the graveyard zombie) used to draw at 1.8-2x the 24 px hero, with doubled pixels next to 1x players.
+// Now 1x like the player and the Founder's Statue; each NPC keeps its FEET where they were (the sprite moves down by the
+// shrink) and its labels follow the head. ?npcscale=classic restores the old sizes.
+const TOWN_NPC_SCALE = (() => { try { return /[?&]npcscale=classic(&|$)/.test(location.search) ? 0 : 1; } catch (e) { return 1; } })();
+const npcScale = (classic) => (TOWN_NPC_SCALE ? TOWN_NPC_SCALE : classic);
+const npcFeetShift = (classic) => 12 * (classic - npcScale(classic)); // 24 px cell, origin centre: feet at y + 12 * scale
+// W-06 wildlife scale table: Town fauna drew at their SVG sizes (fox 56, deer 68, butterfly 32 px) next to the 24 px hero, i.e. 2-3x.
+// Display size is now 0.45x of that, clamped 14..32 px: insects / frogs ~14, birds / snakes 16-18, fox / otter ~25, deer / caribou /
+// shark ~31 (a deer is a little taller than the hero, a fox about hero height), baked 1:1 so the pixels match the hero's density.
+// Flora keeps its size. Catch reach, speed and wander range still use the old size, so gameplay is unchanged. ?npcscale=classic: old.
+const FF_FAUNA_K = 0.45;
+const ffDisplaySize = (a) => (TOWN_NPC_SCALE && a.kind === 'fauna' ? Math.max(14, Math.min(32, Math.round(Math.max(a.w, a.h) * FF_FAUNA_K))) : Math.max(14, a.w, a.h));
 const NPC_POS = { x: 1550, y: 540 };
 const NPC_RADIUS = 48;
 const NPC_NAME = '🧪 Professor Byte';
@@ -817,7 +905,7 @@ const SHOP_RADIUS = 70;
 // arcade district, southeast of the statue — previously these were
 // scattered across the whole map (the tournament sign in particular sat
 // all the way on the opposite, western edge, by the main pond), which
-// meant a lot of walking just to find them. Having one GTA portal instead
+// meant a lot of walking just to find them. Having one portal instead
 // of the original two redundant ones is part of the same tidy-up.
 const POLYROLL_POS = { x: 1900, y: 760 };
 const POLYROLL_RADIUS = 50;
@@ -1001,8 +1089,10 @@ const BEACH_PICKUP_RADIUS = 36;
 const BEACH_RESPAWN_MS = 20000;
 const FLOWER_TYPES = ['🌸', '🌷', '🌻', '🌹'];
 const FLOWER_SPOTS = [
+  // cyc0-S: the 4th patch sat 22 px from the Kart Rally door, and flowers answer E before doors in interact(), so E at that
+  // door picked the flower (door reachable over 40% of its range). It now sits in the middle of the four doors, clear of each.
   { x: 400, y: 450 }, { x: 650, y: 420 }, { x: 1700, y: 750 },
-  { x: 1850, y: 950 }, { x: 2150, y: 600 }, { x: 350, y: 880 },
+  { x: 1900, y: 915 }, { x: 2150, y: 600 }, { x: 350, y: 880 },
 ];
 const FLOWER_PICKUP_RADIUS = 34;
 
@@ -1188,6 +1278,20 @@ const MAIL_STAR_BASE = 2;
 // deal/bulk bonuses never apply to crafted goods). Local-only: nothing here touches the network.
 const WORKBENCH_POS = { x: 1330, y: 800 };
 const WORKBENCH_RADIUS = 70;
+// R4: objects that answer E before a weed in interact(), with the exact centre and radius their isNear*() uses. weedSpotsForDay
+// keeps r + 8 around each clear, so no weed is ever shadowed (shop, museum, scavenger spots and NPCs have their own rules there).
+const WEED_SHADOW_RINGS = [
+  { x: ABLE_SISTERS_POS.x + ABLE_SISTERS_POS.w / 2, y: ABLE_SISTERS_POS.y + ABLE_SISTERS_POS.h / 2, r: ABLE_SISTERS_RADIUS },
+  { x: CAMPFIRE_POS.x, y: CAMPFIRE_POS.y, r: CAMPFIRE_RADIUS }, // only at concert time, kept clear every day
+  { x: POLYROLL_POS.x, y: POLYROLL_POS.y, r: POLYROLL_RADIUS },
+  { x: TURNIP_STALL_POS.x, y: TURNIP_STALL_POS.y, r: TURNIP_STALL_RADIUS },
+  { x: WORKBENCH_POS.x, y: WORKBENCH_POS.y, r: WORKBENCH_RADIUS },
+  { x: MAILBOX_POS.x, y: MAILBOX_POS.y, r: MAILBOX_RADIUS },
+  { x: HOME_POS.x, y: HOME_POS.y, r: HOME_RADIUS },
+  { x: GUESTBOOK_POS.x, y: GUESTBOOK_POS.y, r: GUESTBOOK_RADIUS },
+  { x: ISLES_SIGN_POS.x, y: ISLES_SIGN_POS.y + 14, r: ISLES_SIGN_RADIUS },
+  { x: POSTCARD_POS.x, y: POSTCARD_POS.y + 14, r: POSTCARD_RADIUS },
+];
 const RECIPES = [
   { id: 'plank', icon: '🪵', label: 'Plank Stack', cost: { wood: 3 }, value: 4 },
   { id: 'brick', icon: '🧱', label: 'Stone Brick', cost: { stone: 3 }, value: 4 },
@@ -1222,19 +1326,24 @@ const KK_CONCERT_END_HOUR = 21; // 9pm local time
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
 const WEATHER_RAIN_CHANCE = 0.3; // ~30% of windows are rainy
 const WEATHER_RAIN_COUNT = 70;
-// One-way, GTA3-loading-door style portals: each is a real door object in
-// the town that, on interact, leaves Pixeltown entirely for another
-// browser game in this same tab. No teleport back — closing/navigating
-// away from the destination is how you return. Both doors live in the
-// arcade district (see POLYROLL_POS above) — there used to be two
-// redundant GTA 3 doors on opposite sides of the map; one is enough now
-// that there's a single, easy-to-find spot for all of this.
+// Arcade district doors (O-01, owner decision): original neutral names only. A door with a `url` opens that page in a NEW
+// tab (rel=noopener) after a "this leaves the game" confirm, so Pixeltown stays open behind it; a door without one shows
+// the "Coming soon" card. The doors used to carry third-party game names and same-tab links; those are gone.
 const PORTALS = [
-  { x: 1830, y: 870, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
-  { x: 1970, y: 870, label: '🚪 NFS Underground 2', color: 0xe0454f, url: 'https://nfsu2.xyz/' },
-  { x: 1830, y: 960, label: '🚪 Kart Racing', color: 0xffa726, url: 'https://olivers.tools/kart/' },
-  { x: 1970, y: 960, label: '🚪 Vice City', color: 0xff4fa0, url: 'https://quenq.com/apps/vice-city/' },
+  { x: 1830, y: 870, label: '🚪 City Drive', color: 0x4fa0e0, url: null },
+  { x: 1970, y: 870, label: '🚪 Night Racer', color: 0xe0454f, url: null },
+  { x: 1830, y: 960, label: '🚪 Kart Rally', color: 0xffa726, url: 'https://olivers.tools/kart/' },
+  { x: 1970, y: 960, label: '🚪 Neon Coast', color: 0xff4fa0, url: null },
 ];
+// Cycle 1 S: the targets that answer E AFTER a weed in interact() (arcade doors, dig hole, Realm Gate, visiting merchant). A weed in
+// pull range of any point of their ring would steal E, so their keep-clear is their real radius + WEED_PULL_RADIUS (the ring test in
+// weedSpotsForDay adds 8, hence the - 8). Pushed here because PORTALS is declared after WEED_SHADOW_RINGS.
+WEED_SHADOW_RINGS.push(
+  ...PORTALS.map((p) => ({ x: p.x, y: p.y, r: DOOR_RADIUS + WEED_PULL_RADIUS - 8 })),
+  { x: DIG_HOLE_POS.x, y: DIG_HOLE_POS.y, r: DIG_HOLE_RADIUS + WEED_PULL_RADIUS - 8 },
+  { x: REALM_GATE_POS.x, y: REALM_GATE_POS.y + 30, r: REALM_GATE_RADIUS + WEED_PULL_RADIUS - 8 },
+  { x: MERCHANT_POS.x, y: MERCHANT_POS.y, r: MERCHANT_RADIUS + WEED_PULL_RADIUS - 8 },
+);
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 const MAIN_POND = { cx: 260, cy: 600, rx: 150, ry: 90 };
 
@@ -1653,7 +1762,7 @@ class TownScene extends Phaser.Scene {
     this.setupActivities();
     this.setupBuilding();
     this.setupWalkie();
-    this.setupPortalReopen();
+    this.setupPortalReopen(); this.setupDoorSoon();
     this.setupPolyroll();
     this.setupAchievements();
     this.setupLoginStreak();
@@ -2016,8 +2125,8 @@ class TownScene extends Phaser.Scene {
       this.sparkleIndex = index;
       this.sparkleCaught = false;
       const [x, y] = SPARKLE_SPOTS[index];
-      this.sparkleStar.setPosition(x, y).setVisible(true);
-      this.sparkleGlow.setPosition(x, y).setVisible(true);
+      this.uncull(this.sparkleStar.setPosition(x, y).setVisible(true)); // moved: never keep the cull bit of its old spot
+      this.uncull(this.sparkleGlow.setPosition(x, y).setVisible(true));
     }
 
     if (this.sparkleCaught) return;
@@ -2058,6 +2167,14 @@ class TownScene extends Phaser.Scene {
   // other island quadrants) are off camera at any time. Every 4th frame (or when the camera moved 48+ px) each top-level, world-space
   // object whose box lies fully outside the camera view plus a 320 px margin is excluded from the main camera through `cameraFilter`
   // (its own `visible` flag, which game code uses, is never touched). The margin covers anything that moves between two passes.
+  // A pooled object that jumps to a new spot between two cull passes must not keep the cull bit of its old spot (it would be
+  // undrawn for up to 3 frames). The next pass re-checks it normally.
+  uncull(o) {
+    const cam = this.cameras && this.cameras.main;
+    if (o && cam && (o.cameraFilter & cam.id)) o.cameraFilter &= ~cam.id;
+    return o;
+  }
+
   cullOffscreen() {
     const cam = this.cameras && this.cameras.main;
     if (!cam || !this.sys.displayList) return;
@@ -2075,6 +2192,9 @@ class TownScene extends Phaser.Scene {
     for (let i = 0; i < list.length; i++) {
       const o = list[i];
       if (o.scrollFactorX !== 1 || o.scrollFactorY !== 1 || o.type === 'Container' || o.type === 'Graphics' || o.type === 'Particles' || o.type === 'ParticleEmitter') continue;
+      // Hidden objects draw nothing anyway; never leave them culled. A pooled object (sparkle star, firefly) is moved and shown
+      // between two cull passes: with a stale cull bit from its old spot it would stay undrawn for up to 3 frames in view.
+      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; continue; }
       const w = o.displayWidth, h = o.displayHeight;
       if (!(w > 0) || !(h > 0)) continue;
       const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
@@ -2311,7 +2431,7 @@ class TownScene extends Phaser.Scene {
       const setMore = (open) => {
         strip.classList.toggle('more-open', open);
         moreBtn.setAttribute('aria-expanded', String(open));
-        moreBtn.textContent = open ? '✕ Less' : '☰ More';
+        moreBtn.textContent = open ? '✕ Close' : '🧰 Tools'; // R4 D4 (b07-r2-10): was a second '☰ More' (the panel tab keeps that name)
       };
       this.setHudMore = setMore;
       setMore(false);
@@ -2458,7 +2578,7 @@ class TownScene extends Phaser.Scene {
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
       ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'], ['realmMenuOpen', 'realm-menu-close-btn'],
-      ['postcardsOpen', 'postcards-close-btn'],
+      ['postcardsOpen', 'postcards-close-btn'], ['doorSoonOpen', 'door-soon-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2576,7 +2696,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen && !this.navSheetOpen() && !(this.sharedSettings && this.sharedSettings.isOpen()); // review N3: nothing acts behind the "Where to?" sheet
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen && !this.doorSoonOpen && !this.navSheetOpen() && !(this.sharedSettings && this.sharedSettings.isOpen()); // review N3: nothing acts behind the "Where to?" sheet
   }
 
   navSheetOpen() { try { return typeof MMNav !== 'undefined' && MMNav.isOpen(); } catch (e) { return false; } }
@@ -2822,7 +2942,7 @@ class TownScene extends Phaser.Scene {
 
     const tree = this.findNearestTree();
     if (tree) {
-      this.treeCooldowns[tree.index] = Date.now();
+      this.treeCooldowns[tree.index] = this.cooldownNow();
       this.shakeTreeVisual(tree.index);
       this.swingTool('🪓');
       this.gainResource('wood', 1, tree.x, tree.y - 40);
@@ -2837,7 +2957,7 @@ class TownScene extends Phaser.Scene {
 
     const rock = this.findNearestRock();
     if (rock) {
-      this.rockCooldowns[rock.key] = Date.now();
+      this.rockCooldowns[rock.key] = this.cooldownNow();
       this.swingTool('⛏️');
       this.gainResource('stone', 1, rock.x, rock.y - 20);
       return;
@@ -2873,7 +2993,7 @@ class TownScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 1).fillRect(x - 24, y - 6, 48, 18);
     g.fillStyle(0x1c2430, 1);
     [[-14, -1], [0, 2], [14, -2]].forEach(([dx, dy]) => g.fillCircle(x + dx, y + dy, 2));
-    g.bake();
+    g.bake({ finish: 'polyroll' });
     this.add.text(x, y - 36, '🎲 Polyroll', { fontSize: '13px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
@@ -3033,10 +3153,10 @@ class TownScene extends Phaser.Scene {
   updateSellStreak() {
     const saved = loadSave();
     const today = new Date().toISOString().slice(0, 10);
-    if (saved.lastSellDate === today) return; // already counted today
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const streak = saved.lastSellDate === yesterday ? cleanCount(saved.sellStreak) + 1 : 1;
-    writeSave({ sellStreak: streak, lastSellDate: today });
+    const st = streakStep(saved.lastSellDate, saved.sellStreak, today);
+    if (st.write) writeSave({ sellStreak: st.streak, lastSellDate: st.date });
+    if (!st.counted) return; // already counted today (or the stored day is ahead of the clock: cycle1 L-07, see streakStep)
+    const streak = st.streak;
     this.sellStreak = streak;
     this.lifetimeStats.bestSellStreak = Math.max(this.lifetimeStats.bestSellStreak || 0, streak);
     this.saveAchievements();
@@ -3087,12 +3207,12 @@ class TownScene extends Phaser.Scene {
   buyTurnips() {
     const price = this.turnipBuyPrice();
     if ((this.localScore || 0) < price) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${price} ⭐ for ${TURNIP_BUNDLE} turnips`);
+      this.stallNote(`Not enough stars: ${TURNIP_BUNDLE} turnips cost ${price} ⭐, you have ${Math.max(0, this.localScore || 0)} ⭐`);
       return;
     }
     const boughtToday = this.turnipBundlesBoughtToday();
     if (boughtToday >= TURNIP_DAILY_BUNDLE_CAP) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'sold out for today — come back tomorrow');
+      this.stallNote('Sold out for today. Come back tomorrow.');
       return;
     }
     writeSave({ turnipBuys: { day: this.questDayBucket(), bundles: boughtToday + 1 } });
@@ -3102,18 +3222,28 @@ class TownScene extends Phaser.Scene {
     this.awardPoint(-price, `bought ${TURNIP_BUNDLE} 🥬 for ${price} ⭐`, this.localBody.x, this.localBody.y - 30, 'pop');
   }
 
+  // R4 D4 (b07-r2-13): a refused buy used to flash a 0.9 s float on top of the player's name (easy to miss). Now the float
+  // stays longer above the name and the same line goes to the polite live region (toast) for 3.5 s, so it is seen and read.
+  stallNote(text) {
+    this.lastStallNote = text;
+    const t = this.add.text(this.localBody.x, this.localBody.y - 52, text, { fontSize: '12px', fontFamily: 'monospace', color: '#ffb4a8', stroke: '#1c2430', strokeThickness: 3, align: 'center', wordWrap: { width: 220 } }).setOrigin(0.5, 1).setDepth(100002);
+    this.tweens.add({ targets: t, y: t.y - 16, alpha: { from: 1, to: 0 }, delay: 1600, duration: 900, onComplete: () => t.destroy() });
+    const toast = document.getElementById('achievement-toast');
+    if (toast) {
+      toast.textContent = text;
+      toast.classList.remove('hidden');
+      clearTimeout(this.achievementToastTimer);
+      this.achievementToastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
+  }
+
   // ---------- underground (3D voxel cave, local-only) ----------
 
   isNearDigHole() {
     return Math.hypot(this.localBody.x - DIG_HOLE_POS.x, this.localBody.y - DIG_HOLE_POS.y) < DIG_HOLE_RADIUS;
   }
 
-  // These doors are one-way, GTA3-loading-door style: they leave Pixeltown
-  // entirely for another browser game in this same tab. There's no
-  // teleport back — closing/navigating away from that page is how you
-  // return, same as actually walking through a loading door and leaving
-  // the area behind. Always confirm first since this abandons the
-  // current session.
+  // O-01: arcade doors. Linked doors open in a new tab (noopener) after a confirm; the rest show the Coming soon card.
   findNearestPortal() {
     let best = null;
     let bestDist = DOOR_RADIUS;
@@ -3129,14 +3259,42 @@ class TownScene extends Phaser.Scene {
   }
 
   useDoor() {
-    if (this.doorBusy) return;
+    if (this.doorBusy || this.doorSoonOpen) return;
     const portal = this.findNearestPortal();
     if (!portal) return;
     const name = portal.label.replace('🚪', '').trim();
-    const ok = window.confirm(`Walk through the portal to ${name}? This leaves Pixeltown in this tab — there's no way back through it.`);
+    if (!portal.url) { this.openDoorSoon(name); return; }
+    const ok = window.confirm(`${name} is another site. It opens in a new tab and leaves the game; Pixeltown stays open in this tab.`);
     if (!ok) return;
-    this.doorBusy = true;
-    window.location.href = portal.url;
+    const w = window.open(portal.url, '_blank', 'noopener,noreferrer');
+    if (w) { try { w.opener = null; } catch (e) { /* already detached */ } }
+  }
+
+  openDoorSoon(name) {
+    const ov = document.getElementById('door-soon-overlay');
+    if (!ov) return;
+    document.getElementById('door-soon-title').textContent = '🚪 ' + name;
+    this.doorSoonOpen = true;
+    ov.classList.remove('hidden');
+    this.doorSoonReturn = document.activeElement;
+    const btn = document.getElementById('door-soon-close-btn');
+    if (btn) btn.focus();
+  }
+
+  closeDoorSoon() {
+    this.doorSoonOpen = false;
+    const ov = document.getElementById('door-soon-overlay');
+    if (ov) ov.classList.add('hidden');
+    const back = this.doorSoonReturn; this.doorSoonReturn = null;
+    if (back && back.focus && document.contains(back)) { try { back.focus(); } catch (e) { /* gone */ } }
+  }
+
+  setupDoorSoon() {
+    const ov = document.getElementById('door-soon-overlay');
+    if (!ov) return;
+    document.getElementById('door-soon-close-btn').addEventListener('click', () => this.closeDoorSoon());
+    document.getElementById('door-soon-ok-btn').addEventListener('click', () => this.closeDoorSoon());
+    ov.addEventListener('click', (e) => { if (e.target === ov) this.closeDoorSoon(); });
   }
 
   // If the player presses the browser's Back button after going through a
@@ -3334,10 +3492,23 @@ class TownScene extends Phaser.Scene {
     });
   }
 
+  // cycle1 L-09: the hint updaters run every frame, so they keep their element (looked up again only if it left the page) and
+  // touch the class list only when the state changes (as updateIslesSignHint / updatePostcardHint already did).
+  hintEl(id) {
+    const c = this._hintEls || (this._hintEls = {});
+    let el = c[id];
+    if (!el || !el.isConnected) { el = document.getElementById(id); c[id] = el; }
+    return el;
+  }
+
+  setHintHidden(el, hidden) {
+    if (el.classList.contains('hidden') !== hidden) el.classList.toggle('hidden', hidden);
+  }
+
   updateDigHoleHint() {
-    const hint = document.getElementById('dig-hole-hint');
+    const hint = this.hintEl('dig-hole-hint');
     if (!hint) return;
-    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearDigHole());
+    this.setHintHidden(hint, !!(this.inUnderground || this.inRealm || this.buildMode || !this.isNearDigHole()));
   }
 
   // A real tappable button — not just a key hint — since "press E" isn't
@@ -3360,7 +3531,7 @@ class TownScene extends Phaser.Scene {
   }
 
   updateFishHint() {
-    const btn = document.getElementById('fish-hint-btn');
+    const btn = this.hintEl('fish-hint-btn');
     if (!btn) return;
     const state = this.fishing.state;
     const target = state === 'idle' ? this.findNearestFishingSpot() : null;
@@ -3373,8 +3544,8 @@ class TownScene extends Phaser.Scene {
       this.fishTargetShadow = targetShadow;
     }
     const show = !this.inUnderground && !this.inRealm && !this.buildMode && (state !== 'idle' || !!target);
-    btn.classList.toggle('hidden', !show);
-    btn.classList.toggle('biting', state === 'biting');
+    this.setHintHidden(btn, !show);
+    if (btn.classList.contains('biting') !== (state === 'biting')) btn.classList.toggle('biting', state === 'biting');
     let label = '🎣 Fish';
     if (state === 'biting') label = '❗ Reel it in!';
     else if (state === 'casting') label = '🎣 Waiting for a bite…';
@@ -3414,9 +3585,9 @@ class TownScene extends Phaser.Scene {
   }
 
   updateRealmGateHint() {
-    const hint = document.getElementById('realm-gate-hint');
+    const hint = this.hintEl('realm-gate-hint');
     if (!hint) return;
-    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate());
+    this.setHintHidden(hint, !!(this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate()));
   }
 
   // ---------- NAV slice E: "Where to?" sheet + Realm Gate pointer (UI only; no network, no save keys) ----------
@@ -3498,9 +3669,9 @@ class TownScene extends Phaser.Scene {
   }
 
   updateGatePointer(time) {
-    const el = document.getElementById('gate-pointer');
-    if (!el || !this.localBody || !this.gatePointer) return;
     if (time - this._gatePointerAt < 200) return; // a few times a second is plenty
+    const el = this.hintEl('gate-pointer');
+    if (!el || !this.localBody || !this.gatePointer) return;
     this._gatePointerAt = time;
     const st = this.gatePointer;
     const dx = REALM_GATE_POS.x - this.localBody.x;
@@ -3549,7 +3720,7 @@ class TownScene extends Phaser.Scene {
     this.realmEmbed.remove();
     this.realmEmbed = null;
     try { this.game.loop.wake(); } catch (e) { /* ignore */ }
-    try { const f = JSON.parse(localStorage.getItem('pixeltown-save-v1') || 'null'); if (f && f.realm && this.save) this.save.realm = f.realm; } catch (e) { /* ignore */ }
+    // what Mad Maze saved needs no copy here: enterRealm reads the stored realm, and a live arena resyncs from storage before every write
   }
 
   openRealmGateMenu() {
@@ -4045,9 +4216,10 @@ class TownScene extends Phaser.Scene {
     return Math.floor(this.questHash(31) * (24 - BUGOFF_HOURS));
   }
 
-  // 'before' | 'live' | 'after' relative to today's window (local hour).
+  // 'before' | 'live' | 'after' relative to today's window. The start hour is hashed from the UTC day (questDayBucket), so the
+  // hour it is compared with is the UTC hour too (cycle0 L-01); the signs show the window on the player's own clock (windowLabel).
   bugOffPhase() {
-    const hour = new Date().getHours();
+    const hour = this.utcHour();
     const start = this.bugOffStartHour();
     if (hour < start) return 'before';
     return hour < start + BUGOFF_HOURS ? 'live' : 'after';
@@ -4117,9 +4289,10 @@ class TownScene extends Phaser.Scene {
     const start = this.bugOffStartHour();
     const end = start + BUGOFF_HOURS;
     const rec = this.bugOffRecord();
-    let status = `next: ${start}:00-${end}:00`;
-    if (this.isBugOffTime()) status = `LIVE now! (${start}:00-${end}:00)`;
-    else if (new Date().getHours() >= end) status = `ended (${start}:00-${end}:00)`;
+    const win = this.windowLabel(start, end);
+    let status = `next: ${win}`;
+    if (this.isBugOffTime()) status = `LIVE now! (${win})`;
+    else if (this.utcHour() >= end) status = `ended (${win})`;
     const medal = rec.tier > 0 ? BUGOFF_TIERS[rec.tier - 1].icon : '';
     this.bugOffSignText.setText(['🦋 BUG-OFF', status, `today: ${rec.count} ${medal}`, `best: ${rec.best}`].join('\n'));
   }
@@ -4183,8 +4356,12 @@ class TownScene extends Phaser.Scene {
     if (museumEl) museumEl.textContent = this.museumCollection.size;
   }
 
+  // cycle0 L-06: the clock for in-session respawn cooldowns (trees, rocks, fossils, flowers, beach). Monotonic, so changing the
+  // device clock neither skips a cooldown (clock forward) nor freezes a spot until the clock catches up (clock back).
+  cooldownNow() { return performance.now(); }
+
   findNearestFossilSpot() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = FOSSIL_DIG_RADIUS;
     FOSSIL_SPOTS.forEach((spot, i) => {
@@ -4200,7 +4377,7 @@ class TownScene extends Phaser.Scene {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'fossil bag is full');
       return;
     }
-    this.fossilCooldowns[spot.index] = Date.now();
+    this.fossilCooldowns[spot.index] = this.cooldownNow();
     const mound = this.fossilMounds[spot.index];
     if (mound) {
       mound.setVisible(false);
@@ -4244,7 +4421,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestTree() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = TREE_SHAKE_RADIUS;
     TREES.forEach(([tx, ty], i) => {
@@ -4259,7 +4436,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestRock() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = ROCK_MINE_RADIUS;
     const consider = (list, prefix) => {
@@ -4591,18 +4768,36 @@ class TownScene extends Phaser.Scene {
     }
   }
 
+  // R4 O-04: the Town Backup is the same full bundle as the Lantern and the Hub (every save key + settings, MMBackup.bundle).
+  // If the backup tool cannot load (offline, first visit), it falls back to the old town-only file and says so.
   exportSave() {
-    const data = JSON.stringify(loadSave(), null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pixeltown-save-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'save backed up!');
+    const download = (data, name) => {
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    };
+    this.addChatLine({ system: true, text: 'Making your backup…' });
+    loadBackupModules().then((B) => {
+      if (!B) {
+        download(JSON.stringify(loadSave(), null, 2), `pixeltown-save-${Date.now()}.json`);
+        this.addChatLine({ system: true, text: 'Could not load the full backup tool, so this file holds the town save only.' });
+        return;
+      }
+      let bun;
+      try { bun = B.bundle(localStorage); } catch (e) { this.addChatLine({ system: true, text: 'Could not read your saves here (site data is blocked), so there is nothing to back up.' }); return; }
+      download(JSON.stringify(bun, null, 1), `pixeltown-backup-${Date.now()}.json`);
+      try { window.__lastBackup = bun; } catch (e) { /* test hook only */ }
+      const warn = bun.warnings && bun.warnings.length ? bun.warnings.map((w) => w.label).join(', ') : '';
+      const n = Object.keys(bun.keys).length;
+      this.addChatLine({ system: true, text: warn ? `Backup saved (${n} items), but this was damaged on this device and was left out: ${warn}.` : `Backup saved: ${n} saves and settings in one file. Keep it somewhere safe.` });
+      if (this.localBody) this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'save backed up!');
+    });
   }
 
   // Beta S-01: Restore validates the file. A Lantern backup bundle is planned and applied with MMBackup (every key, after a
@@ -4651,15 +4846,20 @@ class TownScene extends Phaser.Scene {
   }
 
   restoreBundle(text) {
+    // b14-r2-N02: the backup tool lazy-loads (1-2 s on a slow phone); say so at once instead of showing nothing until the confirm
+    if (!window.MMBackup) this.addChatLine({ system: true, text: 'Reading the backup…' });
     loadBackupModules().then((B) => {
       if (!B) { this.addChatLine({ system: true, text: 'Could not load the restore tool. Check your connection and try again. Nothing was changed.' }); return; }
       let plan;
       try { plan = B.plan(text); } catch (e) { plan = { ok: false }; }
       if (!plan || !plan.ok) { this.addChatLine({ system: true, text: ((plan && plan.message) || 'That backup file is damaged.') + ' Nothing was changed.' }); return; }
-      const lines = plan.keys.map((k) => '- ' + B.labelOf(k));
-      // beta S-03: damaged entries are skipped by MMBackup.plan (the town save first); say so plainly, they stay as they are here
-      const bad = Array.isArray(plan.skipped) && plan.skipped.length ? '\n\nCannot restore (damaged in the file), kept as they are on this device:\n' + plan.skipped.map((x) => '- ' + x.label).join('\n') : '';
-      const ok = window.confirm('Restore this backup? It will replace these saves on this device:\n' + lines.join('\n') + bad + '\n\nNothing changes if you cancel.');
+      const lines = (plan.saves || plan.keys).map((k) => '- ' + B.labelOf(k));
+      // R4 O-04 preview: settings are listed apart; build / date stamp when the file has one
+      const sets = Array.isArray(plan.settings) && plan.settings.length ? '\n\nSettings (' + plan.settings.length + '): ' + plan.settings.map((k) => B.labelOf(k)).join(', ') : '';
+      const made = plan.made ? '\nMade ' + String(plan.made).slice(0, 10) + (plan.build ? ' by build ' + plan.build : '') + (plan.newer ? ' (a newer version of the game)' : '') + '.' : '';
+      // beta S-03: damaged / unknown entries are skipped by MMBackup.plan (the town save first); say so plainly, they stay as they are here
+      const bad = Array.isArray(plan.skipped) && plan.skipped.length ? '\n\nSkipped (damaged or not known by this version), kept as they are on this device:\n' + plan.skipped.map((x) => '- ' + x.label).join('\n') : '';
+      const ok = window.confirm('Restore this backup?' + made + '\nIt will replace these saves on this device:\n' + lines.join('\n') + sets + bad + '\n\nNothing changes if you cancel.');
       if (!ok) { this.addChatLine({ system: true, text: 'Restore cancelled. Nothing was changed.' }); return; }
       this.commitRestore(() => { const r = B.apply(localStorage, plan); return r && r.ok ? true : ((r && r.message) || 'Restore failed, nothing was changed.'); });
     });
@@ -4695,11 +4895,10 @@ class TownScene extends Phaser.Scene {
   setupLoginStreak() {
     const saved = loadSave();
     const today = new Date().toISOString().slice(0, 10);
-    let streak = cleanCount(saved.loginStreak);
-    if (saved.lastLoginDate !== today) {
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      streak = saved.lastLoginDate === yesterday ? streak + 1 : 1;
-      writeSave({ loginStreak: streak, lastLoginDate: today });
+    const st = streakStep(saved.lastLoginDate, saved.loginStreak, today); // cycle1 L-07: a clock that was ahead never resets it
+    const streak = st.streak;
+    if (st.write) writeSave({ loginStreak: streak, lastLoginDate: st.date });
+    if (st.counted) {
       const bonus = Math.min(streak, 5);
       this.awardPoint(bonus, `🔥 Day ${streak} streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 44);
     }
@@ -5635,7 +5834,7 @@ class TownScene extends Phaser.Scene {
   }
 
   isFishTournamentTime() {
-    const hour = new Date().getHours();
+    const hour = this.utcHour(); // same clock as the UTC day the start hour is hashed from (cycle0 L-01)
     const start = this.tournamentStartHour();
     return hour >= start && hour < start + FISH_TOURNAMENT_HOURS;
   }
@@ -5684,9 +5883,10 @@ class TownScene extends Phaser.Scene {
     const end = start + FISH_TOURNAMENT_HOURS;
     const record = this.tournamentRecord;
     const recordLine = record ? `biggest: ${record.size}cm\nby ${record.name}` : 'no catches yet';
-    let statusLine = `next: ${start}:00-${end}:00`;
-    if (this.isFishTournamentTime()) statusLine = `LIVE now! (${start}:00-${end}:00)`;
-    else if (new Date().getHours() >= end) statusLine = `ended (${start}:00-${end}:00)`;
+    const win = this.windowLabel(start, end);
+    let statusLine = `next: ${win}`;
+    if (this.isFishTournamentTime()) statusLine = `LIVE now! (${win})`;
+    else if (this.utcHour() >= end) statusLine = `ended (${win})`;
     this.tournamentSignText.setText(['🎣 FISH TOURNEY', statusLine, recordLine].join('\n'));
   }
 
@@ -5772,7 +5972,50 @@ class TownScene extends Phaser.Scene {
     document.getElementById('build-material-btn').classList.toggle('hidden', !this.buildMode);
     document.getElementById('build-undo-btn').classList.toggle('hidden', !this.buildMode);
     if (!this.buildMode) this.lastPlacedBlockKey = null;
+    // R4 D4 (b07-r2-08): on a phone the expanded people panel and the build controls fought for the same strip. Entering
+    // build mode folds the panel (view only, the saved preference is untouched); leaving restores the saved state.
+    const panel = document.getElementById('player-list-panel');
+    if (panel && window.innerWidth <= 720) {
+      if (this.buildMode && !panel.classList.contains('collapsed') && this.applyPanelCollapse) { this.buildFoldedPanel = true; this.panelCollapsed = true; this.applyPanelCollapse(); }
+      else if (!this.buildMode && this.buildFoldedPanel && this.applyPanelCollapse) { this.buildFoldedPanel = false; this.panelCollapsed = false; this.applyPanelCollapse(); }
+    }
     this.updateBuildBanner();
+    this.layoutBuildHud();
+    if (!this.buildHudResize) { this.buildHudResize = () => this.layoutBuildHud(); window.addEventListener('resize', this.buildHudResize); }
+  }
+
+  // R4 D4 (b07-r2-08): stack the build banner, then Material + Undo side by side, BELOW whatever top HUD sits in the
+  // centre band (inventory, Where to?, the people chip, Hold to talk, the Realm Gate chip), so nothing overprints.
+  // Desktop (> 720 px) keeps the stylesheet layout. Buttons are >= 44 px tall on phones.
+  layoutBuildHud() {
+    const ids = ['build-mode-banner', 'build-material-btn', 'build-undo-btn'];
+    const [banner, mat, undo] = ids.map((id) => document.getElementById(id));
+    if (!banner || !mat || !undo) return;
+    const reset = () => [banner, mat, undo].forEach((el) => { el.style.top = ''; el.style.left = ''; el.style.transform = ''; el.style.minHeight = ''; el.style.width = ''; el.style.maxWidth = ''; el.style.boxSizing = ''; });
+    if (!this.buildMode || window.innerWidth > 720) { reset(); return; }
+    const vw = window.innerWidth;
+    const bw = Math.min(vw - 16, 360);
+    const bl = (vw - bw) / 2;
+    let top = 8;
+    ['inventory-panel', 'player-list-panel', 'where-to-btn', 'walkie-talk-btn', 'gate-pointer', 'whats-new-banner'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el || el.classList.contains('hidden')) return;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.top > window.innerHeight * 0.5 || r.bottom > window.innerHeight * 0.62) return;
+      if (r.right > bl && r.left < bl + bw) top = Math.max(top, r.bottom + 6);
+    });
+    banner.style.maxWidth = bw + 'px'; banner.style.width = bw + 'px'; banner.style.boxSizing = 'border-box';
+    banner.style.left = Math.round(bl) + 'px'; banner.style.transform = 'none';
+    banner.style.top = Math.round(top) + 'px';
+    const bh = banner.getBoundingClientRect().height || 40;
+    const rowTop = Math.round(top + bh + 6);
+    [mat, undo].forEach((el) => { el.style.minHeight = '44px'; el.style.top = rowTop + 'px'; el.style.transform = 'none'; });
+    const mw = mat.getBoundingClientRect().width; const uw = undo.getBoundingClientRect().width;
+    const start = Math.max(8, (vw - (mw + 8 + uw)) / 2);
+    mat.style.left = Math.round(start) + 'px';
+    undo.style.left = Math.round(start + mw + 8) + 'px';
   }
 
   cycleBuildType() {
@@ -6423,7 +6666,7 @@ class TownScene extends Phaser.Scene {
       try {
         const img = this.textures.get(src).getSourceImage();
         if (!img || !(img.naturalWidth || img.width)) return;
-        const px = Math.max(8, Math.round(Math.max(14, a.w, a.h) / 2));
+        const px = TOWN_NPC_SCALE && a.kind === 'fauna' ? ffDisplaySize(a) : Math.max(8, Math.round(Math.max(14, a.w, a.h) / 2)); // W-06: fauna 1:1 with the hero's pixels
         const ent = MMPixelize.bake(img, { size: px, key: `ff_${a.id}@${px}` });
         if (ent && ent.canvas && ent.w > 0) { this.textures.addCanvas(`ffpx_${a.id}`, ent.canvas); this.ffPixelized++; }
       } catch (e) { /* this species keeps its SVG */ }
@@ -6439,9 +6682,10 @@ class TownScene extends Phaser.Scene {
     // The SVGs are square, so a non-square w/h used to squash the art
     // (pine 72x96, joshua tree 80x104...). Keep the bigger side, square;
     // never below 14px so the microscopic species stay findable specks.
-    const size = Math.max(14, a.w, a.h);
+    const size = Math.max(14, a.w, a.h); // gameplay size (reach / speed / range), unchanged
     const fly = move === 'fly';
-    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(size, size).setDepth(fly ? s.y + 40 : s.y);
+    const shown = ffDisplaySize(a); // W-06: what is drawn
+    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(shown, shown).setDepth(fly ? s.y + 40 : s.y);
     const inWater = !!s.pond && FF_IN_WATER.has(a.id);
     const spec = {
       id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean,
@@ -6617,7 +6861,7 @@ class TownScene extends Phaser.Scene {
       const s = spec.sprite;
       const d = Math.hypot(s.x - px, s.y - py);
       if (d < 260 && n < this.ffSparkles.length) {
-        this.ffSparkles[n++].setPosition(s.x + s.displayWidth * 0.3, s.y - s.displayHeight * 0.45).setVisible(true);
+        this.uncull(this.ffSparkles[n++].setPosition(s.x + s.displayWidth * 0.3, s.y - s.displayHeight * 0.45).setVisible(true)); // pooled: moved this frame
       }
       if (d < spec.reach && d < bestDist) { best = spec; bestDist = d; }
     }
@@ -6780,7 +7024,7 @@ class TownScene extends Phaser.Scene {
     const proxy = new Proxy(g, {
       get: (t, k) => {
         if (k === 'bake') {
-          return () => {
+          return (opt) => {
             if (b.live || !(b.x1 > b.x0)) return t; // untracked call or empty: stay a live Graphics
             const pad = 3;
             const left = Math.floor(b.x0) - pad;
@@ -6792,6 +7036,7 @@ class TownScene extends Phaser.Scene {
             this.bakedGfxN = (this.bakedGfxN || 0) + 1;
             const key = `baked_${this.bakedGfxN}`;
             t.generateTexture(key, w, h);
+            if (opt && opt.finish) this.finishBakedTexture(key, opt.finish);
             const img = this.add.image(left, top, key).setOrigin(0, 0).setDepth(t.depth);
             this.children.moveTo(img, this.children.getIndex(t)); // same display-list slot as the Graphics
             t.destroy();
@@ -6808,6 +7053,49 @@ class TownScene extends Phaser.Scene {
       },
     });
     return proxy;
+  }
+
+  // Cycle 1 art (G, T-BLD "flat fills, no outline"): a pixel finish for a baked building texture, run ONCE at create (never per frame).
+  // Alpha snapped to 0/255 (no soft canvas fringe), a 1 px colour-matched dark outline outside the silhouette (30% of the darkest
+  // opaque neighbour, never pure black, the same rule as the cycle 0 creature / Hub icon outline), and a little depth with the light
+  // from the top-left: the bottom 4 px and right 3 px of every shape are shaded, the top-left 2 px rim is lit. ?bldfinish=0 = flat.
+  bldDepth() { return !/[?&]bldfinish=0(&|$)/.test(typeof location !== 'undefined' ? location.search : ''); }
+  finishBakedTexture(key, name) {
+    const st = this.bldFinish || (this.bldFinish = { on: this.bldDepth(), count: 0, ms: 0, keys: {}, outline: 0 });
+    st.keys[name || key] = key;
+    if (!st.on) return false;
+    const t0 = performance.now();
+    try {
+      const tex = this.textures.get(key); const cv = tex && tex.getSourceImage();
+      if (!cv || !cv.getContext) return false;
+      const W = cv.width, H = cv.height, ctx = cv.getContext('2d');
+      const im = ctx.getImageData(0, 0, W, H), d = im.data, src = new Uint8ClampedArray(d);
+      const op = (x, y) => x >= 0 && y >= 0 && x < W && y < H && src[(y * W + x) * 4 + 3] >= 128;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (op(x, y)) {
+          d[i + 3] = 255;
+          let f = 1;
+          if (!op(x, y + 1) || !op(x, y + 2) || !op(x, y + 3) || !op(x, y + 4)) f = 0.78; // ground-side shade
+          else if (!op(x + 1, y) || !op(x + 2, y) || !op(x + 3, y)) f = 0.88; // right-side shade
+          else if (!op(x - 1, y) || !op(x, y - 1) || !op(x - 1, y - 1) || !op(x, y - 2)) f = 1.14; // top-left rim light
+          if (f !== 1) for (let c = 0; c < 3; c++) d[i + c] = Math.min(255, Math.round(src[i + c] * f));
+          continue;
+        }
+        d[i + 3] = 0;
+        let best = -1, br = 0, bg = 0, bb = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if ((!dx && !dy) || !op(x + dx, y + dy)) continue;
+          const j = ((y + dy) * W + x + dx) * 4, l = src[j] + src[j + 1] + src[j + 2];
+          if (best < 0 || l < best) { best = l; br = src[j]; bg = src[j + 1]; bb = src[j + 2]; }
+        }
+        if (best >= 0) { d[i] = Math.round(br * 0.3); d[i + 1] = Math.round(bg * 0.3); d[i + 2] = Math.round(bb * 0.3); d[i + 3] = 255; st.outline++; }
+      }
+      ctx.putImageData(im, 0, 0);
+      if (tex.refresh) tex.refresh();
+      st.count++;
+      return true;
+    } catch (e) { return false; } finally { st.ms += performance.now() - t0; }
   }
 
   // Draws static vector art once into a texture and places it as a plain
@@ -6944,8 +7232,10 @@ class TownScene extends Phaser.Scene {
       this.addObstacleRect({ x: s.x - 9, y: s.y - 10, width: 18, height: 10 });
     });
 
-    const zombie = this.add.sprite(x + 50, y + 18, 'zombies', 0).setScale(1.8).setDepth(y + 19);
-    this.tweens.add({ targets: zombie, y: y + 14, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const zdy = npcFeetShift(1.8);
+    const zombie = this.add.sprite(x + 50, y + 18 + zdy, 'zombies', 0).setScale(npcScale(1.8)).setDepth(y + 19);
+    this.graveZombie = zombie;
+    this.tweens.add({ targets: zombie, y: y + 14 + zdy, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.add.text(x, y - 68, '🪦 Old Graveyard', {
       fontSize: '11px',
       fontFamily: 'monospace',
@@ -7008,13 +7298,14 @@ class TownScene extends Phaser.Scene {
     const { x, y, w, h } = HOUSE_POS;
     const g = this.bakedGfx();
     g.fillStyle(0x8a5a3b, 1).fillRect(x, y, w, h);
+    if (this.bldDepth()) g.fillStyle(0x2a1a10, 0.3).fillRect(x, y, w, 6); // cycle 1 art: eave shadow under the roof
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 45);
     g.fillStyle(0x5a3a22, 1).fillRect(x + w / 2 - 10, y + h - 28, 20, 28);
     g.fillStyle(0xcfe8f5, 1);
     g.fillRect(x + 16, y + 14, 20, 20);
     g.fillRect(x + w - 36, y + 14, 20, 20);
     g.setDepth(y + h);
-    g.bake();
+    g.bake({ finish: 'shop' });
 
     this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
     const deal = this.todaysDeal();
@@ -7032,11 +7323,12 @@ class TownScene extends Phaser.Scene {
     const { x, y, w, h } = MUSEUM_POS;
     const g = this.bakedGfx();
     g.fillStyle(0xd8d0bc, 1).fillRect(x, y, w, h);
+    if (this.bldDepth()) g.fillStyle(0x3a3428, 0.25).fillRect(x, y, w, 6); // cycle 1 art: eave shadow under the roof
     g.fillStyle(0x8f8568, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 40);
     g.fillStyle(0x6b6250, 1);
     for (let i = 0; i < 4; i++) g.fillRect(x + 10 + i * 22, y + 16, 10, h - 20);
     g.setDepth(y + h);
-    g.bake();
+    g.bake({ finish: 'museum' });
     this.add.text(x + w / 2, y - 50, '🏛️ Museum', { fontSize: '14px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 16, width: w, height: h - 16 });
   }
@@ -7045,10 +7337,11 @@ class TownScene extends Phaser.Scene {
     const { x, y, w, h } = ABLE_SISTERS_POS;
     const g = this.bakedGfx();
     g.fillStyle(0xd88fb0, 1).fillRect(x, y, w, h);
+    if (this.bldDepth()) g.fillStyle(0x4a2033, 0.28).fillRect(x, y, w, 6); // cycle 1 art: eave shadow under the roof
     g.fillStyle(0xe8b8d0, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 34);
     g.fillStyle(0xcfe8f5, 1).fillRect(x + w / 2 - 10, y + 14, 20, 18);
     g.setDepth(y + h);
-    g.bake();
+    g.bake({ finish: 'able' });
     // Label under the shop, not above the roof: the roof line is the town spawn (1200, 600), where it sat under the player's name.
     this.add.text(x + w / 2, y + h + 10, '👗 Able Sisters', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 14, width: w, height: h - 14 });
@@ -7072,7 +7365,7 @@ class TownScene extends Phaser.Scene {
     g.fillTriangle(x + 26, y - 6, x, y - 22, x, y - 6);
     g.lineStyle(1, 0x8f7044, 1);
     g.lineBetween(x, y - 22, x, y - 6);
-    g.bake();
+    g.bake({ finish: 'guestbook' });
     this.add.text(x, y - 42, '📖 Guestbook', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
@@ -7812,9 +8105,10 @@ class TownScene extends Phaser.Scene {
     const g = this.bakedGfx(y - 1);
     g.fillStyle(0x7a4a26, 1).fillRect(x - 26, y - 4, 52, 18);
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 32, y - 4, x + 32, y - 4, x, y - 30);
-    g.bake();
+    g.bake({ finish: 'turnip' });
     this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
-    this.turnipBuyLabel = this.add.text(x, y + 20, '', { fontSize: '11px', color: '#ffe066' }).setOrigin(0.5).setDepth(y + 1);
+    // R4 D4 (b07-r2-13): the price sat at y+20, exactly where a shopper's name label is drawn. It now sits above the sign.
+    this.turnipBuyLabel = this.add.text(x, y - 62, '', { fontSize: '11px', color: '#ffe066', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
     this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 38, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + 1);
   }
 
@@ -7866,6 +8160,9 @@ class TownScene extends Phaser.Scene {
         if (Math.hypot(HOUSE_POS.x + HOUSE_POS.w / 2 - x, HOUSE_POS.y + HOUSE_POS.h / 2 - y) < SHOP_RADIUS + 12) continue;
         if (Math.hypot(MUSEUM_POS.x + MUSEUM_POS.w / 2 - x, MUSEUM_POS.y + MUSEUM_POS.h / 2 - y) < MUSEUM_RADIUS + 12) continue;
         if (SCAVENGER_SPOTS.some((k) => Math.hypot(k.x - x, k.y - y) < SCAVENGER_RADIUS + 12)) continue;
+        // R4: every other object that answers E BEFORE a weed in interact() keeps its real radius + 8 clear (the flat 60 px above
+        // was smaller than the mailbox / workbench / home rings, 70-75 px, so a weed 63 px from the mailbox could never be pulled).
+        if (WEED_SHADOW_RINGS.some((k) => Math.hypot(k.x - x, k.y - y) < k.r + 8)) continue;
         // The home plot is a 156x96 footprint: keep weeds off it (and its fence).
         if (Math.abs(x - HOME_POS.x) < 175 && Math.abs(y - HOME_POS.y) < 80) continue;
         // Talk-radius NPCs: stay outside their interaction radius so a weed can't steal a chat.
@@ -7974,7 +8271,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestFlower() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = FLOWER_PICKUP_RADIUS;
     FLOWER_SPOTS.forEach((spot, i) => {
@@ -7986,7 +8283,7 @@ class TownScene extends Phaser.Scene {
   }
 
   collectFlower(spot) {
-    this.flowerCooldowns[spot.index] = Date.now();
+    this.flowerCooldowns[spot.index] = this.cooldownNow();
     const sprite = this.flowerSprites[spot.index];
     if (sprite) {
       const floraIdx = FLOWER_TYPES.indexOf(sprite.text);
@@ -8012,7 +8309,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestBeachItem() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = BEACH_PICKUP_RADIUS;
     BEACH_SPOTS.forEach((spot, i) => {
@@ -8024,7 +8321,7 @@ class TownScene extends Phaser.Scene {
   }
 
   collectBeachItem(spot) {
-    this.beachCooldowns[spot.index] = Date.now();
+    this.beachCooldowns[spot.index] = this.cooldownNow();
     const sprite = this.beachSprites[spot.index];
     if (sprite) {
       sprite.setVisible(false);
@@ -8037,15 +8334,34 @@ class TownScene extends Phaser.Scene {
   }
 
   drawStatue() {
+    // Owner decision O-10 (Round 4): the Founder's Statue. A stone hero (the stone-tinted hero alias 'mooncats', frame 0 = a hero class)
+    // at the SAME pixel scale as every hero and NPC (1x, b12-r2-05: no 2.3x sprite, no mixed pixel density), raised on a sculpted
+    // three-step plinth with a top-left light, a carved plaque and a soft ground shadow. Code-drawn until the Codex hero-statue sprite
+    // (CODEX-REMAKE-QUEUE, T-STATUE) lands; no ape.
     const { x, y } = STATUE_POS;
     const g = this.bakedGfx();
-    g.fillStyle(0x9a9a9a, 1).fillRect(x - 24, y, 48, 14);
-    g.fillStyle(0x7d7d7d, 1).fillRect(x - 18, y - 10, 36, 10);
+    g.fillStyle(0x000000, 0.22).fillEllipse(x + 3, y + 15, 60, 10); // ground shadow, down-right
+    const step = (w, top, h, base, lit, dark) => {
+      g.fillStyle(base, 1).fillRect(x - w / 2, top, w, h);
+      g.fillStyle(lit, 1).fillRect(x - w / 2, top, w, 2).fillRect(x - w / 2, top, 2, h); // top / left light
+      g.fillStyle(dark, 1).fillRect(x - w / 2, top + h - 2, w, 2).fillRect(x + w / 2 - 2, top, 2, h); // bottom / right shade
+      g.lineStyle(1, 0x3c3a40, 1).strokeRect(x - w / 2 - 0.5, top - 0.5, w + 1, h + 1); // dark colour-matched rim
+    };
+    step(48, y + 2, 10, 0x8c8a90, 0xb4b2b8, 0x5e5c64); // base step
+    step(38, y - 8, 10, 0x9a98a0, 0xc2c0c6, 0x67656e); // middle step
+    step(28, y - 18, 10, 0xa6a4ac, 0xd0ced4, 0x706e78); // top block
+    g.fillStyle(0x6a5a3a, 1).fillRect(x - 9, y - 5, 18, 5); // bronze plaque on the middle step
+    g.fillStyle(0xc9a24a, 1).fillRect(x - 8, y - 4, 16, 3);
+    g.fillStyle(0x6a5a3a, 1).fillRect(x - 6, y - 3, 12, 1);
     g.setDepth(y - 1);
     g.bake();
 
-    const ape = this.add.sprite(x, y - 28, 'boredapes', 0).setScale(2.3).setDepth(y);
-    this.add.text(x, y - 68, '🐵 Mayor', {
+    const tex = this.textures.exists('mooncats') && !MMTownHeroes.legacyArt() ? { key: 'mooncats', frame: 0 } : this.safeTexture(MMTownHeroes.heroKey('warrior'), 0);
+    const hero = this.add.sprite(x, y - 30, tex.key, tex.frame).setDepth(y);
+    hero.htStill = true; hero.founderStatue = true;
+    if (tex.key !== 'mooncats') hero.setTint(0xb8b4bc); // legacy-art fallback: a grey hero, still no ape
+    this.founderStatue = hero;
+    this.add.text(x, y - 52, "🦸 Founder's Statue", {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#ffffff',
@@ -8075,7 +8391,7 @@ class TownScene extends Phaser.Scene {
     // Door.
     g.fillStyle(0x5a3a22, 1).fillRect(x - 6, y - 16, 12, 16);
     g.setDepth(y - 1);
-    g.bake();
+    g.bake({ finish: 'windmill' });
 
     // Blade assembly: four thin arms in a plus shape, grouped in a
     // container so a single rotation tween spins them all together.
@@ -8128,7 +8444,7 @@ class TownScene extends Phaser.Scene {
   }
 
   isMerchantVisiting() {
-    const hour = new Date().getHours();
+    const hour = this.utcHour(); // same clock as merchantDayBucket (cycle0 L-01)
     const start = this.merchantStartHour();
     return hour >= start && hour < start + 3;
   }
@@ -8136,8 +8452,9 @@ class TownScene extends Phaser.Scene {
   drawMerchant() {
     const { x, y } = MERCHANT_POS;
     const species = this.merchantSpecies();
-    this.merchantSprite = this.add.sprite(x, y, species.key, 0).setScale(1.8).setDepth(y);
-    this.merchantSign = this.add.text(x, y - 34, '', {
+    const mdy = npcFeetShift(1.8);
+    this.merchantSprite = this.add.sprite(x, y + mdy, species.key, 0).setScale(npcScale(1.8)).setDepth(y);
+    this.merchantSign = this.add.text(x, y + 2 * mdy - 34, '', {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
@@ -8158,16 +8475,17 @@ class TownScene extends Phaser.Scene {
       this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${lookName}`);
     } else {
       this.merchantSprite.setVisible(false);
-      const hour = new Date().getHours();
+      const hour = this.utcHour();
       const todayStart = this.merchantStartHour();
       // If today's window hasn't started yet, that's the next visit. If
       // it already started and ended (or we're just not in it anymore),
       // the next visit is tomorrow — with tomorrow's own hashed hour,
       // not today's stale one.
-      const nextIsToday = hour < todayStart;
-      const nextStart = nextIsToday ? todayStart : this.merchantStartHour(1);
-      const whenLabel = nextIsToday ? 'today' : 'tomorrow';
-      this.merchantSign.setText(`🛒 closed — back at ${nextStart}:00 ${whenLabel}`);
+      const nextUtc = hour < todayStart ? todayStart : 24 + this.merchantStartHour(1); // a UTC hour counted from today's UTC midnight
+      const at = this.utcHourDate(nextUtc); // shown on the player's own clock, with their own "today" / "tomorrow"
+      const now = new Date(); const off = Math.round((new Date(at.getFullYear(), at.getMonth(), at.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+      const whenLabel = off <= 0 ? 'today' : off === 1 ? 'tomorrow' : 'in 2 days'; // late evening west of UTC: tomorrow's UTC visit can fall two local dates ahead
+      this.merchantSign.setText(`🛒 closed — back at ${this.localHourLabel(nextUtc)} ${whenLabel}`);
     }
   }
 
@@ -8225,9 +8543,11 @@ class TownScene extends Phaser.Scene {
 
   drawNPC() {
     const { x, y } = NPC_POS;
-    const sprite = this.add.sprite(x, y, 'genius', 2).setScale(2).setDepth(y);
-    this.tweens.add({ targets: sprite, y: y - 4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.add.text(x, y - 36, NPC_NAME, {
+    const dy = npcFeetShift(2); const ly = y + 2 * dy; // sprite centre / label baseline after the W-06 shrink
+    const sprite = this.add.sprite(x, y + dy, 'genius', 2).setScale(npcScale(2)).setDepth(y);
+    this.npcSprite = sprite;
+    this.tweens.add({ targets: sprite, y: y + dy - 4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, ly - 36, NPC_NAME, {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
@@ -8235,7 +8555,7 @@ class TownScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
     // Bubble bottom above the quest sign (centred at y - 46, up to two lines), so the line never sits on "bring 4🪵".
-    this.npcBubble = this.add.text(x, y - 64, '', {
+    this.npcBubble = this.add.text(x, ly - 64, '', {
       fontSize: '11px',
       color: '#1c2430',
       backgroundColor: '#ffe066',
@@ -8243,7 +8563,7 @@ class TownScene extends Phaser.Scene {
       wordWrap: { width: 180 },
       align: 'center',
     }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
-    this.npcQuestSign = this.add.text(x, y - 46, '', {
+    this.npcQuestSign = this.add.text(x, ly - 46, '', {
       fontSize: '10px',
       fontFamily: 'monospace',
       color: '#6fbf73',
@@ -8270,6 +8590,20 @@ class TownScene extends Phaser.Scene {
   questDayBucket() {
     return Math.floor(Date.now() / 86400000);
   }
+
+  // cycle0 L-01: the daily hour windows (Bug-Off, fishing tournament, Mystery Merchant) hash their start hour from the UTC day
+  // number, so they are compared with the UTC hour: one clock for the day and the hour. Before, the local hour was used, so for
+  // every player outside UTC the start hour was re-rolled in the middle of their day and an announced window could be cut
+  // short or never come. The window is the same moment for everyone; the labels show it on the player's own clock.
+  utcHour() { return new Date().getUTCHours(); }
+
+  // The instant of a UTC hour counted from today's UTC midnight (24+ = tomorrow).
+  utcHourDate(utcHour) { const d = new Date(); d.setUTCHours(utcHour, 0, 0, 0); return d; }
+
+  // That instant as the player's clock reads it: "17:00" (or "17:30" in a half-hour time zone).
+  localHourLabel(utcHour) { const d = this.utcHourDate(utcHour); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; }
+
+  windowLabel(startUtc, endUtc) { return `${this.localHourLabel(startUtc)}-${this.localHourLabel(endUtc)}`; }
 
   questHash(seed) {
     const bucket = this.questDayBucket();
@@ -8431,16 +8765,18 @@ class TownScene extends Phaser.Scene {
 
   drawNPC2() {
     const { x, y } = NPC2_POS;
-    const sprite = this.add.sprite(x, y, 'doge', 4).setScale(2).setDepth(y);
-    this.tweens.add({ targets: sprite, y: y - 4, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.add.text(x, y - 36, NPC2_NAME, {
+    const dy = npcFeetShift(2); const ly = y + 2 * dy;
+    const sprite = this.add.sprite(x, y + dy, 'doge', 4).setScale(npcScale(2)).setDepth(y);
+    this.npc2Sprite = sprite;
+    this.tweens.add({ targets: sprite, y: y + dy - 4, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, ly - 36, NPC2_NAME, {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
-    this.npc2Bubble = this.add.text(x, y - 50, '', {
+    this.npc2Bubble = this.add.text(x, ly - 50, '', {
       fontSize: '11px',
       color: '#1c2430',
       backgroundColor: '#ffe066',
@@ -8770,7 +9106,9 @@ class TownScene extends Phaser.Scene {
       label();
       fit();
     };
+    this.applyPanelCollapse = apply; // R4 D4: build mode folds the panel for view only (no saved-preference write)
     this.setPanelCollapsed = (collapsed) => {
+      this.buildFoldedPanel = false;
       this.panelCollapsed = !!collapsed;
       try { localStorage.setItem(PANEL_COLLAPSE_KEY, this.panelCollapsed ? '1' : '0'); } catch (e) { /* ignore */ }
       apply();
@@ -8822,7 +9160,7 @@ class TownScene extends Phaser.Scene {
     // Once the window has passed without a medal it can no longer be done today:
     // 'missed' is excluded from the total so it can't lock you out of the bonus.
     const after = !live && this.bugOffPhase() === 'after';
-    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.bugOffStartHour()}:00-${this.bugOffStartHour() + BUGOFF_HOURS}:00${after ? ', over for today' : ''})`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : (after ? 'missed' : 'later')) });
+    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.windowLabel(this.bugOffStartHour(), this.bugOffStartHour() + BUGOFF_HOURS)}${after ? ', over for today' : ''})`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : (after ? 'missed' : 'later')) });
     const bday = this.todaysBirthdayVillager();
     items.push({ id: 'birthday', icon: '🎂', label: bday ? `${bday.name}'s birthday` : 'Birthdays', detail: bday ? 'bring a gift' : 'none today', status: !bday ? 'na' : (this.birthdayClaimed(bday) ? 'done' : 'todo') });
     items.push({ id: 'home', icon: '🏡', label: 'Visit your home plot', detail: this.homeCozy() ? `cozy ${this.homeCozy()}` : 'place a crafted good first', status: this.homeCozy() === 0 ? 'na' : (this.home.paidDay === day ? 'done' : 'todo') });
@@ -9027,16 +9365,22 @@ class TownScene extends Phaser.Scene {
     // TN2 low tier: the villagers ease every third frame (their tags move with them, so nothing drifts apart)
     this.npcTick = ((this.npcTick || 0) + 1) % TOWN_PERF.npcEvery;
     if (this.npcTick === 0) this.updateVillagers();
-    const btn = document.getElementById('gift-hint-btn');
+    const btn = this.hintEl('gift-hint-btn');
     if (!btn) return;
     const v = (!this.inUnderground && !this.inRealm && !this.buildMode) ? this.findNearestVillager() : null;
-    btn.classList.toggle('hidden', !v);
+    this.setHintHidden(btn, !v);
     if (!v) return;
-    // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag.
-    const label = `🎁 Gift ${v.name} ${v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join('')}`;
+    // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag. The label is built once per villager (cycle1 L-09).
+    if (this._giftHintFor !== v) {
+      this._giftHintFor = v;
+      this._giftHintLabel = `🎁 Gift ${v.name} ${v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join('')}`;
+    }
+    const label = this._giftHintLabel;
     if (btn.textContent !== label) btn.textContent = label;
-    const has = v.likes.some((k) => (this.resources[k] || 0) > 0);
-    btn.style.opacity = has ? '' : '0.6';
+    let has = false;
+    for (let i = 0; i < v.likes.length && !has; i++) has = (this.resources[v.likes[i]] || 0) > 0;
+    const op = has ? '' : '0.6';
+    if (btn.style.opacity !== op) btn.style.opacity = op;
   }
 
   drawCampfire() {
@@ -9069,9 +9413,11 @@ class TownScene extends Phaser.Scene {
     return hour >= KK_CONCERT_START_HOUR && hour < KK_CONCERT_END_HOUR;
   }
 
+  // One key per show = per local evening (cycle0 L-02). It used to end in the hour, and the show runs two hours, so the "once per
+  // show" bonus paid again at 20:00 while the message said "already enjoyed tonight's show".
   concertWindowKey() {
     const now = new Date();
-    return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+    return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
   }
 
   isNearCampfire() {
@@ -9091,7 +9437,8 @@ class TownScene extends Phaser.Scene {
 
   enjoyConcert() {
     const key = this.concertWindowKey();
-    if (this.kkEnjoyedWindow === key) {
+    const seen = typeof this.kkEnjoyedWindow === 'string' ? this.kkEnjoyedWindow : '';
+    if (seen === key || seen.startsWith(key + '-')) { // key + '-<hour>': a save written by the older per-hour key, same evening
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'already enjoyed tonight\'s show');
       return;
     }
@@ -9505,7 +9852,7 @@ class TownScene extends Phaser.Scene {
     // W-06 (b12-06): a bigger board and 12 px text rendered at 2x, so TOP SCORES reads (cap height >= 8 screen px at both zooms; was 8 px, smeared).
     g.fillStyle(0xe8d9b5, 1).fillRect(x - 72, y - 78, 144, 76);
     g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 72, y - 78, 144, 76);
-    g.bake();
+    g.bake({ finish: 'board' }); // cycle 1 art: same outline / depth finish as the buildings
     this.noticeBoardText = this.add.text(x, y - 40, '', {
       fontSize: '12px',
       fontFamily: 'monospace',
@@ -9787,7 +10134,7 @@ if (savedProfile.name) nameInput.value = savedProfile.name;
 try {
   if (new URLSearchParams(location.search).get('from') === 'hub') {
     const pill = document.getElementById('back-to-map-pill');
-    if (pill) pill.classList.remove('hidden');
+    if (pill) { pill.classList.remove('hidden'); document.body.classList.add('has-back-pill'); } // R4 D4 b15-06: card clears the pill
     if (!nameInput.value && typeof MMHubProfile !== 'undefined') {
       let raw = null;
       try { raw = JSON.parse(localStorage.getItem(MMHubProfile.KEY)); } catch (e) { raw = null; }
@@ -9843,7 +10190,21 @@ function renderAvatarGrid() {
 
 function updateJoinButtonState() {
   joinBtn.disabled = nameInput.value.trim().length === 0;
+  const jh = document.getElementById('join-hint'); if (jh) jh.classList.toggle('hidden', !joinBtn.disabled); // b08-r2-11: a disabled Join says why
 }
+updateJoinButtonState();
+// b08-r2 (round 4): the join card's compass Menu opens the shared "Where to?" sheet (mounted on first use; the Town mounts it again later, a no-op)
+(function joinMenu() {
+  const b = document.getElementById('join-menu-btn'); if (!b) return;
+  let on = false;
+  b.addEventListener('click', () => {
+    try {
+      if (!on) on = typeof MMNav !== 'undefined' && MMNav.mount({ page: 'town', hideMenu: true }) === true;
+      if (!on) { location.href = './hub/index.html'; return; }
+      if (MMNav.isOpen()) MMNav.close(); else MMNav.open();
+    } catch (e) { location.href = './hub/index.html'; }
+  });
+})();
 
 nameInput.addEventListener('input', updateJoinButtonState);
 nameInput.addEventListener('keydown', (e) => {
@@ -9853,6 +10214,7 @@ joinBtn.addEventListener('click', attemptJoin);
 
 const JOIN_TIMEOUT_MS = 6000;
 let joinDone = false; // true once the player is in town (online or offline)
+const TOWN_SESSION_KEY = 'pixeltown-town-session-v1'; // sessionStorage only (R4 D4 b07-r2-14)
 let joinTimer = null;
 
 function showOfflineOption(message) {
@@ -9868,8 +10230,17 @@ function enterTown(net, data) {
   joinDone = true;
   clearTimeout(joinTimer);
   joinOverlay.classList.add('hidden');
-  { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
+  { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); document.body.classList.remove('has-back-pill'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
   hud.classList.remove('hidden');
+  // Cycle 1 U-01 (b08-r2-07): offline, quick chat and Hold to talk only answer "Chat needs the online town", so the HUD hides them
+  // (body.town-offline, see style.css). Test-only `?hud=online` keeps the online HUD pieces on the offline path, so the layout tests
+  // (which can never join the live town) still measure the online layout explicitly. It changes visibility only, never the network.
+  const hudOnline = /[?&]hud=online(&|$)/.test(location.search);
+  document.body.classList.toggle('town-offline', net instanceof OfflineNet && !hudOnline);
+  if (net instanceof OfflineNet && !hudOnline) { const ci = document.getElementById('chat-input'); if (ci) ci.placeholder = 'Offline: chat needs the online town'; }
+  // R4 D4 (b07-r2-14): remember (this tab only, sessionStorage, never the save) that the player was in town and how, so
+  // browser Back from the Isles / a game returns to the town instead of the join card.
+  try { sessionStorage.setItem(TOWN_SESSION_KEY, net instanceof OfflineNet ? 'offline' : 'online'); } catch (e) { /* storage blocked */ }
   startTown(net, data);
 }
 
@@ -10056,6 +10427,20 @@ function startTown(net, data) {
 renderSpeciesTabs();
 renderAvatarGrid();
 updateJoinButtonState();
+
+// R4 D4 (b07-r2-14): browser Back (or Forward) into the town after this tab had joined skips the join card: rejoin the same
+// way as before (offline stays offline; online joins presence exactly like pressing Join Town). A fresh visit, a reload or
+// a new tab still shows the card. Never writes the save beyond what Join already writes.
+(function autoRejoinOnBack() {
+  let mode = null;
+  try { mode = sessionStorage.getItem(TOWN_SESSION_KEY); } catch (e) { mode = null; }
+  if (mode !== 'offline' && mode !== 'online') return;
+  let back = false;
+  try { const nav = performance.getEntriesByType('navigation')[0]; back = !!nav && nav.type === 'back_forward'; } catch (e) { back = false; }
+  if (!back || !nameInput.value.trim()) return;
+  joinStatus.textContent = 'Welcome back! Returning to town…';
+  setTimeout(() => { if (joinDone) return; if (mode === 'offline') playOffline(); else attemptJoin(); }, 0);
+}());
 
 // Join screen "Continue: <last place>" (shared/mm-nav.js, key pixeltown-nav-v1, read-only here): only when a previous
 // place other than the Town is stored. A plain link, so it leaves the page without joining (no network).

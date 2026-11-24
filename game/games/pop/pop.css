@@ -3,30 +3,30 @@
 html, body { margin:0; background:var(--bg); color:var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace; overflow-x:hidden; }
 body { min-height:100vh; display:flex; flex-direction:column; align-items:center; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
 #top { width:100%; max-width:560px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 16px; }
-#top h1 { font-size:18px; margin:0; }
+#top h1 { font-size:calc(18px * var(--ui-scale,1)); margin:0; }
 .back { color:var(--accent); text-decoration:none; min-height:48px; min-width:48px; display:inline-flex; align-items:center; }
-#btn-mute { font:inherit; font-size:14px; color:var(--ink); background:var(--panel); border:1px solid #556; border-radius:8px; min-height:48px; min-width:48px; padding:4px 10px; cursor:pointer; }
+#btn-mute { font:inherit; font-size:calc(14px * var(--ui-scale,1)); color:var(--ink); background:var(--panel); border:1px solid #556; border-radius:8px; min-height:48px; min-width:48px; padding:4px 10px; cursor:pointer; }
 #stage { width:100%; max-width:560px; padding:0 16px 24px; display:flex; flex-direction:column; gap:10px; position:relative; }
 #hud { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
 .stat { background:var(--panel); border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; min-width:0; }
-.stat .lbl { font-size:12px; color:var(--dim); }
-.stat strong { font-size:18px; overflow-wrap:anywhere; }
+.stat .lbl { font-size:calc(12px * var(--ui-scale,1)); color:var(--dim); }
+.stat strong { font-size:calc(18px * var(--ui-scale,1)); overflow-wrap:anywhere; }
 #timebar { height:10px; background:#0a0816; border-radius:6px; overflow:hidden; }
 #timefill { height:100%; width:100%; background:linear-gradient(90deg,#7fd18b,#ffd166); transform-origin:left; }
 #board { width:100%; height:auto; display:block; background:#120f22; border:3px solid #0a0816; border-radius:12px; touch-action:none; cursor:pointer; }
 #board:focus-visible { outline:3px solid #fff; outline-offset:2px; }
 .card { background:var(--panel); border-radius:12px; padding:12px 14px; }
-.card h2 { margin:0 0 6px; font-size:18px; }
+.card h2 { margin:0 0 6px; font-size:calc(18px * var(--ui-scale,1)); }
 .card p { margin:6px 0; }
-.dim { color:var(--dim); font-size:13px; }
+.dim { color:var(--dim); font-size:calc(13px * var(--ui-scale,1)); }
 .overlay { position:absolute; left:16px; right:16px; top:70px; z-index:5; border:2px solid var(--accent); box-shadow:0 8px 24px #0008; }
 .overlay[hidden], .card[hidden] { display:none; }
 .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-.big { font:inherit; font-size:18px; font-weight:bold; color:#111; background:var(--go); border:0; border-radius:12px; min-height:56px; min-width:120px; padding:0 18px; cursor:pointer; flex:1; }
+.big { font:inherit; font-size:calc(18px * var(--ui-scale,1)); font-weight:bold; color:#111; background:var(--go); border:0; border-radius:12px; min-height:56px; min-width:120px; padding:0 18px; cursor:pointer; flex:1; }
 .big.alt { background:#c9bdf5; }
 .big:focus-visible, #btn-mute:focus-visible, .back:focus-visible { outline:3px solid #fff; outline-offset:2px; }
 ul.medals { list-style:none; padding:0; margin:6px 0; display:flex; flex-wrap:wrap; gap:6px; }
-ul.medals li { background:var(--bg); border-radius:8px; padding:6px 8px; font-size:13px; color:var(--dim); }
+ul.medals li { background:var(--bg); border-radius:8px; padding:6px 8px; font-size:calc(13px * var(--ui-scale,1)); color:var(--dim); }
 ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 #msg { min-height:1.4em; margin:0; text-align:center; }
 .new { color:var(--accent); font-weight:bold; }
@@ -44,4 +44,12 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
   #stage .overlay { right:16px; top:8px; max-height:calc(100vh - 100px); max-height:calc(100dvh - 100px); }
 }
 /* W-09 (b09-01): a 5-6 digit score stays on one line (the stat box never grows / the HUD row never jumps) */
-.stat strong { overflow-wrap:normal; white-space:nowrap; font-variant-numeric:tabular-nums; font-size:min(18px, 4.6vw); }
+.stat strong { overflow-wrap:normal; white-space:nowrap; font-variant-numeric:tabular-nums; font-size:min(calc(18px * var(--ui-scale,1)), calc(4.6vw * var(--ui-scale,1))); }
+
+/* R4 D4: every font size follows the shared Text size setting (--ui-scale from mm-side-access.js) */
+/* R4 D4 (b09-12): on a phone the Score and Best boxes get the room (Time and Tile are short) and the value font is capped at
+   3.9vw, so a six-figure score fits inside its border; tabular figures keep the width steady */
+@media (max-width:480px) {
+  #hud { grid-template-columns:1.45fr 1fr 1fr 1.45fr; }
+  #hud .stat strong { font-size:min(calc(20px * var(--ui-scale,1)), calc(3.9vw * var(--ui-scale,1))); letter-spacing:0; }
+}
