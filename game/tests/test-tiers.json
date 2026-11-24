@@ -1947,5 +1947,9 @@
   "realm-shard-tick-hud.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "town-cooldown-clock.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

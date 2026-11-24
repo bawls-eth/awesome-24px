@@ -2860,7 +2860,7 @@ class TownScene extends Phaser.Scene {
 
     const tree = this.findNearestTree();
     if (tree) {
-      this.treeCooldowns[tree.index] = Date.now();
+      this.treeCooldowns[tree.index] = this.cooldownNow();
       this.shakeTreeVisual(tree.index);
       this.swingTool('🪓');
       this.gainResource('wood', 1, tree.x, tree.y - 40);
@@ -2875,7 +2875,7 @@ class TownScene extends Phaser.Scene {
 
     const rock = this.findNearestRock();
     if (rock) {
-      this.rockCooldowns[rock.key] = Date.now();
+      this.rockCooldowns[rock.key] = this.cooldownNow();
       this.swingTool('⛏️');
       this.gainResource('stone', 1, rock.x, rock.y - 20);
       return;
@@ -4261,8 +4261,12 @@ class TownScene extends Phaser.Scene {
     if (museumEl) museumEl.textContent = this.museumCollection.size;
   }
 
+  // cycle0 L-06: the clock for in-session respawn cooldowns (trees, rocks, fossils, flowers, beach). Monotonic, so changing the
+  // device clock neither skips a cooldown (clock forward) nor freezes a spot until the clock catches up (clock back).
+  cooldownNow() { return performance.now(); }
+
   findNearestFossilSpot() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = FOSSIL_DIG_RADIUS;
     FOSSIL_SPOTS.forEach((spot, i) => {
@@ -4278,7 +4282,7 @@ class TownScene extends Phaser.Scene {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'fossil bag is full');
       return;
     }
-    this.fossilCooldowns[spot.index] = Date.now();
+    this.fossilCooldowns[spot.index] = this.cooldownNow();
     const mound = this.fossilMounds[spot.index];
     if (mound) {
       mound.setVisible(false);
@@ -4322,7 +4326,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestTree() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = TREE_SHAKE_RADIUS;
     TREES.forEach(([tx, ty], i) => {
@@ -4337,7 +4341,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestRock() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = ROCK_MINE_RADIUS;
     const consider = (list, prefix) => {
@@ -8126,7 +8130,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestFlower() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = FLOWER_PICKUP_RADIUS;
     FLOWER_SPOTS.forEach((spot, i) => {
@@ -8138,7 +8142,7 @@ class TownScene extends Phaser.Scene {
   }
 
   collectFlower(spot) {
-    this.flowerCooldowns[spot.index] = Date.now();
+    this.flowerCooldowns[spot.index] = this.cooldownNow();
     const sprite = this.flowerSprites[spot.index];
     if (sprite) {
       const floraIdx = FLOWER_TYPES.indexOf(sprite.text);
@@ -8164,7 +8168,7 @@ class TownScene extends Phaser.Scene {
   }
 
   findNearestBeachItem() {
-    const now = Date.now();
+    const now = this.cooldownNow();
     let best = null;
     let bestDist = BEACH_PICKUP_RADIUS;
     BEACH_SPOTS.forEach((spot, i) => {
@@ -8176,7 +8180,7 @@ class TownScene extends Phaser.Scene {
   }
 
   collectBeachItem(spot) {
-    this.beachCooldowns[spot.index] = Date.now();
+    this.beachCooldowns[spot.index] = this.cooldownNow();
     const sprite = this.beachSprites[spot.index];
     if (sprite) {
       sprite.setVisible(false);
