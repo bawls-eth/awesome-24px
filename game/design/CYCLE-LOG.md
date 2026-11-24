@@ -1,0 +1,6 @@
+# Cycle log
+
+## Cycle 0 (2026-11-24, comprehensive review) + Round 4 merge: stamped 495/495 on 6d3d7d8, pushed (stamp 9fc5cde)
+Changed: Round 4 lanes D1-D5 (new-player survival, Shore reward pity, Deepdelve touch/shader fixes, one Backup, door renames, Founder's Statue, terrain smoothing, dungeon pad layout, Arcane "Coming soon", stricter live-class test rule) + cycle 0: L (UTC window bug, shard tick perf, concert/cooldown fixes, dead code), U (a11y allow-list to {}, 195 px scroll fixes, Realm/Town Text size), G (pixel hub icons, warm black sand, creature finish, Isles tile detail), D (quest level hint, IDEAS.md 14 proposals), S (Kart Rally door shadow, Isles leash, Deepdelve bank line + seed ghost).
+Tested: 4-shard full suite on 6d3d7d8: 495/495 (487 first pass; 8 load flakes passed solo). Beta gate not run (owner request only). Not tested: real touch play of coach steps 5-6; live-class cave tests ran under the live lock inside the stamp.
+Queued next: approve IDEAS.md top 5 (ID-02, 06, 07, 04, 03); Town offline HUD clutter (U-01); L-08 one game-day rule (owner decision); L-13 wire-or-remove 8 unused modules; Codex asks (tundra/Mars strips, R02 ground, black-sand tiles, building outlines, tree canopy); art-integration test change for Rimewolf etc. (needs owner OK); retest round 4 by the 15 testers.
