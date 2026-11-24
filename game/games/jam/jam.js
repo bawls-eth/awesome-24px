@@ -6,6 +6,10 @@
   var qs = new URLSearchParams(location.search);
   var TEST = qs.get('test') === '1';
   var FROM_HUB = qs.get('from') === 'hub'; // exact match only
+  // cyc2 U: touch players get touch wording (no "Keys D F J K"), like Angler and the Realm; keyboard players keep the keys
+  var COARSE = (function () { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
+  var TOUCH_HELP = 'Tap the four pads below as each note reaches the bright line. Hold long notes. The Menu button pauses the song.';
+  (function () { var hp = document.getElementById('help'); if (COARSE && hp) hp.textContent = TOUCH_HELP; })();
   var LANES = Jam.LANES;
   var CW = 320, CH = 420, LANE_W = CW / 4, HIT_Y = 340, APPROACH_MS = 1400;
   var BASE_COL = ['#ef476f', '#ffd166', '#06d6a0', '#4cc9f0'];
@@ -717,7 +721,7 @@
     if (!save.hint) {
       var h = el('div'); h.id = 'hint'; h.setAttribute('role', 'note');
       h.appendChild(el('strong', 'How to play'));
-      h.appendChild(el('p', 'Tap each note as it reaches the bright line. Keys D F J K, arrows, or touch. Hold long notes.'));
+      h.appendChild(el('p', COARSE ? 'Tap the pad under each lane as its note reaches the bright line. Hold long notes.' : 'Tap each note as it reaches the bright line. Keys D F J K, arrows, or touch. Hold long notes.'));
       var ok = btn('Got it', function () { save.hint = true; persist(); showMenu(); }); ok.id = 'hint-ok'; h.appendChild(ok);
       overlay.appendChild(h);
     }

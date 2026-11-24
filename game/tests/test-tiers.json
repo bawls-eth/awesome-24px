@@ -2047,5 +2047,9 @@
   "cyc2-ui-town-narrow.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc2-ui-copy.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
