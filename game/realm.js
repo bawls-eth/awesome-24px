@@ -2696,12 +2696,13 @@ class RealmArena {
 
   fireEnemyBullet(x, y, angle, speed, kind) {
     const fb = this._fireBudget();
-    if (fb && this._ebLive >= fb.cap) { this._ebCapped++; return; } // world fire budget: the zone's live enemy-bullet cap is full
+    if (fb && this._ebLive >= fb.cap) { this._ebCapped++; return null; } // world fire budget: the zone's live enemy-bullet cap is full
     const b = this._take(this.eBullets);
-    if (!b) return;
+    if (!b) return null;
     if (this.team && this.role === 'host') this.team.ev('fe', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, speed, kind || 0]);
-    b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.dm = this._curDm; b.ea = this._boltArt ? this._ebSelect(b.kind) : null;
+    b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.rl = 0; b.dm = this._curDm; b.ea = this._boltArt ? this._ebSelect(b.kind) : null;
     if (fb) { this._ebLive++; const t = fb.travel * Math.max(this.W, this.H) / (speed > 1 ? speed : 1); if (t < b.life) b.life = t; } // a bolt flies at most `travel` x the view's long side
+    return b; // cyc5 (ID-36): additive, the Trial layers shorten their own bolts' life; every older caller ignores it
   }
 
   // World mode only (solo overworld, never the classic arena, dungeons or co-op): the fire budget realm-world.js sets per zone, else null.

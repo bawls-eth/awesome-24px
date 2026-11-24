@@ -2252,5 +2252,14 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 120
+  },
+  "cyc5-trial-layers.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc5-trial-layers-live.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 180
   }
 }

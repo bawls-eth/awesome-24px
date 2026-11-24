@@ -139,6 +139,46 @@
     keepDrops: true,           // leaving or falling returns the hero to the Nexus with every drop already collected
     offRampEvery: 1,
   });
+  // ID-36 (cycle 5 S, spec cycle4-design.md): the Trial ramp. Fights 1-3 are unchanged; fight 4 adds layer A, fight 5 A + B, fight 6 A + B + C.
+  // Boss HP / damage ramps (RUSH.ramp), bolt speeds of the bosses' own patterns, the 15 px hit radius and the 0.6 s boss wind-up are untouched;
+  // every layer waits at least the 0.6 s wind-up before its first bolt and is telegraphed (C by 0.8 s of faded bolts where the line will spawn).
+  // The world fire budget (40 live bolts at the Trial) silently drops bolts over the cap, so each layer raises the Trial cap by its own budget:
+  // fights 1-3 +0, fight 4 +1 (40 -> 41), fight 5 +12 (40 -> 52, as the spec), fight 6 +21 (52 + the 9 bolts of a sweep line).
+  const LAYERS = Object.freeze({
+    lead: Object.freeze({ id: 'lead', name: 'Lead shot', from: 4, every: 1.6, ahead: 0.35, velWin: 0.2, speed: 207 /* 0.9 x the 230 aimed bolt */, life: 1.45 /* one alive at a time (310 px > the 240 px orbit) */, budget: 1, windup: 0.6 }),
+    arm: Object.freeze({ id: 'arm', name: 'Slow arm', from: 5, every: 0.5, turnDeg: 40, bolts: 2, speed: 110, life: 2.4 /* at most 5 pairs alive */, budget: 11, windup: 0.6 }),
+    sweep: Object.freeze({ id: 'sweep', name: 'Edge sweep', from: 6, every: 7, bolts: 9, gap: 3, speed: 140, warn: 0.8, spacing: 28, dist: 300, budget: 9, windup: 0.8 }),
+  });
+  const LAYER_IDS = Object.freeze(['lead', 'arm', 'sweep']);
+  const RUSH_CAP_BASE = 40;
+  const stepOf = (step) => toInt(typeof step === 'string' ? Number(step) : step, 0, RUSH.steps, 0);
+  // rushLayers(step) -> the layer ids active in Trial fight `step` (1..6): [] for 1-3, ['lead'] for 4, ['lead','arm'] 5, all three 6.
+  function rushLayers(step) { const st = stepOf(step); return Object.freeze(LAYER_IDS.filter((id) => st >= LAYERS[id].from)); }
+  // rushCapExtra(step) -> how many live bolts the fight's layers add on top of the zone's fire budget (0, 0, 0, 1, 12, 21).
+  function rushCapExtra(step) { const st = stepOf(step); let n = 0; for (const id of rushLayers(st)) n += LAYERS[id].budget; return n; }
+  // rushCap(step, base) -> the Trial's live-bolt cap for that fight (base defaults to the measured 40).
+  function rushCap(step, base) { const b = isNum(base) && base > 0 ? Math.floor(base) : RUSH_CAP_BASE; return b + rushCapExtra(step); }
+  // leadAim(bx, by, px, py, vx, vy) -> the angle from the boss at (bx,by) to where the hero will be in LAYERS.lead.ahead s at velocity (vx,vy).
+  function leadAim(bx, by, px, py, vx, vy) {
+    const n = (v) => (isNum(v) ? clamp(v, -1e5, 1e5) : 0); const k = LAYERS.lead.ahead;
+    return Math.atan2(n(py) + n(vy) * k - n(by), n(px) + n(vx) * k - n(bx));
+  }
+  // armAngles(t) -> the two angles of the slow arm at layer time t s (turning LAYERS.arm.turnDeg per second, the second arm opposite).
+  function armAngles(t) { const a = (isNum(t) ? clamp(t, 0, 1e6) : 0) * LAYERS.arm.turnDeg * Math.PI / 180; return Object.freeze([a, a + Math.PI]); }
+  // sweepLine(k, px, py) -> sweep number k centred on the hero at (px,py): { dir: travel angle, pts: [{x,y}] x9, gapFrom, slots }.
+  // The direction turns a quarter each sweep (from the west, north, east, south) and the 3-slot gap alternates between the two halves.
+  function sweepLine(k, px, py) {
+    const C = LAYERS.sweep; const kk = toInt(k, 0, 1e6, 0); const x0 = isNum(px) ? px : 0, y0 = isNum(py) ? py : 0;
+    const dir = (kk % 4) * Math.PI / 2; const dx = Math.cos(dir), dy = Math.sin(dir); const ux = -dy, uy = dx;
+    const slots = C.bolts + C.gap; const gapFrom = kk % 2 ? slots - C.gap - 2 : 2; const pts = [];
+    for (let i = 0; i < slots; i++) {
+      if (i >= gapFrom && i < gapFrom + C.gap) continue;
+      const o = (i - (slots - 1) / 2) * C.spacing;
+      pts.push(Object.freeze({ x: r3(x0 - dx * C.dist + ux * o), y: r3(y0 - dy * C.dist + uy * o) }));
+    }
+    return Object.freeze({ dir: r3(dir), pts: Object.freeze(pts), gapFrom, slots, speed: C.speed, warn: C.warn });
+  }
+
   // rushLadder(seed, level) -> { ok, minLevel, level, text, steps: [...6], rules }. Below Lv 20: ok false and no steps.
   function rushLadder(seed, level) {
     const lv = toInt(typeof level === 'string' ? Number(level) : level, 0, 999, 0);
@@ -155,7 +195,7 @@
           step: i + 1, boss: b[0], name: b[1], relic: relicIdOf(b[0]), zone: RUSH.zone, tier: RUSH.tier,
           hpMul: r3(base.hpMul * hpR), dmgMul: r3(base.dmgMul * dmgR), speedMul: r3(base.speedMul), xpMul: r3(base.xpMul), shardMul: r3(base.shardMul),
           ramp: Object.freeze({ hp: hpR, dmg: dmgR }), windup: RUSH.windup, telegraphs: 'own',
-          bag: 'boss', extraLoot: false, pity: 'normal', offRamp: true, keepsDrops: true,
+          bag: 'boss', extraLoot: false, pity: 'normal', offRamp: true, keepsDrops: true, layers: rushLayers(i + 1), capExtra: rushCapExtra(i + 1),
           restText: last ? 'The trial is done. Rest here' : 'Rest here', leaveText: 'Leave with your loot',
           text: 'Step ' + (i + 1) + ' of ' + order.length + ': ' + b[1],
         });
@@ -243,5 +283,6 @@
   return Object.freeze({
     VERSION: 1, BOSSES, BOSS_IDS, RUSH, RULES, MUTATORS, MUT_IDS, MUT_CAP, MUT_MAX, MUT_MIN_ZONE, DEEP,
     chase, chaseView, relicBook, rushLadder, mutatorsFor, applyMutators, deepRun, collectItems,
+    LAYERS, LAYER_IDS, RUSH_CAP_BASE, rushLayers, rushCapExtra, rushCap, leadAim, armAngles, sweepLine,
   });
 });
