@@ -5,13 +5,12 @@
 // Isles sign, postcards) and that findNearestWeed() picks that weed. OFFLINE ONLY: blockDb + stubbed Firebase SDK.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-weed-reach.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by weed-reach */' }));
+  const db = await offlineStub(ctx); // helpers: blockDb + the Firebase SDK answered empty (the same two routes this file used to set by hand)
   await ctx.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     route.fulfill({ response: resp, body: (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);') });

@@ -1935,5 +1935,9 @@
   "beta-r4-realm-density.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "town-hour-windows.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

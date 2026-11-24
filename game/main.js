@@ -4121,9 +4121,10 @@ class TownScene extends Phaser.Scene {
     return Math.floor(this.questHash(31) * (24 - BUGOFF_HOURS));
   }
 
-  // 'before' | 'live' | 'after' relative to today's window (local hour).
+  // 'before' | 'live' | 'after' relative to today's window. The start hour is hashed from the UTC day (questDayBucket), so the
+  // hour it is compared with is the UTC hour too (cycle0 L-01); the signs show the window on the player's own clock (windowLabel).
   bugOffPhase() {
-    const hour = new Date().getHours();
+    const hour = this.utcHour();
     const start = this.bugOffStartHour();
     if (hour < start) return 'before';
     return hour < start + BUGOFF_HOURS ? 'live' : 'after';
@@ -4193,9 +4194,10 @@ class TownScene extends Phaser.Scene {
     const start = this.bugOffStartHour();
     const end = start + BUGOFF_HOURS;
     const rec = this.bugOffRecord();
-    let status = `next: ${start}:00-${end}:00`;
-    if (this.isBugOffTime()) status = `LIVE now! (${start}:00-${end}:00)`;
-    else if (new Date().getHours() >= end) status = `ended (${start}:00-${end}:00)`;
+    const win = this.windowLabel(start, end);
+    let status = `next: ${win}`;
+    if (this.isBugOffTime()) status = `LIVE now! (${win})`;
+    else if (this.utcHour() >= end) status = `ended (${win})`;
     const medal = rec.tier > 0 ? BUGOFF_TIERS[rec.tier - 1].icon : '';
     this.bugOffSignText.setText(['🦋 BUG-OFF', status, `today: ${rec.count} ${medal}`, `best: ${rec.best}`].join('\n'));
   }
@@ -5734,7 +5736,7 @@ class TownScene extends Phaser.Scene {
   }
 
   isFishTournamentTime() {
-    const hour = new Date().getHours();
+    const hour = this.utcHour(); // same clock as the UTC day the start hour is hashed from (cycle0 L-01)
     const start = this.tournamentStartHour();
     return hour >= start && hour < start + FISH_TOURNAMENT_HOURS;
   }
@@ -5783,9 +5785,10 @@ class TownScene extends Phaser.Scene {
     const end = start + FISH_TOURNAMENT_HOURS;
     const record = this.tournamentRecord;
     const recordLine = record ? `biggest: ${record.size}cm\nby ${record.name}` : 'no catches yet';
-    let statusLine = `next: ${start}:00-${end}:00`;
-    if (this.isFishTournamentTime()) statusLine = `LIVE now! (${start}:00-${end}:00)`;
-    else if (new Date().getHours() >= end) statusLine = `ended (${start}:00-${end}:00)`;
+    const win = this.windowLabel(start, end);
+    let statusLine = `next: ${win}`;
+    if (this.isFishTournamentTime()) statusLine = `LIVE now! (${win})`;
+    else if (this.utcHour() >= end) statusLine = `ended (${win})`;
     this.tournamentSignText.setText(['🎣 FISH TOURNEY', statusLine, recordLine].join('\n'));
   }
 
@@ -8296,7 +8299,7 @@ class TownScene extends Phaser.Scene {
   }
 
   isMerchantVisiting() {
-    const hour = new Date().getHours();
+    const hour = this.utcHour(); // same clock as merchantDayBucket (cycle0 L-01)
     const start = this.merchantStartHour();
     return hour >= start && hour < start + 3;
   }
@@ -8327,16 +8330,17 @@ class TownScene extends Phaser.Scene {
       this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${lookName}`);
     } else {
       this.merchantSprite.setVisible(false);
-      const hour = new Date().getHours();
+      const hour = this.utcHour();
       const todayStart = this.merchantStartHour();
       // If today's window hasn't started yet, that's the next visit. If
       // it already started and ended (or we're just not in it anymore),
       // the next visit is tomorrow — with tomorrow's own hashed hour,
       // not today's stale one.
-      const nextIsToday = hour < todayStart;
-      const nextStart = nextIsToday ? todayStart : this.merchantStartHour(1);
-      const whenLabel = nextIsToday ? 'today' : 'tomorrow';
-      this.merchantSign.setText(`🛒 closed — back at ${nextStart}:00 ${whenLabel}`);
+      const nextUtc = hour < todayStart ? todayStart : 24 + this.merchantStartHour(1); // a UTC hour counted from today's UTC midnight
+      const at = this.utcHourDate(nextUtc); // shown on the player's own clock, with their own "today" / "tomorrow"
+      const now = new Date(); const off = Math.round((new Date(at.getFullYear(), at.getMonth(), at.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+      const whenLabel = off <= 0 ? 'today' : off === 1 ? 'tomorrow' : 'in 2 days'; // late evening west of UTC: tomorrow's UTC visit can fall two local dates ahead
+      this.merchantSign.setText(`🛒 closed — back at ${this.localHourLabel(nextUtc)} ${whenLabel}`);
     }
   }
 
@@ -8441,6 +8445,20 @@ class TownScene extends Phaser.Scene {
   questDayBucket() {
     return Math.floor(Date.now() / 86400000);
   }
+
+  // cycle0 L-01: the daily hour windows (Bug-Off, fishing tournament, Mystery Merchant) hash their start hour from the UTC day
+  // number, so they are compared with the UTC hour: one clock for the day and the hour. Before, the local hour was used, so for
+  // every player outside UTC the start hour was re-rolled in the middle of their day and an announced window could be cut
+  // short or never come. The window is the same moment for everyone; the labels show it on the player's own clock.
+  utcHour() { return new Date().getUTCHours(); }
+
+  // The instant of a UTC hour counted from today's UTC midnight (24+ = tomorrow).
+  utcHourDate(utcHour) { const d = new Date(); d.setUTCHours(utcHour, 0, 0, 0); return d; }
+
+  // That instant as the player's clock reads it: "17:00" (or "17:30" in a half-hour time zone).
+  localHourLabel(utcHour) { const d = this.utcHourDate(utcHour); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; }
+
+  windowLabel(startUtc, endUtc) { return `${this.localHourLabel(startUtc)}-${this.localHourLabel(endUtc)}`; }
 
   questHash(seed) {
     const bucket = this.questDayBucket();
@@ -8997,7 +9015,7 @@ class TownScene extends Phaser.Scene {
     // Once the window has passed without a medal it can no longer be done today:
     // 'missed' is excluded from the total so it can't lock you out of the bonus.
     const after = !live && this.bugOffPhase() === 'after';
-    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.bugOffStartHour()}:00-${this.bugOffStartHour() + BUGOFF_HOURS}:00${after ? ', over for today' : ''})`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : (after ? 'missed' : 'later')) });
+    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.windowLabel(this.bugOffStartHour(), this.bugOffStartHour() + BUGOFF_HOURS)}${after ? ', over for today' : ''})`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : (after ? 'missed' : 'later')) });
     const bday = this.todaysBirthdayVillager();
     items.push({ id: 'birthday', icon: '🎂', label: bday ? `${bday.name}'s birthday` : 'Birthdays', detail: bday ? 'bring a gift' : 'none today', status: !bday ? 'na' : (this.birthdayClaimed(bday) ? 'done' : 'todo') });
     items.push({ id: 'home', icon: '🏡', label: 'Visit your home plot', detail: this.homeCozy() ? `cozy ${this.homeCozy()}` : 'place a crafted good first', status: this.homeCozy() === 0 ? 'na' : (this.home.paidDay === day ? 'done' : 'todo') });
