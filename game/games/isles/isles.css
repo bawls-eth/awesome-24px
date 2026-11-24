@@ -284,3 +284,27 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
 .st-heart-full { color: #ff7aa8; }
 .st-heart-half { background: linear-gradient(90deg, #ff7aa8 50%, #6b5560 50%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .st-heart-empty { color: #a9c2ad; }
+/* cyc5-ui (b05-r3-05, b06-r3-04): phones get a COMPACT how-to: one 44 px row ("How to play" + Tips + close) under the HUD; Tips opens
+   the five lines. The toast sits just under the compact row, and the hint line waits while the card or a toast is up (staggered, so
+   the first screen shows at most one overlay over the map besides the HUD). */
+.howto-more { display: inline-block; min-width: 56px; min-height: 44px; margin-left: 6px; padding: 0 8px; vertical-align: middle; font: bold calc(12px * var(--us)) monospace; pointer-events: auto; cursor: pointer; }
+.howto-more:focus-visible { outline: 3px solid #ffec27; }
+.howto.compact { padding: 2px 8px; width: max-content; max-width: calc(100% - 32px); }
+.howto.compact .howto-list { display: none; }
+.howto.compact .howto-title { display: flex; align-items: center; min-height: 44px; }
+@media (max-width: 300px) { .howto { top: calc(166px + env(safe-area-inset-top)); } #toast { left: 8px; right: 8px; transform: none; max-width: none; font-size: 12px; padding: 4px 8px; } }
+@media (max-width: 600px) {
+  body:has(#howto.compact:not([hidden])) #toast { top: calc(194px + env(safe-area-inset-top)); }
+  body.howto-open .hint, body.toast-on .hint { visibility: hidden; }
+}
+@media (max-width: 300px) { body:has(#howto.compact:not([hidden])) #toast { top: calc(230px + env(safe-area-inset-top)); } }
+/* cyc5-ui: 195x422 (a phone at 200% zoom): the screen centre (the hero) is right under the HUD, so the compact card becomes a narrow
+   column at the left edge (Tips "?" over the close X), and the toast sits right of it, under the hero */
+@media (max-width: 300px) and (max-height: 500px) {
+  .howto.compact { left: calc(8px + env(safe-area-inset-left)); transform: none; width: auto; max-width: none; padding: 2px; display: flex; flex-direction: column; gap: 2px; }
+  .howto.compact .howto-x { position: static; }
+  .howto.compact .howto-title { order: -1; padding: 0; min-height: 0; font-size: 0; }
+  .howto.compact .howto-more { margin: 0; min-width: 44px; font-size: 0; }
+  .howto.compact .howto-more::after { content: '?'; font-size: 16px; }
+  body:has(#howto.compact:not([hidden])) #toast { top: calc(222px + env(safe-area-inset-top)); left: 64px; }
+}

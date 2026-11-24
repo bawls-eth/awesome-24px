@@ -5302,9 +5302,29 @@ class TownScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-M', () => { if (this.canAct()) open(); });
   }
 
+  // cyc5-ui (b07-r3-01): the island grew (world 5800 x 4600) while the village stayed ~2000 x 500 in the middle, so the whole-world map
+  // squeezed every pin into a small central cluster with labels printed over each other. The map now frames the village: the landmark
+  // box (plus the local player, so you are always on it) padded and fitted to the canvas aspect, clamped to the world; coast, land and
+  // ponds use the same transform. Labels are placed greedily (right, left, above, below, then diagonals) so none overlaps another
+  // label, a pin or the canvas edge; the placed boxes are kept on this.mapLabelRects for the test.
+  mapView(w, h) {
+    const W = this.world, pad = 160;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const pts = MAP_LANDMARKS.map((l) => [l.x, l.y]);
+    if (this.localBody) pts.push([this.localBody.x, this.localBody.y]);
+    pts.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); });
+    x0 -= pad; y0 -= pad; x1 += pad * 1.6; y1 += pad; // labels run to the right of their pin
+    let vw = x1 - x0, vh = y1 - y0; const asp = w / h;
+    if (vw / vh < asp) { const nw = vh * asp; x0 -= (nw - vw) / 2; vw = nw; } else { const nh = vw / asp; y0 -= (nh - vh) / 2; vh = nh; }
+    if (vw >= W.width || vh >= W.height) return { x0: W.originX, y0: W.originY, vw: W.width, vh: W.height };
+    x0 = Math.max(W.originX, Math.min(x0, W.originX + W.width - vw)); y0 = Math.max(W.originY, Math.min(y0, W.originY + W.height - vh));
+    return { x0, y0, vw, vh };
+  }
+
   drawMap(ctx, w, h) {
     ctx.clearRect(0, 0, w, h);
-    const toScreen = (x, y) => [((x - this.world.originX) / this.world.width) * w, ((y - this.world.originY) / this.world.height) * h];
+    const V = this.mapView(w, h);
+    const toScreen = (x, y) => [((x - V.x0) / V.vw) * w, ((y - V.y0) / V.vh) * h];
 
     // Ocean background, land rect inset by the ocean margin — same shape
     // as the real world, just schematic.
@@ -5343,24 +5363,47 @@ class TownScene extends Phaser.Scene {
       // Sizes scale by the map's ratio only — running them through
       // toScreen() (which also adds the world-origin offset) drew the
       // ponds as huge blobs covering most of the village.
-      const swx = (rx * 2 * w) / this.world.width;
-      const swy = (ry * 2 * h) / this.world.height;
+      const swx = (rx * 2 * w) / V.vw;
+      const swy = (ry * 2 * h) / V.vh;
       ctx.beginPath();
       ctx.ellipse(sx, sy, Math.max(swx / 2, 2), Math.max(swy / 2, 2), 0, 0, Math.PI * 2);
       ctx.fill();
     });
 
-    MAP_LANDMARKS.forEach(({ x, y, label }) => {
-      const [sx, sy] = toScreen(x, y);
+    const pins = MAP_LANDMARKS.map(({ x, y, label }) => { const [sx, sy] = toScreen(x, y); return { sx, sy, label }; });
+    pins.forEach(({ sx, sy }) => {
       ctx.fillStyle = '#d8cfa8';
       ctx.beginPath();
       ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(238,242,247,0.8)';
-      ctx.font = '8px monospace';
-      ctx.textAlign = sx > w - 40 ? 'right' : 'left';
-      ctx.fillText(label, sx + (sx > w - 40 ? -4 : 4), sy + 3);
     });
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    const LH = 10, placed = [];
+    const hitArea = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+    const dots = pins.map((p) => ({ x: p.sx - 3, y: p.sy - 3, w: 6, h: 6 }));
+    pins.forEach((p, i) => {
+      const tw = Math.ceil(ctx.measureText(p.label).width) + 2;
+      const cands = [[4, -LH / 2], [-4 - tw, -LH / 2], [-tw / 2, -4 - LH], [-tw / 2, 4], [4, -LH - 2], [4, 2], [-4 - tw, -LH - 2], [-4 - tw, 2],
+        [-tw / 2, -6 - LH * 2], [-tw / 2, 6 + LH], [8, -LH * 1.5 - 4], [8, LH / 2 + 4], [-8 - tw, -LH * 1.5 - 4], [-8 - tw, LH / 2 + 4]];
+      let best = null, bestCost = Infinity;
+      for (const [dx, dy] of cands) {
+        const r = { x: p.sx + dx, y: p.sy + dy, w: tw, h: LH };
+        if (r.x < 1 || r.y < 1 || r.x + r.w > w - 1 || r.y + r.h > h - 1) continue;
+        let cost = 0;
+        placed.forEach((q) => { cost += hitArea(r, q) * 10; });
+        dots.forEach((d, j) => { if (j !== i) cost += hitArea(r, d) * 4; });
+        if (cost < bestCost) { best = r; bestCost = cost; if (!cost) break; }
+      }
+      if (!best) best = { x: Math.max(1, Math.min(w - tw - 1, p.sx + 4)), y: Math.max(1, Math.min(h - LH - 1, p.sy - LH / 2)), w: tw, h: LH };
+      placed.push(best);
+      ctx.fillStyle = 'rgba(18,26,20,0.72)';
+      ctx.fillRect(best.x - 1, best.y, best.w + 1, best.h);
+      ctx.fillStyle = 'rgba(238,242,247,0.95)';
+      ctx.fillText(p.label, best.x, best.y + LH - 2);
+    });
+    this.mapLabelRects = placed.map((r, i) => ({ label: pins[i].label, x: r.x, y: r.y, w: r.w, h: r.h, px: pins[i].sx, py: pins[i].sy }));
 
     this.remotePlayers.forEach((rp) => {
       const [sx, sy] = toScreen(rp.x, rp.y);

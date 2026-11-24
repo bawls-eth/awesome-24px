@@ -2034,6 +2034,7 @@
       + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
       + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
     // ID-04 notebook panel: the same .nx-board card as the quest board (EIGHTBIT-STYLE: pixel border, no blur), one list per category
+    nxCss.textContent += '#rw-nx-more{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:81;pointer-events:none;padding:4px 12px;background:#ffe27a;color:#120e1f;border:2px solid #000;box-shadow:2px 2px 0 #000;font:700 13px system-ui,sans-serif;white-space:nowrap}#rw-nx-more.hidden{display:none}'; // cyc5-ui (b04-r3-01) scroll cue
     nxCss.textContent += '#rw-nexus .nx-notebook{background:#221d3a;border-color:#7a63c9}#rw-nexus .nx-nb-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-nb-head h3{margin:0;font-size:16px}'
       + '#rw-nexus .nx-nb-note{margin:4px 0 8px;font-size:13px;color:#c9bff0}#rw-nexus .nx-nb-cat{margin:10px 0 4px;font-size:13px;color:#ffe27a}#rw-nexus .nx-nb-list{list-style:none;margin:0;padding:0}'
       + '#rw-nexus .nx-nb-list li{padding:6px 0;border-top:1px solid #3b3166;font-size:max(13px,1em);overflow-wrap:anywhere}#rw-nexus .nx-nb-list li:first-child{border-top:0}#rw-nexus .nx-nb-list b{color:#fff}#rw-nexus .nx-nb-list em{color:#8fe9ff;font-style:normal;margin-left:6px}#rw-nexus .nx-nb-list span{display:block;color:#d9d1f5}'
@@ -2327,7 +2328,7 @@
     // first button instead of falling to <body> (the notebook is emptied). Focus anywhere else is left alone.
     const nbHadFocus = () => !!(nxDom && nxDom.notebook && !nxDom.notebook.classList.contains('hidden') && nxDom.notebook.contains(document.activeElement));
     const nxFocusFirst = (el) => { const f = el && el.querySelector('button:not([disabled])'); if (f) { try { f.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } };
-    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); const had = nbHadFocus(); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); if (had) nxFocusFirst(nxDom.stall); return true; }
+    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); const had = nbHadFocus(); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); if (had) nxFocusFirst(nxDom.stall); nxMoreSync(); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
     // nxReturn remembers that origin only for a panel opened from the stall; any other panel, a death or a leave forgets it.
     let nxReturn = null;
@@ -2753,7 +2754,7 @@
       const b = nxDom.board; b.textContent = '';
       const h = document.createElement('b'); h.textContent = 'Daily quests · ' + questDate(); b.appendChild(h);
       const bx = document.createElement('button'); bx.type = 'button'; bx.id = 'rw-nx-board-close'; bx.textContent = 'Close'; bx.setAttribute('aria-label', 'Close the quest board'); // G-12
-      bx.style.cssText = 'float:right;min-height:44px;min-width:44px'; bx.addEventListener('click', () => b.classList.add('hidden')); b.insertBefore(bx, h);
+      bx.style.cssText = 'float:right;min-height:44px;min-width:44px'; bx.addEventListener('click', () => { b.classList.add('hidden'); nxMoreSync(); }); b.insertBefore(bx, h);
       MMQuests.summary(save.quests, questDate()).forEach((q) => {
         const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
         const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎' + (QBAG_ON && q.reward.bag ? ' · ' + q.reward.bag + ' bag' : '') + (MMQuests.levelHint && MMQuests.levelHint(q) ? ' · ' + MMQuests.levelHint(q) : ''); t.appendChild(r);
@@ -2764,7 +2765,31 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); const had = nbHadFocus(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); if (had) nxFocusFirst(nxDom.board); }
+    function nxBoardOpen() { nxBuild(); const had = nbHadFocus(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); if (had) nxFocusFirst(nxDom.board); nxBoardReveal(); }
+    // cyc5-ui (b04-r3-01): on a phone the board opened below the plaza (top 736 of 844: one row seen, Claim buttons off screen, and
+    // #rw-nexus scrolled inside itself with no cue). Where the board is not the fixed side card (narrow / short screens) the Nexus now
+    // scrolls the whole board into view as it opens, and a "More below" cue shows whenever a panel still runs past the bottom edge.
+    const nxWide = () => { try { return window.matchMedia('(min-width:1000px) and (min-height:560px)').matches; } catch (e) { return false; } };
+    function nxBoardReveal() {
+      if (!nxDom || nxWide()) { nxMoreSync(); return; }
+      const b = nxDom.board, r = b.getBoundingClientRect(), root = nxDom.root;
+      if (r.bottom > innerHeight - 4 || r.top < 0) { const want = Math.min(r.top - 8, r.bottom - innerHeight + 8); root.scrollTop += r.height + 16 > innerHeight ? r.top - 8 : want; }
+      nxMoreSync();
+    }
+    function nxMoreSync() {
+      if (!nxDom) return; const root = nxDom.root;
+      let cue = document.getElementById('rw-nx-more');
+      if (!cue) {
+        cue = document.createElement('div'); cue.id = 'rw-nx-more'; cue.setAttribute('aria-hidden', 'true'); cue.textContent = 'More below \u25BE swipe up'; cue.className = 'hidden';
+        root.appendChild(cue); root.addEventListener('scroll', nxMoreSync, { passive: true }); window.addEventListener('resize', nxMoreSync);
+      }
+      let below = false;
+      if (!root.classList.contains('hidden')) {
+        [nxDom.board, nxDom.stall, nxDom.notebook].forEach((p) => { if (p && p.isConnected && !p.classList.contains('hidden')) { const r = p.getBoundingClientRect(); if (r.height && r.bottom > innerHeight + 4 && r.top < innerHeight) below = true; } });
+        if (!below && root.scrollHeight - root.scrollTop - root.clientHeight > 24) { const last = Array.from(root.children).filter((e) => e !== cue && e.offsetParent && !e.classList.contains('hidden')).pop(); if (last && last.getBoundingClientRect().top > innerHeight - 4) below = true; }
+      }
+      cue.classList.toggle('hidden', !below);
+    }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {

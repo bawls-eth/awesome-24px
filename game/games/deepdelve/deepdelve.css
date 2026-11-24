@@ -136,3 +136,25 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
 
 /* cyc2 U-06: at 200% zoom (<= 260 css px) the tool buttons were 43 px wide: keep the 44 px tap target */
 @media (max-width: 260px) { .tools .btn { min-width:44px; } }
+
+/* cyc5-ui (b15-r3-01): 195x422 (a phone at 200% zoom) was mostly HUD: the top bar wrapped (Town cut off, 36 px page h-scroll), the
+   tool row took two rows, and the coach line printed over the HP panel and the Jump / Mine / Place buttons. At <= 300 px wide: one
+   slim title row that fits, the tool buttons in ONE row that scrolls sideways inside itself, a smaller HUD, smaller thumb controls,
+   and the coach line in the free band between the HUD and the stick, left of the button column. */
+@media (max-width: 300px) {
+  .bar { gap: 4px; padding: 3px 4px; }
+  .bar h1 { flex: 1 1 0; min-width: 0; font-size: 10px; letter-spacing: 0; overflow-wrap: normal; overflow: hidden; }
+  #craft-btn { font-size: 11px; }
+  #hud > div:empty { display: none; }
+  #stage:has(#msg:not(:empty)) #hud-dive, #stage:has(#msg:not(:empty)) #hud-bank { display: none; } /* the dive / bank lines wait while a message shows (no overprint) */
+  .bar .btn { padding: 0 4px; letter-spacing: 0; }
+  .bar.tools { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; gap: 4px; padding: 3px 4px; }
+  .tools .btn { flex: 0 0 auto; white-space: nowrap; overflow-wrap: normal; font-size: 11px; min-height: 44px; }
+  #hud { left: 4px; top: 4px; max-width: calc(100% - 80px); padding: 2px 6px; font-size: 11px; }
+  #hpbar { margin: 3px 2px; height: 8px; }
+  #tbtns { right: 4px; bottom: 6px; gap: 4px; }
+  .tb { min-width: 60px; min-height: 44px; font-size: 11px; padding: 0 2px; }
+  #joy { left: 6px; bottom: 6px; width: 88px; height: 88px; }
+  #knob { left: 24px; top: 24px; }
+  #msg { left: 4px; right: 72px; top: auto; bottom: 97px; width: auto; max-width: none; margin: 0; padding: 3px 6px; font-size: 11px; }
+}
