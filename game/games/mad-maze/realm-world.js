@@ -49,7 +49,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb|seatPos)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb|seatPos|zk|errand)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -83,6 +83,9 @@
       const sp = {}; ['0', '1', '2', '3'].forEach((k) => { const q = o.seatPos[k]; if (q && typeof q === 'object' && Number.isInteger(q.x) && Number.isInteger(q.y) && q.x >= 0 && q.y >= 0 && q.x < 4096 && q.y < 4096) sp[k] = { x: q.x, y: q.y }; });
       if (Object.keys(sp).length) out.seatPos = sp;
     }
+    if (Number.isInteger(o.zk) && o.zk > 0 && o.zk < 16) out.zk = o.zk; // ID-13 (additive): bit z set once the first world boss of zone z died (first-kill bag floor spent); garbage -> key left out
+    if (o.errand !== undefined && window.MMErrands) { const er = window.MMErrands.cleanRealm(o.errand); if (er.p) out.errand = er; } // ID-12 (additive): the Realm leg of the parcel errand; not started -> key left out
+    else if (o.errand !== undefined) out.errand = o.errand; // a page without MMErrands keeps the value as it is (never drops progress)
     if (o.fb === 1) out.fb = 1; // FT2 (additive): this save has picked up its first world bag, so the first-bag guarantee is spent
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
@@ -97,6 +100,8 @@
   // seat 0 (or solo) writes the canonical `pos`; solo saves keep exactly today's shape (no seatPos key).
   function mergeStored(c, cur) {
     const st = cleanSave(cur);
+    if (st.zk) c.zk = ((c.zk | 0) | st.zk) & 15;
+    if (st.errand && window.MMErrands) { const E = window.MMErrands; const a = E.cleanRealm(st.errand), b = E.cleanRealm(c.errand); const p = a.p | b.p; c.errand = { id: E.ID, p: p, d: p ? (a.d | b.d) : 0 }; } // ID-12: the errand only moves forward // ID-13: zone first-kill bits are per hero, not per island: union with what another tab spent
     if (st.seed !== c.seed) return c;
     const F = window.MMFog;
     if (F && st.discovered) {
@@ -422,6 +427,28 @@
         cornerStat.filled++;
       }
     }
+    // Cycle 3 art (G), R01b stopgap: Highlands / Godlands seams (snow, lava rock, dry grass, gravel). A tile whose four cardinal
+    // neighbours are its own terrain draws its plain variant, so where the diagonal neighbour is another terrain the two neighbours' edge
+    // strips meet at a square stair-step. Here that corner (CORNER x CORNER) is copied from the terrain's OWN edge tile toward that
+    // diagonal terrain, the mask whose two sides at that corner are connected (it carries the art's notch = an inner corner in the
+    // artist's own pixels). Bake time only. ?icorner=0 = off. Hook: smoothStats().icorners.
+    const ICORNER = !(typeof location !== 'undefined' && /[?&]icorner=0(&|$)/.test(location.search));
+    const ICORNER_T = new Set(['snow', 'lava_rock', 'dry_grass', 'gravel'].filter((n) => Object.prototype.hasOwnProperty.call(T, n)).map((n) => T[n]));
+    const icornerStat = { on: ICORNER, filled: 0 };
+    function innerCorners(g, wx, wy, t, px, py) {
+      if (wx < 1 || wy < 1 || wx >= ww - 1 || wy >= wh - 1) return;
+      const banks = edgeArt[t]; if (!banks) return;
+      // [dx, dy, maskForCorner (two connected sides + the side opposite the first), ox, oy]
+      const C = [[1, -1, 1 | 2 | 4, TILE - CORNER, 0], [1, 1, 4 | 2 | 1, TILE - CORNER, TILE - CORNER], [-1, 1, 4 | 8 | 1, 0, TILE - CORNER], [-1, -1, 1 | 8 | 4, 0, 0]];
+      for (let k = 0; k < 4; k++) {
+        const c = C[k]; const d = drawT[(wy + c[1]) * ww + wx + c[0]];
+        if (d === t || !banks[d]) continue;
+        if (drawT[(wy + c[1]) * ww + wx] !== t || drawT[wy * ww + wx + c[0]] !== t) continue;
+        const src = banks[d][c[2]]; if (!src) continue;
+        g.drawImage(src, c[3], c[4], CORNER, CORNER, px + c[3], py + c[4], CORNER, CORNER);
+        icornerStat.filled++;
+      }
+    }
     function buildChunk(cx, cy) {
       // fieldStat: ms / maxMs = the field pass alone (its added bake cost); chunkMs / chunkMaxMs = the whole chunk bake, for scale
       const ft0 = performance.now(); fieldStat.cur = 0;
@@ -444,7 +471,7 @@
         if (t === T.deep_water || t === T.shallow_water) water = true;
         const transition = transitionAt(wx, wy, t);
         if (transition) { g.drawImage(transition, px, py, TILE, TILE); fillInnerCorners(g, wx, wy, t, px, py, art, pal); }
-        else if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
+        else if (art && art.length) { g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE); if (ICORNER && ICORNER_T.has(t)) innerCorners(g, wx, wy, t, px, py); }
         else {
           rect(g, pal[0], px, py, TILE, TILE);
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
@@ -894,11 +921,12 @@
     // no shards, no item) for QUIET_AFTER s and no enemy is alive within QUIET_R, the nearest cleared group in range respawns now instead of
     // waiting out its zone timer (Shore 60 s), and the nearest live enemy is provoked and comes over; again every QUIET_AGAIN s while it stays quiet. ?quietpity=0 turns it off.
     const QUIET_ON = !/[?&]quietpity=0(&|$)/.test(qs0); const QUIET_AFTER = 15; const QUIET_AGAIN = 6; const QUIET_R = 14 * TILE;
-    let quietSig = ''; let quietT = 0; let quietNudges = 0;
+    let qS0 = -1, qS1 = -1, qS2 = -1, qS3 = -1, qS4 = -1, qS5 = -1; let quietT = 0; let quietNudges = 0;
     function quietTick(dt) {
       if (!QUIET_ON || !zones || arena.state !== 'play' || typeof zones.hurry !== 'function') return;
-      const sv = arena.save || {}; const sig = (sv.level | 0) + '|' + (sv.xp | 0) + '|' + kills + '|' + (sv.shards | 0) + '|' + (sv.items ? sv.items.length : 0) + '|' + (sv.nextUid | 0);
-      if (sig !== quietSig) { quietSig = sig; quietT = 0; return; }
+      // cycle 3 (L hot path): the six numbers are compared as numbers (a 'level|xp|kills|shards|items|uid' string was built every frame)
+      const sv = arena.save || {}; const s0 = sv.level | 0, s1 = sv.xp | 0, s2 = kills, s3 = sv.shards | 0, s4 = sv.items ? sv.items.length : 0, s5 = sv.nextUid | 0;
+      if (s0 !== qS0 || s1 !== qS1 || s2 !== qS2 || s3 !== qS3 || s4 !== qS4 || s5 !== qS5) { qS0 = s0; qS1 = s1; qS2 = s2; qS3 = s3; qS4 = s4; qS5 = s5; quietT = 0; return; }
       if ((quietT += dt) < QUIET_AFTER) return;
       quietT = QUIET_AFTER - QUIET_AGAIN; // still quiet: nudge again every QUIET_AGAIN s until something pays
       const p = arena.player; let near = false;
@@ -990,7 +1018,9 @@
       if (deg !== arrowDeg) { arrowDeg = deg; zArrow.style.transform = `rotate(${deg}deg)`; }
       const ct = `${tx},${ty} · centre ${dist}`;
       if (zCoords.textContent !== ct) zCoords.textContent = ct;
-      const w = document.getElementById('realm-wave'); if (w && w.textContent !== zi.name) w.textContent = zi.name;
+      // cyc2 U-10: on a phone (<= 560 px, the one-line zone HUD) the zone line below already names the zone; the info line drops it
+      const wn = window.innerWidth <= 560 ? '' : zi.name;
+      const w = document.getElementById('realm-wave'); if (w && w.textContent !== wn) w.textContent = wn;
       const b = document.getElementById('realm-biome'); if (b && b.textContent !== zi.danger) b.textContent = zi.danger;
       if (fogOn) { const fk = tx + ',' + ty; if (fk !== fogKey) { fogKey = fk; revealAt(tx, ty); } }
       drawMini(force);
@@ -1079,7 +1109,7 @@
       return { on: GEAR_ON, b: gp.b, d: gp.d, text: v ? v.text : '', cryptText: v ? v.cryptText : '', bonusPct: v ? v.bonusPct : 0, bossKillsLeft: v ? v.bossKillsLeft : 60 };
     }
     function giveBag(x, y, bag, info) {
-      const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
+      const got = { zone: info.zone, boss: !!info.boss, src: info.src || (info.boss ? 'boss' : 'mob'), tier: bag.tier, tierIndex: bag.tierIndex, firstKill: info.firstKill === true, items: [], shards: bag.shards, potions: bag.potions };
       const rolls = []; let toasted = false;
       // review F12: the pity counter lives in storage and another world tab may have spent (or raised) it since this page loaded: re-read it right
       // before a boss roll / pityStep, so two tabs at b = 60 give ONE forced T12, not two. Unreadable storage keeps the in-memory value.
@@ -1152,6 +1182,42 @@
         const k = Math.min(d - 12, FIRSTBAG_SPEED * dt) / d; b.x += dx * k; b.y += dy * k;
       }
     }
+    // ---- ID-04 Hero notebook (MMNotebook, own key pixeltown-notebook-v1): a page on the FIRST meet only. The in-memory copy answers
+    // "seen already?" per kill (no storage read); a new page re-reads, merges and writes once. Knowledge only: no stat, drop or price changes.
+    const NB = window.MMNotebook && !/[?&]notebook=0(&|$)/.test(qs0) ? window.MMNotebook : null;
+    let nbSave = null; let nbNew = 0;
+    // cycle 3 (L): the disk copy is MERGED into what this page already knows, never put in its place. With storage that refuses the write
+    // (quota, private window) the disk never holds this visit's pages, so replacing wiped them on every new page: A, B, A announced A twice.
+    function nbLoad() { if (NB) { let disk = null; try { disk = NB.load(localStorage); } catch (e) { disk = null; } nbSave = nbSave && disk ? NB.merge(nbSave, disk) : (nbSave || disk || NB.defaults()); } return nbSave; }
+    function nbMeet(id, name) {
+      if (!NB || !id) return false;
+      if (!nbSave) nbLoad();
+      if (NB.has(nbSave, id)) return false;
+      try { NB.record(localStorage, id); } catch (e) { /* storage blocked */ }
+      nbLoad(); // what is on disk now: this page plus any other tab's pages
+      if (!NB.has(nbSave, id) && !NB.add(nbSave, id, Date.now())) return false; // blocked storage keeps the page for this visit; a full notebook takes nothing
+      nbNew++; nbSyncBtn();
+      try { arena._floatText(arena.player.x, arena.player.y - 60, 'New notebook page: ' + name, '#ffe27a'); } catch (e) { /* no float text */ }
+      return true;
+    }
+    // ---- ID-12 Town-to-Realm errand (MMErrands): this page writes ONLY the Realm save's `errand`; the Town save is read, never written ----
+    const ER = window.MMErrands && !/[?&]errands=0(&|$)/.test(qs0) ? window.MMErrands : null;
+    function erTown() { try { const o = JSON.parse(localStorage.getItem('pixeltown-save-v1') || 'null'); return o && typeof o === 'object' ? o.errand : null; } catch (e) { return null; } }
+    function erKill(zone) {
+      if (!ER || !save.errand) return false; // nothing delivered yet: no work per kill
+      const r = ER.trophy(save.errand, zone); if (!r.ok) return false;
+      save.errand = r.realm; writeSave(save);
+      try { arena._floatText(arena.player.x, arena.player.y - 72, 'Trophy for Mocha! Take it back to town.', '#ffe27a'); } catch (e) { /* no float text */ }
+      return true;
+    }
+    // the Vendor's errand line (and the delivery itself), or null when the Town has no errand running
+    function erVendor() {
+      if (!ER) return null;
+      const town = erTown(); const st = ER.stage(town, save.errand);
+      if (st === 'carry') { const r = ER.deliver(save.errand, town); if (r.ok) { save.errand = r.realm; writeSave(save); return 'A parcel from Mocha? Thank you! ' + ER.LINES.hunt; } }
+      if (st === 'hunt' || st === 'return') return ER.LINES[st];
+      return null;
+    }
     function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
       if (e.rushStep) { rushKilled(e); return; }
@@ -1162,7 +1228,12 @@
         const info = zones.markDead(e.zid, arena.clock); live.delete(e.zid); e.zid = -1;
         if (!info) return;
         kills++; save.stats.kills++; nxQuestEvent({ type: 'kill', zone: info.zone, n: 1 });
-        rollFor({ zone: info.zone, tier: info.tier, src: e.type === 'giant_spider_queen' ? 'elite' : 'mob', bossId: e.type === 'giant_spider_queen' ? e.type : '' }, e.x, e.y, 'g' + info.group);
+        nbMeet(NB ? NB.ids.kill(info.type, info.creature, info.zone) : null, info.creature); // ID-04: first kill of this creature in this zone
+        erKill(info.zone); // ID-12: a Midlands-or-deeper kill after the parcel delivery gives the Vendor's trophy (once)
+        // cyc2-S bug fix: the elite test read e.type, which is the bolt pattern ('aimed'), never 'giant_spider_queen', so the elite never rolled
+        // its own gear row (MMGearDrops ELITE). The creature id lives on the zone group (info.creature).
+        const elite = info.creature === 'giant_spider_queen';
+        rollFor({ zone: info.zone, tier: info.tier, src: elite ? 'elite' : 'mob', bossId: elite ? info.creature : '' }, e.x, e.y, 'g' + info.group);
         spawnPickups(e.x, e.y, 'g' + info.group, kills, info.tier);
         return;
       }
@@ -1170,7 +1241,12 @@
         if (bossLive[i] !== e) continue;
         const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
-        rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss }, e.x, e.y + 30, 'boss' + i);
+        nbMeet(NB ? NB.ids.boss(site.boss, site.zone) : null, BOSS_NAME[i]); // ID-04
+        // ID-13: the FIRST world boss of a zone rolls with the bag floor (MMZones FIRST_KILL_BAG_FLOOR); the bit is set and saved once (writeSave below).
+        // Trial of Six kills (rushKilled) never come here, so they neither read nor set zk.
+        const zbit = 1 << Math.max(0, Math.min(3, site.zone | 0)); const fk = !((save.zk | 0) & zbit);
+        rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss, firstKill: fk }, e.x, e.y + 30, 'boss' + i);
+        if (fk) save.zk = ((save.zk | 0) | zbit) & 15;
         spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
         dropKey(e.x + 24, e.y + 26, 'boss' + i); // BK2: every world boss drops a boss key
         writeSave(save);
@@ -1612,28 +1688,33 @@
       }
       return c;
     }
+    // cycle 3 (L hot path): plain loops and plain numbers. Each frame this built 3 closures, one {x, y} object per shrine and per NPC (sPx)
+    // and two key strings per shrine, for sites that are almost always off screen. Same draws in the same order.
+    const SHRINE_GK = {}; const SHRINE_AK = {};
     function drawSites(g, vx0, vy0, vx1, vy1, tt, reduced) {
-      SITES.shrines.forEach((q) => {
-        const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 60 || c.y > vy1 + 60) return;
+      const sh = SITES.shrines, cps = SITES.camps, nps = SITES.npcs;
+      for (let i = 0; i < sh.length; i++) {
+        const q = sh[i]; const cx = (q.x + 0.5) * TILE, cy = (q.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 - 60 || cy > vy1 + 60) continue;
         const lit = shrineReady(q);
-        if (lit) { if (!sc['g' + q.kind]) sc['g' + q.kind] = glowSprite(SHRINE_COL[q.kind]); g.globalAlpha = reduced ? 0.45 : 0.35 + 0.2 * Math.sin(tt * 2.4 + q.x); g.drawImage(sc['g' + q.kind], c.x - 64, c.y - 80); g.globalAlpha = 1; }
-        const sa = wArt['shrine_' + q.kind];
-        if (sa) { if (!lit) g.globalAlpha = 0.6; drawArt(g, sa, lit ? frameOf(sa, tt, reduced) : 0, c.x, c.y + 18); g.globalAlpha = 1; artDraws.shrine++; }
-        else g.drawImage(shrineSprite(q.kind, lit), c.x - 24, c.y - 70);
-      });
-      SITES.camps.forEach((q) => {
-        const cx = (q.chest.x + 0.5) * TILE; const cy = (q.chest.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 || cy > vy1) return;
+        const gk = SHRINE_GK[q.kind] || (SHRINE_GK[q.kind] = 'g' + q.kind);
+        if (lit) { if (!sc[gk]) sc[gk] = glowSprite(SHRINE_COL[q.kind]); g.globalAlpha = reduced ? 0.45 : 0.35 + 0.2 * Math.sin(tt * 2.4 + q.x); g.drawImage(sc[gk], cx - 64, cy - 80); g.globalAlpha = 1; }
+        const sa = wArt[SHRINE_AK[q.kind] || (SHRINE_AK[q.kind] = 'shrine_' + q.kind)];
+        if (sa) { if (!lit) g.globalAlpha = 0.6; drawArt(g, sa, lit ? frameOf(sa, tt, reduced) : 0, cx, cy + 18); g.globalAlpha = 1; artDraws.shrine++; }
+        else g.drawImage(shrineSprite(q.kind, lit), cx - 24, cy - 70);
+      }
+      for (let i = 0; i < cps.length; i++) {
+        const q = cps[i]; const cx = (q.chest.x + 0.5) * TILE; const cy = (q.chest.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 || cy > vy1) continue;
         const ca = wArt.loot_chest_gold;
         if (ca) {
           const t0c = chestAnimT.get(q.id); let f = chestOpen.has(q.id) ? ca.frames - 1 : 0;
           if (t0c !== undefined && !reduced) f = Math.max(0, Math.min(ca.frames - 1, Math.floor((tt - t0c) / 0.12)));
           drawArt(g, ca, f, cx, cy + 18); artDraws.chest++;
         } else g.drawImage(chestSprite(chestOpen.has(q.id)), cx - 22, cy - 22);
-      });
-      SITES.npcs.forEach((q) => {
-        const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 50 || c.y > vy1 + 50) return;
-        const s = npcSprite(q.npc); g.drawImage(s, c.x - s.width / 2, c.y + 14 - s.height);
-      });
+      }
+      for (let i = 0; i < nps.length; i++) {
+        const q = nps[i]; const cx = (q.x + 0.5) * TILE, cy = (q.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 - 50 || cy > vy1 + 50) continue;
+        const s = npcSprite(q.npc); g.drawImage(s, cx - s.width / 2, cy + 14 - s.height);
+      }
     }
     // ---------- world status (S11): shrines show their buff as a status icon; world creatures apply debuffs from their bolts ----------
     // realm.js enemy bolts carry no `st` field and have no player-hit callback, so this hooks the instance: arena._guarded is only ever called for an
@@ -1916,6 +1997,12 @@
     // W-04 (b04-07): portrait phones get a tall walk view (400x540 world px) so the plaza fills >= 55% of the screen instead of a 4:3 strip
     const NX_TALL = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth * 1.3;
     const NX_VW = NX_TALL ? 400 : 640; const NX_VH = NX_TALL ? 540 : 480; const NX_R = 10; // walk view (world px) and the hero's collision radius
+    // Cycle 3 art (G): plaza life in the walk view. Torches play their 4 b13 frames with a warm additive glow that flickers, the three
+    // banners' cloth sways (2 px row bands sheared from the crossbar, the pole and crossbar fixed), the 7 NPC portraits bob 1 px on
+    // their own phase. The animated props / portraits are left out of the baked plaza and drawn per frame (no double-draw ghosting).
+    // Reduced motion = still frame 0, steady glow. ?nxlife=0 = the old static bake. Only while the plaza is open; cost in nxLifeStat.
+    const NX_LIFE = NX_WALK && !/[?&]nxlife=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const nxLife = []; const nxLifeStat = { on: NX_LIFE, frames: 0, ms: 0, torches: 0, banners: 0, npcs: 0, lastSway: 0, lastBob: 0, lastTorchF: -1 }; let nxGlow = null;
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
     // Shown name of a Nexus portal (display only; MMNexus keeps its ids and labels): the vault says where it leads (NAV-AUDIT 4.1 renames).
     const nxPortalName = (q) => (q && q.id === 'vault' ? 'Lantern vault' : q ? q.label : '');
@@ -1943,6 +2030,17 @@
       // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
       + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
       + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
+    // ID-04 notebook panel: the same .nx-board card as the quest board (EIGHTBIT-STYLE: pixel border, no blur), one list per category
+    nxCss.textContent += '#rw-nexus .nx-notebook{background:#221d3a;border-color:#7a63c9}#rw-nexus .nx-nb-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-nb-head h3{margin:0;font-size:16px}'
+      + '#rw-nexus .nx-nb-note{margin:4px 0 8px;font-size:13px;color:#c9bff0}#rw-nexus .nx-nb-cat{margin:10px 0 4px;font-size:13px;color:#ffe27a}#rw-nexus .nx-nb-list{list-style:none;margin:0;padding:0}'
+      + '#rw-nexus .nx-nb-list li{padding:6px 0;border-top:1px solid #3b3166;font-size:max(13px,1em);overflow-wrap:anywhere}#rw-nexus .nx-nb-list li:first-child{border-top:0}#rw-nexus .nx-nb-list b{color:#fff}#rw-nexus .nx-nb-list em{color:#8fe9ff;font-style:normal;margin-left:6px}#rw-nexus .nx-nb-list span{display:block;color:#d9d1f5}'
+      + '#rw-nexus .nx-nb-empty{color:#a59cc4;font-size:13px;margin:2px 0}'
+      // cyc3 U review (EIGHTBIT-STYLE / phone / a11y): square card with a hard ring and a whole-pixel drop shadow (no 10 px blob), pixel
+      // font titles, the Text size preference scales the panel, and the walking Nexus move stick steps aside while the notebook is open
+      + '#rw-nexus .nx-notebook{border-radius:0;border:2px solid #7a63c9;box-shadow:0 0 0 2px #000,4px 4px 0 2px #000}'
+      + '#rw-nexus .nx-nb-head h3,#rw-nexus .nx-nb-cat{font-family:var(--px-font,ui-monospace,Menlo,Consolas,monospace);letter-spacing:.04em;text-transform:uppercase}'
+      + 'body.mm-hud-big #rw-nexus .nx-nb-head h3{font-size:calc(16px * var(--mm-hud-scale,1))}body.mm-hud-big #rw-nexus .nx-nb-note,body.mm-hud-big #rw-nexus .nx-nb-cat,body.mm-hud-big #rw-nexus .nx-nb-empty,body.mm-hud-big #rw-nexus .nx-nb-list li{font-size:calc(13px * var(--mm-hud-scale,1))}'
+      + 'body.nx-walking:has(#rw-nx-notebook:not(.hidden)) .realm-stick{display:none !important}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
       if (nxPortrait[id] !== undefined || !opts.assetRoot || !artOn) return;
@@ -1989,8 +2087,10 @@
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
       const pad = wArt.spawn_pad; const sp = L.spawn;
       if (pad) drawArt(g, pad, 0, sp.x, sp.y + 16); else { g.fillStyle = '#7a63c9'; g.beginPath(); g.arc(sp.x, sp.y, 20, 0, 7); g.fill(); g.fillStyle = '#a98bff'; g.beginPath(); g.arc(sp.x, sp.y, 13, 0, 7); g.fill(); }
+      nxLife.length = 0;
       L.props.forEach((p) => {
         const a = wArt[p.art]; const x = (p.tx + 0.5) * TILE; const y = (p.ty + 0.5) * TILE + 16;
+        if (a && NX_LIFE && (/torch/.test(p.id) || /banner/.test(p.id))) { nxLife.push({ kind: /torch/.test(p.id) ? 'torch' : 'banner', p, a, x, y, ph: (MMRng.hash(p.id) % 1000) / 1000 }); return; } // cycle 3: drawn per frame
         if (a) { drawArt(g, a, 0, x, y); return; }
         if (p.id === 'fountain') { g.fillStyle = '#7d8aa3'; g.beginPath(); g.arc(x, y - 16, 44, 0, 7); g.fill(); g.fillStyle = '#4fa8e0'; g.beginPath(); g.arc(x, y - 16, 34, 0, 7); g.fill(); g.fillStyle = '#bfe6ff'; g.fillRect(x - 4, y - 44, 8, 26); }
         else if (/torch/.test(p.id)) { g.fillStyle = '#5a4026'; g.fillRect(x - 3, y - 30, 6, 28); g.fillStyle = '#ffb347'; g.beginPath(); g.arc(x, y - 34, 7, 0, 7); g.fill(); }
@@ -2014,7 +2114,8 @@
       }
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
-        if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
+        if (im && NX_LIFE) nxLife.push({ kind: 'npc', im, x, y, ph: (MMRng.hash(n.npc) % 1000) / 1000 }); // cycle 3: drawn per frame (idle bob)
+        else if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
         else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
         g.font = 'bold 18px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 2, y + 38); /* R4-D2: pixel (mono) font like the portal labels */ g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
       });
@@ -2160,10 +2261,12 @@
       if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
       if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
       if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
+      const erLine = n.role === 'shop' ? erVendor() : null; // ID-12: the Vendor takes Mocha's parcel / names the trophy, then opens the stall as always
       if (n.stall && nxStallOn()) { nxStallOpen(n.stall); if (n.stall === 'forge') { const fb = document.getElementById('rw-nx-forge'); if (fb) { fb.classList.add('nx-hi'); try { fb.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } } // G-18 (b04-09): the Blacksmith points at the Forge button in this stall
-        nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Tap "Open the Forge" below to salvage and reforge your gear.' : 'Same goods, same prices, every day. Take your time.'); return; }
-      if (n.role === 'shop' && typeof arena.setShop === 'function') { nxSay(name, 'Take a look. Everything is priced in 💎 shards, same every day.'); nxStallShop(); return; } // forge/stall off: the vendor still opens the classic shop
+        nxSay(name, erLine || (n.stall === 'forge' ? 'The anvil is yours to use. Tap "Open the Forge" below to salvage and reforge your gear.' : 'Same goods, same prices, every day. Take your time.')); return; }
+      if (n.role === 'shop' && typeof arena.setShop === 'function') { nxSay(name, erLine || 'Take a look. Everything is priced in 💎 shards, same every day.'); nxStallShop(); return; } // forge/stall off: the vendor still opens the classic shop
       const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
+      if (erLine) { nxSay(name, erLine); return; }
       const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
     }
     // ---------- VN: the vendor / forge stall (arena.vendorStock / vendorBuy / vendorSellBack / openForge; realm.js owns the save) ----------
@@ -2217,7 +2320,7 @@
       setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
     let nxStallKind = 'shop';
-    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
     // nxReturn remembers that origin only for a panel opened from the stall; any other panel, a death or a leave forgets it.
     let nxReturn = null;
@@ -2239,6 +2342,13 @@
       const head = document.createElement('div'); head.className = 'nx-head';
       const back = document.createElement('button'); back.type = 'button'; back.id = 'rw-nx-back'; back.textContent = 'Back to the Realm'; back.setAttribute('aria-label', 'Back to the Realm');
       const h = document.createElement('h2'); h.textContent = 'The Nexus'; head.appendChild(back); head.appendChild(h);
+      let nbBtn = null; let notebook = null;
+      if (NB) { // ID-04: the hero notebook, a real button in the header (keyboard / touch / screen reader), Esc closes it
+        nbBtn = document.createElement('button'); nbBtn.type = 'button'; nbBtn.id = 'rw-nx-notebook-btn'; nbBtn.setAttribute('aria-controls', 'rw-nx-notebook'); nbBtn.setAttribute('aria-expanded', 'false');
+        nbBtn.addEventListener('click', () => (nxDom && nxDom.notebook && !nxDom.notebook.classList.contains('hidden') ? nbHide(true) : nbShow()));
+        head.appendChild(nbBtn);
+        notebook = document.createElement('div'); notebook.className = 'nx-board nx-notebook hidden'; notebook.id = 'rw-nx-notebook'; notebook.setAttribute('role', 'region'); notebook.setAttribute('aria-label', 'Hero notebook');
+      }
       const stage = document.createElement('div'); stage.className = 'nx-stage';
       const cv = document.createElement('canvas'); cv.width = NX_WALK ? NX_VW : NX.W * TILE; cv.height = NX_WALK ? NX_VH : NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
       let plaza = cv; let act = null;
@@ -2265,10 +2375,49 @@
       const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = nxHint();
       const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
       const stall = document.createElement('div'); stall.className = 'nx-board nx-stall hidden'; stall.id = 'rw-nx-stall'; stall.setAttribute('role', 'region'); stall.setAttribute('aria-label', 'Vendor stall');
-      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
+      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (notebook) root.appendChild(notebook); /* after the quest board: '#rw-nexus .nx-board' still finds the board first */ if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
       back.addEventListener('click', () => nexusClose());
-      nxDom = { root, cv, plaza, act, stage, talk, board, stall, back, last: null };
+      nxDom = { root, cv, plaza, act, stage, talk, board, stall, back, nbBtn, notebook, last: null };
+      nbSyncBtn();
       return nxDom;
+    }
+    function nbSyncBtn() {
+      if (!nxDom || !nxDom.nbBtn) return;
+      const n = NB.count(nbSave || nbLoad());
+      nxDom.nbBtn.textContent = 'Notebook (' + n + ')';
+      nxDom.nbBtn.setAttribute('aria-label', 'Hero notebook: ' + n + (n === 1 ? ' page' : ' pages') + (nbNew ? ', ' + nbNew + ' new this visit' : ''));
+    }
+    function nbShow() {
+      if (!NB || !nxOpen || !nxDom || !nxDom.notebook) return false;
+      nxDom.board.classList.add('hidden'); nxStallHide();
+      const el = nxDom.notebook; el.textContent = ''; nbLoad();
+      const hd = document.createElement('div'); hd.className = 'nx-nb-head';
+      const h3 = document.createElement('h3'); h3.id = 'rw-nx-nb-title'; h3.textContent = 'Hero notebook'; hd.appendChild(h3);
+      const close = document.createElement('button'); close.type = 'button'; close.id = 'rw-nx-nb-close'; close.textContent = 'Close'; close.setAttribute('aria-label', 'Close the notebook'); close.addEventListener('click', () => nbHide(true)); hd.appendChild(close);
+      el.appendChild(hd); el.setAttribute('aria-labelledby', 'rw-nx-nb-title');
+      const note = document.createElement('p'); note.className = 'nx-nb-note'; note.textContent = NB.count(nbSave) + ' pages. A page fills in the first time you beat, clear or tame something. Knowledge only: pages never change your stats.'; el.appendChild(note);
+      NB.sections(nbSave).forEach((sec) => {
+        const c = document.createElement('h4'); c.className = 'nx-nb-cat'; c.textContent = sec.title + ' (' + sec.pages.length + ')'; el.appendChild(c);
+        if (!sec.pages.length) { const p = document.createElement('p'); p.className = 'nx-nb-empty'; p.textContent = sec.id === 'kill' ? 'Beat a creature to start this page.' : sec.id === 'boss' ? 'Beat a world boss at its altar.' : sec.id === 'clear' ? 'Beat a dungeon boss.' : 'Tame a creature on the Isles.'; el.appendChild(p); return; }
+        const ul = document.createElement('ul'); ul.className = 'nx-nb-list'; ul.dataset.cat = sec.id;
+        sec.pages.forEach((pg) => {
+          const li = document.createElement('li'); li.dataset.page = pg.id;
+          const b = document.createElement('b'); b.textContent = pg.title; li.appendChild(b);
+          if (pg.where) { const w = document.createElement('em'); w.textContent = pg.where; li.appendChild(w); }
+          if (pg.hint) { const t = document.createElement('span'); t.textContent = pg.hint; li.appendChild(t); }
+          ul.appendChild(li);
+        });
+        el.appendChild(ul);
+      });
+      el.classList.remove('hidden'); nxDom.nbBtn.setAttribute('aria-expanded', 'true');
+      close.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' });
+      return true;
+    }
+    function nbHide(refocus) {
+      if (!nxDom || !nxDom.notebook || nxDom.notebook.classList.contains('hidden')) return false;
+      nxDom.notebook.classList.add('hidden'); nxDom.notebook.textContent = ''; nxDom.nbBtn.setAttribute('aria-expanded', 'false');
+      if (refocus) nxDom.nbBtn.focus({ preventScroll: true });
+      return true;
     }
     function nxTouch() { return document.body.classList.contains('touch-device'); }
     function nxHint() {
@@ -2344,12 +2493,43 @@
       px(5, 18, 2, 4 - step, BOOT); px(9, 18, 2, 3 + step, BOOT); // boots (walk alternates)
       nxHeroStat.code++;
     }
+    function nxLifeDraw(g) {
+      const t0 = performance.now(); const red = !!arena._reduced; const t = red ? 0 : t0 / 1000; const st = nxLifeStat;
+      if (!nxGlow) { // one warm radial glow, built once
+        nxGlow = document.createElement('canvas'); nxGlow.width = nxGlow.height = 96; const c = nxGlow.getContext('2d');
+        const gr = c.createRadialGradient(48, 48, 2, 48, 48, 48); gr.addColorStop(0, 'rgba(255,190,90,0.55)'); gr.addColorStop(0.5, 'rgba(255,140,50,0.18)'); gr.addColorStop(1, 'rgba(255,120,40,0)');
+        c.fillStyle = gr; c.fillRect(0, 0, 96, 96);
+      }
+      let nt = 0, nb = 0, nn = 0;
+      for (let i = 0; i < nxLife.length; i++) {
+        const it = nxLife[i];
+        if (it.kind === 'torch') {
+          const fr = it.p.frames || [it.p.art]; const k = red ? 0 : Math.floor((t + it.ph) * 8) % fr.length; const a = wArt[fr[k]] || it.a;
+          drawArt(g, a, 0, it.x, it.y); st.lastTorchF = k; nt++;
+          const fl = red ? 0.8 : 0.72 + 0.12 * Math.sin(t * 9.1 + it.ph * 6) + 0.08 * Math.sin(t * 23.7 + it.ph * 11);
+          const ga = g.globalAlpha, op = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.max(0, Math.min(1, fl));
+          g.drawImage(nxGlow, Math.round(it.x - a.ax + a.fw / 2 - 48), Math.round(it.y - a.ay + a.fh * 0.34 - 48)); g.globalAlpha = ga; g.globalCompositeOperation = op;
+        } else if (it.kind === 'banner') {
+          const a = it.a; const ox = Math.round(it.x - a.ax), oy = Math.round(it.y - a.ay); const c0 = Math.round(a.fh * 0.25), c1 = Math.round(a.fh * 0.66); // cloth rows (b13: 16..42 of 64)
+          const sw = red ? 0 : Math.sin(t * 2.2 + it.ph * 6.28);
+          g.drawImage(a.img, 0, 0, a.fw, c0, ox, oy, a.fw, c0); g.drawImage(a.img, 0, c1, a.fw, a.fh - c1, ox, oy + c1, a.fw, a.fh - c1);
+          let last = 0;
+          for (let r = c0; r < c1; r += 2) { const h = Math.min(2, c1 - r); last = Math.round(2 * sw * (r - c0) / (c1 - c0)); g.drawImage(a.img, 0, r, a.fw, h, ox + last, oy + r, a.fw, h); }
+          st.lastSway = last; nb++;
+        } else {
+          const im = it.im; const b = red ? 0 : (Math.floor((t + it.ph * 2) / 0.9) & 1);
+          g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, it.x - 40, it.y - 60 - b, 80, 80); st.lastBob = b; nn++;
+        }
+      }
+      st.torches = nt; st.banners = nb; st.npcs = nn; st.frames++; st.ms += performance.now() - t0;
+    }
     function nxWalkDraw() {
       const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
       const cl = (v, lo, hi) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v))); // W-04 (b04-05): the view stays on the floor (ring excluded); a plaza smaller than the view is centred
       nxCam.x = Math.round(cl(h.x - NX_VW / 2, TILE, (L.w - 1) * TILE - NX_VW)); nxCam.y = Math.round(cl(h.y - NX_VH / 2, TILE, (L.h - 1) * TILE - NX_VH));
       g.drawImage(nxDom.plaza, nxCam.x, nxCam.y, NX_VW, NX_VH, 0, 0, NX_VW, NX_VH);
       g.save(); g.translate(-nxCam.x, -nxCam.y);
+      if (NX_LIFE && nxLife.length) nxLifeDraw(g);
       if (nxNearI) { const r = nxNearI.ref; g.strokeStyle = '#ffe27a'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, nxNearI.kind === 'npc' ? 30 : 36, 0, Math.PI * 2); g.stroke(); }
       let ok = false;
       if (arena._heroArt && typeof arena._drawHero === 'function') { // the arena's own hero sprite (walk / idle, facing the move direction)
@@ -2390,7 +2570,7 @@
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
-      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxStallHide();
+      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxStallHide(); nbHide(false); nbSyncBtn();
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
       nxDom.talk.textContent = nxHint();
       if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
@@ -2404,6 +2584,7 @@
     window.addEventListener('keydown', (ev) => {
       if (nxOpen && ev.key === 'Escape') { // G-12: Esc closes the quest board / stall first, the Nexus on the next press
         ev.preventDefault(); ev.stopImmediatePropagation();
+        if (nbHide(true)) return; // ID-04: the notebook closes first
         if (nxDom && !nxDom.board.classList.contains('hidden')) { nxDom.board.classList.add('hidden'); return; }
         if (nxDom && nxDom.stall && !nxDom.stall.classList.contains('hidden')) { nxStallHide(); return; }
         nexusClose(); return;
@@ -2576,7 +2757,7 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
+    function nxBoardOpen() { nxBuild(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {
@@ -2763,7 +2944,7 @@
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
-      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, fieldStats: () => Object.assign({ on: FIELD_DETAIL }, fieldStat), treeFix: () => treeFixApi(), bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
+      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, fieldStats: () => Object.assign({ on: FIELD_DETAIL }, fieldStat), treeFix: () => treeFixApi(), bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled, icorners: icornerStat.filled, icornerOn: icornerStat.on }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
       slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, danger: () => ({ on: DANGER_ON, now: dangerNow, hidden: dangerEl.classList.contains('hidden'), el: dangerEl.isConnected }), zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
@@ -2779,7 +2960,7 @@
       diffOn: !!DIFF, diffMode, diffAt, spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
-      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills, gearOn: GEAR_ON, gearDefaultOn: GEAR_DEFAULT_ON, gearPity, setGearPlayer: (id) => { gearPlayerSet = id === null ? null : String(id).slice(0, 60); }, gearPlayerId, setTeam: (t) => { gearTeam = t || null; }, gearHint: () => Object.assign({}, gearHintSt), gearSave: () => ({ gp: save.gp || null }), testDrop: (info, tag) => { kills++; return rollFor(info, arena.player.x, arena.player.y, tag || 't'); }, // test hook: one kill's worth of drops with the real seed/pity path
+      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills, gearOn: GEAR_ON, gearDefaultOn: GEAR_DEFAULT_ON, gearPity, setGearPlayer: (id) => { gearPlayerSet = id === null ? null : String(id).slice(0, 60); }, gearPlayerId, setTeam: (t) => { gearTeam = t || null; }, gearHint: () => Object.assign({}, gearHintSt), gearSave: () => ({ gp: save.gp || null }), errand: () => (save.errand ? Object.assign({}, save.errand) : null), erKill, erVendor, debugCleanSave: () => { try { return cleanSave(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } }, forceSave: () => writeSave(save), zk: () => save.zk | 0, testDrop: (info, tag) => { kills++; return rollFor(info, arena.player.x, arena.player.y, tag || 't'); }, // test hook: one kill's worth of drops with the real seed/pity path
       
       bossesClassic, rosterClassic, bandsClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
@@ -2803,9 +2984,10 @@
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       ttk: { on: TTK_ON }, quiet: () => ({ on: QUIET_ON, nudges: quietNudges }), firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
+      notebook: { on: !!NB, save: () => JSON.parse(JSON.stringify(nbSave || nbLoad() || {})), meet: (id, name) => nbMeet(id, name || id), open: () => nbShow(), close: () => nbHide(false), newThisVisit: () => nbNew },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
-        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), floor: () => Object.assign({ classic: NX_FLOOR_CLASSIC }, nxFloorStat), codeHero: () => nxHeroStat.code, tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), floor: () => Object.assign({ classic: NX_FLOOR_CLASSIC }, nxFloorStat), codeHero: () => nxHeroStat.code, life: () => Object.assign({ items: nxLife.length }, nxLifeStat), tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
           place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },

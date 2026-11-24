@@ -298,6 +298,11 @@
     else if (!code && !GFX_LOW && T_DETAIL && IA && IA.active() && window.MMIsleArt && window.MMIsleArt.detail) detailBaked += window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: artFreePal(), tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
     // cycle 0 art (b12-r2-09): warm volcanic black sand drawn over the baked b30 / code tiles (overlay; the PNGs stay as delivered). ?warmsand=0
     if (WARM_SAND && window.MMIsleArt && window.MMIsleArt.warmSand) sandWarmed += window.MMIsleArt.warmSand(c, world.terrain, W, cx, cy, { names: NAMES, tile: TILE, ch: CH });
+    // cycle 2 art (G): field detail overlay (flowers / pebbles / tufts on grass-like tiles; PNG terrains skipped via artFreePal). ?islefield=0
+    if (ISLE_FIELD && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.fieldDetail) {
+      const f0 = performance.now(), fr = window.MMIsleArt.fieldDetail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: code ? PAL : artFreePal(), tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003 });
+      fieldStat.flowers += fr.flowers; fieldStat.pebbles += fr.pebbles; fieldStat.tufts += fr.tufts; fieldStat.chunks++; fieldStat.ms += performance.now() - f0;
+    }
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
     const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
     for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
@@ -314,6 +319,8 @@
   const propsBaked = { png: 0, code: 0 }; // test handle counters (bake time only)
   const WARM_SAND = Q.get('warmsand') !== '0';
   const T_DETAIL = Q.get('tdetail') !== '0';
+  const ISLE_FIELD = Q.get('islefield') !== '0';
+  const fieldStat = { flowers: 0, pebbles: 0, tufts: 0, chunks: 0, ms: 0 }; // cycle 2 art: field overlay counters (bake time only)
   let detailBaked = 0, artFree = null; // cycle 0 art: tiles detailed on art bakes; the palette without the PNG terrains (built once)
   function artFreePal() {
     if (artFree) return artFree;
@@ -421,6 +428,10 @@
   const CAP = LOW ? 12 : 24, BIG_CAP = 4;
   const SPAWN_R = 22, DESPAWN_R = 34, LEASH = 14 * TILE;
   const SLIDE = Q.get('slide') !== '0'; // cycle 1 S: wall-slide steering (steer); ?slide=0 = the old straight aim
+  // cycle 2 S: wanderers turn along a wall instead of bouncing off it (wanderTurn). OPT-IN (?wslide=1) for now: on by default it moved
+  // the isles-first-ten bot's reward cadence over its 45 s gap limit (mars-b 48.7 s, then tundra-b 45.8 s with a 90-degree-first variant).
+  const WSLIDE = SLIDE && Q.get('wslide') !== '0';
+  let wallBumps = 0; // test handle: per-axis wall hits of wandering creatures (the old bounce)
   const LEASH_BACK = 4 * TILE, LEASH_GIVEUP = 8; // cyc0-S: a leashed creature walks back to within 4 tiles of home (or gives up after 8 s)
   let creatures = [];
   let uid = 0, simT = 0;
@@ -604,6 +615,18 @@
     for (let si = 0; si < 2; si++) for (let k = 1; k <= 3; k++) { const a = a0 + sides[si] * k * Math.PI / 4; if (free(a)) { c.slide = sides[si]; go(a); return; } }
     c.slide = 0; go(a0); // boxed in: the old straight aim (the per-axis step still slides where it can)
   }
+  // cycle 2 S: a wandering creature (random heading, no target) whose heading is blocked a short probe ahead turns 45/90/135 degrees
+  // to a sticky side and keeps its speed, so it walks along the wall instead of bumping it (per-axis flip) every few frames. It draws
+  // NO random numbers (the creature's seeded stream is untouched); boxed in = leave the heading (the old bounce still frees it).
+  function wanderTurn(c) {
+    const sp = Math.hypot(c.vx, c.vy); if (sp < 1) { c.wslide = 0; return; }
+    const a0 = Math.atan2(c.vy, c.vx), pr = (c.rad || 8) + TILE * 0.6;
+    const free = (a) => !creatureSolid(c, tileOf(c.x + Math.cos(a) * pr), tileOf(c.y + Math.sin(a) * pr));
+    if (free(a0)) return;
+    const sides = c.wslide ? [c.wslide, -c.wslide] : [1, -1];
+    for (let si = 0; si < 2; si++) for (let k = 1; k <= 3; k++) { const a = a0 + sides[si] * k * Math.PI / 4; if (free(a)) { c.wslide = sides[si]; c.vx = Math.cos(a) * sp; c.vy = Math.sin(a) * sp; return; } }
+    c.wslide = 0;
+  }
   function think(c) {
     const s = specOf(c.sp, c.kind);
     // taming clock (10 Hz with the accumulated time)
@@ -642,6 +665,7 @@
       if (R.next() < 0.45) { c.vx = 0; c.vy = 0; }
       else { const a = R.next() * Math.PI * 2; c.vx = Math.cos(a) * s.speed * 0.5; c.vy = Math.sin(a) * s.speed * 0.5; }
     }
+    if (WSLIDE) wanderTurn(c);
   }
   function curious(c, d) {
     if (!TAME || !POUCH || hero.dead || hero.shotT > 0 || c.angry > 0 || !c.tm || c.tm.st !== 'wild' || d > 7 * TILE || d < 1.5 * TILE) return false;
@@ -670,6 +694,7 @@
       if (c.pt <= 0) { c.ph = 'rest'; c.pt = 0.35; c.vx = 0; c.vy = 0; }
     } else if (c.pt <= 0) { c.ph = ''; c.cd = s.atk.cd; }
   }
+  const leftNow = (c) => c.leaving > 0 && c.leaving <= 0.01;
   function stepCreatures(dt) {
     for (let i = 0; i < creatures.length; i++) {
       const c = creatures[i];
@@ -682,14 +707,18 @@
       if (c.ph) attackStep(c, s, dt);
       if (c.ko) { c.vx = 0; c.vy = 0; }
       const nx = c.x + c.vx * dt, ny = c.y + c.vy * dt;
-      if (!creatureSolid(c, tileOf(nx), tileOf(c.y))) c.x = nx; else { c.vx = -c.vx; }
-      if (!creatureSolid(c, tileOf(c.x), tileOf(ny))) c.y = ny; else { c.vy = -c.vy; }
+      const wand = !c.ph && !c.ko && !c.calm && !c.ret && !c.hostile; // test count only: a non-chasing walker hitting a wall
+      if (!creatureSolid(c, tileOf(nx), tileOf(c.y))) c.x = nx; else { c.vx = -c.vx; if (wand && c.vx) wallBumps++; }
+      if (!creatureSolid(c, tileOf(c.x), tileOf(ny))) c.y = ny; else { c.vy = -c.vy; if (wand && c.vy) wallBumps++; }
       c.moving = Math.abs(c.vx) + Math.abs(c.vy) > 4;
       c.awake = !c.ko;
       c.hostile = !c.ko && !c.calm && s.dmg > 0 && (c.mood === 'hostile' || c.angry > 0);
       if (!c.seen && Math.abs(hero.x - c.x) < 8 * TILE && Math.hypot(hero.x - c.x, hero.y - c.y) < 8 * TILE) { c.seen = true; noteSeen(c); }
     }
-    if (creatures.length && creatures.some((c) => c.leaving > 0 && c.leaving <= 0.01)) removeWhere((c) => c.leaving > 0 && c.leaving <= 0.01, 0);
+    // cycle 2 (L): a plain scan, no closure per frame (was creatures.some(...) every frame, and a second closure when one left)
+    let gone = false;
+    for (let i = 0; i < creatures.length; i++) { const l = creatures[i].leaving; if (l > 0 && l <= 0.01) { gone = true; break; } }
+    if (gone) removeWhere(leftNow, 0);
   }
   // IF1: the first sighting of a species ever is a journal entry (a small reward beat); later ones just count
   function noteSeen(c) {
@@ -872,6 +901,7 @@
   function killCreature(c) {
     const s = specOf(c.sp, c.kind);
     xp += XP_BY_SIZE[s.size] || 4; kills++;
+    if (c.compHit && BONDX) party.forEach((p) => { if (!(p.cs.down > 0)) bondAff(p.ent.id, 'fight'); });
     cue('kill');
     addDeath(c);
     rollLoot(c);
@@ -889,7 +919,7 @@
     if (sooth) { sootheTgt = c; sootheAt = simT; }
     const real = sooth ? dmg * SOOTHE_DMG : dmg;
     c.flash = 0.12;
-    if (how !== 'comp') cue('hit');
+    if (how !== 'comp') cue('hit'); else c.compHit = 1; // ID-07: a fight won together (a companion landed a hit)
     if (TAME && c.tm) {
       const left = c.hp - real;
       const r = TM.step(c.kind, c.tm, { dmg: real, torporHit: sooth ? dmg : 0, hits: 1, lethal: left <= 0, hpFrac: clamp(left / c.maxHp, 0, 1),
@@ -1065,6 +1095,25 @@
     partyStates.length = 0;
     party.forEach((p, k) => { p.cs.slot = k; partyStates.push(p.cs); });
   }
+  // ---- ID-07 bond hearts (cycle 3 S): extra aff through the ONE TAMES.addAffinity path, capped per tame per session (TAMES.bondGain):
+  // +10 per riding minute (cap 30), +5 per fight won together (cap 25). The stable is written only when aff actually moves (at most
+  // 3 + 5 writes per tame per session). The hearts are a view of `bond`; the perks are cosmetic only. ?bondx=0 turns the new sources off.
+  const BONDX = Q.get('bondx') !== '0';
+  const bondSess = {}; let bondRideT = 0;
+  function bondAff(id, kind) {
+    const n = TAMES.bondGain(bondSess, id, kind); if (!n) return 0;
+    TAMES.addAffinity(tames, id, n); TAMES.write(S, tames); return n;
+  }
+  function bondRideTick(dt) { bondRideT += dt; if (bondRideT >= 60) { bondRideT -= 60; bondAff(ride.id, 'ride'); } }
+  function heartsEl(bond) {
+    const h = TAMES.hearts(bond); const sp = el('span', 'st-hearts'); sp.setAttribute('role', 'img'); sp.setAttribute('aria-label', h.label); sp.title = h.label;
+    for (let i = 0; i < 5; i++) { const k = i < h.full ? 'full' : i < h.full + h.half ? 'half' : 'empty'; const e = el('span', 'st-heart st-heart-' + k, k === 'empty' ? '\u2661' : '\u2665'); e.setAttribute('aria-hidden', 'true'); sp.appendChild(e); }
+    return sp;
+  }
+  // draw-only bond perks (no state is touched): a soft glow under the creature at bond 10, a ribbon above at 6+; the idle sway (4+) is an x offset
+  function bondSway(p, moving) { return !moving && TAMES.perks(p.ent.bond).sway ? Math.sin(hero.t * 2.2 + p.cs.slot) * 1.5 : 0; }
+  function bondPerkUnder(p, sx, sy) { if (!TAMES.perks(p.ent.bond).glow) return; g.save(); g.globalAlpha = 0.28; g.fillStyle = '#ffe58a'; g.beginPath(); g.ellipse(sx, sy - 4, 20, 8, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+  function bondPerkOver(p, sx, topY) { if (!TAMES.perks(p.ent.bond).ribbon) return; g.fillStyle = '#e8506e'; g.fillRect(sx - 5, topY - 3, 4, 3); g.fillRect(sx + 1, topY - 3, 4, 3); g.fillStyle = '#a8324e'; g.fillRect(sx - 1, topY - 3, 2, 3); }
   function loadParty() {
     tames.party.forEach((id, k) => { const ent = TAMES.find(tames, id); if (ent) spawnCompanion(ent, hero.x + (k ? 40 : -40), hero.y + 30); });
   }
@@ -1108,6 +1157,7 @@
     let ent = null;
     if (rule.allow) ent = TAMES.add(tames, { sp: def.id, nm: def.name, isle: ISLE, d: today(), bond: bond });
     else if (owned[0]) TAMES.addAffinity(tames, owned[0].id, 30);
+    if (window.MMNotebook && !/[?&]notebook=0(&|$)/.test(location.search)) { try { window.MMNotebook.record(localStorage, window.MMNotebook.ids.tame(def.id)); } catch (e) { /* storage blocked */ } } // ID-04: first tame of a species (a known page writes nothing)
     if (ent && alpha) { TAMES.setCosmetic(tames, ent.id, 'alpha'); ent.lv = Math.max(1, Math.min(TAMES.MAX_LV, (def.lv && def.lv[0]) | 0)); }
     if (ent) {
       if (tames.party.length < Math.min(TAMES.MAX_PARTY, LOW ? 1 : CMP.MAX_ACTIVE)) {
@@ -1162,6 +1212,7 @@
       const what = riding ? 'riding' : inParty ? (p ? p.cs.mode : 'party') : 'resting';
       const li = el('li', 'stable-row'); li.dataset.tame = t.id;
       li.appendChild(el('span', 'st-name', (t.nm || specName(t.sp)) + (t.nm && d && t.nm !== d.name ? ' (' + d.name + ')' : '') + ' Lv ' + t.lv + ' - ' + what + (isMount && !riding ? ', mount' : '')));
+      li.appendChild(heartsEl(t.bond)); // ID-07: the bond as 5 hearts (a view of bond, no new field)
       const mk = (cls, text, why, fn) => { const b = el('button', 'st-btn ' + cls, text); b.type = 'button'; b.dataset.tame = t.id; b.style.minHeight = '44px'; b.style.minWidth = '44px'; if (why) { b.disabled = true; b.title = why; b.setAttribute('aria-label', text + ': ' + why); } else b.setAttribute('aria-label', text + ' ' + (t.nm || specName(t.sp))); b.addEventListener('click', () => { if (fn()) openPanel('party'); }); return b; };
       if (COMPANIONS && d && d.companion) {
         if (inParty) li.appendChild(mk('st-rest', 'Rest', busy, () => stableRest(t.id)));
@@ -1715,7 +1766,9 @@
       const pm = Math.abs(cs.x - p.lx) + Math.abs(cs.y - p.ly) > 0.4; p.lx = cs.x; p.ly = cs.y;
       const pst = STRIPS && p.sk && STRIPS.has(p.sk) ? STRIPS.get(p.sk, pm ? 'move' : 'idle', (p.dir = cs.face < 0 ? MS.LEFT : MS.RIGHT)) : null;
       if (pst) {
-        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), sx, sy, 1, p.dir === MS.LEFT, true); // 8B: party creatures wear the light rim
+        const bx = sx + bondSway(p, pm); bondPerkUnder(p, sx, sy); // ID-07: cosmetic bond perks (draw only)
+        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), bx, sy, 1, p.dir === MS.LEFT, true); // 8B: party creatures wear the light rim
+        bondPerkOver(p, bx, sy - (pst.ay - pst.top));
         drawHeart(sx, sy - (pst.ay - pst.top) - 8, '#ff7aa8');
         continue;
       }
@@ -1941,9 +1994,34 @@
       if (el > MS.duration('death', d.sk) + 0.35) { d.on = false; continue; }
       const st = STRIPS.get(d.sk, 'death', d.dir);
       if (!st) { d.on = false; continue; }
-      STRIPS.draw(g, st, MS.frameIndex('death', el, d.sk), d.x - camX, d.y - camY, 1, MS.flipFor('death', d.dir));
+      const dur = MS.duration('death', d.sk);
+      if (el > dur && DISSOLVE && !REDUCED) dissolveDeath(st, d, MS.frameIndex('death', el, d.sk), (el - dur) / 0.35);
+      else STRIPS.draw(g, st, MS.frameIndex('death', el, d.sk), d.x - camX, d.y - camY, 1, MS.flipFor('death', d.dir));
       if (d.id !== st.id) { d.id = st.id; deathsShown++; }
     }
+  }
+  // cycle 3 art (G): over the 0.35 s hold on the death strip's last frame the body breaks up in 2x2 ordered-dither (Bayer 4x4) blocks and
+  // squashes toward its feet (12 % flatter, 8 % wider) instead of popping off. One shared scratch canvas + 17 preset patterns (built once);
+  // per dissolving body: clear, one strip draw, one pattern fill (destination-out), one drawImage. Reduced motion / ?dissolve=0 = the old hold.
+  const DISSOLVE = Q.get('dissolve') !== '0';
+  const dslStat = { on: DISSOLVE, draws: 0, ms: 0, level: -1 }; let dslKit = null;
+  function dissolveDeath(st, d, frame, p) {
+    const t0 = performance.now();
+    const need = Math.ceil(Math.max(st.w, st.h) * 2.2);
+    if (!dslKit || dslKit.cv.width < need) {
+      const W = Math.max(256, need), cv = document.createElement('canvas'); cv.width = cv.height = W; const c = cv.getContext('2d');
+      const B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], pats = [];
+      for (let lv = 0; lv <= 16; lv++) { const pc = document.createElement('canvas'); pc.width = pc.height = 8; const x = pc.getContext('2d'); x.fillStyle = '#000'; for (let i = 0; i < 16; i++) if (B[i] < lv) x.fillRect((i % 4) * 2, ((i / 4) | 0) * 2, 2, 2); pats.push(c.createPattern(pc, 'repeat')); }
+      dslKit = { cv, c, pats, W, fx: W / 2, fy: Math.round(W * 0.85) };
+    }
+    const k = dslKit, c = k.c, lv = Math.min(16, Math.max(1, Math.ceil(p * 16)));
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, k.W, k.W); c.imageSmoothingEnabled = false;
+    const sx = 1 + 0.08 * p, sy = 1 - 0.12 * p; c.setTransform(sx, 0, 0, sy, k.fx * (1 - sx), k.fy * (1 - sy));
+    STRIPS.draw(c, st, frame, k.fx, k.fy, 1, MS.flipFor('death', d.dir));
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'destination-out'; c.fillStyle = k.pats[lv]; c.fillRect(0, 0, k.W, k.W); c.globalCompositeOperation = 'source-over';
+    const sm = g.imageSmoothingEnabled; g.imageSmoothingEnabled = false;
+    g.drawImage(k.cv, Math.round(d.x - camX - k.fx), Math.round(d.y - camY - k.fy)); g.imageSmoothingEnabled = sm;
+    dslStat.draws++; dslStat.level = lv; dslStat.ms += performance.now() - t0;
   }
   function drawHeart(x, y, col) {
     g.fillStyle = col; g.fillRect(x - 5, y - 3, 4, 4); g.fillRect(x + 1, y - 3, 4, 4); g.fillRect(x - 4, y, 8, 3); g.fillRect(x - 2, y + 3, 4, 2);
@@ -1963,7 +2041,13 @@
   // ---------- B10: homestead (Hearth Isle only, local save), gather spots, travel, medals ----------
   // the day key comes from Date.now() (the same source as the page clock and the save load), never from a bare `new Date()`: a second
   // time source made the daily spots, sparkles and bonus finds follow the wall calendar even when the page clock is pinned (tests)
-  const DAY = todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ) ? todayQ : (() => { try { return new Date(Date.now()).toISOString().slice(0, 10); } catch (e) { return ''; } })();
+  // cycle 3 (L): the day is no longer frozen for the life of the page. A tab that stays open over 00:00 UTC (a phone tab can live for
+  // days) kept yesterday's gather spots and the spent sparkle / glint budgets until a reload: dayRoll() (below, 5 Hz, one number compare)
+  // moves to the new day. The day rule itself is unchanged (UTC date, MMGameDay.utcKey = the old toISOString slice; L-08 may change it
+  // there). ?today= pins the day as before.
+  const DAY_PIN = !!(todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ));
+  const dayRead = () => { if (DAY_PIN) return todayQ; try { return window.MMGameDay ? window.MMGameDay.utcKey(Date.now()) : new Date(Date.now()).toISOString().slice(0, 10); } catch (e) { return ''; } };
+  let DAY = dayRead(); let dayNum = Math.floor(Date.now() / 86400000); let dayRolls = 0;
   const tileName = (tx, ty) => NAMES[O.tileAt(world, tx, ty)] || '';
   const WET = { deep_water: 1, shallow_water: 1, abyss: 1, lagoon: 1, dust_sea: 1 };
   const homeO = HOME ? HS.origin(world.spawnPoint, world.center, W, H) : null;
@@ -2249,8 +2333,11 @@
     // never waits long whatever the spawns did; it is still a plain seeded find (own MMRng stream), it never expires or nags
     const pity = !!(POUCH && POUCH.PITY_AFTER) && simT < POUCH.PITY_WINDOW;
     const since = pity ? simT - lastFindT : simT - lastRewardT;
-    // never while you are low on air (mars): a find must not lure you away from the way back to a dome
-    if (!POUCH || !CRAFT || hero.dead || envS.warnO || envS.emptyO || since < (pity ? POUCH.PITY_AFTER : POUCH.SPARKLE_AFTER)) return;
+    // cycle 3 D: low on air (mars) a find must not lure you away from the way back to a dome, but it may sit ON that way: during the air warning
+    // (not once the air is out) the sparkle is placed only on tiles no farther from the nearest dome / pad than you are. Before this, the mars
+    // reward gap was set by the air trips (the sparkle was held back for the whole 20 s warning + empty + walk home), see beta/cycle3-design.md.
+    if (!POUCH || !CRAFT || hero.dead || envS.emptyO || since < (pity ? POUCH.PITY_AFTER : POUCH.SPARKLE_AFTER)) return;
+    if (envS.warnO && !SHELTER_PTS.length) return;
     // an unpicked sparkle you walked far away from moves back near you (it is the same sparkle: the day's count does not grow)
     const moving = !!sparkle && sparkle.until === 0;
     if (moving && Math.hypot((sparkle.x + 0.5) * TILE - hero.x, (sparkle.y + 0.5) * TILE - hero.y) <= (POUCH.SPARKLE_R + 4) * TILE) return;
@@ -2273,7 +2360,12 @@
         seen.set(ni, st + 1); q.push(ni);
       }
     }
-    const pool = near.length ? near : far;
+    let pool = near.length ? near : far;
+    if (envS.warnO) { // the way home: nearest shelter point from the hero's tile, keep only tiles that are not farther from it
+      const dShelter = (tx, ty) => { let bd = Infinity; for (let k = 0; k < SHELTER_PTS.length; k++) { const p = SHELTER_PTS[k], d = (p.x - tx) * (p.x - tx) + (p.y - ty) * (p.y - ty); if (d < bd) bd = d; } return bd; };
+      const dh = dShelter(hx, hy);
+      pool = pool.filter((t) => dShelter(t % W, Math.floor(t / W)) <= dh);
+    }
     if (!pool.length) return;
     const i = pool[Math.floor(rs.next() * pool.length)];
     sparkle = { i: -1000 - used, x: i % W, y: Math.floor(i / W), kind: POUCH.sparkle(ISLE, rs.next()), until: 0, picks: 0, respawn: 0, sparkle: true };
@@ -2571,6 +2663,30 @@
     GLINTS.forEach((q, i) => { q.i = i; });
   }());
   if (GLINTS.length && (!save.glint || save.glint.day !== DAY)) save.glint = { day: DAY, n: {} };
+  // cycle 3 (L): a new day while the page is open. Exactly what a reload on the new day would give: the gather log rolls (MMHomestead
+  // rollDay), today's seeded spots replace yesterday's, the sparkle and glint budgets start again. A resource tile is either a gather
+  // spot or a walk-over node, never both: yesterday's spots become nodes again, today's spots stop being nodes.
+  function dayRoll() {
+    if (DAY_PIN) return false;
+    const dn = Math.floor(Date.now() / 86400000); if (dn === dayNum) return false;
+    dayNum = dn; const d = dayRead(); if (!d || d === DAY) return false;
+    DAY = d; dayRolls++;
+    HS.rollDay(save.gather, DAY);
+    const next = HS.dailySpots(world.resources, ISLE + '|' + SEED, DAY, HS.MAX_SPOTS); const nextSet = new Set(next.map((p) => p.idx));
+    const byIdx = new Map(); nodes.forEach((n) => { if (n.i >= 0 && !n.sparkle && !n.food) byIdx.set(n.i, n); });
+    spots.forEach((p) => {
+      if (nextSet.has(p.idx)) return;
+      const r = world.resources[p.idx]; if (!r) return; let n = byIdx.get(p.idx);
+      if (n) { n.until = 0; nodeAt.set(n.y * W + n.x, n); } else addNode({ i: p.idx, x: r.x, y: r.y, kind: r.kind, until: 0, picks: 0 });
+    });
+    byIdx.forEach((n, i) => { if (nextSet.has(i)) { n.until = Infinity; if (nodeAt.get(n.y * W + n.x) === n) nodeAt.delete(n.y * W + n.x); } });
+    spots.length = 0; spotSet.clear(); spotTiles.clear();
+    next.forEach((p) => { spots.push(p); spotSet.add(p.idx); spotTiles.add(p.y * W + p.x); });
+    save.spark = { day: DAY, n: {} };
+    if (GLINTS.length) save.glint = { day: DAY, n: {} };
+    dirty = true;
+    return true;
+  }
   const glintTaken = (q) => !!save.glint && Array.isArray(save.glint.n[ISLE]) && save.glint.n[ISLE].indexOf(q.i) >= 0;
   const glintLive = (q) => !glintTaken(q) && (!q.night || tdNight());
   function glintCheck() {
@@ -3513,6 +3629,7 @@
     hero.t += dt; hero.iframes -= dt; hero.cd -= dt; hero.shotT -= dt;
     heroMoving = Math.hypot(mx, my) > 0.05;
     if (ride) CMP.rideStep(ride, dt);
+    if (ride && BONDX) bondRideTick(dt);
     if (ride && abil && !hero.dead) abilityStep(dt);
     if (!hero.dead) moveHero(mx, my, dt);
     if (ONE_THUMB && !hero.dead && hero.cd <= 0 && !firing && !build) autoAttack(); // PI2: one-thumb mode fires at the nearest foe by itself
@@ -3524,7 +3641,7 @@
     if (bz.st) bossStep(dt);
     if (ENV_ON) envStep(dt);
     tdStep(dt); // TD1: thin ice, hot spring soak, glints, the air arrow
-    restAcc += dt; if (restAcc >= 0.2) { restStep(restAcc); restAcc = 0; } // IF1: 5 Hz is plenty for a calm heal
+    restAcc += dt; if (restAcc >= 0.2) { restStep(restAcc); restAcc = 0; dayRoll(); } // IF1: 5 Hz is plenty for a calm heal
     stepBolts(dt);
     if (party.length) { if (!GFX.aiHz) stepParty(dt); else if ((partyAcc += dt) >= 1 / GFX.aiHz - 1e-9) { stepParty(partyAcc); partyAcc = 0; } } // PI2: 15 Hz on the low tier
     saveT -= dt;
@@ -3645,6 +3762,7 @@
       propsBaked: () => Object.assign({}, propsBaked),
       sandWarmed: () => ({ on: WARM_SAND, tiles: sandWarmed }), // cycle 0 art
       detailBaked: () => ({ on: T_DETAIL, tiles: detailBaked }), // cycle 0 art
+      fieldDetail: () => Object.assign({ on: ISLE_FIELD && !GFX_LOW }, fieldStat), // cycle 2 art
       // cycle 0 art: distinct colours and an FNV hash of the baked pixels of terrain `name` in the chunk under the hero
       tileStats: (name) => {
         const id = NAMES.indexOf(name), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
@@ -3671,7 +3789,7 @@
       },
       craftIcons: () => Object.keys(craftIcon).sort(),
       isleArt: () => (IA ? IA.ready.then(() => ({ pack: IA.pack, tiles: IA.active(), props: IA.propsActive() ? Object.keys(IA.props()).sort() : [] })) : { pack: '', tiles: false, props: [] }),
-      deathsShown: () => deathsShown,
+      deathsShown: () => deathsShown, dissolve: () => Object.assign({}, dslStat), deadPool: () => deadPool.map((d) => Object.assign({}, d)), drawDeathsAt: (dt) => { deadPool.forEach((d) => { if (d.on) d.t0 = simT - dt; }); drawDeaths(); },
       render: () => { render(); return true; },
       face: (x, y) => { const l = Math.hypot(x, y) || 1; hero.face.x = x / l; hero.face.y = y / l; return true; },
       heroDraw: () => Object.assign({}, heroDraw), setMoving: (on) => { heroMoving = !!on; return heroMoving; }, // W-12 hooks
@@ -3712,11 +3830,14 @@
       stun: (id) => { const c = creatures.find((x) => x.uid === id); return c ? c.stun || 0 : null; },
       tames: () => JSON.parse(S.getItem(TAMES.KEY) || 'null'),
       tamesLive: () => JSON.parse(JSON.stringify(tames)),
+      bondSess: () => Object.assign({}, bondSess), bondRideT: () => bondRideT, bondx: BONDX, // ID-07
+      compHit: (uid, dmg) => { const c = creatures.find((x) => x.uid === uid); if (!c) return false; hitCreature(c, Number(dmg) || 1e6, 'comp'); return true; }, // ID-07: a companion's hit through the real path
       hurtLog: () => HURT_LOG.slice(),
       simT: () => simT,
       setTime: (t) => { simT = Number(t) || 0; hero.t = simT; return simT; }, // PI2: one sim time on two pages (seeded frame comparisons)
       hint: () => hintText(TAME ? feedTarget() : null),
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
+      wallBumps: () => wallBumps, wslide: WSLIDE,
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
       spawnTick: () => { spawnTick(); return creatures.length; }, howto: () => ({ open: !$('howto').hidden, auto: howtoStat.auto }), arrival: () => Object.assign({}, arrival), launchPad: () => Math.round(VH * 0.6), // R4-D2 hooks
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },
@@ -3746,7 +3867,7 @@
       closePanel: () => closePanel(),
       destinations: () => DESTS.filter((id) => id !== ISLE),
       travel: (id) => travelTo(id),
-      day: DAY,
+      get day() { return DAY; }, dayRolls: () => dayRolls, dayRoll: () => dayRoll(), nodeTiles: () => nodes.filter((n) => n.i >= 0 && !n.sparkle && !n.food && nodeAt.get(n.y * W + n.x) === n).map((n) => n.i),
       spots: () => spots.map((p) => ({ idx: p.idx, x: p.x, y: p.y, kind: p.kind, taken: HS.taken(save.gather, ISLE, p.idx) })),
       gather: () => gatherNear(),
       gatherLog: () => Object.assign({}, save.gather.log),

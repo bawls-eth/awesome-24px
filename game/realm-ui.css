@@ -277,3 +277,12 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
 /* W-05 r3 (b15-r2, 150% zoom = 260x563 and 320 px): the HUD wraps to three rows (bars / Leave / info line) below 361 px, so the XP bar sits
    under the whole HUD block instead of over the Menu button (row 2) and the info line (row 3). The zone / goal lines follow it (zonePlace). */
 @media (max-width: 360px) { #realm-xp { top: calc(var(--st) + 126px); } #realm-boss { top: calc(var(--st) + 150px); } #realm-partner { top: calc(var(--st) + 190px); } }
+/* cyc3 U (a11y overlap sweep, 200% zoom = 195x422; 320 px at 200% = 160 css px): the HUD column is ~123 px wide, so Leave wrapped to a
+   4th row under the mini-map and the aim toggle (pinned under the HUD block) landed on ability button 1. Here Leave is a 44 px icon button
+   (the back icon stays, the word is hidden; its aria-label / title still name the destination) beside the Menu button, the aim toggle moves to the free left column under the Map
+   button (nothing else lives at x 8..52, y 62..106 in the world or the dungeon) and the mini-map starts under the Leave row. */
+@media (max-width: 260px) {
+  html body #realm-overlay #realm-leave-btn { width: 44px; min-width: 44px; max-width: 44px; padding: 0; font-size: 0; border-radius: 50%; text-overflow: clip; }
+  html body #realm-overlay #realm-aim-btn { position: fixed !important; left: calc(8px + var(--sl)) !important; right: auto !important; top: calc(62px + var(--st)) !important; }
+  html body #rw-minimap:not(.big) { top: calc(140px + env(safe-area-inset-top, 0px)); }
+}

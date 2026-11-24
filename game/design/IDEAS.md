@@ -2,24 +2,25 @@
 
 Flow: D proposes (`proposed`) -> L or U marks `approved` / `rejected` with a reason -> S implements -> D/U verify in play.
 Hard limits for every idea: no pay-to-win, no paid randomness or loot boxes, no fake urgency (no countdown outside a round, no expiring rewards, no streaks across days), additive saves only, original art only, Firebase never written by tests.
+Cycle 2: exact specs for the needs-change ideas (and ID-26 to ID-33) are in `beta/cycle2-specs.md`; `approved-spec` there means S may start.
 Effort S under half a day, M about a day, L several days. Evidence tags: [M] measured in cycle 0 play (see `beta/cycle0-design.md`), [R] from generic design research (sources at the end).
 
 | id | title | effort | risk | status |
 |---|---|---|---|---|
-| ID-01 | Lantern-light Shore ramp | S | low | needs-change (L, cycle 1): fade XP by hero level in the world kill path, not in `ZONE_MUL.xp` (zone data shared with `world-ttk`); Lv 1-5 untouched |
-| ID-02 | Zone-border danger meter | S | low | approved (L confirms, cycle 1): pure label function + one HUD line; no save; write the label on change only |
-| ID-03 | Quest rewards that scale with zone | S | low | approved (L confirms, cycle 1): data-only in `mm-quests.js`; keep the bag tiers, test a reward cap |
-| ID-04 | Hero notebook (knowledge meta-progression) | M | low | approved (L, cycle 1): pure module + additive `notebook` key; cap entries, write on first meet only (not per kill) |
-| ID-05 | Bullet-readability presets | M | medium | needs-change (L, cycle 1): ship High contrast only first, style chosen once per frame (not per bullet), `realm-bullet-bench` before/after |
-| ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | needs-change (L, cycle 1): damage and aim sliders only; no game-speed slider (scaling dt touches every timer, telegraph and seeded test) |
-| ID-07 | Tame bond hearts (Isles) | M | low | needs-change (L, cycle 1): `mm-tames.js` already saves `bond` and `aff`; show and extend those, add no second field |
-| ID-08 | Dungeon first-clear milestones | S | low | needs-change (L, cycle 1): store first clears in the Realm save (the dungeon is its writer), Hub only reads; no write to the Hub medals key |
-| ID-09 | Cozy daily chore card (no streak) | S | low | needs-change (L, cycle 1): feasible, but the Town still pays login and sell streaks; owner decides their fate first (with L-08), else two daily systems |
-| ID-10 | Shared result card across arcade games | M | medium | needs-change (L, cycle 1): `mm-minikit.js` already has `result` + `panel`; this is a migration, one game per commit with its page test |
-| ID-11 | Realm retreat flag (safe walk-back) | M | medium | needs-change (L, cycle 1): no crafted item; reuse the dungeon-trip path (`save.returnTo` + `safeReturn` shield and hop) for the Nexus trip |
-| ID-12 | Town-to-Realm errand chain | M | low | approved (L, cycle 1): other saves read-only through their clean functions; chain state additive in the Town save; no network |
-| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | approved (L, cycle 1): additive per-zone first-kill flag in the Realm save + a floor on the bag tier; node test on the roll |
-| ID-14 | Hit-pause and telegraph timing audit | S | low | needs-change (L, cycle 1): telegraph audit approved; hit pause must freeze draw only (never the sim clock) and be off under reduce motion |
+| ID-01 | Lantern-light Shore ramp | S | low | approved-spec (D, cycle 2): see Cycle 2 specs; level fade in the kill path, Lv 1-4 untouched |
+| ID-02 | Zone-border danger meter | S | low | built (S, cycle 1; in play): `shared/mm-danger.js` + the zone HUD line in `realm-world.js`; test `cyc1-danger-meter`. L checked all land tiles of 6 seeds in cycle 2: the label never leaves its zone's level range |
+| ID-03 | Quest rewards that scale with zone | S | low | built (S, cycle 1; in play): `mm-quests.js` `killShards` = 30 + need + 8 x zone level, capped; test `cyc1-quest-zone-rewards` |
+| ID-04 | Hero notebook (knowledge meta-progression) | M | low | built (S, cycle 2; in play): `shared/mm-notebook.js`, own key `pixeltown-notebook-v1` (not under the Realm save: three pages write it), Nexus Notebook button; tests `cyc2-notebook`, `cyc3-notebook-blocked` (L, cycle 3: a refused storage write no longer wipes the visit's pages) |
+| ID-05 | Bullet-readability presets | M | medium | approved-spec (D, cycle 2): High contrast only, per-frame style, bench before/after |
+| ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | approved-spec (D, cycle 2): damage taken + aim help only, no speed slider |
+| ID-07 | Tame bond hearts (Isles) | M | low | approved-spec (D, cycle 2): hearts are a view of `bond` (no new field) |
+| ID-08 | Dungeon first-clear milestones | S | low | approved-spec (D, cycle 2): first clears live in the Realm/dungeon save, Hub reads only |
+| ID-09 | Cozy daily chore card (no streak) | S | low | blocked-owner (D, cycle 2): spec ready as an additive card; needs the owner decision on login/sell streaks |
+| ID-10 | Shared result card across arcade games | M | medium | approved-spec (D, cycle 2): migration plan, one game per commit, Pop first |
+| ID-11 | Realm retreat flag (safe walk-back) | M | medium | approved-spec (D, cycle 2): Nexus trip reuses `returnTo` + `safeReturn` |
+| ID-12 | Town-to-Realm errand chain | M | low | module built, NOT wired (S, cycle 2): `shared/mm-errands.js` + test `cyc2-errands`; no page loads it and no save key exists yet. Left: Town NPC dialogue, the additive Town save field, Backup + SAVE-KEYS line (L approved in cycle 1: other saves read-only through their clean functions; no network) |
+| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | floor built, NOT wired (D, cycle 2): `MMZones.rollDrop` honours `info.firstKill === true` (`FIRST_KILL_BAG_FLOOR`, test `cyc2-first-kill-floor`), but nothing passes it: no first-kill flag in the Realm save yet, so play is unchanged. S wires the flag |
+| ID-14 | Hit-pause and telegraph timing audit | S | low | approved-spec (D, cycle 2): telegraph audit + draw-only hit pause, off under reduce motion |
 
 ## ID-01 Lantern-light Shore ramp
 - Player-facing: the Shore's first 10 minutes keep their gentle start, but past Lv 5 the Shore stops giving full XP (a soft fade to 60 percent), and a one-line toast says "The Midlands has better prey". A hero who lingers is nudged inland, never blocked.
@@ -45,6 +46,7 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 - Player-facing: a notebook page per boss and per creature fills in as you meet it (pattern sketch, a hint such as "dodge clockwise"). No stat gain. [R] roguelite meta-progression works best as options and knowledge rather than raw power.
 - Why: Realm bosses are pattern puzzles; the Lantern already stores profiles.
 - Files: new `shared/mm-notebook.js` (pure), `lantern.js` panel, `realm-world.js` kill hook; save key additive `notebook` under `pixeltown-realm-v1`.
+- As built (cycle 2): the panel is in the Nexus (`realm-world.js`), not the Lantern; the save is its own key `pixeltown-notebook-v1` (Backup + SAVE-KEYS.md updated); the dungeon and the Isles write pages too (first clear per biome, first tame per species).
 - Test: node (record, clean, cap size); browser (kill one creature, page appears).
 - Effort M. Risk: low.
 
@@ -100,6 +102,7 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 - Player-facing: three Town NPCs each give one short errand that needs something from another mode (a Realm drop, an Isles herb, a fish). Finishing all three opens a one-time decor item. No timer.
 - Why: Town, Realm, Isles and arcade feel like separate products; errands connect them in the owner's "one game" direction.
 - Files: `main.js` NPC dialogue, `shared/mm-quests.js` sibling module, saves read-only from other keys.
+- As built so far (cycle 2): only the pure module `shared/mm-errands.js`. Not in the game yet.
 - Test: node chain state; browser dialogue advances with seeded saves.
 - Effort M. Risk: low (cross-save reads must stay read-only).
 
@@ -107,6 +110,7 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 - Player-facing: the first boss kill in each zone gives a guaranteed pink bag, so hitting the Lv 8-12 band always yields a visible upgrade.
 - Why: [M] XP per kill doubles each zone while need grows linearly (30 + 20 per level), so levels 15-20 come in about 100 Godlands kills; the real wall is survival at Lv 8-12 where gear is the answer.
 - Files: `shared/mm-zones.js` (BOSS_BAG_WEIGHTS floor), `realm-world.js` boss drop.
+- As built so far (cycle 2): only the floor in `mm-zones.js` (`FIRST_KILL_BAG_FLOOR` = pink, pink, purple, cyan, behind `info.firstKill`). The `realm-world.js` boss drop does not pass the flag yet.
 - Test: node: boss bag weights never roll brown below zone 1 first clear (pity counter).
 - Effort S. Risk: low.
 
@@ -151,7 +155,7 @@ Evidence tags as above; [M1] = measured in cycle 1 play (`beta/cycle1-design.md`
 | ID-15 | Isles Oakback orchard route (food sink fix) | S | low | proposed |
 | ID-16 | Isles creature "likes" journal hint | S | low | proposed |
 | ID-17 | Isles tame verbs per species | M | low | proposed |
-| ID-18 | Town daily nudge through mm-bounties | S | low | proposed |
+| ID-18 | Town daily nudge through mm-bounties | S | low | needs-change (L, cycle 2): the module's pool is 8 Realm tasks and its reward is fame / petTreat (neither exists); needs a Town pool, one additive save key and a panel row. Spec in `beta/cycle2-lead.md` section 1; must not ship beside ID-09 |
 | ID-19 | Town neighbour gift errand (no streak) | M | low | proposed |
 | ID-20 | Arcade daily course with a shared modifier | M | low | proposed |
 | ID-21 | Stack soft first miss | S | low | proposed |
@@ -202,3 +206,25 @@ Evidence tags as above; [M1] = measured in cycle 1 play (`beta/cycle1-design.md`
 - `mm-labyrinth` (seeded 12x12 cells, Hedge Tide timer) and the `MMDaily` Daily Maze seed exist but no page loads them. A 2-minute maze run with a rising hedge tide, swipe on phone. Gives arcade variety and wires L-13's mm-labyrinth. L / medium (new page, hub card, medals key, test).
 
 Sources (generic queries, cycle 1): [feeding-based taming in cozy games](https://berkeleyhistoricalsociety.org/disney-dreamlight-valley/), [Of Peaks and Tides taming wiki](https://thegameswiki.com/of-peaks-and-tides/wiki/taming), [daily runs, shared seed and modifiers](https://gamedeveloper.com/design/the-24-hour-ticket-examining-daily-runs-), [runner progression](https://gamedeveloper.com/design/studying-gameplay-progression-on-runners).
+
+## Cycle 3 ideas (D, all `proposed`; generic web queries only; evidence [M3] = `beta/cycle3-design.md`)
+
+| ID | Idea | Size | Risk | Status |
+|---|---|---|---|---|
+| ID-34 | Show-hitbox option for the hero (small core dot, device pref) | S | low | proposed |
+| ID-35 | Bolt colour roles: one colour per threat class (aimed / ring / spiral / minion), never two colours that behave the same | S | low | proposed |
+| ID-36 | Trial of Six ramp: fights 1-3 stay, fights 4-6 add one pattern layer each, and a carried-HP readout | M | medium | proposed |
+| ID-37 | Gear sink ladder: reforge shards 25 x (t-6) (shipped as data in cycle 3) plus a Godlands-only shard sink that never touches outcomes | M | low | proposed |
+| ID-38 | Cozy 20-minute day: a Town "that's the day" card once the chores are done (names tomorrow's board, no streak, no timer) | S | low | proposed |
+| ID-39 | Species temperaments on the Isles: each tameable has a liked verb (feed / sing / ride) shown in the journal after first sighting; bond grows faster with it | M | low | proposed |
+| ID-40 | Dust-first reforge hint: the Forge says which side is short ("12 more kills of dust, shards are enough") | S | low | proposed |
+
+- ID-34: the hit radius is 15 px (RM_PLAYER.r 11 + 4) against a much larger drawn hero [M3]; players of bullet games ask for a visible hitbox (itch.io dev threads) and Brotato ships Projectile Visibility under Visual Aids. A dot only, no change to the hit test.
+- ID-35: Danmaku guides and player reviews: many bolt colours that behave the same read as clutter; readable bosses use colour to say what a bolt does. Audit `bolt-art` colours against the pattern classes; pair with ID-05.
+- ID-36: [M3] fights are flat at 66-80 s and cost 0 HP at Lv 20 with a common wand when the dodge samples at 55 Hz or better. The Game Developer ARPG readability article: raise difficulty by adding patterns, never by lowering readability.
+- ID-37: sources and sinks (dev.to economy guide: inflation = sources outrun sinks; crafting is the main sink; perfect crafted items reachable but rarely reached). [M3]: Godlands makes 9.6 shards and 4.6 dust per kill while a reforge cost 3 shards.
+- ID-38: Cozy Grove ends its loop at about 20 minutes and tells players to log off (Vice); Stardew uses daily goals without timers. Fits the no-streak rule: a closing card, not a counter.
+- ID-39: Of Peaks and Tides (care-based bond: feeding, grooming, travelling) and a RuneScape taming proposal (favourite foods) both make bond a view of care; ID-07 defines the hearts, this adds the liked verb.
+- ID-40: from the economy sim, dust (salvage) not shards is the pacing gate of a reforge (13-22 Godlands kills for dust against 8-13 for shards).
+
+Sources (generic queries, cycle 3): [Designing for difficulty readability in ARPGs](https://www.gamedeveloper.com/game-platforms/designing-for-difficulty-readability-in-arpgs), [bullet hell bosses readability](https://choost-site.pages.dev/blog/bullet-hell-games-best-bosses), [visible hitbox thread](https://itch.io/post/14220428), [Brotato accessibility options](https://www.ludo.guide/guide/brotato/getting-started/controls-keybindings/accessibility-options), [Cozy Grove logging off (Vice)](https://www.vice.com/en/article/bvx9vw/cozy-grove-is-ok-telling-players-to-log-off-its-delightful), [stress-free game loop](https://dev.to/tatomamo_games/designing-a-stress-free-game-loop-balancing-engagement-vs-pressure-2976), [game economy sources and sinks](https://dev.to/hiroshi_takamura_c851fe71/how-to-design-a-game-economy-sources-sinks-loops-and-balance-j05), [roguelite meta progression](https://bugnet.io/blog/how-to-design-a-roguelite-meta-progression), [Of Peaks and Tides taming](https://thegameswiki.com/of-peaks-and-tides/wiki/taming).

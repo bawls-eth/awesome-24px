@@ -245,10 +245,11 @@ function ugBuildTextures() {
 // "three.min.js is deprecated" console warning. Resolves true when THREE is ready, false when it could not be loaded.
 const UG_THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
 let ugThreePromise = null;
+let ugThreeTry = 0; // a failed dynamic import(url) is cached per page by current Chromium: a retry of the SAME url fails at once, so retries add a query string (the CDN ignores it)
 function ugEnsureThree() {
   if (typeof THREE !== 'undefined') return Promise.resolve(true);
   if (ugThreePromise) return ugThreePromise;
-  ugThreePromise = import(UG_THREE_URL).then((m) => { window.THREE = m; return true; }).catch(() => { ugThreePromise = null; return false; });
+  ugThreePromise = import(UG_THREE_URL + (ugThreeTry ? '?retry=' + ugThreeTry : '')).then((m) => { window.THREE = m; return true; }).catch(() => { ugThreePromise = null; ugThreeTry++; return false; });
   return ugThreePromise;
 }
 window.ugEnsureThree = ugEnsureThree;

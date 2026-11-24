@@ -48,7 +48,7 @@ const PAGES = [
   { id: 'stalk', lane: 'stalk', url: G('stalk/index.html'), primary: /play|start|open|begin|go|buy|sell|enter/i }
 ];
 const only = (v) => (v ? new Set(v.split(',')) : null);
-const PAGE_F = only(process.env.PAGES), VP_F = only(process.env.VPS);
+const PAGE_F = only(process.env.PAGES), VP_F = only(process.env.VPS), PREF_F = only(process.env.PREFS); // cyc2: PREFS=text-200 runs only that preference pass
 
 // ---------------- in-page audit (runs in every page; returns plain data) ----------------
 const AUDIT = () => {
@@ -235,6 +235,39 @@ const CLIP = () => {
   return out;
 };
 
+// cyc2 U-06: controls that cover each other (visible tap targets + drag areas such as the Town stick, role=application). Each rect
+// is clipped by its overflow ancestors and the viewport first (scrolled-away chips do not count); a control nested in the other, and
+// a focusable full-screen game canvas (the backdrop every HUD control sits on, as in the Menu check) are not overlaps.
+const OVERLAP = () => {
+  const vw = innerWidth, vh = innerHeight;
+  const sel = (e) => (e.id ? '#' + e.id : e.tagName.toLowerCase() + ((e.getAttribute('class') || '').trim() ? '.' + e.getAttribute('class').trim().split(/\s+/)[0] : ''));
+  const hidden = (e) => { for (let n = e; n && n.nodeType === 1; n = n.parentElement) { const cs = getComputedStyle(n); if (cs.display === 'none' || cs.visibility === 'hidden' || n.hidden || n.getAttribute('aria-hidden') === 'true' || n.hasAttribute('inert') || parseFloat(cs.opacity) === 0) return true; } return false; };
+  const clipRect = (e) => {
+    const r = e.getBoundingClientRect();
+    let x = Math.max(0, r.left), y = Math.max(0, r.top), R = Math.min(vw, r.right), B = Math.min(vh, r.bottom);
+    for (let n = e.parentElement; n && n !== document.body; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (/hidden|clip|auto|scroll/.test(cs.overflowX + cs.overflowY)) { const p = n.getBoundingClientRect(); x = Math.max(x, p.left); y = Math.max(y, p.top); R = Math.min(R, p.right); B = Math.min(B, p.bottom); }
+      if (cs.position === 'fixed') break;
+    }
+    return R - x > 2 && B - y > 2 ? { x, y, R, B } : null;
+  };
+  const Q = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link],[role=tab],[role=checkbox],[role=switch],[role=application],[tabindex]:not([tabindex="-1"])';
+  const els = [...document.querySelectorAll(Q)].filter((e) => !e.disabled && !hidden(e))
+    .filter((e) => { if (e.tagName !== 'CANVAS' && e.getAttribute('role') !== 'application') return true; const r = e.getBoundingClientRect(); return r.width * r.height < 0.5 * vw * vh; })
+    .map((e) => ({ e, r: clipRect(e) })).filter((o) => o.r);
+  const out = [];
+  for (let i = 0; i < els.length && out.length < 8; i++) {
+    for (let j = i + 1; j < els.length && out.length < 8; j++) {
+      const a = els[i], b = els[j];
+      if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
+      const ox = Math.min(a.r.R, b.r.R) - Math.max(a.r.x, b.r.x), oy = Math.min(a.r.B, b.r.B) - Math.max(a.r.y, b.r.y);
+      if (ox > 2 && oy > 2) { const k = [sel(a.e), sel(b.e)].sort(); out.push({ key: k.join('+'), detail: `${k[0]} and ${k[1]} cover each other by ${Math.round(ox)}x${Math.round(oy)} at ${vw}x${vh}` }); }
+    }
+  }
+  return out;
+};
+
 const CHROME = /mm-nav|^menu|menu:|sound|mute|← town|back to|settings|close|^town/i; // shared chrome is never the page's primary action
 const lanesShared = /mm-nav|mm-settings|mm-fb|mm-feedback|mm-mk|\.mk-|mm-min|mm-board|mm-gift/;
 const all = new Map(); // "page|check|key" -> { page, lane, check, key, detail, vps:Set }
@@ -368,7 +401,7 @@ async function keyboardPass(p, page, vpId) {
     ];
     let baseSize = 0;
     try { const r0 = await openPage(browser, pg, vp); baseSize = await r0.p.evaluate(PROBE); await r0.ctx.close(); } catch (e) { /* baseline missing */ }
-    for (const pf of PREFS) {
+    for (const pf of PREFS.filter((x) => !PREF_F || PREF_F.has(x.id))) {
       const L = `[${pg.id} ${pf.id}]`;
       let run;
       try { run = await openPage(browser, pg, pf.vp || vp, pf.seed, pf.media); } catch (e) { check(L + ' page opens', false, String(e.message).slice(0, 160)); continue; }
@@ -398,6 +431,14 @@ async function keyboardPass(p, page, vpId) {
           const au = await run.p.evaluate(AUDIT);
           au.offenders.filter((o) => o.check === 'hscroll' || (o.check === 'menu' && !/missing/.test(o.key))).forEach((o) => record(pg, key, o.check + ':' + o.key, o.detail, pf.id));
           (await run.p.evaluate(CLIP)).forEach((c) => record(pg, key, 'clipped:' + c.split(' ')[0], c, pf.id));
+          // cyc2 U-06: at 200% (195 css px, touch) also the tap-target size and controls covering each other (the HUD overlap that
+          // U-03 / U-09 found by hand in the Town: stick under the action strip, bag bar over Where to?)
+          if (pf.id === 'text-200') {
+            au.offenders.filter((o) => o.check === 'tap').forEach((o) => record(pg, key, 'tap:' + o.key, o.detail, pf.id));
+            // cyc3 U: always on (the 4 cycle-2 offenders, Realm leave/minimap + ability/aim and Isles pack/soothe/fire at 195x422, are
+            // fixed in realm-ui.css / isles.css); never allow-listed
+            (await run.p.evaluate(OVERLAP)).forEach((o) => record(pg, key, 'overlap:' + o.key, o.detail, pf.id));
+          }
         }
         if (pf.id === 'high-contrast') {
           const hc = await run.p.evaluate(() => ({ attr: document.documentElement.hasAttribute('data-high-contrast') || document.documentElement.classList.contains('high-contrast') || document.body.classList.contains('high-contrast') }));
@@ -417,7 +458,7 @@ async function keyboardPass(p, page, vpId) {
   // ---------------- allow-list ratchet ----------------
   let allow = {};
   try { allow = JSON.parse(fs.readFileSync(ALLOW_FILE, 'utf8')); } catch (e) { allow = {}; }
-  const full = !PAGE_F && !VP_F;
+  const full = !PAGE_F && !VP_F && !PREF_F;
   if (process.env.A11Y_SEED === '1' && full) {
     allow = {};
     [...all.values()].sort((a, b) => a.id.localeCompare(b.id)).forEach((o) => { allow[o.id] = o.detail.slice(0, 100); });
@@ -430,7 +471,7 @@ async function keyboardPass(p, page, vpId) {
   }
   const ranPages = new Set(pages.map((p) => p.id));
   const fresh = [...all.values()].filter((o) => !(o.id in allow));
-  const stale = Object.keys(allow).filter((k) => ranPages.has(k.split('|')[0]) && !all.has(k) && !VP_F); // cyc0-ui: a PAGES-only run covers every check of those pages
+  const stale = Object.keys(allow).filter((k) => ranPages.has(k.split('|')[0]) && !all.has(k) && !VP_F && !PREF_F); // cyc0-ui: a PAGES-only run covers every check of those pages
   fresh.forEach((o) => check(`new a11y offender [${o.lane}] ${o.id}`, false, `${o.detail} @ ${[...o.vps].join(',')}`));
   stale.forEach((k) => check(`allow-list entry no longer occurs (delete it: the allow-list only shrinks) ${k}`, false, ''));
   check(`no new accessibility offenders beyond the allow-list (${Object.keys(allow).length} allowed, ${all.size} seen)`, fresh.length === 0);

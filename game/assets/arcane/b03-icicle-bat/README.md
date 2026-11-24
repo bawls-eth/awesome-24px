@@ -1,0 +1,1 @@
+B-03 Tundra partial candidate: icicle bat only. 12 strips / 60 frames. Native 48, stored 192, anchor 96,171 inferred from b40a S48. Original pixel geometry, no borrowed sprites. Pending Claude visual review, required b04 side-by-side and full repository audit. Not registered or pushed.

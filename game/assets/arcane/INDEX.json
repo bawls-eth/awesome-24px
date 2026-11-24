@@ -741,6 +741,17 @@
       "source": "codex",
       "branch": "codex/m08-medals-original",
       "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
+    },
+    {
+      "id": "b03-icicle-bat",
+      "label": "icicle-bat",
+      "path": "assets/arcane/b03-icicle-bat",
+      "manifest": "assets/arcane/b03-icicle-bat/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/b03-icicle-bat",
+      "note": "WIP, audit not run; B-03 Tundra S48, 12 animation strips. Claude review required."
     }
   ]
 }

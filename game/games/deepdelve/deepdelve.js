@@ -199,7 +199,23 @@
     if (!RUNS) return;
     if (!runRec) runRec = RUNS.load(LS);
     run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id, CREATIVE ? null : SEED); pbDepthShown = false; comboShown = false; ghostPassed = false; $('combo').textContent = '';
-    renderDive();
+    renderDive(); ghostPathBuild();
+  }
+  // cyc2-S DD5 path replay: the deepest dive on this seed drawn as a faint trail of <= 64 points (one THREE.Points + one THREE.Line,
+  // a static BufferGeometry built once per dive: 2 draw calls, no per-frame work). Measured on software GL at 1280x720 with 120
+  // points: no frame-time change beyond noise. ?ghost=0 hides it with the rest of the ghost; reduce motion changes nothing (it is still).
+  let ghostPath = null; const ghostPathStat = { builds: 0, n: 0 };
+  function ghostPathBuild() {
+    if (ghostPath && scene) { ghostPath.forEach((o) => { scene.remove(o); o.geometry.dispose(); o.material.dispose(); }); }
+    ghostPath = null; ghostPathStat.n = 0;
+    if (!GHOST_ON || !scene || !window.THREE || !run || !run.seed || !runRec || !runRec.seedPath) return;
+    const pts = runRec.seedPath[run.seed]; if (!pts || pts.length < 2) return;
+    const a = new Float32Array(pts.length * 3); pts.forEach((q, i) => { a[i * 3] = q[0]; a[i * 3 + 1] = q[1] + 0.9; a[i * 3 + 2] = q[2]; }); // at head height
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const dots = new THREE.Points(g, new THREE.PointsMaterial({ color: 0x9fe8ff, size: 0.22, transparent: true, opacity: 0.75, depthWrite: false }));
+    const line = new THREE.Line(g.clone(), new THREE.LineBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.3, depthWrite: false }));
+    dots.renderOrder = line.renderOrder = 5; scene.add(line); scene.add(dots);
+    ghostPath = [dots, line]; ghostPathStat.builds++; ghostPathStat.n = pts.length;
   }
   // G-10: cells the player placed this session (cap 4096, oldest out); mining one gives the item back but scores nothing
   const placedCells = new Set(); const PLACED_CAP = 4096;
@@ -222,6 +238,7 @@
     if (!run) return;
     if (comboShown && !RUNS.comboLive(run, nowS())) { comboShown = false; $('combo').textContent = ''; }
     const wasArmed = run.armed;
+    if (GHOST_ON) RUNS.sample(run, player.x, player.y, player.z, nowS()); // DD5 replay: one sparse point per second (thinned on long dives)
     if (RUNS.depth(run, absDepth)) {
       if (!pbDepthShown && runRec.best.depth > 0 && run.depth > runRec.best.depth) { pbDepthShown = true; pop('New depth record!', 'pb'); sfx('levelup'); }
       const gb = GHOST_ON && run.seed && runRec.seedBest ? runRec.seedBest[run.seed] || 0 : 0;
@@ -479,15 +496,20 @@
     return [-Math.sin(player.yaw) * cp, Math.sin(player.pitch), -Math.cos(player.yaw) * cp];
   }
   const cellOf = (x, y, z) => [Math.floor(x), Math.floor(-y), Math.floor(z)];
+  // cycle 2 (L): the ray walks 126 steps; it used to build an array per step (4.2 KB per ray; MMChunks.getBlock added 7.7 KB of
+  // chunk key strings, fixed there). Now it works on plain numbers and builds the two cell arrays only for a hit: 41 bytes per ray.
+  // Same steps, same maths, same result shape: { cell, id, prev } with prev = the cell of the step before (null on the first step).
   function raycast(reach) {
-    const e = eyePos(), d = lookDir();
-    let prev = null;
+    const ex = player.x, ey = player.y + EYE, ez = player.z;
+    const cp = Math.cos(player.pitch), dx = -Math.sin(player.yaw) * cp, dy = Math.sin(player.pitch), dz = -Math.cos(player.yaw) * cp;
+    let has = false, px = 0, py = 0, pz = 0;
     for (let t = 0; t <= reach; t += 0.04) {
-      const c = cellOf(e[0] + d[0] * t, e[1] + d[1] * t, e[2] + d[2] * t);
-      if (c[1] < 0) { prev = c; continue; }
-      const id = world.getBlock(c[0], c[1], c[2]);
-      if (id !== B.AIR && id !== B.WATER) return { cell: c, id, prev };
-      if (!prev || prev[0] !== c[0] || prev[1] !== c[1] || prev[2] !== c[2]) prev = c;
+      const cx = Math.floor(ex + dx * t), cy = Math.floor(-(ey + dy * t)), cz = Math.floor(ez + dz * t);
+      if (cy >= 0) {
+        const id = world.getBlock(cx, cy, cz);
+        if (id !== B.AIR && id !== B.WATER) return { cell: [cx, cy, cz], id, prev: has ? [px, py, pz] : null };
+      }
+      has = true; px = cx; py = cy; pz = cz;
     }
     return null;
   }
@@ -562,7 +584,10 @@
   let renderer = null, scene = null, camera = null, atlasTex = null, material = null, outline = null, torchGeo = null, torchMat = null;
   const meshes = new Map(); // key -> { mesh, torches }
   const stale = new Set();
-  let lastAnimated = false, renderRev = 0, lastRenderKey = '', lastRenderAt = 0;
+  let lastAnimated = false, renderRev = 0, lastRenderAt = 0;
+  const renderKey = new Float64Array(13).fill(NaN);
+  // store v at k[i]; true when it was already there (NaN counts as equal to NaN, as it did in the old string key)
+  function keyPut(k, i, v) { const old = k[i]; if (old === v || (old !== old && v !== v)) return true; k[i] = v; return false; }
   let lightDirty = true, win = null, manageSkip = false, lastPc = '', backlog = 0;
   const MAX_BUILDS = 3; // chunk meshes rebuilt per frame at most (the rest wait for the next frame)
   const WIN = 5; // light window in chunks (xz), full depth
@@ -927,9 +952,16 @@
   // the whole world again. Anything that moves (mobs, wyrm, camera, sky, chunks, benches) changes the key or forces a draw.
   function renderIfChanged(t) {
     const animated = !!(slimes.length || creatures.length || creatureMeshes || wyrm.awake || wyrm.group), was = lastAnimated; lastAnimated = animated;
-    const key = camera.position.x + ',' + camera.position.y + ',' + camera.position.z + ',' + camera.rotation.x + ',' + camera.rotation.y + ',' + renderRev + ',' + scene.background.getHex() + ',' + outline.visible + ',' + outline.position.x + ',' + outline.position.y + ',' + outline.position.z + ',' + benchRev + ',' + scene.fog.far;
-    if (!animated && !was && key === lastRenderKey && t - lastRenderAt < 500) return;
-    lastRenderKey = key; lastRenderAt = t;
+    // cycle 2 (L): the 13 values are compared as numbers in a kept array (was a string of about 150 characters built every frame)
+    const k = renderKey, cpos = camera.position, crot = camera.rotation, op = outline.position;
+    let same = true;
+    same = keyPut(k, 0, cpos.x) && same; same = keyPut(k, 1, cpos.y) && same; same = keyPut(k, 2, cpos.z) && same;
+    same = keyPut(k, 3, crot.x) && same; same = keyPut(k, 4, crot.y) && same; same = keyPut(k, 5, renderRev) && same;
+    same = keyPut(k, 6, scene.background.getHex()) && same; same = keyPut(k, 7, outline.visible ? 1 : 0) && same;
+    same = keyPut(k, 8, op.x) && same; same = keyPut(k, 9, op.y) && same; same = keyPut(k, 10, op.z) && same;
+    same = keyPut(k, 11, benchRev) && same; same = keyPut(k, 12, scene.fog.far) && same;
+    if (!animated && !was && same && t - lastRenderAt < 500) return;
+    lastRenderAt = t;
     renderer.render(scene, camera);
   }
   function frame(t) {
@@ -1193,7 +1225,8 @@
     return true;
   }
   function benchNear() { return MMDDCraft.benchNear(benches, Math.floor(player.x), Math.floor(-(player.y + 0.9)), Math.floor(player.z), 4); }
-  let benchGroup = null, benchGeo = null, benchMat = null, benchRev = '';
+  let benchGroup = null, benchGeo = null, benchMat = null, benchRev = 0, benchSynced = false;
+  const benchFlat = [];
   function placeBench(wx, wy, wz) {
     if ((inv[BENCH_ITEM] | 0) <= 0 || wy < 0 || world.getBlock(wx, wy, wz) !== B.AIR) return false;
     if (benches.length >= 32 || benches.some((b) => b[0] === wx && b[1] === wy && b[2] === wz)) return false;
@@ -1226,9 +1259,12 @@
       benchGroup = new THREE.Group(); scene.add(benchGroup);
       benchGeo = new THREE.BoxGeometry(0.9, 0.8, 0.9); benchMat = new THREE.MeshBasicMaterial({ color: 0xa8743a });
     }
-    const sig = benches.map((b) => b.join(',')).join(';');
-    if (sig === benchRev) return;
-    benchRev = sig;
+    // cycle 2 (L): compared number by number against a flat copy (was a new array and a joined string every frame)
+    let same = benchFlat.length === benches.length * 3;
+    for (let i = 0; same && i < benches.length; i++) { const b = benches[i], j = i * 3; same = benchFlat[j] === b[0] && benchFlat[j + 1] === b[1] && benchFlat[j + 2] === b[2]; }
+    if (same && benchSynced) return;
+    benchFlat.length = 0; for (let i = 0; i < benches.length; i++) benchFlat.push(benches[i][0], benches[i][1], benches[i][2]);
+    benchSynced = true; benchRev++;
     while (benchGroup.children.length) benchGroup.remove(benchGroup.children[0]);
     benches.forEach((b) => { const m = new THREE.Mesh(benchGeo, benchMat); m.position.set(b[0] + 0.5, -(b[1] + 1) + 0.4, b[2] + 0.5); benchGroup.add(m); });
   }
@@ -1871,7 +1907,7 @@
         return lightAt(x, y, z);
       }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
       introText, prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
-      run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, bank: () => bankText(), bankEl: () => ($('hud-bank') || {}).textContent || '', depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
+      run: { get state() { return run; }, get rec() { return runRec; }, ghostPath: () => ({ on: GHOST_ON, shown: !!ghostPath && ghostPath.every((o) => o.parent === scene), n: ghostPathStat.n, builds: ghostPathStat.builds }), start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, bank: () => bankText(), bankEl: () => ($('hud-bank') || {}).textContent || '', depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
       craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), programs: () => (renderer && renderer.info && renderer.info.programs ? renderer.info.programs.length : -1), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
@@ -1940,6 +1976,7 @@
     wyrmInit();
     applyTime(true);
     initRenderer();
+    ghostPathBuild(); // DD5 replay: the first dive started before the scene existed
     prewarmPrograms();
     applyLowGfx();
     window.addEventListener('mm-settings-change', (ev) => {

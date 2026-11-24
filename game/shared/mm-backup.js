@@ -9,14 +9,14 @@
       profile: req('./mm-profile.js'), map: req('./mm-map.js'), angler: req('./mm-angler.js'),
       bugs: req('./mm-bugs.js'), hubProfile: req('./profile.js'),
       access: req('./mm-access.js'), gift: req('./mm-gift.js'),
-      tames: req('./mm-tames.js'), isles: req('./mm-isles.js'), feedback: req('./mm-feedback.js')
+      tames: req('./mm-tames.js'), isles: req('./mm-isles.js'), feedback: req('./mm-feedback.js'), notebook: req('./mm-notebook.js')
     }));
   } else {
     root.MMBackup = factory(() => ({
       profile: root.MMProfile || null, map: root.MMMap || null, angler: root.MMAngler || null,
       bugs: root.MMBugs || null, hubProfile: root.MMHubProfile || null,
       access: root.MMAccess || null, gift: root.MMGift || null,
-      tames: root.MMTames || null, isles: root.MMIsles || null, feedback: root.MMFeedback || null
+      tames: root.MMTames || null, isles: root.MMIsles || null, feedback: root.MMFeedback || null, notebook: root.MMNotebook || null
     }));
   }
 }(typeof self !== 'undefined' ? self : this, function (getOwners) {
@@ -121,6 +121,15 @@
     'mm-aim-toggle', 'mm-bullet-shapes', 'mm-auto-fire', 'pixeltown-hub-hint-v1', 'pixeltown-bugs-hint-v1'];
   ['pixeltown-realm-audio-v1', 'pixeltown-realm-tutorial-v1', 'pixeltown-calm-v1', 'pixeltown-gearhint-v1', 'pixeltown-medals-jam-v1']
     .forEach((k) => { CLEANERS[k] = (o, v) => cleanPlain(v); });
+  // cyc2-S ID-04 Hero notebook: the owner cleaner keeps only valid page ids and times (capped); without the module, a bounded inline copy
+  // of the same rule (a page that loads MMBackup without MMNotebook must not export or restore junk).
+  CLEANERS['pixeltown-notebook-v1'] = (o, v) => {
+    if (!isObj(v)) return undefined;
+    if (o.notebook && o.notebook.clean) return o.notebook.clean(v);
+    const e = {}; let n = 0;
+    if (isObj(v.e)) Object.keys(v.e).slice(0, 5000).forEach((k) => { const t = v.e[k]; if (n < 300 && /^(kill|boss|clear|tame):[a-z0-9_:@]{1,60}$/.test(k) && typeof t === 'number' && isFinite(t) && t >= 0 && t <= 8.64e15) { e[k] = Math.floor(t); n++; } });
+    return { v: 1, e: e };
+  };
   const DEVICE_FIELDS = { 'pixeltown-access-v1': ['lowGfx'] };
   const KNOWN = Object.keys(CLEANERS).concat(FLAG_KEYS);
   const isSetting = (k) => /^mm-/.test(k) || k === 'pixeltown-access-v1' || k === 'pixeltown-realm-audio-v1' || k === 'pixeltown-panel-collapsed';
@@ -143,7 +152,7 @@
     'mm-aim-assist': 'aim assist setting', 'mm-aim-toggle': 'aim toggle setting', 'mm-bullet-shapes': 'bullet shapes setting', 'mm-auto-fire': 'auto fire setting',
     'pixeltown-hub-hint-v1': 'hub hint seen', 'pixeltown-bugs-hint-v1': 'Bug Safari hint seen', 'pixeltown-realm-audio-v1': 'Realm ambience setting',
     'pixeltown-realm-tutorial-v1': 'Realm tutorial progress', 'pixeltown-calm-v1': 'hidden hub ideas', 'pixeltown-gearhint-v1': 'gear hint seen',
-    'pixeltown-medals-jam-v1': 'Jam medals'
+    'pixeltown-medals-jam-v1': 'Jam medals', 'pixeltown-notebook-v1': 'hero notebook'
   };
   const label = (k) => NAMES[k] || k;
 

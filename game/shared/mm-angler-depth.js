@@ -1,9 +1,9 @@
 // Lakeside Angler depth (pure, no DOM, seeded only): daily tournament, bait economy, aquarium.
 // Play-money only. UMD: browser global MMAnglerDepth (needs MMAngler), or require().
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./mm-angler.js'));
-  else root.MMAnglerDepth = factory(root.MMAngler);
-}(typeof self !== 'undefined' ? self : this, function (A) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./mm-angler.js'), require('./mm-gameday.js'));
+  else root.MMAnglerDepth = factory(root.MMAngler, root.MMGameDay || null);
+}(typeof self !== 'undefined' ? self : this, function (A, GD) {
   const DAY_MAX = 99999;
   function clampInt(v, lo, hi) { v = Math.floor(Number(v)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; }
   // Calendar day number from a local y/m/d. Real-day input only; tests pass ?day=N.
@@ -41,9 +41,16 @@
   }
   function rankOf(score) { return score >= RANKS.gold ? 'gold' : score >= RANKS.silver ? 'silver' : score >= RANKS.bronze ? 'bronze' : 'none'; }
   const BADGE_TITLES = { bronze: 'Bronze Hook', silver: 'Silver Hook', gold: 'Gold Hook', streak3: 'Three-Day Streak', streak7: 'Week Streak', streak30: 'Month Streak' };
+  // Why today's tournament cannot start although it is not done ('' = it can): 'ahead' = the last finished tournament is dated 1 or 2 days
+  // after today (the device clock was ahead then, or the time zone moved back): that day is already played, so the streak waits for it
+  // instead of falling back to 1; 'clock' = the device date is before the game existed while the streak is not. Shared rule: MMGameDay.
+  function blockedWhy(journal, day) { const t = (journal && journal.tour) || {}; return GD && !(t.run && t.run.day === day) ? GD.blocked(t.last, t.streak, day, gdOpts(t)) : ''; }
+  const gdOpts = (t) => ({ floor: t.last >= GD.FLOOR ? GD.FLOOR : 0 }); // the dead-clock floor only guards a streak dated by a real calendar day (test days are small numbers)
   function start(journal, day) {
     const j = A.journal.cleanFull(journal);
     if (j.tour.last === day) return { journal: j, ok: false, reason: 'done' };
+    const why = blockedWhy(j, day); // cycle 3 (L-07 class): the last tournament is dated after today, or the device date is certainly wrong
+    if (why) return { journal: j, ok: false, reason: why };
     if (j.tour.run && j.tour.run.day === day) return { journal: j, ok: true, resumed: true };
     j.tour.run = { day, used: 0, score: 0 };
     return { journal: A.journal.cleanFull(j), ok: true };
@@ -65,8 +72,11 @@
     const j = A.journal.cleanFull(journal), run = j.tour.run;
     if (!run || run.day !== day || run.used < CASTS) return { journal: j, result: null };
     const t = j.tour, score = run.score, rank = rankOf(score), got = [];
-    t.streak = t.last === day - 1 ? Math.min(9999, t.streak + 1) : 1;
-    t.last = day; t.played = Math.min(99999, t.played + 1); t.run = null;
+    // cycle 3 (L-07 class, MMGameDay.streakStep): yesterday +1, older 1, and a stored day in the future (a clock that was ahead once) no
+    // longer resets the streak to 1: it is kept and not counted twice. Without the helper (an old cached page): the old rule.
+    if (GD) { const st = GD.streakStep(t.last, t.streak, day, gdOpts(t)); t.streak = Math.min(9999, st.streak); t.last = st.last; }
+    else { t.streak = t.last === day - 1 ? Math.min(9999, t.streak + 1) : 1; t.last = day; }
+    t.played = Math.min(99999, t.played + 1); t.run = null;
     if (score >= t.best.score) t.best = { day, score };
     if (rank !== 'none') {
       t.medals[rank] += 1;
@@ -76,7 +86,7 @@
     return { journal: A.journal.cleanFull(j), result: { day, score, rank, streak: t.streak, badges: got } };
   }
   // The streak shown on screen: a missed day resets it (display only; no nag).
-  function liveStreak(journal, day) { const t = A.journal.cleanFull(journal).tour; return t.last === day || t.last === day - 1 ? t.streak : 0; }
+  function liveStreak(journal, day) { const t = A.journal.cleanFull(journal).tour; return t.last === day || t.last === day - 1 || (GD && t.last > day) ? t.streak : 0; } // a stored day ahead of the clock: the streak is not lost (cycle 3)
 
   // ---------- economy (play money, hard caps) ----------
   const CAPS = { bells: 99999, bait: 99, stock: 99 };
@@ -179,7 +189,7 @@
   return {
     DAY_MAX, CASTS, RANKS, CAPS, SELL, BAIT_PRICE, BAIT_INFO, DROP_CHANCE, SET_BONUS, BADGE_TITLES,
     dayNumber, clampDay,
-    tournament: { forDay, castFor, scoreCatch, rankOf, start, takeCast, addScore, finish, liveStreak },
+    tournament: { forDay, castFor, scoreCatch, rankOf, start, takeCast, addScore, finish, liveStreak, blockedWhy },
     economy: { baitDrop, addBait, addStock, sellPrice, sell, buy, useBait, setBaitType, baitCount },
     aquarium: { spotSet, claimSet, hallOfRecords, tankEntries },
   };

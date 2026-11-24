@@ -270,7 +270,7 @@ const TOWN_SAVE_FIELDS = ['name', 'species', 'frame', 'realm', 'resources', 'cra
   'fishlog', 'home', 'mail', 'birthdays', 'dailies', 'bugoff', 'loginStreak', 'lastLoginDate', 'sellStreak', 'lastSellDate',
   'sfxMuted', 'musicEnabled', 'reduceMotion', 'lastSeenVersion', 'villagerAffinity', 'villagerTalkDay', 'bestieId', 'bestieName',
   'ffDiscovered', 'weedsPulled', 'turnipBuys', 'questClaimedBucket', 'triviaAnsweredBucket', 'tournamentBonusBucket',
-  'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen'];
+  'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen', 'errand'];
 function cleanTownSave(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
   if (obj.format === 'pixeltown-backup') return null; // a bundle is never a town save (S-01: it used to be written as one)
@@ -504,7 +504,8 @@ if (IS_TOUCH) document.body.classList.add('touch-device');
       show = show.slice(0, -1);
     }
   };
-  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+  // cyc3 U: short landscape touch screens fold too (844x390 showed all 12 counts in the top row on the first visit)
+  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px), (max-height: 500px) and (pointer: coarse)') : null;
   const sync = () => {
     const on = !!(phone && phone.matches);
     panel.classList.toggle('bag-compact', on);
@@ -1804,6 +1805,7 @@ class TownScene extends Phaser.Scene {
       this.setupHaptics();
     }
     this.setupGamepad();
+    this.pixelWorldLabels(); // cycle 2 art (G): emoji in world labels -> code-drawn pixel icons (?worldicons=0 = off)
 
     this.registerNetHandlers();
     this.registerChatUI();
@@ -6656,6 +6658,48 @@ class TownScene extends Phaser.Scene {
   // 8-bit look for the wildlife (shared/mm-pixelize.js, design/PIXELIZE.md): every loaded ff_<id> SVG is baked ONCE, here, into a
   // crisp canvas texture ffpx_<id> at half its display size, then drawn at 2x (setDisplaySize is unchanged, so layout and reach stay).
   // ?pixelize=0 (or a missing module, or a failed bake) keeps the original SVG art. Never per frame.
+  // Cycle 2 art (G): emoji glyphs inside the world's pixel labels render differently on every OS and clash with the 8-bit look. Once at
+  // create, every world-space Text whose text starts with a mapped emoji + space loses the emoji and gets a code-drawn 16 px MMPixelIcons
+  // image (original art, 1x, crisp) 1 px left of the word; the pair stays centred where the label was. Labels whose emoji a test pins
+  // (Founder's Statue, Isles sign) are not in the map. A later setText on a converted label (mailbox count, home cozy) is stripped the
+  // same way. ?worldicons=0 = the old emoji labels. Cost: one canvas texture per icon id, one Image per label, nothing per frame.
+  pixelWorldLabels() {
+    const st = this.worldIcons = { on: !/[?&]worldicons=0(&|$)/.test(location.search) && !!window.MMPixelIcons, labels: [], ms: 0 };
+    if (!st.on) return st;
+    const t0 = performance.now();
+    const MAP = { '🏠': 'house', '🏡': 'house', '🏛️': 'museum', '🏛': 'museum', '📬': 'mail', '📮': 'mail', '🔨': 'hammer', '📖': 'book', '🥬': 'turnip', '🌀': 'realm', '🎣': 'angler',
+      // cycle 3 art (G): the rest of the world labels. 🚪 portal doors stay glyphs (beta-r4-doors / replay-doors find them by /^🚪/).
+      '🎲': 'dice', '🕹️': 'joystick', '🕹': 'joystick', '🪦': 'grave', '🌾': 'wheat', '👗': 'dress', '⛏️': 'pickaxe', '⛏': 'pickaxe', '🛒': 'cart', '🦋': 'bugs', '🧪': 'flask' };
+    const split = (txt) => { const m = typeof txt === 'string' ? /^(\S+) (.+)$/s.exec(txt) : null; return m && MAP[m[1]] ? { id: MAP[m[1]], rest: m[2] } : null; };
+    const texKey = (id) => {
+      const key = 'pxico-' + id;
+      if (!this.textures.exists(key)) { const cv = window.MMPixelIcons.canvas(id, 16); if (!cv) return null; this.textures.addCanvas(key, cv); }
+      return key;
+    };
+    this.children.list.slice().forEach((o) => {
+      if (!o || o.type !== 'Text' || o.scrollFactorX !== 1 || o.parentContainer) return;
+      const sp = split(o.text); if (!sp) return;
+      const key = texKey(sp.id); if (!key) return;
+      const cx0 = o.x, icon = this.add.image(0, 0, key).setDepth(o.depth).setOrigin(0.5);
+      const place = () => {
+        const w = o.displayWidth, left = cx0 - (w + 17) / 2; // icon 16 + 1 px gap, the pair centred on the old label x
+        o.x = left + 17 + w * o.originX;
+        icon.setPosition(Math.round(left + 8), Math.round(o.y + o.displayHeight * (0.5 - o.originY)));
+        icon.setVisible(o.visible); icon.setAlpha(o.alpha);
+      };
+      const set0 = o.setText.bind(o);
+      o.setText = (v) => { const s2 = split(Array.isArray(v) ? v.join('\n') : v); set0(s2 ? s2.rest : v); if (icon.scene) place(); return o; };
+      const vis0 = o.setVisible.bind(o);
+      o.setVisible = (v) => { vis0(v); if (icon.scene) icon.setVisible(v); return o; };
+      o.once('destroy', () => icon.destroy());
+      set0(sp.rest); place();
+      o.pxIcon = icon;
+      st.labels.push({ id: sp.id, text: sp.rest, obj: o, icon: icon });
+    });
+    st.ms = performance.now() - t0;
+    return st;
+  }
+
   pixelizeFloraFauna() {
     this.ffPixelized = 0;
     if (!window.MMPixelize || !MMPixelize.enabled()) return;
@@ -7307,9 +7351,11 @@ class TownScene extends Phaser.Scene {
     g.setDepth(y + h);
     g.bake({ finish: 'shop' });
 
-    this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
+    // cyc3 U: three stacked lines over the roof, each in its own row: title, today's deal, the turnip price (y - 50, just above the roof apex at y - 45).
+    // The deal and the turnip price both sat at y - 38 and printed over each other.
+    this.add.text(x + w / 2, y - 80, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
     const deal = this.todaysDeal();
-    this.add.text(x + w / 2, y - 38, `💰 ${deal.icon} +50% today`, { fontSize: '11px', color: '#2a6b2a' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.add.text(x + w / 2, y - 64, `💰 ${deal.icon} +50% today`, { fontSize: '11px', color: '#2a6b2a' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 20, width: w, height: h - 20 });
   }
 
@@ -7402,6 +7448,62 @@ class TownScene extends Phaser.Scene {
     this.homeLabel = this.add.text(x, y - 66, '🏡 Home', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 60);
     this.home = this.loadHome();
     this.renderHomeSprites();
+    this.renderErrandDecor();
+  }
+
+  // ---------- ID-12 parcel errand (MMErrands; cycle 3 S) ----------
+  // Mocha packs a parcel from 3 of your wood (Town save `errand: {id, s: 1}`), the Realm Nexus Vendor takes it and asks for a Midlands
+  // trophy (Realm save, written by realm-world.js only), and Mocha takes the trophy back: `s: 2` and a Realm lantern stands by your home
+  // plot for good (derived from s: 2, so it can never be sold, gifted or lost; cosmetic only, no cozy score). This page writes ONLY the
+  // Town save's `errand` (forward-only merge) and reads the Realm save. ?errands=0 turns it off.
+  errandsOn() { try { return !!window.MMErrands && !/[?&]errands=0(&|$)/.test(location.search); } catch (e) { return false; } }
+  errandRealm() { try { const o = JSON.parse(localStorage.getItem('pixeltown-realm-v1') || 'null'); return o && typeof o === 'object' ? o.errand : null; } catch (e) { return null; } }
+  saveErrand(next) {
+    const E = window.MMErrands;
+    writeSaveMerged((stored) => { const a = E.cleanTown(stored.errand); const b = E.cleanTown(next); return { errand: a.s > b.s ? a : b }; }); // never steps back
+  }
+  // Mocha's errand line for this talk (and the step it makes), or null to chat as usual
+  errandTalk() {
+    if (!this.errandsOn()) return null;
+    const E = window.MMErrands; const town = loadSave().errand; const realm = this.errandRealm();
+    const st = E.stage(town, realm);
+    const say = (txt, col) => { if (this.localBody) this.showFloatingText(this.localBody.x, this.localBody.y - 46, txt, col); };
+    if (st === 'offer') {
+      if (!this.errandAsked) { this.errandAsked = true; return E.LINES.offer + ' Talk to me again when you are ready.'; }
+      const r = E.accept(town, this.resources);
+      if (!r.ok) return E.LINES.offerShort;
+      this.resources.wood = Math.max(0, (this.resources.wood || 0) - r.spend.wood);
+      this.updateInventoryHUD(); this.saveResources(); this.saveErrand(r.town);
+      say('-' + r.spend.wood + ' wood: parcel packed 📦');
+      return 'All packed! ' + E.LINES.carry;
+    }
+    if (st === 'return') {
+      const r = E.finish(town, realm); if (!r.ok) return null;
+      this.saveErrand(r.town); this.renderErrandDecor();
+      say('🏮 ' + r.reward.label + ' now stands by your home');
+      return 'A trophy from the Realm! As promised: a Realm lantern for your home plot.';
+    }
+    if (st === 'carry' || st === 'hunt') return E.LINES[st];
+    return null; // done: the usual chat
+  }
+  errandDone() { return !!window.MMErrands && window.MMErrands.cleanTown(loadSave().errand).s === 2; }
+  // The reward: an original code-drawn Realm lantern beside the home plot (a post, a dark iron frame, a teal Realm-crystal flame).
+  renderErrandDecor() {
+    if (this.errandDecor || !this.errandDone()) return;
+    if (!this.textures.exists('realmLantern')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.18).fillEllipse(12, 45, 18, 5);
+      g.fillStyle(0x4a3524, 1).fillRect(10, 18, 4, 27); g.fillStyle(0x6b4a30, 1).fillRect(10, 18, 2, 27);
+      g.fillStyle(0x2b2b38, 1).fillRect(4, 4, 16, 16); g.fillRect(6, 1, 12, 3);
+      g.fillStyle(0x7ff0e0, 1).fillRect(7, 7, 10, 10); g.fillStyle(0xd8fff8, 1).fillRect(10, 9, 4, 6);
+      g.fillStyle(0x2b2b38, 1).fillRect(11, 7, 2, 10);
+      g.generateTexture('realmLantern', 24, 48);
+      g.destroy();
+    }
+    const x = HOME_POS.x + 96, y = HOME_POS.y - 6;
+    const glow = this.add.circle(x, y - 12, 16, 0x7ff0e0, 0.18).setDepth(y + 69);
+    this.errandDecor = this.add.image(x, y, 'realmLantern').setOrigin(0.5, 0.75).setDepth(y + 70);
+    this.errandDecor.glow = glow;
   }
 
   // Sanitised: slot ids must be real recipe ids; everything else is dropped.
@@ -8109,7 +8211,7 @@ class TownScene extends Phaser.Scene {
     this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
     // R4 D4 (b07-r2-13): the price sat at y+20, exactly where a shopper's name label is drawn. It now sits above the sign.
     this.turnipBuyLabel = this.add.text(x, y - 62, '', { fontSize: '11px', color: '#ffe066', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
-    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 38, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + 1);
+    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 50, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + HOUSE_POS.h + 1); // cyc3 U: drawn over the Shop roof like the title and deal lines
   }
 
   updateTurnipPriceLabels(time) {
@@ -8554,7 +8656,7 @@ class TownScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
-    // Bubble bottom above the quest sign (centred at y - 46, up to two lines), so the line never sits on "bring 4🪵".
+    // Bubble bottom above the quest sign (one line, bottom at ly - 46), so the line never sits on "bring 4🪵".
     this.npcBubble = this.add.text(x, ly - 64, '', {
       fontSize: '11px',
       color: '#1c2430',
@@ -8571,7 +8673,7 @@ class TownScene extends Phaser.Scene {
       strokeThickness: 3,
       align: 'center',
       wordWrap: { width: 150 },
-    }).setOrigin(0.5).setDepth(y + 1);
+    }).setOrigin(0.5, 1).setDepth(y + 1); // cyc3 U: bottom-anchored above the name (centred at ly - 46 it covered the name by 7 px)
     this.questClaimedBucket = Number(loadSave().questClaimedBucket) || -1;
     this.triviaAnsweredBucket = Number(loadSave().triviaAnsweredBucket) || -1;
     this.refreshNpcQuestSign();
@@ -9055,6 +9157,7 @@ class TownScene extends Phaser.Scene {
     if (this.isBirthdayFor(v) && !this.birthdayClaimed(v)) {
       line = "🎂 It's my birthday today! A little gift would make it perfect.";
     }
+    if (v.id === 'mocha') { const el = this.errandTalk(); if (el) line = el; } // ID-12: the parcel errand (a step taken is always reported)
     this.showVillagerBubble(v, line);
     SFX.pop();
   }

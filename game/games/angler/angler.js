@@ -78,6 +78,9 @@
   const realDay = () => { const d = new Date(); return D.dayNumber(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
   let dayOverride = TEST ? D.clampDay(params.get('day'), null) : null;
   const today = () => (dayOverride === null ? realDay() : dayOverride);
+  // The day a running tournament belongs to: the day it was started (cycle 2). A run that is open when the calendar day turns
+  // (midnight, or a clock change) keeps its own spot, casts and score, instead of locking the lake until a reload.
+  const tourDay = () => (g.tour && journal && journal.tour && journal.tour.run ? journal.tour.run.day : today());
 
   // ---- journal ----
   let journal = A.journal.cleanFull(Store.get(KEY, null));
@@ -222,7 +225,7 @@
   function pickSpot(id) {
     if ((A.SPOTS.indexOf(id) < 0 && id !== COVE) || spotLocked(id)) return false;
     if (g.state !== 'idle') return false;
-    if (g.tour && id !== D.tournament.forDay(today()).spot) return false;
+    if (g.tour && id !== D.tournament.forDay(tourDay()).spot) return false;
     g.spot = id; renderSpots(); setMsg(idleMsg()); $('spot-title').textContent = spotName(id);
     return true;
   }
@@ -234,10 +237,10 @@
     if (spotLocked(g.spot)) { setMsg('This spot is closed right now.'); return; }
     g.cf = null; g.baitUsed = null;
     if (g.tour) {
-      const tk = D.tournament.takeCast(journal, today());
+      const tk = D.tournament.takeCast(journal, tourDay());
       if (tk.n < 0) { setMsg('No casts left in the tournament.'); return; }
       journal = tk.journal; saveJournal();
-      g.cf = D.tournament.castFor(today(), tk.n);
+      g.cf = D.tournament.castFor(tourDay(), tk.n);
       g.bite = A.bite(rng); g.bite.wait = g.cf.wait; // same bite for everyone; no bait in the tournament
     } else if (g.spot === COVE) {
       g.bite = A.bite(rng); // cove bait (kelp / shell / pearl) is never used up; Market bait stays in the bag here
@@ -364,7 +367,7 @@
     g.dropMsg = '';
     if (drop) { const r = D.economy.addBait(journal, drop); if (r.ok) { journal = r.journal; g.dropMsg = ' +1 ' + BAIT_NAMES[drop] + ' bait'; } }
     g.tourPts = 0;
-    if (g.tour && g.cf) { g.tourPts = D.tournament.scoreCatch(f.id, g.size, today()); journal = D.tournament.addScore(journal, g.tourPts); }
+    if (g.tour && g.cf) { g.tourPts = D.tournament.scoreCatch(f.id, g.size, tourDay()); journal = D.tournament.addScore(journal, g.tourPts); }
     saveJournal(); renderJournalCount(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
     const fl = funLand(f);
@@ -713,7 +716,7 @@
   function afterTourCast() {
     const run = journal.tour.run;
     if (run && run.used >= D.CASTS) {
-      const r = D.tournament.finish(journal, today());
+      const r = D.tournament.finish(journal, tourDay());
       if (r.result) { journal = r.journal; saveJournal(); g.tourResult = r.result; g.tour = false; renderStatus(); }
     }
   }
@@ -736,7 +739,7 @@
   }
   function renderTourney() {
     const box = $('tourney-body'); box.textContent = '';
-    const day = today(), t = D.tournament.forDay(day), tr = journal.tour, done = tr.last === day;
+    const day = tourDay(), t = D.tournament.forDay(day), tr = journal.tour, done = tr.last === day;
     box.appendChild(mk('p', 'rule', 'Day ' + day + ' - same fish and bites for every angler. ' + D.CASTS + ' casts, score = size x rarity (target species counts double).'));
     box.appendChild(mk('p', '', 'Spot: ' + A.SPOT_NAMES[t.spot] + ' - Target: ' + fishName(t.target)));
     box.appendChild(mk('p', 'rule', 'Ranks: bronze ' + D.RANKS.bronze + ', silver ' + D.RANKS.silver + ', gold ' + D.RANKS.gold + ' points.'));
@@ -754,6 +757,11 @@
       box.appendChild(mk('p', '', 'In progress: ' + tr.run.used + '/' + D.CASTS + ' casts, ' + tr.run.score + ' points.'));
     } else if (done) {
       box.appendChild(mk('p', 'rule', 'Today\'s tournament is complete. A new one starts with the next calendar day.'));
+    } else if (D.tournament.blockedWhy && D.tournament.blockedWhy(journal, day)) { // cycle 3: say why instead of a Start button that does nothing
+      const w = mk('p', 'rule', D.tournament.blockedWhy(journal, day) === 'ahead'
+        ? 'Your last tournament is dated after today on this device (the clock or the time zone changed). Your streak is safe. The next tournament opens the day after it.'
+        : 'The date on this device looks wrong. Tournaments wait until it is right. Your streak is safe.');
+      w.id = 'tour-wait'; box.appendChild(w);
     } else {
       const b = btn(tr.run && tr.run.day === day ? 'Resume (' + tr.run.used + '/' + D.CASTS + ')' : 'Start tournament', startTournament, g.state !== 'idle');
       b.id = 'tour-start'; b.classList.add('primary'); box.appendChild(b);

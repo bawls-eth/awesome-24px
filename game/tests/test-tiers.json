@@ -24,6 +24,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "angler-tournament-midnight.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "angler-economy.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -185,6 +189,10 @@
     "tier": "smoke"
   },
   "deepdelve-fps.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-frame-alloc.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -504,6 +512,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-chunks-last-chunk.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-chunks-light-recipes.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -676,7 +688,7 @@
     "class": "node",
     "tier": "smoke"
   },
-  "shared-mm-pets.test.js": {
+  "shared-removed-modules.test.js": {
     "class": "node",
     "tier": "smoke"
   },
@@ -1420,6 +1432,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "isles-frame-some.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "isles-ftue-fixes.test.js": {
     "class": "browser",
     "tier": "full"
@@ -2028,6 +2044,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "cyc2-first-kill-floor.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "cyc1-isles-wall-slide.test.js": {
     "class": "browser",
     "tier": "full"
@@ -2041,6 +2061,126 @@
     "tier": "full"
   },
   "cyc1-art-town-buildings.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-art-isles-field.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-art-town-label-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-ui-town-narrow.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-ui-copy.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-notebook.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-isles-wander-slide.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-errands.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc2-dd-path-replay.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-chunks-cache-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc3-notebook-blocked.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-dd-path-merge.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc3-realm-frame-alloc.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-gameday-streak.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-isles-day-roll.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-economy-tuning.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc3-art-town-label-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-death-dissolve.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-nexus-life.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-realm-icorner.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-isles-dissolve.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-ui-town-labels.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-ui-notebook.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-ui-town-first-visit.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-ui-landscape-audit.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-first-kill-zk.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-errands-wired.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-bond-hearts.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-hit-pause.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-telegraph-audit.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc2-shore-fade.test.js": {
     "class": "browser",
     "tier": "full"
   }

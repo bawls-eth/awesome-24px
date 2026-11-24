@@ -143,7 +143,11 @@
       }
       return c;
     }
+    // cycle 2 (L): the last chunk asked for is kept. A ray or the walk physics asks for the same chunk many times in a row, and each
+    // ask used to build its 'cx,cy,cz' string key (about 60 bytes, 126 times per ray). Forgotten on unload and on load().
+    let lastC = null, lastCx = 0, lastCy = 0, lastCz = 0;
     function getChunk(cx, cy, cz) {
+      if (lastC !== null && cx === lastCx && cy === lastCy && cz === lastCz) return lastC;
       const k = key(cx, cy, cz);
       let c = chunks.get(k);
       if (!c) {
@@ -152,6 +156,7 @@
         if (d) for (const i in d) c.data[i] = d[i];
         chunks.set(k, c);
       }
+      lastC = c; lastCx = cx; lastCy = cy; lastCz = cz;
       return c;
     }
     function getBlock(wx, wy, wz) {
@@ -206,7 +211,7 @@
       return JSON.stringify({ v: 1, seed, d: out });
     }
     function load(str) {
-      diffs = new Map(); diffCount = 0; chunks.clear();
+      diffs = new Map(); diffCount = 0; chunks.clear(); lastC = null;
       let o;
       try { o = JSON.parse(str); } catch (e) { return false; }
       if (!o || o.v !== 1 || !Array.isArray(o.d)) return false;
@@ -222,7 +227,7 @@
       return true;
     }
     if (savedDiffs) load(savedDiffs);
-    return { seed, getChunk, getBlock, setBlock, neighbours, serialise, load, diffCount: () => diffCount, unloadChunk: (k) => chunks.delete(k), loadedKeys: () => Array.from(chunks.keys()) };
+    return { seed, getChunk, getBlock, setBlock, neighbours, serialise, load, diffCount: () => diffCount, unloadChunk: (k) => { lastC = null; return chunks.delete(k); }, loadedKeys: () => Array.from(chunks.keys()) };
   }
 
   return { SIZE, VOL, WORLD, B, ORE_BANDS, LAVA_BAND, LAKE, MAX_DIFFS, generate, blockAt, mesh, visible, unload, createWorld, key, inWorld, surfaceY };
