@@ -45,7 +45,7 @@
     if (d.unit === 'pct') return Math.round(raw * 1000) / 1000;
     return Math.round(raw * 10) / 10;
   }
-  const costFor = (t, r) => Object.freeze({ dust: 20 * (t - 6) + 10 * r, shards: t - 6 });
+  const costFor = (t, r) => Object.freeze({ dust: 20 * (t - 6) + 10 * r, shards: 25 * (t - 6) }); // cycle 3 D: was t - 6 (1-6 shards: never a real sink, see beta/cycle3-design.md and tools/economy-sim.js)
   const forgedOf = (item) => {
     const f = has(item, 'f') ? item.f : null;
     return f && typeof f === 'object' && !Array.isArray(f) && typeof f.id === 'string' && has(MMGearAffix.AFFIXES, f.id) ? f : null;

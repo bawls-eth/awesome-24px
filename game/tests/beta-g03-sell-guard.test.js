@@ -92,7 +92,7 @@ const items = (page) => page.evaluate(() => window.__mm.arena.save.items.map((x)
     await p.waitForTimeout(400);
     const r = await p.evaluate(() => { const a = window.__mm.arena; const it = a.save.items.find((x) => x.id === 'sparkwand' && x.t === 8); return { it: !!it, f: it && it.f && it.f.id, dust: a.save.dust, shards: a.save.shards, salvageQ: !!document.querySelector('button.fg[data-forge-yes="salvage"]'), ask: a._forgeAsk }; });
     check('3. double-tap "Confirm reforge": the item still exists (reforged once) and no salvage confirm is open', r.it && r.f === 'blast' && !r.salvageQ && !r.ask, JSON.stringify(r));
-    check('3b. the reforge was charged exactly once', before.dust - r.dust === 50 && before.shards - r.shards === 2, JSON.stringify([before, r]));
+    check('3b. the reforge was charged exactly once', before.dust - r.dust === 50 && before.shards - r.shards === 50 /* cycle 3 D: 25 x (t - 6) for T8, was 2 */, JSON.stringify([before, r]));
     check('no page errors (forge)', A.errors.length === 0, A.errors.join(' | '));
     await A.ctx.close();
   }
@@ -114,7 +114,7 @@ const items = (page) => page.evaluate(() => window.__mm.arena.save.items.map((x)
     const r = await p.evaluate(() => { const a = window.__mm.arena; const it = a.save.items.find((x) => x.id === 'sparkwand' && x.t === 8); const s = document.querySelector('button.fg[data-forge-salvage]'); return { it: !!it, f: it && it.f && it.f.id, dust: a.save.dust, shards: a.save.shards, salvageQ: !!document.querySelector('button.fg[data-forge-yes="salvage"]'), salOn: !!(s && !s.disabled) }; });
     check('3c. 340 ms after a reforge the Salvage button is still asleep (past the 300 ms plain arm)', mid.sal && mid.salOff, JSON.stringify(mid));
     check('3d. two taps 340 ms apart on "Confirm reforge": the wand still exists (reforged once), no salvage confirm open', r.it && r.f === 'blast' && !r.salvageQ, JSON.stringify(r));
-    check('3e. charged exactly once, and Salvage wakes afterwards (not stuck)', before.dust - r.dust === 50 && before.shards - r.shards === 2 && r.salOn, JSON.stringify([before, r]));
+    check('3e. charged exactly once, and Salvage wakes afterwards (not stuck)', before.dust - r.dust === 50 && before.shards - r.shards === 50 && r.salOn, JSON.stringify([before, r]));
     check('no page errors (forge slow double-tap)', A.errors.length === 0, A.errors.join(' | '));
     await A.ctx.close();
   }

@@ -15,7 +15,7 @@
     classic: [0.68, 0.40, 0.20],
     wide: [0.62, 0.34, 0.17],
   };
-  const TOUGH_GAP = 3;               // up to 3 levels under the area level = tough; more = too hot
+  const TOUGH_GAP = 2;               // cycle 3 D: up to 2 levels under the area level = tough; 3+ = too hot (was 3: a Lv 10 hero at area 12.7 read Tough while losing 90 percent of its HP in 19 s)
   const SPAN = 6;                    // the bar: 0 at 3+ levels over the area, 1 at 3+ levels under the "too hot" line
   const LEVELS = Object.freeze({
     comfortable: Object.freeze({ id: 'comfortable', label: 'Comfortable', icon: '✓', rank: 0 }), // check mark

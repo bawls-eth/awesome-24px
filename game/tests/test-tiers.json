@@ -2095,5 +2095,9 @@
   "cyc2-dd-path-replay.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-economy-tuning.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
