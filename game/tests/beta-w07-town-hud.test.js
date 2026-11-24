@@ -3,14 +3,13 @@
 // Never chats, never writes to Firebase (0 DB requests, 0 sockets).
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-w07-town-hud.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb, expandPanel } = require('./helpers');
+const { check, done, expandPanel, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SHOTS = process.env.SHOTS || null;
 
 async function open(browser, viewport) {
   const ctx = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-w07-town-hud.test.js */' }));
+  const db = await offlineStub(ctx);
   const sockets = [];
   const page = await ctx.newPage();
   page.on('websocket', (ws) => sockets.push(ws.url()));

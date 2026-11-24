@@ -60,7 +60,7 @@ async function restoreFile(page, obj) {
       const after = await stored(page);
       check('b14-03: after restoring a Lantern bundle the town save is NOT the bundle object (no format / keys)', after && after !== 'CORRUPT' && !('format' in after) && !('keys' in after), JSON.stringify(after).slice(0, 160));
       check('b14-03: the bundle\'s town save fields are restored (name, wood 12, stone 7)', after && after.name === 'ADMINqaBundle' && after.resources && after.resources.wood === 12 && after.resources.stone === 7, JSON.stringify(after).slice(0, 160));
-      check('b14-03: no database traffic', db.count() === 0, String(db.count()));
+      check('b14-03: no database traffic', db.attempts() === 0, String(db.count()));
       check('b14-03: no pageerror', errors.length === 0, errors.join(' | '));
       await ctx.close();
     }
@@ -100,7 +100,7 @@ async function restoreFile(page, obj) {
       check('b14-02: after the Town tab catches a fish the restored wood 12 / stone 7 survive', s2 && s2.resources && s2.resources.wood === 12 && s2.resources.stone === 7, JSON.stringify(s2 && s2.resources));
       check('b14-02: restored achievements survive', s2 && Array.isArray(s2.achievementsUnlocked) && s2.achievementsUnlocked.includes('craft1') && s2.achievementsUnlocked.includes('fish1'), JSON.stringify(s2 && s2.achievementsUnlocked));
       check('b14-02: restored lifetimeStats.wood 40 survives', s2 && s2.lifetimeStats && s2.lifetimeStats.wood >= 40, JSON.stringify(s2 && s2.lifetimeStats));
-      check('two-tab run: no database traffic', t.db.count() === 0, String(t.db.count()));
+      check('two-tab run: no database traffic', t.db.attempts() === 0, String(t.db.count()));
       check('two-tab run: no pageerror in either tab', !t.errors.a.concat(t.errors.b).some((e) => e.startsWith('pageerror')), t.errors.a.concat(t.errors.b).join(' | '));
       await ctx.close();
     }

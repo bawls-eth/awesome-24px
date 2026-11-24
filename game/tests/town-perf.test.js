@@ -10,10 +10,9 @@
 //   and flushed every frame. Fixes: one ambient layer drawn only when visible, static Graphics baked to textures, and an adaptive
 //   render resolution on desktop (steps 1 -> 0.75 -> 0.5 while frames stay under 28 fps; the canvas keeps its CSS size).
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const LS = require('./lib/load-scale');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
-const SDK = /gstatic\.com\/firebasejs\//;
 // The SDK stub makes "Join Town" fall through to the offline offer; take it.
 async function joinOffline(page, name) {
   await page.fill('#name-input', name);
@@ -27,8 +26,7 @@ const BASELINE_LONG_PER_S = 8.1;
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const errors = [];
-  const db = await blockDb(ctx);
-  await ctx.route(SDK, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-perf.test.js */' }));
+  const db = await offlineStub(ctx);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|ERR_FAILED|net::/.test(m.text())) errors.push('console: ' + m.text()); });
@@ -95,8 +93,7 @@ const BASELINE_LONG_PER_S = 8.1;
   // ---- phone: layout intact ----
   const b2 = await chromium.launch();
   const c2 = await b2.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  const db2 = await blockDb(c2);
-  await c2.route(SDK, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-perf.test.js */' }));
+  const db2 = await offlineStub(c2);
   const p2 = await c2.newPage();
   const e2 = [];
   p2.on('pageerror', (e) => e2.push(e.message));
@@ -108,7 +105,7 @@ const BASELINE_LONG_PER_S = 8.1;
   const ph = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth, chat: document.getElementById('chat-input').getBoundingClientRect().height, scale: document.getElementById('game-container').dataset.renderScale || '1' }));
   check('phone 390x844: no horizontal scroll, render scale untouched (adaptive scaling is desktop-only)', ph.sw <= ph.iw && ph.scale === '1', JSON.stringify(ph));
   check('phone: no console errors', e2.length === 0, e2.join(' | '));
-  check('0 database requests or sockets (desktop + phone)', db.count() === 0 && db2.count() === 0, JSON.stringify({ d: db.http.concat(db.ws).slice(0, 2), p: db2.http.concat(db2.ws).slice(0, 2) }));
+  check('0 database requests or sockets (desktop + phone)', db.attempts() === 0 && db2.attempts() === 0, JSON.stringify({ d: db.http.concat(db.ws).slice(0, 2), p: db2.http.concat(db2.ws).slice(0, 2) }));
   await b2.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

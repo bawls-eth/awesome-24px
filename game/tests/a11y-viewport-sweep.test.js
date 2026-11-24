@@ -11,7 +11,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, blockDb, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:9438/game/index.html';
 const ORIGIN = new URL(BASE).origin;
 const ALLOW_FILE = path.join(__dirname, 'fixtures', 'a11y-allow.json');
@@ -248,8 +248,7 @@ async function openPage(browser, page, vp, extraSeed, mediaOpts) {
   const ctxOpts = vp.touch ? { viewport: { width: vp.w, height: vp.h }, hasTouch: true, isMobile: true } : { viewport: { width: vp.w, height: vp.h } };
   if (mediaOpts) Object.assign(ctxOpts, mediaOpts);
   const ctx = await browser.newContext(ctxOpts);
-  const db = await blockDb(ctx);
-  if (page.town) await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by a11y-viewport-sweep */' }));
+  const db = page.town ? await offlineStub(ctx) : await blockDb(ctx); // Town: database blocked + Firebase SDK answered empty
   const seed = Object.assign({}, SEED, extraSeed || {});
   await ctx.addInitScript((s) => {
     if (!sessionStorage.a11ySeeded) { sessionStorage.a11ySeeded = '1'; Object.keys(s).forEach((k) => { try { localStorage.setItem(k, s[k]); } catch (e) { /* storage blocked */ } }); }
@@ -347,7 +346,7 @@ async function keyboardPass(p, page, vpId) {
         const res = await run.p.evaluate(AUDIT);
         res.offenders.forEach((o) => record(pg, o.check, o.key, o.detail, vp.id));
         run.errors.forEach((er) => record(pg, 'console-error', er.replace(/\s+/g, ' ').slice(0, 90), er.slice(0, 200), vp.id));
-        check(L + ' db requests blocked, none escaped as page traffic', run.db.attempts() >= 0);
+        check(L + ' no database request attempted', run.db.attempts() === 0, String(run.db.attempts()));
         if (vp.id === '1920x1080' || vp.id === '390x844') await keyboardPass(run.p, pg, vp.id);
         summary.push(`${pg.id} ${vp.id}: ${res.offenders.length} offenders, ${res.stats.measured} contrast samples (${res.stats.unknownBg} gradient/image bg skipped)`);
       } catch (e) { check(L + ' audit runs', false, String(e.message).slice(0, 200)); }

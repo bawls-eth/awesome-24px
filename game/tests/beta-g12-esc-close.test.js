@@ -4,14 +4,13 @@
 // ADMIN* name; no chat is sent, nothing is written to Firebase.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-g12-esc-close.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, blockDb, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
-  await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-g12-esc-close.test.js */' }));
+  const db = await offlineStub(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -73,6 +72,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
   check('3c. Postcards over the Journal: one Esc closes only Postcards', pc.p && !pca.p && pca.j, JSON.stringify({ pc, pca }));
   await page.keyboard.press('Escape');
   check('no page errors', errors.length === 0, errors.join(' | '));
+  check('no database traffic (Town)', db.attempts() === 0, String(db.attempts()));
   await ctx.close();
 
   // 4: the Realm Nexus: Esc with the quest board open closes the board only; the second Esc leaves the Nexus

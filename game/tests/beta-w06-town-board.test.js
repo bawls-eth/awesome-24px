@@ -2,14 +2,13 @@
 // (rendered at >= 2x). OFFLINE only (blockDb + Firebase SDK stubbed, "Play offline"): 0 DB requests, 0 sockets, never chats.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-w06-town-board.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SHOTS = process.env.SHOTS || null;
 
 async function open(browser, viewport) {
   const ctx = await browser.newContext(viewport.width < 600 ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-w06-town-board.test.js */' }));
+  const db = await offlineStub(ctx);
   const sockets = [];
   const page = await ctx.newPage();
   page.on('websocket', (ws) => sockets.push(ws.url()));

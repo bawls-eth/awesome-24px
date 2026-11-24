@@ -11,7 +11,7 @@
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/save-compat-pages.test.js
 //      ONLY=hub,pop   to run a subset of pages; MODES=old,quota  to run a subset of scenarios.
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const FX = require('./save-compat-fixtures.js');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ROOT = BASE.replace(/index\.html.*$/, '');
@@ -45,8 +45,7 @@ const HOSTILE = [
 
 async function open(browser, page0, mode, round) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by save-compat-pages.test.js */' }));
+  const db = await offlineStub(ctx);
   const seed = {};
   if (mode === 'old' || mode === 'quota') FX.KEYS.forEach((k) => { seed[k] = FX.rawOf(k); });
   if (mode === 'hostile') FX.KEYS.forEach((k, i) => { seed[k] = HOSTILE[(i + round * 5) % HOSTILE.length]; });
@@ -178,7 +177,7 @@ const rendered = (page) => page.evaluate(() => {
           }
         }
         check(`${L}: 0 page / console errors`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
-        check(`${L}: 0 database requests`, p.db.count() === 0, JSON.stringify(p.db.http.concat(p.db.ws).slice(0, 2)));
+        check(`${L}: 0 database requests`, p.db.attempts() === 0, JSON.stringify(p.db.http.concat(p.db.ws).slice(0, 2)));
         await p.ctx.close();
       }
     }

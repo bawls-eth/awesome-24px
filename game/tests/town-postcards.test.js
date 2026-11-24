@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const PHONE = { label: '390x844', viewport: { width: 390, height: 844 }, touch: true };
 const DESK = { label: '1280x720', viewport: { width: 1280, height: 720 }, touch: false };
@@ -30,8 +30,7 @@ const HOSTILE = {
 
 async function open(browser, prof, seed, query) {
   const ctx = await browser.newContext(prof.touch ? { viewport: prof.viewport, hasTouch: true, isMobile: true } : { viewport: prof.viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-postcards.test.js */' }));
+  const db = await offlineStub(ctx);
   if (seed) await ctx.addInitScript((kv) => { if (!sessionStorage.tn2Seeded) { sessionStorage.tn2Seeded = '1'; localStorage.clear(); Object.keys(kv).forEach((k) => localStorage.setItem(k, kv[k])); } }, seed);
   const page = await ctx.newPage();
   const sockets = []; page.on('websocket', (ws) => sockets.push(ws.url()));

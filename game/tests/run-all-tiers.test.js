@@ -27,16 +27,35 @@ check('every tier is smoke|full', Object.values(table).every((v) => lib.TIERS.in
 
 // Class sanity by source: node tests never launch a browser; only live tests use helpers.launch / join the town.
 const src = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8');
+const JOIN_ACTION = /[^.\w]launch\(|[^.\w]joinOffline\(|\.(?:click|tap|dblclick|press)\(\s*(['"`])(?:(?!\1)[^\n])*?(?:#join-btn|Join Town)|join-btn['"`]\)\.click\(/;
+// Named exemption (owner decision, Round 4): town-offline.test.js is the test OF the unreachable database. It needs the real Firebase
+// SDK and a database that hangs, so the page must try to connect (the attempts are the point) and offlineStub would remove what it
+// tests. It blocks every database host itself (ctx.route + ctx.routeWebSocket on the host pattern) and asserts that no socket attempt
+// follows "Play offline". Nothing else may be added here without the same kind of reason; the check below pins the list and the block.
+const JOIN_EXEMPT = ['town-offline.test.js'];
 const bad = [];
 for (const f of all.filter((x) => x !== path.basename(__filename))) {
   const c = table[f] && table[f].class, s = src(f);
   const usesBrowser = /chromium\.launch|[^.\w]launch\(/.test(s);
-  const joinsTown = /[^.\w]launch\(|#join-btn/.test(s);
+  // Round 4 (owner-approved): the rule looks for a join ACTION, not for the string '#join-btn'. A join action is helpers.launch(),
+  // helpers.joinOffline(), or a click / tap / press on the Join button ('#join-btn' or "Join Town", also through getElementById).
+  // A file with a join action is live-class unless it PROVES it is offline: it calls offlineStub(ctx) (database blocked and the
+  // Firebase SDK answered empty, so the page cannot even try) and asserts db.attempts() === 0. Naming the button without acting on
+  // it (reading its label or disabled state) is not a join.
+  const joinsTown = JOIN_ACTION.test(s);
+  const provenOffline = (/[^.\w]offlineStub\(/.test(s) && /\.attempts\(\)\s*===\s*0/.test(s)) || JOIN_EXEMPT.includes(f);
   if (c === 'node' && usesBrowser) bad.push(f + ' (node but launches a browser)');
-  if (c === 'browser' && joinsTown) bad.push(f + ' (browser but joins the town)');
-  if (c !== 'live' && joinsTown && c !== undefined) bad.push(f + ' (joins the town but not live)');
+  if (c !== 'live' && c !== undefined && joinsTown && !provenOffline) bad.push(f + ' (joins the town without offlineStub(ctx) + a db.attempts() === 0 assert: make it live-class or add both)');
 }
-check('classes agree with what each file does (node = no browser, browser = no town join)', bad.length === 0, bad.join('; '));
+// self-test of the join rule (so the rule itself cannot rot silently)
+{
+  const J = (t) => JOIN_ACTION.test(t);
+  const yes = ["await launch();", "await joinOffline(page);", "await page.click('#join-btn');", "await page.tap('button:has-text(\"Join Town\")');", "document.getElementById('join-btn').click();"];
+  const no = ["await chromium.launch();", "document.querySelector('#join-btn').disabled", "page.textContent('#join-btn')", "await page.click('#join-menu-btn');", "// never clicks Join Town"];
+  check('join rule self-test: 5 join actions are seen, 5 look-alikes are not', yes.every(J) && !no.some(J), JSON.stringify([yes.filter((t) => !J(t)), no.filter(J)]));
+}
+check('the join-rule exemption list is exactly town-offline.test.js, and that file still blocks the database hosts for HTTP and WebSocket itself', JOIN_EXEMPT.length === 1 && JOIN_EXEMPT[0] === 'town-offline.test.js' && /ctx\.route\(DB_HOST/.test(src('town-offline.test.js')) && /ctx\.routeWebSocket\(DB_HOST/.test(src('town-offline.test.js')) && /firebaseio/.test(src('town-offline.test.js')));
+check('classes agree with what each file does (node = no browser; a town join is live-class unless proven offline)', bad.length === 0, bad.join('; '));
 
 // Smoke tier
 const smoke = lib.select(all, table, { tier: 'smoke' });

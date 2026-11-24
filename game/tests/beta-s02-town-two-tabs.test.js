@@ -11,7 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const LANTERN = BASE.replace(/index\.html.*$/, 'games/mad-maze/lantern.html');
 const SAVE_KEY = 'pixeltown-save-v1';
@@ -48,8 +48,7 @@ async function join(page) {
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-s02 */' }));
+  const db = await offlineStub(ctx);
   await ctx.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');

@@ -5,15 +5,14 @@
 // requests and 0 sockets; never chats, never accepts or declines an invite (that would call net.*), never writes to Firebase.
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/nav-town-p2.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const HUB = BASE.replace(/index\.html.*$/, '') + 'hub/index.html?test=1&gdate=2026-11-21';
 const SAVE_KEY = 'pixeltown-save-v1';
 
 async function open(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by nav-town-p2.test.js */' }));
+  const db = await offlineStub(ctx);
   // A fake gamepad the test drives through window.__pad (null = none connected).
   await ctx.addInitScript(() => {
     window.__pad = null;

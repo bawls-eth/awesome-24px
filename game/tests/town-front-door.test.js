@@ -7,14 +7,13 @@
 //  - an automated browser (webdriver true, every other Town test) is never redirected
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/town-front-door.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ORIGIN = new URL(BASE).origin;
 
 async function ctxFor(browser, viewport, touch, human) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-front-door.test.js */' }));
+  const db = await offlineStub(ctx);
   if (human) await ctx.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false, configurable: true }); } catch (e) { /* ignore */ } });
   // a same-origin page with a link and a no-referrer iframe, served by the test (never on disk)
   await ctx.route(ORIGIN + '/game/__front_door_host.html', (r) => r.fulfill({ status: 200, contentType: 'text/html',
@@ -40,7 +39,7 @@ const errs = (page) => { const e = []; page.on('pageerror', (x) => e.push('pagee
     check('the Home Play button starts the guided adventure (?from=hub) and the Town card leads back into the Town', play === '../games/mad-maze/index.html?mode=world&from=hub' && townCard === '../index.html?from=hub', String(play) + ' ' + String(townCard));
     await page.goBack().catch(() => {});
     check('Back does not bounce into the redirect again (location.replace)', !/\/game\/index\.html$/.test(new URL(page.url()).pathname) || page.url() === 'about:blank', page.url());
-    check('plain visit: 0 database requests', db.count() === 0);
+    check('plain visit: 0 database requests', db.attempts() === 0);
     await ctx.close();
   }
   // 2) ?from=hub and ?town=1 stay; Play offline works at both sizes
@@ -61,7 +60,7 @@ const errs = (page) => { const e = []; page.on('pageerror', (x) => e.push('pagee
     const sw = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }));
     check(`${label}: no horizontal scroll`, sw.sw <= sw.iw, JSON.stringify(sw));
     check(`${label}: 0 console errors`, e.length === 0, e.slice(0, 3).join(' | '));
-    check(`${label}: 0 database requests`, db.count() === 0);
+    check(`${label}: 0 database requests`, db.attempts() === 0);
     await ctx.close();
   }
   // 3) same-origin link and a no-referrer iframe stay in the Town
@@ -76,7 +75,7 @@ const errs = (page) => { const e = []; page.on('pageerror', (x) => e.push('pagee
     await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), page.click('#go')]);
     await page.waitForTimeout(800);
     check('a link from inside the game (same-origin referrer) stays in the Town', /\/game\/index\.html$/.test(new URL(page.url()).pathname), page.url());
-    check('links/iframe: 0 database requests', db.count() === 0);
+    check('links/iframe: 0 database requests', db.attempts() === 0);
     await ctx.close();
   }
   // 4) automated browsers (every other Town test) are never redirected
@@ -86,7 +85,7 @@ const errs = (page) => { const e = []; page.on('pageerror', (x) => e.push('pagee
     await page.goto(BASE, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(800);
     check('webdriver: a plain visit stays in the Town (existing tests keep working)', /\/game\/index\.html$/.test(new URL(page.url()).pathname), page.url());
-    check('webdriver: 0 database requests', db.count() === 0);
+    check('webdriver: 0 database requests', db.attempts() === 0);
     await ctx.close();
   }
   await browser.close();

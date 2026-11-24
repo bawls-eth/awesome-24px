@@ -8,7 +8,7 @@
 // database; the test asserts 0 blocked attempts and 0 sockets. The bot never chats.
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/net-hostile-presence.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 
 // In-memory stand-in for the firebase compat SDK (app + database). Every write is recorded in window.__fb.writes.
@@ -75,7 +75,7 @@ const HOSTILE_PLAYERS = [
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-  const db = await blockDb(ctx);
+  const db = await offlineStub(ctx); // the fake in-page SDK route below is registered later, so it still answers the SDK request
   let sdkServed = 0;
   await ctx.route(/gstatic\.com\/firebasejs\//, (r) => {
     sdkServed++;

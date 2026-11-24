@@ -7,7 +7,7 @@
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-o04-town-hub-backup.test.js
 const { chromium } = require('playwright');
 const fs = require('fs');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const HUB = BASE.replace(/index\.html.*$/, 'hub/index.html');
 const SEED = {
@@ -17,8 +17,7 @@ const SEED = {
 };
 async function ctxWith(browser, seed) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by o04 */' }));
+  const db = await offlineStub(ctx);
   if (seed) await ctx.addInitScript((s) => { if (!sessionStorage.o04) { sessionStorage.o04 = '1'; Object.keys(s).forEach((k) => localStorage.setItem(k, s[k])); } }, seed);
   const page = await ctx.newPage();
   const errors = [];
