@@ -2942,7 +2942,7 @@ class TownScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 1).fillRect(x - 24, y - 6, 48, 18);
     g.fillStyle(0x1c2430, 1);
     [[-14, -1], [0, 2], [14, -2]].forEach(([dx, dy]) => g.fillCircle(x + dx, y + dy, 2));
-    g.bake();
+    g.bake({ finish: 'polyroll' });
     this.add.text(x, y - 36, '🎲 Polyroll', { fontSize: '13px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
@@ -6973,7 +6973,7 @@ class TownScene extends Phaser.Scene {
     const proxy = new Proxy(g, {
       get: (t, k) => {
         if (k === 'bake') {
-          return () => {
+          return (opt) => {
             if (b.live || !(b.x1 > b.x0)) return t; // untracked call or empty: stay a live Graphics
             const pad = 3;
             const left = Math.floor(b.x0) - pad;
@@ -6985,6 +6985,7 @@ class TownScene extends Phaser.Scene {
             this.bakedGfxN = (this.bakedGfxN || 0) + 1;
             const key = `baked_${this.bakedGfxN}`;
             t.generateTexture(key, w, h);
+            if (opt && opt.finish) this.finishBakedTexture(key, opt.finish);
             const img = this.add.image(left, top, key).setOrigin(0, 0).setDepth(t.depth);
             this.children.moveTo(img, this.children.getIndex(t)); // same display-list slot as the Graphics
             t.destroy();
@@ -7001,6 +7002,49 @@ class TownScene extends Phaser.Scene {
       },
     });
     return proxy;
+  }
+
+  // Cycle 1 art (G, T-BLD "flat fills, no outline"): a pixel finish for a baked building texture, run ONCE at create (never per frame).
+  // Alpha snapped to 0/255 (no soft canvas fringe), a 1 px colour-matched dark outline outside the silhouette (30% of the darkest
+  // opaque neighbour, never pure black, the same rule as the cycle 0 creature / Hub icon outline), and a little depth with the light
+  // from the top-left: the bottom 4 px and right 3 px of every shape are shaded, the top-left 2 px rim is lit. ?bldfinish=0 = flat.
+  bldDepth() { return !/[?&]bldfinish=0(&|$)/.test(typeof location !== 'undefined' ? location.search : ''); }
+  finishBakedTexture(key, name) {
+    const st = this.bldFinish || (this.bldFinish = { on: this.bldDepth(), count: 0, ms: 0, keys: {}, outline: 0 });
+    st.keys[name || key] = key;
+    if (!st.on) return false;
+    const t0 = performance.now();
+    try {
+      const tex = this.textures.get(key); const cv = tex && tex.getSourceImage();
+      if (!cv || !cv.getContext) return false;
+      const W = cv.width, H = cv.height, ctx = cv.getContext('2d');
+      const im = ctx.getImageData(0, 0, W, H), d = im.data, src = new Uint8ClampedArray(d);
+      const op = (x, y) => x >= 0 && y >= 0 && x < W && y < H && src[(y * W + x) * 4 + 3] >= 128;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (op(x, y)) {
+          d[i + 3] = 255;
+          let f = 1;
+          if (!op(x, y + 1) || !op(x, y + 2) || !op(x, y + 3) || !op(x, y + 4)) f = 0.78; // ground-side shade
+          else if (!op(x + 1, y) || !op(x + 2, y) || !op(x + 3, y)) f = 0.88; // right-side shade
+          else if (!op(x - 1, y) || !op(x, y - 1) || !op(x - 1, y - 1) || !op(x, y - 2)) f = 1.14; // top-left rim light
+          if (f !== 1) for (let c = 0; c < 3; c++) d[i + c] = Math.min(255, Math.round(src[i + c] * f));
+          continue;
+        }
+        d[i + 3] = 0;
+        let best = -1, br = 0, bg = 0, bb = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if ((!dx && !dy) || !op(x + dx, y + dy)) continue;
+          const j = ((y + dy) * W + x + dx) * 4, l = src[j] + src[j + 1] + src[j + 2];
+          if (best < 0 || l < best) { best = l; br = src[j]; bg = src[j + 1]; bb = src[j + 2]; }
+        }
+        if (best >= 0) { d[i] = Math.round(br * 0.3); d[i + 1] = Math.round(bg * 0.3); d[i + 2] = Math.round(bb * 0.3); d[i + 3] = 255; st.outline++; }
+      }
+      ctx.putImageData(im, 0, 0);
+      if (tex.refresh) tex.refresh();
+      st.count++;
+      return true;
+    } catch (e) { return false; } finally { st.ms += performance.now() - t0; }
   }
 
   // Draws static vector art once into a texture and places it as a plain
@@ -7203,13 +7247,14 @@ class TownScene extends Phaser.Scene {
     const { x, y, w, h } = HOUSE_POS;
     const g = this.bakedGfx();
     g.fillStyle(0x8a5a3b, 1).fillRect(x, y, w, h);
+    if (this.bldDepth()) g.fillStyle(0x2a1a10, 0.3).fillRect(x, y, w, 6); // cycle 1 art: eave shadow under the roof
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 45);
     g.fillStyle(0x5a3a22, 1).fillRect(x + w / 2 - 10, y + h - 28, 20, 28);
     g.fillStyle(0xcfe8f5, 1);
     g.fillRect(x + 16, y + 14, 20, 20);
     g.fillRect(x + w - 36, y + 14, 20, 20);
     g.setDepth(y + h);
-    g.bake();
+    g.bake({ finish: 'shop' });
 
     this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
     const deal = this.todaysDeal();
@@ -7227,11 +7272,12 @@ class TownScene extends Phaser.Scene {
     const { x, y, w, h } = MUSEUM_POS;
     const g = this.bakedGfx();
     g.fillStyle(0xd8d0bc, 1).fillRect(x, y, w, h);
+    if (this.bldDepth()) g.fillStyle(0x3a3428, 0.25).fillRect(x, y, w, 6); // cycle 1 art: eave shadow under the roof
     g.fillStyle(0x8f8568, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 40);
     g.fillStyle(0x6b6250, 1);
     for (let i = 0; i < 4; i++) g.fillRect(x + 10 + i * 22, y + 16, 10, h - 20);
     g.setDepth(y + h);
-    g.bake();
+    g.bake({ finish: 'museum' });
     this.add.text(x + w / 2, y - 50, '🏛️ Museum', { fontSize: '14px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 16, width: w, height: h - 16 });
   }
@@ -7240,10 +7286,11 @@ class TownScene extends Phaser.Scene {
     const { x, y, w, h } = ABLE_SISTERS_POS;
     const g = this.bakedGfx();
     g.fillStyle(0xd88fb0, 1).fillRect(x, y, w, h);
+    if (this.bldDepth()) g.fillStyle(0x4a2033, 0.28).fillRect(x, y, w, 6); // cycle 1 art: eave shadow under the roof
     g.fillStyle(0xe8b8d0, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 34);
     g.fillStyle(0xcfe8f5, 1).fillRect(x + w / 2 - 10, y + 14, 20, 18);
     g.setDepth(y + h);
-    g.bake();
+    g.bake({ finish: 'able' });
     // Label under the shop, not above the roof: the roof line is the town spawn (1200, 600), where it sat under the player's name.
     this.add.text(x + w / 2, y + h + 10, '👗 Able Sisters', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 14, width: w, height: h - 14 });
@@ -7267,7 +7314,7 @@ class TownScene extends Phaser.Scene {
     g.fillTriangle(x + 26, y - 6, x, y - 22, x, y - 6);
     g.lineStyle(1, 0x8f7044, 1);
     g.lineBetween(x, y - 22, x, y - 6);
-    g.bake();
+    g.bake({ finish: 'guestbook' });
     this.add.text(x, y - 42, '📖 Guestbook', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
@@ -8007,7 +8054,7 @@ class TownScene extends Phaser.Scene {
     const g = this.bakedGfx(y - 1);
     g.fillStyle(0x7a4a26, 1).fillRect(x - 26, y - 4, 52, 18);
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 32, y - 4, x + 32, y - 4, x, y - 30);
-    g.bake();
+    g.bake({ finish: 'turnip' });
     this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
     // R4 D4 (b07-r2-13): the price sat at y+20, exactly where a shopper's name label is drawn. It now sits above the sign.
     this.turnipBuyLabel = this.add.text(x, y - 62, '', { fontSize: '11px', color: '#ffe066', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
@@ -8293,7 +8340,7 @@ class TownScene extends Phaser.Scene {
     // Door.
     g.fillStyle(0x5a3a22, 1).fillRect(x - 6, y - 16, 12, 16);
     g.setDepth(y - 1);
-    g.bake();
+    g.bake({ finish: 'windmill' });
 
     // Blade assembly: four thin arms in a plus shape, grouped in a
     // container so a single rotation tween spins them all together.
@@ -9754,7 +9801,7 @@ class TownScene extends Phaser.Scene {
     // W-06 (b12-06): a bigger board and 12 px text rendered at 2x, so TOP SCORES reads (cap height >= 8 screen px at both zooms; was 8 px, smeared).
     g.fillStyle(0xe8d9b5, 1).fillRect(x - 72, y - 78, 144, 76);
     g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 72, y - 78, 144, 76);
-    g.bake();
+    g.bake({ finish: 'board' }); // cycle 1 art: same outline / depth finish as the buildings
     this.noticeBoardText = this.add.text(x, y - 40, '', {
       fontSize: '12px',
       fontFamily: 'monospace',

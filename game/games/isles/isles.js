@@ -372,6 +372,20 @@
   const stState = { dying: false, ko: false, eating: false, ph: '', moving: false }; // reused every frame
   const seat = { x: 0, y: 0 };
   // the strip a creature shows now (null -> code bake). Updates c.dir / c.act / c.at0 in place; no allocation.
+  // Cycle 1 art (G): the hit flash was a white circle laid over the creature (a round blob over outlined pixel art, wider than thin
+  // bodies). It is now the creature's own silhouette in white, faded over the 0.12 s flash: a white copy of the strip / code frame,
+  // built once on the first hit (cached per source canvas) and drawn with the same geometry. ?hitflash=0 = the old circle.
+  const HITFLASH = !/[?&]hitflash=0(&|$)/.test(location.search);
+  const hitFx = { sil: 0, silPng: 0, silCode: 0, circle: 0, built: 0, ms: 0 };
+  const whiteCache = new WeakMap();
+  function whiteOf(src) {
+    let w = whiteCache.get(src);
+    if (w) return w;
+    w = document.createElement('canvas'); w.width = src.width; w.height = src.height;
+    const wg = w.getContext('2d'); wg.drawImage(src, 0, 0); wg.globalCompositeOperation = 'source-in'; wg.fillStyle = '#fff'; wg.fillRect(0, 0, w.width, w.height);
+    whiteCache.set(src, w); hitFx.built++;
+    return w;
+  }
   function stripOf(c, moving) {
     if (!STRIPS || !c.sk || !STRIPS.has(c.sk)) return null;
     if (c.ph === 'wind' || c.ph === 'strike') c.dir = MS.dirCode(Math.cos(c.ang), Math.sin(c.ang), c.dir, 0.01);
@@ -1646,21 +1660,29 @@
       if (st) {
         const a = c.art;
         if (a && a.shadow && GFX.shadows) { const w0 = a.w / a.dpr, w = Math.min(w0, st.w * 0.8, st.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, sx - w / 2, sy - h / 2, w, h); } // AW2 / AW3: shadow no wider than the body
-        STRIPS.draw(g, st, stripFrame(c), sx, sy, 1, MS.flipFor(c.act, c.dir));
+        const sf = stripFrame(c), sfl = MS.flipFor(c.act, c.dir);
+        STRIPS.draw(g, st, sf, sx, sy, 1, sfl);
+        if (HITFLASH && c.flash > 0 && st.src) { const t0 = performance.now(); g.globalAlpha = Math.min(1, c.flash / 0.12) * 0.8; STRIPS.draw(g, Object.assign({}, st, { src: whiteOf(st.src) }), sf, sx, sy, 1, sfl); g.globalAlpha = 1; hitFx.sil++; hitFx.silPng++; hitFx.ms += performance.now() - t0; c.flashSil = true; }
         c.drawn = st.id; c.src = 'png';
         top = Math.min(top, sy - (st.ay - st.top) - 2);
       } else if (c.art) {
         const a = c.art, act = c.moving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, c.t)];
         const w = a.w / a.dpr, h = a.h / a.dpr;
         if (a.shadow && GFX.shadows) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
-        if (c.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
-        else g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr, w, h);
+        const cfx = HITFLASH && c.flash > 0, t0 = cfx ? performance.now() : 0;
+        for (let pass = 0; pass < (cfx ? 2 : 1); pass++) {
+          const im = pass ? whiteOf(fr) : fr; if (pass) g.globalAlpha = Math.min(1, c.flash / 0.12) * 0.8;
+          if (c.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(im, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
+          else g.drawImage(im, sx - w / 2, sy - a.ay / a.dpr, w, h);
+        }
+        if (cfx) { g.globalAlpha = 1; hitFx.sil++; hitFx.silCode++; hitFx.ms += performance.now() - t0; c.flashSil = true; }
         c.drawn = a.id; c.src = 'code';
       } else {
         g.fillStyle = MOOD_COL[c.mood] || '#ccc'; g.beginPath(); g.arc(sx, sy - c.rad * 0.6, c.rad, 0, Math.PI * 2); g.fill();
         c.drawn = ''; c.src = 'plain';
       }
-      if (c.flash > 0) { g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(sx, sy - c.rad, c.rad, 0, Math.PI * 2); g.fill(); }
+      if (c.flash > 0 && !c.flashSil) { g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(sx, sy - c.rad, c.rad, 0, Math.PI * 2); g.fill(); hitFx.circle++; }
+      c.flashSil = false;
       if (c.hp < c.maxHp) { const bw = Math.max(20, c.rad * 1.6); g.fillStyle = '#2a1b1b'; g.fillRect(sx - bw / 2, top - 6, bw, 4); g.fillStyle = MOOD_COL[c.mood] || '#e0604a'; g.fillRect(sx - bw / 2, top - 6, bw * Math.max(0, c.hp / c.maxHp), 4); }
       if (c.tm) drawTameState(c, sx, sy, top);
     }
@@ -3635,6 +3657,7 @@
       heroDraw: () => Object.assign({}, heroDraw), setMoving: (on) => { heroMoving = !!on; return heroMoving; }, // W-12 hooks
       spawn: (sp, tx, ty) => (SPAWNABLE.indexOf(sp) >= 0 && creatures.length < CAP ? addCreature(sp, (tx + 0.5) * TILE, (ty + 0.5) * TILE, -1).uid : null),
       flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS, saddles: SADDLES }),
+      hitFlash: (id) => { if (id === 'all') creatures.forEach((c) => { c.flash = 0.12; }); else if (id !== undefined) { const c = creatures.find((x) => x.uid === id); if (c) c.flash = 0.12; } return Object.assign({ on: HITFLASH }, hitFx); }, // cycle 1 art: flash one creature / read the counters
       anger: (id) => { const c = creatures.find((x) => x.uid === id); if (c) c.angry = 30; return !!c; },
       soothe: (on) => { if (!TAME) return false; soothe = on !== false; setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); return soothe; },
       feed: () => feed(),

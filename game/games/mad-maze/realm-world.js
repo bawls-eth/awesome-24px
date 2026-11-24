@@ -378,6 +378,31 @@
         rect(g, r < 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.10)', sx, sy, r < 0.25 ? 3 : 2, 2);
       }
     }
+    // Cycle 1 art (G): open grass fields on a phone read calm (one flat green per screen). A seeded, sparse pass adds tiny flowers
+    // (a 3x3 plus of one petal colour round a yellow / white centre), pebbles (2x2 grey with a 1 px light and dark pixel) and darker
+    // grass tufts on grass / tall grass / meadow / dark grass ground. Square pixel clusters only (bullets stay the only bright round
+    // shapes), never on solid or water tiles, baked once per chunk. ?fielddetail=0 = off.
+    const FIELD_DETAIL = TILE_DETAIL && !/[?&]fielddetail=0(&|$)/.test(qs0);
+    const fieldStat = { flowers: 0, pebbles: 0, tufts: 0, ms: 0, chunks: 0, maxMs: 0, cur: 0, chunkMs: 0, chunkMaxMs: 0 };
+    const FIELD_PETALS = ['#f4f1e6', '#ffd23f', '#e86a92', '#9fc6ff', '#c9a7ff'];
+    function fieldDetail(g, t, wx, wy, px, py) {
+      const kind = t === T.flower_meadow ? 2 : t === T.dark_grass ? 1 : 0; // meadow: more flowers; dark grass: no flowers, more tufts
+      const r = h2(wx, wy, 701);
+      const fx = px + 3 + Math.floor(h2(wx, wy, 702) * (TILE - 8)), fy = py + 3 + Math.floor(h2(wx, wy, 703) * (TILE - 8));
+      if (kind !== 1 && r < (kind === 2 ? 0.34 : 0.1)) {
+        const pc = FIELD_PETALS[Math.floor(h2(wx, wy, 704) * FIELD_PETALS.length)];
+        rect(g, 'rgba(0,0,0,0.18)', fx, fy + 2, 3, 1); // tiny ground shadow
+        rect(g, pc, fx + 1, fy - 1, 1, 3); rect(g, pc, fx, fy, 3, 1);
+        rect(g, pc === '#ffd23f' ? '#f4f1e6' : '#ffd23f', fx + 1, fy, 1, 1);
+        fieldStat.flowers++;
+      } else if (r < (kind === 2 ? 0.4 : 0.17)) {
+        rect(g, '#7d8580', fx, fy, 2, 2); rect(g, '#b7bdb4', fx, fy, 1, 1); rect(g, '#4b524f', fx + 1, fy + 1, 1, 1);
+        fieldStat.pebbles++;
+      } else if (r < (kind === 1 ? 0.4 : 0.3)) {
+        const c = 'rgba(16,40,20,0.34)'; rect(g, c, fx, fy, 1, 3); rect(g, c, fx + 2, fy - 1, 1, 4); rect(g, c, fx + 4, fy + 1, 1, 2);
+        fieldStat.tufts++;
+      }
+    }
     // R4-D2 (b12-r2-04 "snow frames with square holes"): the b10t / b11 edge tiles draw a notch of the blend terrain in every corner whose
     // two cardinal sides are open, because the 4-bit mask cannot see diagonals. Inside a 2x2 (or larger) patch the four notches meet and
     // read as a square hole. When the diagonal neighbour is the same terrain too, the notch is painted back with the terrain's own
@@ -398,6 +423,14 @@
       }
     }
     function buildChunk(cx, cy) {
+      // fieldStat: ms / maxMs = the field pass alone (its added bake cost); chunkMs / chunkMaxMs = the whole chunk bake, for scale
+      const ft0 = performance.now(); fieldStat.cur = 0;
+      const out = buildChunk0(cx, cy);
+      const all = performance.now() - ft0;
+      if (fieldStat.cur > 0) { fieldStat.chunks++; fieldStat.ms += fieldStat.cur; fieldStat.maxMs = Math.max(fieldStat.maxMs, fieldStat.cur); fieldStat.chunkMs += all; fieldStat.chunkMaxMs = Math.max(fieldStat.chunkMaxMs, all); }
+      return out;
+    }
+    function buildChunk0(cx, cy) {
       chunkBuilds++;
       const cv = document.createElement('canvas'); cv.width = CPX; cv.height = CPX;
       const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
@@ -417,6 +450,7 @@
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
         }
         if (TILE_DETAIL && t !== T.deep_water && t !== T.shallow_water && !solid[i]) tileDetail(g, wx, wy, px, py);
+        if (FIELD_DETAIL && !solid[i] && (t === T.grass || t === T.tall_grass || t === T.flower_meadow || t === T.dark_grass)) { const f0 = performance.now(); fieldDetail(g, t, wx, wy, px, py); fieldStat.cur += performance.now() - f0; }
         if (GOD_LOOK && t === T.godland_ash) { // W-03 (b04-02): ash gets a dark ember wash and sparse ember specks (palette lava_rock accent)
           rect(g, 'rgba(36,8,18,0.42)', px, py, TILE, TILE);
           if (h2(wx, wy, 601) < 0.22) { const ex = px + 3 + Math.floor(h2(wx, wy, 602) * (TILE - 8)), ey = py + 3 + Math.floor(h2(wx, wy, 603) * (TILE - 8)); rect(g, '#ff7a2a', ex, ey, 2, 2); rect(g, 'rgba(255,122,42,0.35)', ex - 1, ey + 2, 4, 1); }
@@ -442,7 +476,7 @@
       }
       if (artOn) {
         const al = chunkProps(cx, cy);
-        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id] || (al[k].base ? wArt[al[k].base] : null); if (a && al[k].id !== al[k].base && B26_SET[al[k].id] && wArt[al[k].id]) artDraws.b26++; if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
+        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id] || (al[k].base ? wArt[al[k].base] : null); if (a && al[k].id !== al[k].base && B26_SET[al[k].id] && wArt[al[k].id]) artDraws.b26++; if (a && TREE_FIX && TREE_FIX_IDS[al[k].id] && !al[k].dim) { const fa = treeFixOf(al[k].id, a); if (fa !== a) { a = fa; treeFixStat.draws++; } } if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
       }
       let wcv = null;
       if (water) { // a sparse highlight layer, faded / nudged per frame for a cheap shimmer
@@ -501,6 +535,111 @@
       if (!B26_ON || !B26_CODE[p.kind] || p.x < 0 || p.y < 0 || p.x >= ww || p.y >= wh || GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] !== 1) return null;
       return wArt[b26Pick(B26_CODE[p.kind], p.x, p.y)] || null;
     }
+    // Cycle 1 art (G): the R03 prop_tree_medium / prop_tree_small canopies read as one round ball on a stick at 1x (and the medium one
+    // floats 4 px above its trunk). At bake time, once per strip (cached), the canopy rows are re-drawn from an original clump map:
+    // 4-6 overlapping leaf clumps with dark seams, lit top-left, a scalloped outline, the medium canopy reaching down to its trunk.
+    // Colours come from the strip itself (outline = its darkest px, then dark / mid / light leaf by brightness), so the palette stays
+    // R03's. Only rows above the trunk are replaced; a strip of another size is left alone. ?treefix=0 = the R03 pixels.
+    // Map letters: A outline, B light leaf, C dark leaf, D mid leaf, '.' transparent.
+    const TREE_FIX = !/[?&]treefix=0(&|$)/.test(qs0);
+    const TREE_MAPS = {
+      prop_tree_medium: { w: 32, h: 64, rows: [
+        '................................',
+        '................................',
+        '................................',
+        '..........AAAAA...AAAAAA........',
+        '.........ABBBDDA.ABBBDDDA.......',
+        '........ABBBDDDDABBBDDDDDA......',
+        '.......ABBBDDDDDBBBDDDDDDDA.....',
+        '......ABBBDDDDDDBBDDDDDDDDA.....',
+        '......ABBDDDDDDCCDDDDDDDDCCA....',
+        '......ABDDDDDDBBBDDDDDDDCCCA....',
+        '......ADDDDDBBBBDDDDDDDCCCA.....',
+        '.....AADCDDBBBBDDDDDDDCCCCDA....',
+        '....ABBBCDBBBBDDDDDDDDDCCDDDA...',
+        '...ABBBBDCBBBDDDDDDDDDDCDDDDDA..',
+        '..ABBBBDDDCBDDDDDDDDDDCDDDDDDDA.',
+        '..ABBBDDDCCDDDDDDDDDDCCCDDDDDDA.',
+        '..ABBDDDDDCDDDDDDDDDCCCDDDDDDCCA',
+        '.ABBDDDDDDCDDDDDDDDCCCCDDDDDCCCA',
+        '..ADDDDDDDCCDDDDDDCCCCCDDDDCCCA.',
+        '..ADDDDDDDDCCDDDDCCCCCDDDDCCCCA.',
+        '..ADDDDDDDCCCCCCCCCCCDDDDCCCCA..',
+        '...ADDDDDCCCCCCCCCCDCCDDCCCCA...',
+        '....ACCCCCCCCDDDDDDDDCCCCCCA....',
+        '.....AABCCBDDDDDDDDDDDDDCCA.....',
+        '......ABBBDDDDDDDDDDDDDCCCA.....',
+        '......ABBDDDDDDDDDDDDDCCCCA.....',
+        '......ABDDDDDDDDDDDDDCCCCCA.....',
+        '......ADDDDDDDDDDDDDCCCCCCA.....',
+        '.......ADDDDDDDDDDDCCCCCCA......',
+        '.......ADDDDDDDDDDCCCCCCCA......',
+        '........ADDDDDDDDCCCCCCCA.......',
+        '.........ADDDDDDCCCCCCCA........',
+        '..........AACCCCCCCCCAA.........',
+        '............AACCCCCAA...........'] },
+      prop_tree_small: { w: 32, h: 32, rows: [
+        '................................',
+        '..............AAAAA.............',
+        '............AABBBDDAA...........',
+        '...........ABBBBDDDDDA..........',
+        '.....AAAAAAABBBDDDDDDA..........',
+        '....ABBBDDDABBDDDDDDCA.AAAA.....',
+        '...ABBBDDDDCBDDDDDDCCCABBBDAA...',
+        '..ABBBDDDDDDCDDDDDCCCBBBBDDDDA..',
+        '..ABBDDDDDDDCDDDDCCCCBBBDDDDDDA.',
+        '.ABBDDDDDDDDCDDDCCCCBBBDDDDDDDA.',
+        '.ABDDDDDDDDCCCCCCCCABBDDDDDDDCA.',
+        '..ADDDDDDDCCCBBBDDDDCDDDDDDDCCA.',
+        '..ADDDDDDCCCCBBDDDDDCDDDDDDCCCA.',
+        '...ADDDDCCCCBBDDDDDDCCDDDDCCCCA.',
+        '....ACCCCCCBBDDDDDDDDCCDDCCCCA..',
+        '.....AAAABBBDDDDDDDDDDDCCCCAA...',
+        '........ABBDDDDDDDDDDDCCAAA.....',
+        '........ABDDDDDDDDDDDCCCA.......',
+        '........ADDDDDDDDDDDCCCCA.......',
+        '........ADDDDDDDDDDCCCCCA.......',
+        '.........ADDDDDDDDCCCCCA........',
+        '..........ADDDDDDCCCCCA.........',
+        '...........ACCCCCCCCCA..........',
+        '............AACCCCCAA...........'] },
+    };
+    const TREE_FIX_IDS = { prop_tree_medium: 1, prop_tree_small: 1 };
+    const treeFixStat = { built: 0, draws: 0, ms: 0 };
+    const treeFixed = {};
+    function treeFixOf(id, a) {
+      const map = TREE_MAPS[id];
+      if (!TREE_FIX || !map || !a || a.frames !== 1 || a.fw !== map.w || a.fh !== map.h) return a;
+      if (treeFixed[id] && treeFixed[id].src === a) return treeFixed[id].out;
+      const t0 = performance.now(); let out = a;
+      try {
+        const W = a.fw, H = a.fh, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const g = cv.getContext('2d'); g.drawImage(a.img, 0, 0, W, H, 0, 0, W, H);
+        const im = g.getImageData(0, 0, W, H), d = im.data, R = map.rows.length;
+        let ol = null; const leaves = {};
+        for (let i = 0; i < W * R * 4; i += 4) {
+          if (d[i + 3] < 128) continue; const l = d[i] + d[i + 1] + d[i + 2];
+          if (!ol || l < ol[3]) ol = [d[i], d[i + 1], d[i + 2], l];
+          if (d[i + 1] > d[i] + 8 && d[i + 1] >= d[i + 2]) leaves[d[i] + ',' + d[i + 1] + ',' + d[i + 2]] = l;
+        }
+        if (ol) delete leaves[ol[0] + ',' + ol[1] + ',' + ol[2]]; // the outline is a dark teal, not a leaf colour
+        const lv = Object.keys(leaves).sort((p, q) => leaves[p] - leaves[q]).map((k) => k.split(',').map(Number));
+        if (ol && lv.length >= 3) {
+          const P = { A: ol, C: lv[0], D: lv[Math.floor(lv.length / 2)], B: lv[lv.length - 1] };
+          for (let y = 0; y < R; y++) for (let x = 0; x < W; x++) {
+            const ch = map.rows[y][x], i = (y * W + x) * 4, c = P[ch];
+            if (c) { d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; } else d[i + 3] = 0;
+          }
+          g.putImageData(im, 0, 0);
+          out = Object.assign({}, a, { img: cv, treeFix: true });
+          treeFixStat.built++;
+        }
+      } catch (e) { out = a; }
+      treeFixStat.ms += performance.now() - t0;
+      treeFixed[id] = { src: a, out };
+      return out;
+    }
+    function treeFixApi() { return { on: TREE_FIX, built: treeFixStat.built, draws: treeFixStat.draws, ms: treeFixStat.ms, art: (id) => { const a = wArt[id]; if (!a) return null; return { src: a.src, orig: a.img, fixed: treeFixOf(id, a).img, fw: a.fw, fh: a.fh }; } }; }
     let wArtLoading = false;
     function drawArt(g, a, f, x, y) { g.drawImage(a.img, f * a.fw, 0, a.fw, a.fh, Math.round(x - a.ax), Math.round(y - a.ay), a.fw, a.fh); }
     function frameOf(a, tt, reduced) { return reduced || a.frames < 2 ? 0 : Math.floor(tt * a.fps) % a.frames; } // time-sliced, reduce-motion = frame 0
@@ -2595,7 +2734,7 @@
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
-      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
+      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, fieldStats: () => Object.assign({ on: FIELD_DETAIL }, fieldStat), treeFix: () => treeFixApi(), bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
       slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
