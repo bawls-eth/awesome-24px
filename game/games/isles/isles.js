@@ -459,15 +459,36 @@
   // stand 8.5-11 tiles above or below the hero (|dx| <= 3): on screen on a phone (portrait) and on desktop, but outside the 8-tile
   // sighting radius, so arriving never fires a journal toast over the arrival / redirect toast; the first sighting happens when the
   // player walks up. Ordinary wild creatures with no group (gi -1), despawned by distance.
-  // OPT-IN for now (?firstfill=1): every calm small species on meadow / jungle is tameable, so the arrival creatures pull the
-  // first-ten-minutes bot off its first gather (isles-first-ten: jungle firstGather 113 s vs the 60 s gate). D1 (new player) decides.
+  // ON by default (?firstfill=0 turns it off). R4 D1: three tameable greeters pulled a new player (and the isles-first-ten bot) into a
+  // feeding stall before any gather (jungle firstGather 113 s vs the 60 s gate). Now ONE greeter, preferably one you cannot feed yet,
+  // standing beyond the nearest gather node, and only on an empty meadow / jungle start.
+  const ARRIVAL_N = 1; // D1 (b06-r2-05 + first-ten gate): ONE calm creature greets you. Three tameable ones in a row made a 2-minute tame-only stall before the first gather (jungle 113 s)
   const arrival = { n: 0, sp: '' };
   function arrivalFill(htx, hty) {
-    if (creatures.some((c) => Math.hypot(c.x - hero.x, c.y - hero.y) < 8 * TILE)) return;
-    const calm = O.nearestSpawnGroups(world, htx, hty, 80).find((gr) => { const s = specOf(gr.creature, IC.kindOf(gr.creature, -1)); return s.mood !== 'hostile' && s.size !== 'L' && s.size !== 'XL'; });
+    if (creatures.length > 0 || (PACK_ID !== 'meadow' && PACK_ID !== 'jungle')) return; // D1: only a really empty start on the open warm isles (b06-r2-05: meadow 0, jungle 0; tundra already starts with 2; reef / mars are not open-field starts)
+    // D1: prefer a calm small creature you cannot feed yet from what you carry (or one that is not tameable at all): it fills the first
+    // screen and shows in the journal, and its food is something you gather, so the first thing to do is still gather (no tame-first stall).
+    // Only when the island has no such creature does a feedable one come (one of them, ARRIVAL_N).
+    const calms = O.nearestSpawnGroups(world, htx, hty, 80).filter((gr) => { const s = specOf(gr.creature, IC.kindOf(gr.creature, -1)); return s.mood !== 'hostile' && s.size !== 'L' && s.size !== 'XL'; });
+    const feedNow = (gr) => { try { const d = CR.get(IC.kindOf(gr.creature, -1)) || CR.get(gr.creature); if (!d || !d.tame) return false; const f = foodOf(d); return !!(f && f.have); } catch (e) { return true; } };
+    const calm = calms.find((gr) => !feedNow(gr)) || calms[0];
     if (!calm) return;
     const r = RNG.create('isles|' + SEED + '|arrival');
-    for (let t = 0; t < 40 && arrival.n < 3 && creatures.length < CAP; t++) {
+    // D1: stand the greeter BEYOND the nearest gather node (2-6 tiles away), so walking over to say hello crosses the node: the first thing
+    // a new player does on the way is a gather, not a long feeding stall. No node that close: the old seeded spot above / below.
+    let lead = null, ld = 6.5;
+    try { const now = clock.now(); for (let i = 0; i < nodes.length; i++) { const n = nodes[i]; if (n.sparkle || n.until > now) continue; const d = Math.hypot(n.x - htx, n.y - hty); if (d >= 2 && d < ld) { ld = d; lead = n; } } } catch (e) { lead = null; }
+    if (lead) {
+      const ux = (lead.x - htx) / ld, uy = (lead.y - hty) / ld;
+      for (let k = 0; k < 9 && arrival.n < ARRIVAL_N && creatures.length < CAP; k++) {
+        const dist = 9.5 + (k % 3) * 0.5, side = [0, 1, -1][Math.floor(k / 3)];
+        const ax = Math.round(htx + ux * dist - uy * side), ay = Math.round(hty + uy * dist + ux * side), d = Math.hypot(ax - htx, ay - hty);
+        if (d < 8.5 || d > 11 || !walkableAt(ax, ay)) continue;
+        addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n, RNG.create('isles|' + SEED + '|arrival|ai|' + arrival.n));
+        arrival.n++; arrival.lead = lead.kind;
+      }
+    }
+    for (let t = 0; t < 40 && arrival.n < ARRIVAL_N && creatures.length < CAP; t++) {
       const ax = htx + r.int(-3, 3), ay = hty + (r.next() < 0.5 ? -1 : 1) * r.int(9, 10), d = Math.hypot(ax - htx, ay - hty);
       if (d < 8.5 || d > 11 || !walkableAt(ax, ay)) continue;
       addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n, RNG.create('isles|' + SEED + '|arrival|ai|' + arrival.n)); // own AI stream: the shared one (and every other creature's rolls) stays as before
@@ -476,8 +497,8 @@
     arrival.sp = calm.creature;
   }
   // R4-D2 (b06-r2-05 empty first screen): groups closer than 7 tiles never pop in, so the spawn view stayed empty (meadow 0, jungle 0).
-  // The FIRST tick after an island loads runs arrivalFill below when ?firstfill=1 (opt-in, see arrivalFill). Groups keep the 7-tile rule.
-  let firstFill = Q.get('firstfill') === '1';
+  // The FIRST tick after an island loads runs arrivalFill below (on by default, ?firstfill=0 off). Groups keep the 7-tile rule.
+  let firstFill = Q.get('firstfill') !== '0';
   function spawnTick() {
     const htx = tileOf(hero.x), hty = tileOf(hero.y), now = clock.now();
     const near = O.nearestSpawnGroups(world, htx, hty, SPAWN_R);

@@ -35,7 +35,7 @@ const VIEW = () => { const I = window.__isles, h = I.hero(), T = I.tile; const c
     check(isle + ': ?firstfill=1 (opt-in): wildlife on the first screen at arrival (b06-r2-05)', a.view >= 1, JSON.stringify(a));
     check(isle + ': no hostile or big creature placed within 7 tiles of the arrival', a.closeBad === 0, JSON.stringify(a));
     check(isle + ': arrival wildlife stands outside the 8-tile sighting radius (no journal toast over the arrival toast)', a.unsighted === a.view, JSON.stringify(a));
-    check(isle + ': default start unchanged (arrival is opt-in until D1 re-tunes the first-ten gate)', b.close === 0, JSON.stringify(b));
+    check(isle + ': default start (arrival on by default since D1 retuned it: one greeter beyond the nearest gather node): wildlife in view, none within 7 tiles', b.view >= 1 && b.close === 0, JSON.stringify(b)); // R4 D1: was the opt-in check
     errs.push(...A.errors, ...B.errors); await A.ctx.close(); await B.ctx.close();
   }
   { // how-to card: open on a first visit, closes when a hostile comes close
