@@ -56,24 +56,30 @@ class Mem { constructor(o) { this.m = Object.assign({}, o); } getItem(k) { retur
   // ---- page ----
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const shots = process.env.SHOTS;
-  for (const [name, opts] of [['desktop', { viewport: { width: 1280, height: 720 } }], ['phone', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }]]) {
+  const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
+  for (const [name, opts, scale] of [['desktop', { viewport: { width: 1280, height: 720 } }, 1], ['phone', PHONE, 1], ['phone-text150', PHONE, 1.5]]) {
+    const isPhone = opts === PHONE;
     const ctx = await browser.newContext(opts);
     const db = await blockDb(ctx);
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-    await page.addInitScript(([k]) => { try { localStorage.setItem(k, JSON.stringify({ v: 1, runs: 3, safe: 1, best: { score: 50, depth: 30, ores: 0, combo: 1 }, seedBest: { 4242: 9 } })); } catch (e) { /* blocked */ } }, [RUNS]);
+    await page.addInitScript(([k, sc]) => { try { if (sc !== 1) localStorage.setItem('pixeltown-access-v1', JSON.stringify({ v: 1, hudScale: sc })); localStorage.setItem(k, JSON.stringify({ v: 1, runs: 3, safe: 1, best: { score: 50, depth: 30, ores: 0, combo: 1 }, seedBest: { 4242: 9 } })); } catch (e) { /* blocked */ } }, [RUNS, scale]);
     await page.goto(URL('&seed=4242'));
     await page.waitForFunction(() => window.__dd && window.__dd.ready, null, { timeout: 60000 });
     const r0 = await page.evaluate(() => {
       const api = window.__dd.run; const d0 = api.depth0();
-      const a = { start: api.bankEl(), seed: api.state.seed };
+      const shown = (id) => { const e = document.getElementById(id); return !!e && e.offsetHeight > 0; };
+      const hud = document.getElementById('hud');
+      const a = { start: api.bankEl(), seed: api.state.seed, surfaceH: hud.offsetHeight, surfGoal: shown('hud-goal'), surfBank: shown('hud-bank') };
       api.tick(d0 + 3); api.mined('stone', 100); a.shallow = api.bankEl(); a.shallowPts = window.__dd.run.MMDDRun.score(api.state, false);
+      a.diveH = hud.offsetHeight; a.diveGoal = shown('hud-goal'); a.diveBank = shown('hud-bank');
+      a.fonts = ['hud-dive', 'hud-bank', 'hud-pick'].map((id) => parseFloat(getComputedStyle(document.getElementById(id)).fontSize));
       return a;
     });
     // the page's own loop keeps ticking at the surface: an unarmed dive stays as it is, so the HUD can be photographed here
     await page.waitForTimeout(300);
-    if (shots) await page.screenshot({ path: `${shots}/cyc0-deepdelve-bank-${name}.jpg`, type: 'jpeg', quality: 70 });
+    if (shots && scale === 1) await page.screenshot({ path: `${shots}/cyc0-deepdelve-bank-${name}.jpg`, type: 'jpeg', quality: 70 });
     const r = await page.evaluate((a) => {
       const api = window.__dd.run; const d0 = api.depth0();
       a.still = api.bankEl();
@@ -86,10 +92,16 @@ class Mem { constructor(o) { this.m = Object.assign({}, o); } getItem(k) { retur
     }, r0);
     console.log('  ' + name + ': ' + JSON.stringify({ start: r.start, shallow: r.shallow, armed: r.armed, past: r.past }));
     check(name + ': the dive carries the page seed (4242)', r.seed === '4242', String(r.seed));
-    check(name + ': before arming the HUD says how many blocks until the bonus, and shows the seed ghost', /^Dig 6 more to bank x1\.5 \(now 0 pts\) \| Seed ghost: 9 deep \(9 to go\)$/.test(r.start), r.start);
-    check(name + ': 3 deep + one block: 3 more to arm, the fall score so far, 6 to the ghost', r.shallowPts > 30 && r.shallow === 'Dig 3 more to bank x1.5 (now ' + r.shallowPts + ' pts) | Seed ghost: 9 deep (6 to go)', r.shallow + ' / ' + r.shallowPts);
-    check(name + ': armed (8 deep): the climb-out value (x1.5) and the fall value are shown and the line is highlighted', r.armedPts[0] === Math.floor(r.armedPts[1] * 1.5) && r.armed === 'Climb out now: ' + r.armedPts[0] + ' pts (a fall keeps ' + r.armedPts[1] + ') | Seed ghost: 9 deep (1 to go)' && r.armedFlag === '1', r.armed + ' ' + r.armedFlag + ' ' + r.armedPts);
-    check(name + ': 11 deep is past the ghost, with a "Past your seed ghost!" pop', /Past your seed ghost by 2$/.test(r.past) && r.past.indexOf('Climb out now: ' + r.expected + ' pts') === 0 && r.pops.some((t) => /seed ghost/.test(t)), r.past + ' ' + JSON.stringify(r.pops));
+    check(name + ': before arming the HUD says how many blocks until the bonus, and shows the seed ghost', r.start === 'Dig 6 more: x1.5 (0 pts) | Ghost 9 (9 to go)', r.start);
+    check(name + ': 3 deep + one block: 3 more to arm, the fall score so far, 6 to the ghost', r.shallowPts > 30 && r.shallow === 'Dig 3 more: x1.5 (' + r.shallowPts + ' pts) | Ghost 9 (6 to go)', r.shallow + ' / ' + r.shallowPts);
+    check(name + ': armed (8 deep): the climb-out value (x1.5) and the fall value are shown and the line is highlighted', r.armedPts[0] === Math.floor(r.armedPts[1] * 1.5) && r.armed === 'Climb out: ' + r.armedPts[0] + ' pts (fall ' + r.armedPts[1] + ') | Ghost 9 (1 to go)' && r.armedFlag === '1', r.armed + ' ' + r.armedFlag + ' ' + r.armedPts);
+    check(name + ': 11 deep is past the ghost, with a "Past your seed ghost!" pop', /\| Ghost \+2$/.test(r.past) && r.past.indexOf('Climb out: ' + r.expected + ' pts') === 0 && r.pops.some((t) => /seed ghost/.test(t)), r.past + ' ' + JSON.stringify(r.pops));
+    check(name + ': HUD text (dive, bank, pick) is >= 12 px and scales with Text size', r.fonts.every((f) => f >= 12) && (scale === 1 || r.fonts[1] >= 13 * scale - 0.5), JSON.stringify(r.fonts));
+    if (isPhone) {
+      check(name + ': phone at the surface shows the goal line and folds the bank line away', r.surfGoal === true && r.surfBank === false, JSON.stringify(r));
+      check(name + ': phone mid-dive folds the goal line away and shows the bank line', r.diveGoal === false && r.diveBank === true, JSON.stringify(r));
+      check(name + ': phone HUD is no taller mid-dive than at the surface (the bank line takes the goal line\'s place)', r.diveH <= r.surfaceH + 1, r.surfaceH + ' -> ' + r.diveH);
+    } else check(name + ': desktop keeps both the goal and the bank line mid-dive', r.diveGoal === true && r.diveBank === true);
     check(name + ': the bank line fits on screen', r.box.l >= 0 && r.box.r <= r.box.w + 1 && r.box.b > r.box.t, JSON.stringify(r.box));
     check(name + ': the unarmed line survives the live game loop unchanged', r.still === r.shallow, r.still);
     const fin = await page.evaluate((k) => { window.__dd.run.end(true, 'test'); return { tip: document.getElementById('run-tip').textContent, saved: JSON.parse(localStorage.getItem(k)).seedBest }; }, RUNS);
@@ -98,7 +110,7 @@ class Mem { constructor(o) { this.m = Object.assign({}, o); } getItem(k) { retur
     await off.goto(URL('&seed=4242&ghost=0'));
     await off.waitForFunction(() => window.__dd && window.__dd.ready, null, { timeout: 60000 });
     const offTxt = await off.evaluate(() => window.__dd.run.bankEl());
-    check(name + ': ?ghost=0 keeps the bank line and drops the ghost part', /^Dig 6 more to bank x1\.5/.test(offTxt) && !/ghost/i.test(offTxt), offTxt);
+    check(name + ': ?ghost=0 keeps the bank line and drops the ghost part', /^Dig 6 more: x1\.5/.test(offTxt) && !/ghost/i.test(offTxt), offTxt);
     check(name + ': no page errors', errors.length === 0, errors.join(' | '));
     check(name + ': no DB traffic', db.attempts() === 0, String(db.attempts()));
     await ctx.close();

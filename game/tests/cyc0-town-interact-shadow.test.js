@@ -4,16 +4,15 @@
 // door; flowers answer E before doors in interact(), so E at that door picked a flower (door won over 40% of its range).
 // Method: every action handler is replaced by a recorder, dynamic shadows (weeds, fish, villagers, bugs) are moved off the
 // map, the merchant and concert are forced on, and interact() is called on a 4 px grid inside each target's radius.
-// OFFLINE ONLY: blockDb + stubbed Firebase SDK; nothing is written.
+// OFFLINE ONLY: offlineStub(ctx) (blockDb + stubbed Firebase SDK) and db.attempts() === 0 asserted; nothing is written.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc0-town-interact-shadow.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by cyc0 shadow test */' }));
+  const db = await offlineStub(ctx); // database blocked and the Firebase SDK answered empty
   await ctx.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     route.fulfill({ response: resp, body: (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);') });

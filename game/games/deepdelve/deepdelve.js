@@ -173,7 +173,7 @@
   function renderDive() {
     const el = $('hud-dive'); if (!el) return;
     if (!run || !runRec) { el.textContent = ''; return; }
-    el.textContent = modName(run.mod) + ': ' + run.depth + ' deep | Best ' + (runRec.best.depth || '-') + (run.armed ? ' | Climb out for x' + RUNS.SAFE_BONUS : '');
+    el.textContent = modName(run.mod) + ': ' + run.depth + ' deep | Best ' + (runRec.best.depth || '-'); // cyc0-S: the climb-out value lives on the bank line below
     renderBank();
   }
   // cyc0-S (NEXT-SLICES-5 DD5): the bank line says what the dive is worth if you climb out now (x1.5) versus a fall, and the
@@ -184,14 +184,15 @@
   function bankText() {
     const b = run && runRec && RUNS.bank ? RUNS.bank(run, runRec) : null;
     if (!b) return '';
-    const head = b.armed ? 'Climb out now: ' + b.surface + ' pts (a fall keeps ' + b.fall + ')' : 'Dig ' + b.toArm + ' more to bank x' + RUNS.SAFE_BONUS + ' (now ' + b.fall + ' pts)';
-    const ghost = !GHOST_ON || !b.ghost ? '' : b.ahead > 0 ? ' | Past your seed ghost by ' + b.ahead : ' | Seed ghost: ' + b.ghost + ' deep (' + (-b.ahead) + ' to go)';
+    const head = b.armed ? 'Climb out: ' + b.surface + ' pts (fall ' + b.fall + ')' : 'Dig ' + b.toArm + ' more: x' + RUNS.SAFE_BONUS + ' (' + b.fall + ' pts)';
+    const ghost = !GHOST_ON || !b.ghost ? '' : b.ahead > 0 ? ' | Ghost +' + b.ahead : ' | Ghost ' + b.ghost + ' (' + (-b.ahead) + ' to go)';
     return head + ghost;
   }
   function renderBank() {
     const el = $('hud-bank'); if (!el) return;
     const t = bankText(); if (t === bankTxt) return;
     bankTxt = t; el.textContent = t; el.dataset.armed = run && run.armed ? '1' : '0';
+    const hud = $('hud'); if (hud) hud.dataset.diving = run && run.depth > 0 ? '1' : '0'; // phone: the goal line folds away mid-dive (CSS)
   }
   const modName = (id) => { const m = RUNS && RUNS.MODS.filter((x) => x.id === id)[0]; return m ? m.name : 'Dive'; };
   function startRun() {
