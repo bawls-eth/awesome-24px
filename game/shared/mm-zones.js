@@ -53,6 +53,9 @@
     // bag tier weights [brown,pink,purple,cyan,white,gold] by zone; normal enemies / bosses
     BAG_WEIGHTS: [[0.90, 0.09, 0.01, 0, 0, 0], [0.70, 0.22, 0.07, 0.01, 0, 0], [0.50, 0.28, 0.15, 0.06, 0.01, 0], [0.30, 0.28, 0.24, 0.12, 0.05, 0.01]],
     BOSS_BAG_WEIGHTS: [[0.30, 0.40, 0.20, 0.10, 0, 0], [0.10, 0.30, 0.35, 0.20, 0.05, 0], [0, 0.10, 0.30, 0.35, 0.20, 0.05], [0, 0, 0.10, 0.30, 0.40, 0.20]],
+    // ID-13 (cycle 2 D): the bag tier floor for the FIRST boss kill in each zone (pink, pink, purple, cyan). Applied only when rollDrop gets info.firstKill === true
+    // (nothing passes it yet: S wires it with a per-zone first-kill flag in the Realm save). It raises a low roll, never lowers one: it lifts 30% / 10% / 10% / 10% of first boss bags.
+    FIRST_KILL_BAG_FLOOR: [1, 1, 2, 3],
     // rarity weights [common,uncommon,rare,epic] by zone. Epic only appears in BOSS_RARITY_WEIGHTS[3] (godlands bosses).
     RARITY_WEIGHTS: [[0.85, 0.14, 0.01, 0], [0.60, 0.32, 0.08, 0], [0.35, 0.40, 0.25, 0], [0.15, 0.35, 0.50, 0]],
     BOSS_RARITY_WEIGHTS: [[0.60, 0.33, 0.07, 0], [0.35, 0.45, 0.20, 0], [0.15, 0.40, 0.45, 0], [0.05, 0.25, 0.58, 0.12]],
@@ -261,7 +264,8 @@
     info = info || {}; ctx = ctx || {};
     const z = clampZone(info.zone), boss = !!info.boss;
     const rng = MMRng.create('drop:' + rngSeed);
-    const tierIdx = weighted(rng, boss ? T.BOSS_BAG_WEIGHTS[z] : T.BAG_WEIGHTS[z]);
+    let tierIdx = weighted(rng, boss ? T.BOSS_BAG_WEIGHTS[z] : T.BAG_WEIGHTS[z]); // one rng draw, as ever: the floor below never changes the stream
+    if (boss && info.firstKill === true) tierIdx = Math.max(tierIdx, T.FIRST_KILL_BAG_FLOOR[z]); // ID-13: a first boss kill in a zone is never under the floor
     const rarityBias = Math.min(0.6, tierIdx * T.RARITY_BIAS_PER_BAG_TIER + Math.max(0, Math.min(0.3, +ctx.luck || 0)));
     const rw = boss ? T.BOSS_RARITY_WEIGHTS[z] : T.RARITY_WEIGHTS[z];
     const epicOk = boss && z === 3;

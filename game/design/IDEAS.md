@@ -2,24 +2,25 @@
 
 Flow: D proposes (`proposed`) -> L or U marks `approved` / `rejected` with a reason -> S implements -> D/U verify in play.
 Hard limits for every idea: no pay-to-win, no paid randomness or loot boxes, no fake urgency (no countdown outside a round, no expiring rewards, no streaks across days), additive saves only, original art only, Firebase never written by tests.
+Cycle 2: exact specs for the needs-change ideas (and ID-26 to ID-33) are in `beta/cycle2-specs.md`; `approved-spec` there means S may start.
 Effort S under half a day, M about a day, L several days. Evidence tags: [M] measured in cycle 0 play (see `beta/cycle0-design.md`), [R] from generic design research (sources at the end).
 
 | id | title | effort | risk | status |
 |---|---|---|---|---|
-| ID-01 | Lantern-light Shore ramp | S | low | needs-change (L, cycle 1): fade XP by hero level in the world kill path, not in `ZONE_MUL.xp` (zone data shared with `world-ttk`); Lv 1-5 untouched |
+| ID-01 | Lantern-light Shore ramp | S | low | approved-spec (D, cycle 2): see Cycle 2 specs; level fade in the kill path, Lv 1-4 untouched |
 | ID-02 | Zone-border danger meter | S | low | approved (L confirms, cycle 1): pure label function + one HUD line; no save; write the label on change only |
 | ID-03 | Quest rewards that scale with zone | S | low | approved (L confirms, cycle 1): data-only in `mm-quests.js`; keep the bag tiers, test a reward cap |
 | ID-04 | Hero notebook (knowledge meta-progression) | M | low | approved (L, cycle 1): pure module + additive `notebook` key; cap entries, write on first meet only (not per kill) |
-| ID-05 | Bullet-readability presets | M | medium | needs-change (L, cycle 1): ship High contrast only first, style chosen once per frame (not per bullet), `realm-bullet-bench` before/after |
-| ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | needs-change (L, cycle 1): damage and aim sliders only; no game-speed slider (scaling dt touches every timer, telegraph and seeded test) |
-| ID-07 | Tame bond hearts (Isles) | M | low | needs-change (L, cycle 1): `mm-tames.js` already saves `bond` and `aff`; show and extend those, add no second field |
-| ID-08 | Dungeon first-clear milestones | S | low | needs-change (L, cycle 1): store first clears in the Realm save (the dungeon is its writer), Hub only reads; no write to the Hub medals key |
-| ID-09 | Cozy daily chore card (no streak) | S | low | needs-change (L, cycle 1): feasible, but the Town still pays login and sell streaks; owner decides their fate first (with L-08), else two daily systems |
-| ID-10 | Shared result card across arcade games | M | medium | needs-change (L, cycle 1): `mm-minikit.js` already has `result` + `panel`; this is a migration, one game per commit with its page test |
-| ID-11 | Realm retreat flag (safe walk-back) | M | medium | needs-change (L, cycle 1): no crafted item; reuse the dungeon-trip path (`save.returnTo` + `safeReturn` shield and hop) for the Nexus trip |
+| ID-05 | Bullet-readability presets | M | medium | approved-spec (D, cycle 2): High contrast only, per-frame style, bench before/after |
+| ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | approved-spec (D, cycle 2): damage taken + aim help only, no speed slider |
+| ID-07 | Tame bond hearts (Isles) | M | low | approved-spec (D, cycle 2): hearts are a view of `bond` (no new field) |
+| ID-08 | Dungeon first-clear milestones | S | low | approved-spec (D, cycle 2): first clears live in the Realm/dungeon save, Hub reads only |
+| ID-09 | Cozy daily chore card (no streak) | S | low | blocked-owner (D, cycle 2): spec ready as an additive card; needs the owner decision on login/sell streaks |
+| ID-10 | Shared result card across arcade games | M | medium | approved-spec (D, cycle 2): migration plan, one game per commit, Pop first |
+| ID-11 | Realm retreat flag (safe walk-back) | M | medium | approved-spec (D, cycle 2): Nexus trip reuses `returnTo` + `safeReturn` |
 | ID-12 | Town-to-Realm errand chain | M | low | approved (L, cycle 1): other saves read-only through their clean functions; chain state additive in the Town save; no network |
-| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | approved (L, cycle 1): additive per-zone first-kill flag in the Realm save + a floor on the bag tier; node test on the roll |
-| ID-14 | Hit-pause and telegraph timing audit | S | low | needs-change (L, cycle 1): telegraph audit approved; hit pause must freeze draw only (never the sim clock) and be off under reduce motion |
+| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | approved-spec (D, cycle 2): pure floor built and tested (`FIRST_KILL_BAG_FLOOR`); S wires the flag |
+| ID-14 | Hit-pause and telegraph timing audit | S | low | approved-spec (D, cycle 2): telegraph audit + draw-only hit pause, off under reduce motion |
 
 ## ID-01 Lantern-light Shore ramp
 - Player-facing: the Shore's first 10 minutes keep their gentle start, but past Lv 5 the Shore stops giving full XP (a soft fade to 60 percent), and a one-line toast says "The Midlands has better prey". A hero who lingers is nudged inland, never blocked.

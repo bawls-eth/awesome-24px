@@ -2044,6 +2044,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "cyc2-first-kill-floor.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "cyc1-isles-wall-slide.test.js": {
     "class": "browser",
     "tier": "full"
