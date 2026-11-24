@@ -1800,5 +1800,13 @@
   "beta-r4-d4-mobile.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-d4-a11y.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-d4-arcade.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

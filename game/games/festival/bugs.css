@@ -143,3 +143,9 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
 #overlay button.card { overflow-wrap:anywhere; }
 /* Bug bash a11y: at 320 px the joystick + sneak + swing row was 333 px wide (horizontal scroll). */
 @media (max-width: 340px) { #joy { width:96px; height:96px; } #knob { left:28px; top:28px; } #btn-swing { width:84px; height:84px; } #btn-sneak { width:72px; } #touch { gap:6px; } }
+
+/* R4 D4 (b10-r2-10): summary hierarchy. The score is the biggest line on the card; the run facts sit in one panel. */
+#overlay .sum-score { font-size:calc(28px * var(--ui-scale,1)); line-height:1.15; font-weight:bold; color:var(--ink); margin:4px 0; letter-spacing:0.5px; }
+#overlay .sum-score.win { color:var(--accent); }
+#overlay .sum-facts { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:4px 10px; background:var(--panel); padding:6px 10px; margin:6px 0; border-radius:6px; }
+#overlay .sum-facts p { margin:0; font-size:calc(14px * var(--ui-scale,1)); color:var(--ink); }

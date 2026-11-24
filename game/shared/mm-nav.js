@@ -334,7 +334,8 @@
 
     rootEl.appendChild(backdrop);
     rootEl.appendChild(sheet);
-    document.body.appendChild(rootEl);
+    // R4 D4 (b15-r2-17): the Menu button is drawn top-left, so it comes first in the Tab order too (was last in the DOM).
+    document.body.insertBefore(rootEl, document.body.firstChild);
     return { root: rootEl, btn, backdrop, sheet, top, set, isOpen: false };
   }
 

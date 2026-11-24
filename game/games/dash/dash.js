@@ -152,9 +152,19 @@
   const run = { state: 'ready', seed: '', f: 0, wx: 0, dist: 0, flies: 0, combo: 0, bestCombo: 0, perfects: 0, bonus: 0, score: 0, newMedals: [], ins: [], open: -1, near: 0 };
   let C = null, P = body(), G = null, ghostEv = null, ge = 0, ghostC = null, paused = false;
   let parts = [], floats = [], shake = 0, flash = 0, acc = 0, ghostTag = false;
+  // R4 D4 (b09-13): floats rise from the same spot (the runner stays at PX), so back-to-back Perfects piled into unreadable
+  // text. A new float retires any older one it would overlap (floats born in the same step are kept: they are spaced on purpose).
+  let floatGen = 0;
+  function addFloat(f) {
+    floatGen = run.f;
+    floats = floats.filter((o) => o.gen === floatGen || Math.abs(o.y - f.y) >= 16 || Math.abs(o.x - f.x) >= 90);
+    f.gen = floatGen; floats.push(f);
+  }
 
   function newSeed() { return (Date.now().toString(36) + (save.runs % 1296).toString(36)).slice(-8); }
   function start(seed) {
+    // R4 D4: the result card may have scrolled the page down; a new run brings the board back into view
+    try { const vr = $('view').getBoundingClientRect(); if (vr.top < 0 || vr.bottom > window.innerHeight) $('view').scrollIntoView({ block: 'nearest', behavior: 'auto' }); } catch (e) { /* ignore */ }
     run.seed = (typeof seed === 'string' && SEED_RE.test(seed)) ? seed : newSeed();
     const built = course(run.seed);
     C = { obs: built.obs, flies: built.flies, lo: 0, next: 0 };
@@ -233,17 +243,17 @@
       if (o.t !== 'gap' && o.clr > 0 && o.clr < NEAR && !P.dead) {
         run.near++;
         if (!lowGfx && !reduced) burst(PX, P.y - 4, '#bff4ff', 6, true); else burst(PX, P.y - 4, '#bff4ff', 2, true);
-        floats.push({ x: PX + 4, y: P.y - 44, text: 'close!', color: '#bff4ff', t: 0.6 });
+        addFloat({ x: PX + 4, y: P.y - 44, text: 'close!', color: '#bff4ff', t: 0.6 });
       }
       const lead = (o.x - (P.toX + 8)) / sp;
       if (P.toX > -1e8 && lead >= -0.02 && lead <= PERFECT_S) {
         run.combo++; run.perfects++; run.bonus += 5 * run.combo;
         if (run.combo > run.bestCombo) run.bestCombo = run.combo;
-        floats.push({ x: PX, y: P.y - 30, text: 'Perfect' + (run.combo > 1 ? ' x' + run.combo : ''), color: '#ffd166', t: 0.8 });
+        addFloat({ x: PX, y: P.y - 30, text: 'Perfect' + (run.combo > 1 ? ' x' + run.combo : ''), color: '#ffd166', t: 0.8 });
         play('perfect'); flash = 0.12;
         if (run.combo >= 10) award('perfect10');
       } else {
-        if (run.combo >= 3) floats.push({ x: PX, y: P.y - 30, text: 'combo ended', color: '#a7b4d4', t: 0.7 });
+        if (run.combo >= 3) addFloat({ x: PX, y: P.y - 30, text: 'combo ended', color: '#a7b4d4', t: 0.7 });
         run.combo = 0;
       }
     }
@@ -252,7 +262,7 @@
     // fireflies
     for (let i = 0; i < C.flies.length; i++) {
       const fl = C.flies[i]; if (fl.x > run.wx + 20) break; if (fl.got || fl.x < run.wx - 20) continue;
-      if (Math.abs(fl.x - run.wx) < 16 && Math.abs(fl.y - (P.y - 14)) < 22) { fl.got = true; run.flies++; burst(PX, fl.y, '#fff27a', 8, false); floats.push({ x: PX + 10, y: fl.y - 10, text: '+10', color: '#fff27a', t: 0.6 }); play('coin'); }
+      if (Math.abs(fl.x - run.wx) < 16 && Math.abs(fl.y - (P.y - 14)) < 22) { fl.got = true; run.flies++; burst(PX, fl.y, '#fff27a', 8, false); addFloat({ x: PX + 10, y: fl.y - 10, text: '+10', color: '#fff27a', t: 0.6 }); play('coin'); }
     }
     run.wx += sp * STEP; run.f++;
     run.dist = Math.floor(run.wx / 10);
@@ -293,6 +303,9 @@
     $('result').hidden = false;
     msg('');
     if (resCard) resCard.focus(); else $('again').focus({ preventScroll: true });
+    // R4 D4 (b09-08): on a phone the result card sits under the board (top at y~600 on 390x844), so stats, best, medals and
+    // the share code were below the fold. Bring the whole card into view (instant scroll, no animation).
+    try { const rr = $('result').getBoundingClientRect(); if (rr.bottom > window.innerHeight || rr.top < 0) $('result').scrollIntoView({ block: rr.height > window.innerHeight ? 'start' : 'end', behavior: 'auto' }); } catch (e) { /* old browsers: the card is still there below */ }
     hud();
   }
   // MK1: the shared result card (MMMiniKit); ids r-dist / r-best / r-why / r-line / r-new / r-medals / again / fresh kept.
@@ -514,7 +527,17 @@
   $('how').hidden = save.hint;
   $('play').textContent = save.hint ? 'Run' : 'Got it, run';
   medalList($('i-medals'));
-  try { $('play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  // R4 D4 (b15-r2-17): Play is no longer auto-focused (that made Tab go Play -> Menu -> off the page before Sound). Focus
+  // starts at the top, so Tab runs Menu, Sound, board, Play in screen order; Enter / Space with nothing focused still
+  // presses Play while the start card is up, so keyboard players start as fast as before.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae !== document.documentElement) return;
+    const pb = $('play');
+    if (!pb || pb.offsetParent === null || pb.disabled || (window.MMNav && MMNav.isOpen && MMNav.isOpen())) return;
+    ev.preventDefault(); pb.click();
+  });
   C = { obs: course('preview').obs, flies: [], lo: 0, next: 0 };
   hud();
   requestAnimationFrame(frame);
@@ -535,7 +558,7 @@
       }
       return run.state;
     },
-    counts: () => ({ parts: parts.length, floats: floats.length, shake, ghostTag, floatTexts: floats.map((x) => x.text) }),
+    counts: () => ({ parts: parts.length, floats: floats.length, shake, ghostTag, floatTexts: floats.map((x) => x.text), floatBoxes: floats.map((x) => ({ x: x.x, y: x.y, text: x.text })) }),
     tuning: { COYOTE, BUFFER, PV, NEAR }, speedAt, sim: { body, stepBody, press, release }, draw() { draw(); },
   };
 }());
