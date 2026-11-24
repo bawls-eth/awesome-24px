@@ -676,7 +676,7 @@
     "class": "node",
     "tier": "smoke"
   },
-  "shared-mm-pets.test.js": {
+  "shared-removed-modules.test.js": {
     "class": "node",
     "tier": "smoke"
   },

@@ -26,9 +26,10 @@ PARTIAL = some of it plays, the rest is modules only or missing, TODO = nothing 
 - Angler: `MMAngler`, `MMStore`. Bug Safari: `MMBugs`, `MMSfx`. Deepdelve: `MMChunks`, `MMLight`, `MMRecipes` (24 recipes, 1 used).
 
 ## Standalone modules only (pure code + Node tests, no page uses them)
-`MMLabyrinth`, `MMPets`, `MMEvents`, `MMBounties`, `MMIsland`, `MMWilds`, `MMDaily`, `MMGhost`, `MMBoard`,
+`MMLabyrinth`, `MMBounties`, `MMIsland`, `MMDaily`, `MMGhost`,
 `MMAccess`, `MMTutorial`, `MMJam`, `MMStalk`, `MMParty`, `RulesCheck`
 (and `firebase-rules.draft.json`, which is NOT applied).
+Removed in cycle 2 (L-13, decision in `beta/cycle1-design.md`): `MMPets`, `MMEvents`, `MMWilds`, `MMBoard` (no page ever loaded them; no save key was involved).
 
 ## Top 10 next steps
 1. Make Start run use the active Lantern hero (class, stats, items) and Fall it on death.
@@ -36,9 +37,9 @@ PARTIAL = some of it plays, the rest is modules only or missing, TODO = nothing 
 3. Owner applies and tests the Firebase rules draft in the Playground, loosening any rejected field.
 4. Let games report results to the hub profile (medals, secret exits, keys) so the map unlocks for real.
 5. Build the Campfire Jam page on `MMJam` and the Stalk Market page on `MMStalk` (the nodes already exist).
-6. Wire `MMLabyrinth` + Hedge Tide into a second dungeon and start the Wilds (`MMIsland`, `MMWilds`, `MMEvents`).
+6. Wire `MMLabyrinth` + Hedge Tide into a second dungeon and start the Wilds (`MMIsland`; the `MMWilds` / `MMEvents` modules were removed in cycle 2).
 7. Deepdelve: furnace and the full 24 recipes, mobs, day/night, lava, goals, carry over the town cave.
-8. Daily Maze, ghost and board pages (`MMDaily`, `MMGhost`, `MMBoard`), tutorial, colour-blind palettes (`MMAccess`).
+8. Daily Maze and ghost pages (`MMDaily`, `MMGhost`; `MMBoard` was removed in cycle 2), tutorial, colour-blind palettes (`MMAccess`).
 9. Mad Maze co-op: lite party code and dungeon sync on `MMParty`; port duel / 2v2 to the standalone page.
 10. Angler: link the town fish journal and aquarium, add a tournament and bait from Bug Safari.
 

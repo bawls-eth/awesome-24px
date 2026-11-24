@@ -1,4 +1,4 @@
-const D = require('../shared/mm-daily.js'), G = require('../shared/mm-ghost.js'), B = require('../shared/mm-board.js'),
+const D = require('../shared/mm-daily.js'), G = require('../shared/mm-ghost.js'),
   A = require('../shared/mm-access.js'), T = require('../shared/mm-tutorial.js');
 let fails = 0, n = 0;
 function check(name, cond) { n++; if (!cond) { fails++; console.log('FAIL ' + name); } else console.log('ok   ' + name); }
@@ -25,18 +25,8 @@ check('decode garbage', G.decode('zzz') === null && G.decode(null) === null && G
 const top = G.topN([{ timeMs: 90 }, { timeMs: 'x' }, null, { timeMs: 50 }, { timeMs: 70 }, { timeMs: 60 }], 3);
 check('topN best 3', top.map((g) => g.timeMs).join() === '50,60,70' && G.topN('bad', 3).length === 0);
 
-// board
-check('reject < 60000', !B.validateEntry({ name: 'Ann', timeMs: 59999 }).ok && B.validateEntry({ name: 'Ann', timeMs: 60000 }).ok);
-check('name markup stripped', B.validateEntry({ name: '<b>Ann</b><script>', timeMs: 70000 }).entry.name.indexOf('<') < 0);
-check('name max length', B.validateEntry({ name: 'x'.repeat(60), timeMs: 70000 }).entry.name.length <= B.MAX_NAME);
-check('profanity filtered', B.validateEntry({ name: 'shit', timeMs: 70000 }).entry.name === 'Mazer');
-check('bad inputs rejected', !B.validateEntry(null).ok && !B.validateEntry({ name: '  ', timeMs: 70000 }).ok && !B.validateEntry({ name: 'A', timeMs: '9' }).ok);
-let board = []; for (let i = 0; i < 80; i++) board = B.addEntry(board, { name: 'P' + i, timeMs: 61000 + i }).board;
-check('board capped and sorted', board.length === B.MAX_ENTRIES && board[0].timeMs <= board[1].timeMs);
-let calls = 0; const fakeFetch = () => { calls++; return Promise.resolve({}); };
-B.createClient({ fetch: fakeFetch, url: 'x', online: false }).submit({ name: 'Ann', timeMs: 70000 }).then((res) => {
-  check('offline: zero fetch calls', calls === 0 && res.offline === true);
-
+// board: the mm-board module was removed in cycle 2 (L-13, D's decision: no leaderboard write path is planned); its 7 checks went with it.
+{
   // access
   check('palette presets', ['normal', 'deuteranopia', 'protanopia', 'tritanopia'].every((k) => A.PALETTES[k]));
   check('min contrast all palettes', A.names().every((k) => A.passesContrast(k)));
@@ -56,4 +46,4 @@ B.createClient({ fetch: fakeFetch, url: 'x', online: false }).submit({ name: 'An
   check('skip works and rewards once', sk.state.done && sk.state.skipped && sk.reward.item === 'life-potion');
   check('wrong event ignored', T.advance(T.start({}), 'shot').state.name === 'move');
   done();
-});
+}
