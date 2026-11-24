@@ -123,8 +123,8 @@ h2,h3,.sheetbody h3,legend{font-weight:900;letter-spacing:.08em;text-transform:u
 .btn.primary{background:#ffa300;color:#0b0d1a;border:0}
 .btn:hover{filter:brightness(1.1)}
 .btn:active{transform:translateY(4px);box-shadow:0 -2px 0 0 #0b0d1a,0 2px 0 0 #0b0d1a,-2px 0 0 0 #0b0d1a,2px 0 0 0 #0b0d1a,inset 0 4px 0 0 rgba(0,0,0,.28)}
-.btn[disabled],.btn[aria-disabled=true]{background:#5f574f;color:#c2c3c7;opacity:1}
-.btn.testfall{background:#1d2b53;color:#ff004d;border:0}
+.btn[disabled],.btn[aria-disabled=true]{background:#5f574f;color:#fff1e8;opacity:1} /* R4 D4: was #c2c3c7 (4.0:1), now 6.4:1 */
+.btn.testfall{background:#1d2b53;color:#ff77a8;border:0} /* R4 D4: was #ff004d (3.5:1), now 5.4:1 */
 .btn.keep{background:#00e436}
 input[type=text],select{border:0;border-radius:0;background:#0b0d1a;font-family:var(--px-font);box-shadow:0 0 0 2px #5f574f}
 fieldset{border:0;border-radius:0;box-shadow:0 0 0 2px #0b0d1a,0 0 0 4px #5f574f;margin:16px 4px}

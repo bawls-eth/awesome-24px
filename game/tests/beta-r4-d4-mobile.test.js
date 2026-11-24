@@ -1,10 +1,11 @@
-// R4 D4 mobile scaling (no Town join, no database: blockDb + the Firebase SDK stubbed).
+// R4 D4 mobile scaling (Town only through the offline stub; database blocked: blockDb + the Firebase SDK stubbed, 0 DB requests).
 //  b15-06      Town join card at 320x568 with ?from=hub: the "Home" pill (>= 44 px) does not cover the title; the hero grid stays inside the card
 //  b15-r2-18   Hub at 195x422 (200% zoom): the moon is not drawn over the PIXELTOWN logo
+//  b15-05      Town at 844x390 (landscape phone): quick chat and Hold to talk share the bottom strip, overlapping nothing
 //  b10-r2 note Angler at 260x563 (150% zoom): the spot title is not truncated, the Bells chip is fully on screen, Journal keeps its name
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-d4-mobile.test.js
 const { chromium } = require('playwright');
-const { check, done, offlineStub } = require('./helpers');
+const { check, done, offlineStub, exposeGame, joinOffline } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ROOT = BASE.replace(/game\/index\.html.*$/, '');
 const SHOTS = process.env.SHOTS || null;
@@ -76,6 +77,28 @@ const hit = (a, b) => !!(a && b && a.x < b.r - 0.5 && b.x < a.r - 0.5 && a.y < b
     check('260x563 Angler: the Bells chip is fully on screen', bells && bells.x >= 0 && bells.r <= 260, JSON.stringify(bells));
     check('260x563 Angler: Journal keeps its accessible name and a 44 px target, inside the screen', /Journal\s*\d+\/\d+/.test(j.name) && j.h >= 44 && j.r <= 260, JSON.stringify(j));
     if (SHOTS) await page.screenshot({ path: SHOTS + '/r4-d4-angler260.jpg', type: 'jpeg', quality: 60 });
+    await ctx.close();
+  }
+
+  // b15-05 Town on a landscape phone (844x390): quick chat + Hold to talk share the bottom strip and overlap no other control
+  {
+    const { ctx, db, page } = await mk({ width: 844, height: 390 });
+    await exposeGame(page);
+    await page.goto(BASE);
+    await joinOffline(page, 'ADMINr4land');
+    await page.waitForTimeout(800);
+    const r = await page.evaluate(() => {
+      const box = (id) => { const e = document.getElementById(id); if (!e || e.classList.contains('hidden')) return null; const cs = getComputedStyle(e); const b = e.getBoundingClientRect(); return cs.display === 'none' || cs.visibility === 'hidden' || b.width === 0 ? null : { id, x: b.left, y: b.top, r: b.right, b: b.bottom }; };
+      const qc = box('quick-chat-row'), wt = box('walkie-talk-btn');
+      const others = ['joystick', 'action-buttons', 'where-to-btn', 'gate-pointer', 'player-list-panel', 'inventory-panel', 'mobile-chat-btn'].map(box).filter(Boolean);
+      return { qc, wt, others, ih: innerHeight };
+    });
+    const over = [];
+    [r.qc, r.wt].filter(Boolean).forEach((a) => r.others.concat([r.qc, r.wt].filter((x) => x && x !== a)).forEach((b) => { if (hit(a, b)) over.push([a.id, b.id]); }));
+    check('844x390 Town: quick chat and Hold to talk sit in the bottom strip (bottom 60 px)', r.qc && r.wt && r.qc.y >= r.ih - 60 && r.wt.y >= r.ih - 60, JSON.stringify(r));
+    check('844x390 Town: quick chat / Hold to talk overlap no other control or each other', over.length === 0, JSON.stringify({ over, r }));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/r4-d4-town-landscape.jpg', type: 'jpeg', quality: 60 });
+    check('landscape Town: 0 database requests', db.attempts() === 0, JSON.stringify(db.http));
     await ctx.close();
   }
 

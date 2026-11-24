@@ -2992,3 +2992,17 @@ body.has-back-pill #join-overlay > .join-card { max-height: calc(100vh - 64px - 
   #avatar-grid, #outfit-avatar-grid { gap: 4px; }
   .avatar-choice { width: 100%; min-width: 44px; height: auto; aspect-ratio: 1 / 1; }
 }
+
+/* R4 D4 (b15-05): landscape phones (short, touch). The quick-chat row floated over the middle of the world at y~108 and
+   "Hold to talk" sat on the Shop / Able Sisters labels. Both now share the bottom strip between the joystick (left) and the
+   action buttons (right): quick chat on the left of the strip, Hold to talk on its right. */
+@media (max-height: 500px) and (pointer: coarse) {
+  body.touch-device #chat-panel {
+    top: auto;
+    left: calc(150px + env(safe-area-inset-left, 0px));
+    right: calc(270px + env(safe-area-inset-right, 0px));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
+  }
+  body.touch-device #quick-chat-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  body.touch-device #walkie-panel { left: auto; right: calc(146px + env(safe-area-inset-right, 0px)); transform: none; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
