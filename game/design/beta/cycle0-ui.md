@@ -12,13 +12,12 @@ Branch `cyc0-ui` (from `r4-integ2`). Checked in Playwright (Firebase blocked, To
 
 Also: stale allow-list entries are now caught on PAGES-only runs (was full runs only). Targeted tests run green: phone-panel, beta-r4-d4-mobile, beta-r4-d4-town, beta-w05r3-hud-narrow, a11y sweep for town / realm-world / realm-dungeon (all 7 viewports + prefs).
 
-## BLOCKER for merging the test commit (d8b8648)
-The real-zoom text-200 pass also finds 8 genuine horizontal-scroll bugs at 195 px that `html{zoom:2}` never saw:
-dash, echo, festival-bugs, jam, pop, stack (`#btn-mute` / `#top > h1` too wide), lantern (`ul.stats` in the hero picker), stalk (`#price-card`).
-With the allow-list at 0, `a11y-viewport-sweep` is RED on those 8 pages (run: VPS=390x844 PAGES=<the 13 other pages>). The allow-list may not
-grow, so either fix the 8 (shared `mm-8bit-arcade.css` @media (max-width: 300px): wrap `#top`, shrink `#btn-mute`) before merging d8b8648, or
-merge only the runtime commits (0443a34, d0eff46 + its revert) and keep the old html{zoom:2} pass (then the two town text-200 entries change
-to "covered by #inventory-panel" under that emulation and need a separate look).
+## Real-zoom sweep: 8 pages fixed (was the merge blocker for d8b8648)
+The real-zoom text-200 pass found 8 genuine horizontal-scroll bugs at 195 px. All fixed under `@media (max-width: 300px)`: shared
+`mm-8bit-arcade.css` (#top wraps, title on its own row, Sound shrinks, stat row 2-up: dash, echo, pop, stack), bugs.css (header, stick /
+Swing / Sneak row), jam.css (header, song cards, pads), lantern.css (stats 2-up, choices, cards; title words kept whole), stalk.css
+(price card, all-time list, goals, actions). Sweep with VPS=390x844 on those 8: 0 offenders; town / realm-world / realm-dungeon, all
+viewports: 0 offenders; allow-list stays `{}`. Leftover U-08 (low): at 195 px some words in Bug Safari arena cards still break mid-word.
 
 ## Leftovers (prioritised)
 | id | sev | screen | viewport | what | screenshot |
