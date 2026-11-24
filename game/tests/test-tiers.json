@@ -2095,5 +2095,21 @@
   "cyc2-dd-path-replay.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-ui-town-labels.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-ui-notebook.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-ui-town-first-visit.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-ui-landscape-audit.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
