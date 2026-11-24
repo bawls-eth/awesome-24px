@@ -1913,5 +1913,9 @@
   "beta-r4-dungeon-pad.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-realm-density.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

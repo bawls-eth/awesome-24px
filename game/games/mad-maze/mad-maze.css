@@ -516,3 +516,16 @@ body.touch-device:has(#mm-deep) #realm-chase-toast { bottom: calc(200px + 150px 
   html body.dungeon-mode.touch-device #realm-abilities .realm-ab .nm { display: none; } /* the level / name chip does not fit 44 px; the icon, key and cooldown stay */
   html body.dungeon-mode.touch-device #mm-gear-btn { left: calc(50% + 26px); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* R4 D4 (b15-04 / b15-r2-15, Realm world on narrow phones: 320 px, or 150% zoom = 260 px): the two 100 px sticks and the 2x2 of
+   56 px ability buttons covered 17.9% (320x568) / 22.2% (260x563) of the screen. Here the sticks are 88 px (knob 44 px) and sit
+   8 px from the edges, and the pad is a 2x2 of 44 px buttons right above the aim stick. Touch targets stay >= 44 px. */
+@media (max-width: 360px) and (orientation: portrait) {
+  html body.touch-device:not(.dungeon-mode) .realm-stick { width: 88px; height: 88px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  html body.touch-device:not(.dungeon-mode) .realm-stick .knob { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+  html body.touch-device:not(.dungeon-mode) #realm-stick-move { left: calc(8px + env(safe-area-inset-left, 0px)); }
+  html body.touch-device:not(.dungeon-mode) #realm-stick-aim { right: calc(8px + env(safe-area-inset-right, 0px)); }
+  html body.touch-device:not(.dungeon-mode) #realm-abilities { right: calc(8px + env(safe-area-inset-right, 0px)); left: auto; top: auto; bottom: calc(16px + 88px + 10px + env(safe-area-inset-bottom, 0px)); transform: none; grid-template-columns: repeat(2, 44px); gap: 4px; }
+  html body.touch-device:not(.dungeon-mode) #realm-abilities .realm-ab { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  html body.touch-device:not(.dungeon-mode) #realm-abilities .realm-ab .nm { display: none; }
+}
