@@ -2247,5 +2247,10 @@
   "cyc5-deepdelve-surface.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc5-hit-pause-play.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 120
   }
 }
