@@ -8,6 +8,7 @@
 // Firebase blocked (offlineStub), offline join as an ADMIN bot, nothing written to any DB.
 const { chromium } = require('playwright');
 const { check, done, offlineStub, exposeGame, joinOffline } = require('./helpers');
+const LS = require('./lib/load-scale');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const NEW = ['dice', 'joystick', 'grave', 'wheat', 'dress', 'pickaxe', 'cart', 'bugs', 'flask'];
 
@@ -56,7 +57,7 @@ async function sample(browser, q, vp) {
   check('Bug-Off sign reads "BUG-OFF" on its first line, glyph gone', /^BUG-OFF\n/.test(on.bug || ''), JSON.stringify(on.bug));
   check('merchant setText keeps the cart icon and strips the glyph', on.mer && on.mer.text === 'closed — back at 9:00 today' && on.mer.icon, JSON.stringify(on.mer));
   check('pinned glyphs kept: 4 🚪 doors, 🦸 statue, ⛵ Isles', on.doors.length === 4 && on.statue.length >= 1 && on.isles.length === 1, JSON.stringify([on.doors, on.statue, on.isles]));
-  check('one-off create cost < 80 ms', on.ms < 80, on.ms.toFixed(1) + ' ms');
+  check(`one-off create cost < ${LS.budget(80)} ms (80 ms on an idle box; load-scaled: the time-sweep run measured 71.9 ms at load factor 4 to 6)`, on.ms < LS.budget(80), on.ms.toFixed(1) + ' ms');
   const ph = await sample(browser, '', { width: 390, height: 844 });
   check('phone 390x844: same labels converted', ph.labels.length === on.labels.length, ph.labels.length + ' vs ' + on.labels.length);
   const off = await sample(browser, '?worldicons=0');
