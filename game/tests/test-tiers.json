@@ -2187,5 +2187,13 @@
   "cyc4-tames-perks-shared.test.js": {
     "class": "node",
     "tier": "full"
+  },
+  "cyc4-town-cull-alloc.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc4-zk-stale-tab.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

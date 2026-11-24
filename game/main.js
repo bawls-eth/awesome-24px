@@ -2174,6 +2174,7 @@ class TownScene extends Phaser.Scene {
   uncull(o) {
     const cam = this.cameras && this.cameras.main;
     if (o && cam && (o.cameraFilter & cam.id)) o.cameraFilter &= ~cam.id;
+    if (o && o._cs) o._cs = 0; // cycle 4: its remembered box is stale, the next pass measures it again
     return o;
   }
 
@@ -2186,24 +2187,45 @@ class TownScene extends Phaser.Scene {
     this._cullN = ((this._cullN || 0) + 1) % 4;
     const moved = this._cullAt ? Math.abs(this._cullAt.x - v.x) + Math.abs(this._cullAt.y - v.y) : Infinity;
     if (this._cullN !== 0 && moved < 48) return;
-    this._cullAt = { x: v.x, y: v.y };
+    // cycle 4 (L hot path): reading x / y / displayWidth / displayHeight off ~900 objects of many shapes cost about 60 bytes per object
+    // per pass (each read of a number field through a many-shapes lookup returns a fresh boxed number): 14.6 KB per frame, three
+    // quarters of everything main.js allocated per frame. Now each object remembers its box as four whole numbers (_cl, _ct, _cr, _cb:
+    // floor / ceil, so the box only grows and nothing is culled that was not before). A box that was the same on 3 passes in a row is
+    // "settled": it is used as it is and measured again only every 8th pass (staggered over the list). Sprites (players, villagers,
+    // animals: things that walk) are measured on every pass as before. A settled object that starts to move is seen within 8 passes
+    // (32 frames) and the 320 px margin covers that; a pooled object that jumps goes through uncull() (measured on the next pass); a
+    // hidden object forgets its box. A forced / first pass (_cullAt null) measures everything. An object with no size (an empty label)
+    // is skipped as before and looked at again every 8th pass.
+    const full = !this._cullAt;
+    if (full) this._cullAt = { x: v.x, y: v.y }; else { this._cullAt.x = v.x; this._cullAt.y = v.y; }
+    const pass = this._cullPass = ((this._cullPass | 0) + 1) & 0x3ffffff;
     const M = 320, x0 = v.x - M, y0 = v.y - M, x1 = v.right + M, y1 = v.bottom + M;
     const bit = cam.id;
     const list = this.sys.displayList.list;
-    let culled = 0;
+    let culled = 0, measured = 0;
     for (let i = 0; i < list.length; i++) {
       const o = list[i];
       if (o.scrollFactorX !== 1 || o.scrollFactorY !== 1 || o.type === 'Container' || o.type === 'Graphics' || o.type === 'Particles' || o.type === 'ParticleEmitter') continue;
       // Hidden objects draw nothing anyway; never leave them culled. A pooled object (sparkle star, firefly) is moved and shown
       // between two cull passes: with a stale cull bit from its old spot it would stay undrawn for up to 3 frames in view.
-      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; continue; }
-      const w = o.displayWidth, h = o.displayHeight;
-      if (!(w > 0) || !(h > 0)) continue;
-      const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
-      const left = o.x - w * (o.originX === undefined ? 0.5 : o.originX) - r, top = o.y - h * (o.originY === undefined ? 0.5 : o.originY) - r;
-      const out = left + w + 2 * r < x0 || left > x1 || top + h + 2 * r < y0 || top > y1;
+      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; if (o._cs) o._cs = 0; continue; }
+      let l, t, r2, b;
+      if (!full && o._cs >= 3 && o.type !== 'Sprite' && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
+      else {
+        const w = o.displayWidth, h = o.displayHeight;
+        measured++;
+        if (!(w > 0) || !(h > 0)) { if (!o._cz) { o._cz = 1; o._cl = NaN; o._cv = pass - (i & 7); } else o._cv = pass; o._cs = 3; continue; } // no size: nothing to cull (bit left as it is, as before); looked at again every 8th pass
+        if (o._cz) o._cz = 0;
+        const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
+        const left = o.x - w * (o.originX === undefined ? 0.5 : o.originX) - r, top = o.y - h * (o.originY === undefined ? 0.5 : o.originY) - r;
+        l = Math.floor(left); t = Math.floor(top); r2 = Math.ceil(left + w + 2 * r); b = Math.ceil(top + h + 2 * r);
+        if (l === o._cl && t === o._ct && r2 === o._cr && b === o._cb) { if (o._cs < 3) { o._cs = (o._cs | 0) + 1; o._cv = o._cs === 3 ? pass - (i & 7) : pass; } else o._cv = pass; }
+        else { o._cl = l; o._ct = t; o._cr = r2; o._cb = b; o._cs = 0; o._cv = pass; }
+      }
+      const out = r2 < x0 || l > x1 || b < y0 || t > y1;
       if (out) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; } else if (o.cameraFilter & bit) o.cameraFilter &= ~bit;
     }
+    this._cullMeasured = measured; // test hook: objects measured (not taken from the remembered box) on the last pass
     this._culled = culled;
   }
 
