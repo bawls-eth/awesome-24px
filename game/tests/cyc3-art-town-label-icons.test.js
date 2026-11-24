@@ -1,6 +1,6 @@
 // Cycle 3 art (G): the remaining emoji world labels get code-drawn MMPixelIcons too (🎲 Polyroll -> dice, 🕹️ Arcade District ->
 // joystick, 🪦 Old Graveyard -> grave, 🌾 Old Windmill -> wheat, 👗 Able Sisters -> dress, ⛏️ Hole -> pickaxe, 🛒 Mystery Merchant
-// -> cart, 🦋 BUG-OFF -> bugs). Multi-line signs (Bug-Off, merchant) use the cycle-2 geometry (icon left of the text box, centred on it,
+// -> cart, 🦋 BUG-OFF -> bugs, 🧪 Professor Byte -> flask). Multi-line signs (Bug-Off, merchant) use the cycle-2 geometry (icon left of the text box, centred on it,
 // as cyc2-art-town-label-icons pins for the fish tourney). Pinned
 // glyphs stay: 🦸 Founder's Statue, ⛵ Isles, the mailbox ❗N marker, and the 🚪 portal doors (beta-r4-doors finds them by /^🚪/).
 // Serve the repo root first:  python3 -m http.server 8440 &
@@ -9,7 +9,7 @@
 const { chromium } = require('playwright');
 const { check, done, offlineStub, exposeGame, joinOffline } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
-const NEW = ['dice', 'joystick', 'grave', 'wheat', 'dress', 'pickaxe', 'cart', 'bugs'];
+const NEW = ['dice', 'joystick', 'grave', 'wheat', 'dress', 'pickaxe', 'cart', 'bugs', 'flask'];
 
 async function sample(browser, q, vp) {
   const ctx = await browser.newContext({ viewport: vp || { width: 1280, height: 720 } });
@@ -44,8 +44,8 @@ async function sample(browser, q, vp) {
   const browser = await chromium.launch();
   const on = await sample(browser, '');
   const ids = on.labels.map((l) => l.id);
-  check('all 8 new icon ids are used by world labels', NEW.every((k) => ids.indexOf(k) >= 0), JSON.stringify(ids));
-  check('>= 18 labels converted in total (cycle 2 set + cycle 3 set)', on.labels.length >= 18, String(on.labels.length));
+  check('all 9 new icon ids (incl. flask for Professor Byte) are used by world labels', NEW.every((k) => ids.indexOf(k) >= 0), JSON.stringify(ids));
+  check('>= 19 labels converted in total (cycle 2 set + cycle 3 set)', on.labels.length >= 19, String(on.labels.length));
   const nl = on.labels.filter((l) => NEW.indexOf(l.id) >= 0);
   check('new labels hold no emoji glyph and are 16x16 at 1x with >= 80 opaque px', nl.every((l) => !l.emoji && l.w === 16 && l.scale === 1 && l.opaque >= 80), JSON.stringify(nl.filter((l) => !(!l.emoji && l.w === 16 && l.opaque >= 80))));
   const multi = on.labels.filter((l) => l.multi);
