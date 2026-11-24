@@ -592,3 +592,20 @@ New:
 |---|----|------|---------------|---------------------|-----|
 | 14 | T-BLD (new) | Town buildings: house (pink), Able Sisters shop, turnip stand, shop front. Flat fills with no outline today next to outlined trees / statue / workbench | down view, 1 frame each, Town 1x scale (hero 24 px) | code rectangles | cycle 0 audit #5 |
 | 15 | R03b (new) | `prop_tree_medium` (and small): break the round canopy edge (3-4 leaf clumps, a notch or two), keep cell / anchor | as R03 | R03 as delivered | R03 review nit, cycle 0 audit #7 |
+
+## UPDATE 2026-11-24 (cycle 2, Claude G): what code could not solve, re-prioritised
+Code this cycle (fallbacks, replaced by id on delivery): Isles field overlay (`MMIsleArt.fieldDetail`, flowers / pebbles / tufts on
+grass-like non-PNG tiles, `?islefield=0`); Town world labels use code-drawn 16 px icons instead of emoji (`?worldicons=0`). Priority now:
+1. **Isles W-06 creature scale** (cycle 1 table in `beta/cycle1-art.md`): pebble_tortle 21, puffwool 28, frostfox 30 standing px up to
+   32-48; the jungle small set (chompbill 46, canopy_glider 46, fernraptor 52) down toward 36-40. A code rescale is non-integer (not
+   pixel-safe), so only a redraw fixes it. Same ids / anchors.
+2. **Tundra / mars species strips + Frost Dragon / Red Titan** (cycle 0 #1 / #2): still code placeholders.
+3. **R01b Realm inner corners** `tile_<terrain>_icorner_{ne,nw,se,sw}` for the Godlands / Highlands zone seams: not attempted in code
+   this cycle (time box); the stair-step corner where two edge masks meet is still visible. The PNG set is the real fix.
+4. **R02 Isles ground redo** (#7): the field overlay adds sparse detail, but the jungle floor PNG (b30) still reads as a black field at
+   390x844 and cannot be painted over (tests pin its pixels).
+5. **Town label art (16x16 or 24x24, b19 style)**: `town_label_{house,museum,mail,hammer,book,turnip}` would replace the code icons;
+   Founder's Statue and the Isles sign keep their emoji until a test-approved change (both pinned).
+6. T-BLD, R03b: unchanged from cycle 1 (code finish / tree overlay are stopgaps).
+Idle / death animation polish (Town heroes, Realm enemies, Isles creatures) and Nexus plaza life were NOT done in code this cycle; enemy
+death strips (5 frames, last 2 lying down) already ship for b04 and the R07 set, so a code dissolve is the cheap next step (cycle 3).

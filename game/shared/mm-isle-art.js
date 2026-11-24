@@ -268,6 +268,47 @@
     } catch (e) { return 0; }
   }
 
+  // Cycle 2 art (G): field detail. A SEPARATE overlay after detail() (whose output the node tests pin): on grass-like terrain only, seeded
+  // flowers (3x3 plus in 5 petal colours), pebbles (2x2 with a light and a dark pixel) and dark tufts, square clusters in art pixels (bullets
+  // and pickups stay the only bright round shapes). Terrains missing from opts.palette (the PNG terrains on an art bake) are never touched.
+  // Pure in its inputs, bake time only. Returns { flowers, pebbles, tufts }. The Isles page turns it off with ?islefield=0.
+  const FIELD_TERRAINS = { grass: 0.10, tall_grass: 0.08, flower_meadow: 0.34, dry_grass: 0.06, clover_patch: 0.18, jungle_moss: 0.08, tundra_moss: 0.06, orchid_moss: 0.2 };
+  const FIELD_PETALS = ['#f4e9c8', '#f2c94c', '#e98fa6', '#9db8f0', '#c99be8'];
+  const FIELD_PEBBLE = ['#8a8478', '#b4ad9e', '#5f594f'];
+  function fieldDetail(ctx, terrain, w, h, cx, cy, opts) {
+    const out = { flowers: 0, pebbles: 0, tufts: 0 };
+    try {
+      const o = opts && typeof opts === 'object' ? opts : {};
+      const names = o.names || NAMES, pal = o.palette || PALETTE, T = o.tile | 0 || 32, CH = o.ch | 0 || 16, seed = (o.seed | 0) + 4409;
+      if (!ctx || typeof ctx.fillRect !== 'function' || !terrain) return out;
+      const u = Math.max(1, Math.round(T / 16));
+      for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+        const wx = cx * CH + tx, wy = cy * CH + ty;
+        if (wx < 0 || wy < 0 || wx >= w || wy >= h) continue;
+        const nm = names[terrain[wy * w + wx] | 0], rate = FIELD_TERRAINS[nm], p = pal[nm];
+        if (rate === undefined || !p) continue;
+        const r = dhash(wx, wy, seed), q = dhash(wy, wx, seed + 3);
+        const ox = tx * T + u * (3 + ((q * 9) | 0)), oy = ty * T + u * (3 + ((dhash(wx, wy, seed + 5) * 9) | 0));
+        if (r < rate) { // flower: a 3x3 plus with a centre pixel (petal colour per tile, centre warm yellow or white)
+          const pc = FIELD_PETALS[(q * 97 | 0) % FIELD_PETALS.length];
+          ctx.fillStyle = p[1]; ctx.fillRect(ox + u, oy + 3 * u, u, u); // stem shadow
+          ctx.fillStyle = pc; ctx.fillRect(ox + u, oy, u, u); ctx.fillRect(ox, oy + u, u * 3, u); ctx.fillRect(ox + u, oy + 2 * u, u, u);
+          ctx.fillStyle = pc === '#f2c94c' ? '#fff6d8' : '#f2c94c'; ctx.fillRect(ox + u, oy + u, u, u);
+          out.flowers++;
+        } else if (r < rate + 0.05) { // pebble: 2x2 grey, a lit top-left pixel and a dark bottom-right one
+          ctx.fillStyle = FIELD_PEBBLE[0]; ctx.fillRect(ox, oy, u * 2, u * 2);
+          ctx.fillStyle = FIELD_PEBBLE[1]; ctx.fillRect(ox, oy, u, u);
+          ctx.fillStyle = FIELD_PEBBLE[2]; ctx.fillRect(ox + u, oy + u, u, u);
+          out.pebbles++;
+        } else if (r < rate + 0.13) { // tuft: three dark blades in the tile's own shade
+          ctx.fillStyle = p[1]; ctx.fillRect(ox, oy + u, u, u * 2); ctx.fillRect(ox + u, oy, u, u * 3); ctx.fillRect(ox + 2 * u, oy + u, u, u * 2);
+          out.tufts++;
+        }
+      }
+    } catch (e) { /* bake keeps going without the overlay */ }
+    return out;
+  }
+
   // Cycle 0 art (b12-r2-09): the b30 black-sand tiles are 95% #323039 blue-black and read as a void block beside the jungle start.
   // The tile PNGs stay untouched (tests/isle-art-bake pins them); this is an OVERLAY pass the Isles page runs on its own baked chunk:
   // every black_sand tile is re-lit into a warm volcanic-sand ramp by each pixel's brightness (so the b30 grain pattern survives) plus
@@ -302,7 +343,7 @@
     } catch (e) { return 0; }
   }
 
-  return { WARM_SAND: WARM_SAND, warmSand: warmSand, DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
+  return { WARM_SAND: WARM_SAND, warmSand: warmSand, fieldDetail: fieldDetail, FIELD_TERRAINS: FIELD_TERRAINS, DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
     MEADOW_ALIAS: MEADOW_ALIAS, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });

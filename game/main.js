@@ -1804,6 +1804,7 @@ class TownScene extends Phaser.Scene {
       this.setupHaptics();
     }
     this.setupGamepad();
+    this.pixelWorldLabels(); // cycle 2 art (G): emoji in world labels -> code-drawn pixel icons (?worldicons=0 = off)
 
     this.registerNetHandlers();
     this.registerChatUI();
@@ -6656,6 +6657,46 @@ class TownScene extends Phaser.Scene {
   // 8-bit look for the wildlife (shared/mm-pixelize.js, design/PIXELIZE.md): every loaded ff_<id> SVG is baked ONCE, here, into a
   // crisp canvas texture ffpx_<id> at half its display size, then drawn at 2x (setDisplaySize is unchanged, so layout and reach stay).
   // ?pixelize=0 (or a missing module, or a failed bake) keeps the original SVG art. Never per frame.
+  // Cycle 2 art (G): emoji glyphs inside the world's pixel labels render differently on every OS and clash with the 8-bit look. Once at
+  // create, every world-space Text whose text starts with a mapped emoji + space loses the emoji and gets a code-drawn 16 px MMPixelIcons
+  // image (original art, 1x, crisp) 1 px left of the word; the pair stays centred where the label was. Labels whose emoji a test pins
+  // (Founder's Statue, Isles sign) are not in the map. A later setText on a converted label (mailbox count, home cozy) is stripped the
+  // same way. ?worldicons=0 = the old emoji labels. Cost: one canvas texture per icon id, one Image per label, nothing per frame.
+  pixelWorldLabels() {
+    const st = this.worldIcons = { on: !/[?&]worldicons=0(&|$)/.test(location.search) && !!window.MMPixelIcons, labels: [], ms: 0 };
+    if (!st.on) return st;
+    const t0 = performance.now();
+    const MAP = { '🏠': 'house', '🏡': 'house', '🏛️': 'museum', '🏛': 'museum', '📬': 'mail', '📮': 'mail', '🔨': 'hammer', '📖': 'book', '🥬': 'turnip', '🌀': 'realm', '🎣': 'angler' };
+    const split = (txt) => { const m = typeof txt === 'string' ? /^(\S+) (.+)$/s.exec(txt) : null; return m && MAP[m[1]] ? { id: MAP[m[1]], rest: m[2] } : null; };
+    const texKey = (id) => {
+      const key = 'pxico-' + id;
+      if (!this.textures.exists(key)) { const cv = window.MMPixelIcons.canvas(id, 16); if (!cv) return null; this.textures.addCanvas(key, cv); }
+      return key;
+    };
+    this.children.list.slice().forEach((o) => {
+      if (!o || o.type !== 'Text' || o.scrollFactorX !== 1 || o.parentContainer) return;
+      const sp = split(o.text); if (!sp) return;
+      const key = texKey(sp.id); if (!key) return;
+      const cx0 = o.x, icon = this.add.image(0, 0, key).setDepth(o.depth).setOrigin(0.5);
+      const place = () => {
+        const w = o.displayWidth, left = cx0 - (w + 17) / 2; // icon 16 + 1 px gap, the pair centred on the old label x
+        o.x = left + 17 + w * o.originX;
+        icon.setPosition(Math.round(left + 8), Math.round(o.y + o.displayHeight * (0.5 - o.originY)));
+        icon.setVisible(o.visible); icon.setAlpha(o.alpha);
+      };
+      const set0 = o.setText.bind(o);
+      o.setText = (v) => { const s2 = split(Array.isArray(v) ? v.join('\n') : v); set0(s2 ? s2.rest : v); if (icon.scene) place(); return o; };
+      const vis0 = o.setVisible.bind(o);
+      o.setVisible = (v) => { vis0(v); if (icon.scene) icon.setVisible(v); return o; };
+      o.once('destroy', () => icon.destroy());
+      set0(sp.rest); place();
+      o.pxIcon = icon;
+      st.labels.push({ id: sp.id, text: sp.rest, obj: o, icon: icon });
+    });
+    st.ms = performance.now() - t0;
+    return st;
+  }
+
   pixelizeFloraFauna() {
     this.ffPixelized = 0;
     if (!window.MMPixelize || !MMPixelize.enabled()) return;

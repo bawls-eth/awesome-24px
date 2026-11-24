@@ -56,6 +56,18 @@
     deepdelve: [
       '................', '...sssss........', '..ssswwsss......', '.ss....nNss.....', '.s....nn..ss....', '.....nn....s....', '....nn..........', '...nn...........',
       '..nn............', '.nn.............', '................', '................', '................', '................', '................', '................'],
+    house: [ // cycle 2 art (G): Town world-label icon
+      '................', '.......rr.......', '......rrRr......', '.....rrRRRr.....', '....rrRRRRRr....', '...rrrrrrrrrr...', '....wttttttt....', '....tcBttnnt....', '....tccttnnt....', '....tttttnyt....', '....tttttnnt....', '...GGGGGGGGGG...', '................', '................', '................', '................'],
+    museum: [ // cycle 2 art (G): Town world-label icon
+      '................', '.......ss.......', '.....sswwss.....', '...sswwwwwwss...', '..ssssssssssss..', '...ws.ws.ws.ws..', '...ws.ws.ws.ws..', '...ws.ws.ws.ws..', '...ws.ws.ws.ws..', '...ws.ws.ws.ws..', '...ws.ws.ws.ws..', '..ssssssssssss..', '.dddddddddddddd.', '................', '................', '................'],
+    mail: [ // cycle 2 art (G): Town world-label icon
+      '................', '................', '..wwwwwwwwwwww..', '..wSwwwwwwwwSw..', '..wwSwwwwwwSww..', '..wwwSwwwwSwww..', '..wwwwSwwSwwww..', '..wwwwwSSwwwww..', '..wwwwwrrwwwww..', '..wwwwwwwwwwww..', '..ssssssssssss..', '................', '................', '................', '................', '................'],
+    hammer: [ // cycle 2 art (G): Town world-label icon
+      '................', '................', '...ssssss.......', '...swwsssS......', '...sssssSS......', '......nN........', '......nN........', '.......nN.......', '.......nN.......', '........nN......', '........nN......', '.........nN.....', '.........NN.....', '................', '................', '................'],
+    book: [ // cycle 2 art (G): Town world-label icon
+      '................', '................', '....rrrrrrrrr...', '...Rrrrrrrrrr...', '...Rryyyyyyrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rwwwwwwwww...', '....RRRRRRRRR...', '................', '................', '................', '................'],
+    turnip: [ // cycle 2 art (G): Town world-label icon
+      '................', '......g..g......', '.....gGggGg.....', '.......gG.......', '.....PppppP.....', '....PpwppppP....', '....pwwwwwwp....', '....wwwwwwws....', '....wwwwwwws....', '.....wwwwss.....', '......wws.......', '.......s........', '................', '................', '................', '................'],
   };
   const SIZE = 16;
   const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
