@@ -1820,5 +1820,9 @@
   "beta-r4-b09-12-pop-hud-fit.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-b11-12-creative-goals.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

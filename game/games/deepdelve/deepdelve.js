@@ -1082,6 +1082,12 @@
   function renderGoals() {
     const ul = $('goal-list');
     while (ul.firstChild) ul.removeChild(ul.firstChild);
+    if (CREATIVE) { // b11-12: the creative world never earns these, so it says so instead of listing them as if they were live goals here
+      const li = document.createElement('li'); li.id = 'goal-creative-note'; li.className = 'note';
+      const t = document.createElement('strong'); t.textContent = 'Creative world: medals are off here.';
+      const d = document.createElement('span'); d.textContent = 'The goals below are earned in the survival world. Build freely here: nothing is lost.';
+      li.appendChild(t); li.appendChild(d); ul.appendChild(li);
+    }
     MEDALS.forEach((m) => {
       const li = document.createElement('li');
       const done = !!meta.goals[m.id];
