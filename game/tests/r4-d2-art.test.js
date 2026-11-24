@@ -66,6 +66,14 @@ const WORLD = (seed, q) => ORIGIN + '/game/games/mad-maze/index.html?mode=world&
   // not registered: the b10t art stays (4 grass variants, rank 1). The rank code is kept so a redone r01 wins over b10t with no code change.
   check('b10t grass art in use (R01 not registered after review): 4 variants, rank 1', r.grass === 4 && r.rank.grass === 1, JSON.stringify({ grass: r.grass, rank: r.rank }));
   check('Codex R03 props win over b12 by id (prop_tree_small from r03-nature-props)', r.tree === 'r03-nature-props', String(r.tree));
+  // Nexus plaza (b12-r2-08, b04-14): flagstone floor with a mosaic ring (not the checkerboard), and a code-drawn pixel hero when no hero art
+  const nx = await page.evaluate(async () => {
+    const a = window.__mm.arena, w = window.__mm.world; a.player.iframes = 1e9; a._hitPlayer = () => {}; const s = w.nexus.site; a.player.x = s.x - 20; a.player.y = s.y;
+    const opened = w.nexus.open(); await new Promise((r) => setTimeout(r, 800));
+    const wk = w.nexus.walk; return { opened, floor: wk && wk.floor ? wk.floor() : null, hero: wk && wk.codeHero ? wk.codeHero() : -1, art: !!a._heroArt };
+  });
+  check('Nexus floor is flagstones with a mosaic ring (not the checkerboard)', nx.floor && !nx.floor.classic && nx.floor.tiles > 500 && nx.floor.ring > 10, JSON.stringify(nx));
+  check('Nexus hero without class art is the code-drawn pixel adventurer (not the yellow dot)', nx.art || nx.hero > 0, JSON.stringify(nx));
   await ctx.close();
   // opt-outs
   const c2 = await browser.newContext({ viewport: { width: 1280, height: 720 } }); await blockDb(c2);

@@ -1743,7 +1743,7 @@
       + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
       + '#rw-nexus .nx-head{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}#rw-nexus h2{margin:0;font-size:18px;flex:1;min-width:120px}'
       + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
-      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;flex:0 0 auto;width:min(100%,max(320px,calc((100vh - 230px)*4/3)));max-width:760px;aspect-ratio:4/3;margin:0 auto;border:2px solid #3a2f66;border-radius:10px;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
+      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;flex:0 0 auto;width:min(100%,max(320px,calc((100vh - 230px)*4/3)));max-width:760px;aspect-ratio:4/3;margin:0 auto;border:4px solid #2a2150;border-radius:0;box-shadow:0 0 0 2px #7a63c9,4px 4px 0 2px #000;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
       + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
       + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
@@ -1765,12 +1765,40 @@
       img.src = opts.assetRoot.replace(/\/+$/, '') + '/b21-npcs-and-vendors/enemies/' + id + '/' + id + '_idle_down.png';
     }
     const nxLabels = []; // W-04 test hook: portal label rects in plaza px (rebuilt per plaza draw)
+    const NX_FLOOR_CLASSIC = /[?&]nxfloor=classic(&|$)/.test(qs0);
+    const nxFloorStat = { tiles: 0, ring: 0 };
+    function nxFloor(g, L) {
+      const STONE = ['#4a4460', '#524b69', '#5a5372'], RING = ['#6a5468', '#735c70', '#7c6578'], MORTAR = '#2c2740', HI = 'rgba(255,255,255,0.10)', SH = 'rgba(0,0,0,0.22)';
+      const cx = L.spawn.x / TILE, cy = L.spawn.y / TILE;
+      for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) {
+        const px = tx * TILE, py = ty * TILE, d = Math.hypot(tx + 0.5 - cx, ty + 0.5 - cy), ring = d >= 2.2 && d <= 3.6;
+        const ramp = ring ? RING : STONE, v = h2(tx, ty, 911);
+        g.fillStyle = MORTAR; g.fillRect(px, py, TILE, TILE);
+        if (ring) { // four cut stones per tile
+          for (let k = 0; k < 4; k++) { const sx = px + (k & 1) * 16 + 1, sy = py + (k >> 1) * 16 + 1; g.fillStyle = ramp[Math.floor(h2(tx * 2 + (k & 1), ty * 2 + (k >> 1), 913) * 3)]; g.fillRect(sx, sy, 14, 14); g.fillStyle = HI; g.fillRect(sx, sy, 14, 1); g.fillRect(sx, sy, 1, 14); g.fillStyle = SH; g.fillRect(sx, sy + 13, 14, 1); g.fillRect(sx + 13, sy, 1, 14); }
+          nxFloorStat.ring++;
+        } else {
+          const off = (ty & 1) ? 8 : 0; // running bond: every other row shifts the joint
+          g.fillStyle = ramp[Math.floor(v * 3)]; g.fillRect(px + 2, py + 2, TILE - 2, TILE - 2);
+          g.fillStyle = MORTAR; g.fillRect(px + 2 + off + 12, py + 2, 2, TILE - 2); // one vertical joint inside the slab
+          g.fillStyle = HI; g.fillRect(px + 2, py + 2, TILE - 2, 1); g.fillRect(px + 2, py + 2, 1, TILE - 2);
+          g.fillStyle = SH; g.fillRect(px + 2, py + TILE - 1, TILE - 2, 1); g.fillRect(px + TILE - 1, py + 2, 1, TILE - 2);
+          if (v > 0.86) { g.fillStyle = MORTAR; const kx = px + 6 + Math.floor(h2(tx, ty, 915) * 16); for (let k = 0; k < 4; k++) g.fillRect(kx + k, py + 8 + k * 3, 1, 3); } // crack
+          else if (v < 0.07) { g.fillStyle = '#3f6a48'; g.fillRect(px + 3, py + TILE - 5, 4, 2); g.fillRect(px + 5, py + TILE - 7, 2, 2); } // moss in the joint
+        }
+        nxFloorStat.tiles++;
+      }
+    }
     function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
       if (!nxDom) return; nxLabels.length = 0;
       const L = NX.layout(); const c = nxDom.plaza; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
       g.fillStyle = '#2e2742'; g.fillRect(0, 0, L.w * TILE, L.h * TILE); g.fillStyle = '#3d3457'; for (let i = 0; i < L.w; i++) { g.fillRect(i * TILE + 2, 2, TILE - 4, TILE - 6); g.fillRect(i * TILE + 2, (L.h - 1) * TILE + 2, TILE - 4, TILE - 6); } for (let j = 1; j < L.h - 1; j++) { g.fillRect(2, j * TILE + 2, TILE - 4, TILE - 6); g.fillRect((L.w - 1) * TILE + 2, j * TILE + 2, TILE - 4, TILE - 6); } // W-04: a stone kerb ring, never a void band
-      for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
+      // R4-D2 (b12-r2-08): flagstone plaza instead of the flat purple checkerboard. Per tile a seeded stone tone (3-step ramp), a dark
+      // mortar line on the top / left, a 1 px top-left highlight, a bottom-right shade, rare cracks and moss; a warm mosaic ring of
+      // smaller cut stones around the spawn. All baked once per open (nxDrawPlaza). ?nxfloor=classic: the old checkerboard.
+      if (NX_FLOOR_CLASSIC) { for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); } }
+      else nxFloor(g, L);
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
       const pad = wArt.spawn_pad; const sp = L.spawn;
       if (pad) drawArt(g, pad, 0, sp.x, sp.y + 16); else { g.fillStyle = '#7a63c9'; g.beginPath(); g.arc(sp.x, sp.y, 20, 0, 7); g.fill(); g.fillStyle = '#a98bff'; g.beginPath(); g.arc(sp.x, sp.y, 13, 0, 7); g.fill(); }
@@ -1795,13 +1823,13 @@
       });
       if (RUSH_ON && L.trial) { // RE2: the Trial gate, code-drawn (no art id): a gold ring and its name
         const q = L.trial; g.save(); g.globalAlpha = 0.3; g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#ffd45a'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); g.restore();
-        g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#ffe27a'; g.fillText(q.label, q.x, q.y - 38);
+        g.font = 'bold 20px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#ffe27a'; g.fillText(q.label, q.x, q.y - 38);
       }
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
         if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
         else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
-        g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 1, y + 37); g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
+        g.font = 'bold 18px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 2, y + 38); /* R4-D2: pixel (mono) font like the portal labels */ g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
       });
     }
     function nxMutOf(q) { // DV1: the seeded mutator of a Nexus dungeon portal (same seed as nxUrl), or null
@@ -2112,6 +2140,23 @@
       }
       nxSyncPrompt();
     }
+    // R4-D2 (b04-14): the Nexus hero fallback in the established style: 16x24 native at 2x, dark colour-matched outline, 3-tone cloak,
+    // top-left light, facing the move direction (side view mirrored for left, back view when walking up). No face dots on the back.
+    const nxHeroStat = { code: 0 };
+    function nxCodeHero(g, h) {
+      const P = 2, up = h.my < -0.3 && Math.abs(h.my) >= Math.abs(h.mx), side = Math.abs(h.mx) > Math.abs(h.my), flip = side && h.mx < 0;
+      const step = h.moving ? (Math.floor(performance.now() / 140) & 1) : 0;
+      const ox = Math.round(h.x) - 8 * P, oy = Math.round(h.y) - 18 * P;
+      const px = (x, y, w, hh, c) => { g.fillStyle = c; g.fillRect(ox + (flip ? 16 - x - w : x) * P, oy + y * P, w * P, hh * P); };
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(h.x, h.y + 12, 12, 5, 0, 0, Math.PI * 2); g.fill();
+      const OUT = '#1b1430', C1 = '#3d5aa8', C2 = '#5274c4', C3 = '#7a9be0', SKIN = '#f0c9a0', SKIN2 = '#c99a78', BOOT = '#4a3020';
+      px(4, 1, 8, 8, OUT); px(3, 8, 10, 11, OUT); px(4, 18, 3, 5, OUT); px(9, 18, 3, 5, OUT); // outline silhouette
+      px(5, 2, 6, 6, C1); px(5, 2, 5, 1, C3); px(5, 2, 1, 5, C2); // hood: dark / mid / light from the top-left
+      if (!up) { px(side ? 8 : 6, 4, side ? 3 : 4, 3, SKIN); px(side ? 8 : 6, 6, side ? 3 : 4, 1, SKIN2); px(side ? 10 : 7, 5, 1, 1, OUT); if (!side) px(8, 5, 1, 1, OUT); }
+      px(4, 9, 8, 9, C1); px(4, 9, 7, 1, C3); px(4, 9, 1, 8, C2); px(5, 13, 6, 1, '#c9a24a'); // cloak + belt
+      px(5, 18, 2, 4 - step, BOOT); px(9, 18, 2, 3 + step, BOOT); // boots (walk alternates)
+      nxHeroStat.code++;
+    }
     function nxWalkDraw() {
       const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
       const cl = (v, lo, hi) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v))); // W-04 (b04-05): the view stays on the floor (ring excluded); a plaza smaller than the view is centred
@@ -2125,7 +2170,7 @@
         try { ok = !!arena._drawHero(g, h); } catch (e) { ok = false; }
         arena._mx = m0; arena._my = m1;
       }
-      if (!ok) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(h.x, h.y + 12, 12, 5, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(h.x, h.y, 12, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2a2150'; g.beginPath(); g.arc(h.x + h.mx * 5, h.y + h.my * 5, 4, 0, Math.PI * 2); g.fill(); }
+      if (!ok) nxCodeHero(g, h); // R4-D2 (b04-14): a code-drawn pixel adventurer, not the yellow dot (hero art missing / no hero yet)
       g.restore();
     }
     function nxWalkFrame(now) {
@@ -2573,7 +2618,7 @@
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
-        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), floor: () => Object.assign({ classic: NX_FLOOR_CLASSIC }, nxFloorStat), codeHero: () => nxHeroStat.code, tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
           place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
