@@ -4,7 +4,7 @@
 // Firebase is blocked in every context (blockDb). Output: game/design/beta/img/cyc0-art-<scene>-<tag>-<d|p>.jpg (d 1280x720, p 390x844)
 const path = require('path');
 const { chromium } = require('playwright');
-const { blockDb } = require('../helpers');
+const { blockDb, offlineStub, exposeGame, joinOffline } = require('../helpers');
 const [origin, tag, ...scenes] = process.argv.slice(2);
 const OUT = path.join(__dirname, '..', '..', 'design', 'beta', 'img');
 const VPS = { d: { width: 1280, height: 720 }, p: { width: 390, height: 844, isMobile: true, hasTouch: true } };
@@ -22,6 +22,14 @@ const SCENES = {
     await p.goto(isles('&isle=jungle')); await islesReady(p);
     await p.evaluate(() => { const I = window.__isles; I.god(true); const t = I.findTile('black_sand', 3) || I.findTile('black_sand', 1); if (t) I.teleport(t.x, t.y); });
     await p.waitForTimeout(2500);
+  },
+  town: async (p) => {
+    await exposeGame(p); await p.goto(origin + '/game/index.html'); await joinOffline(p, 'ADMINcyc0art');
+    await p.evaluate(() => { const s = window.__g.scene.getScene('Town'); s.localBody.setPosition(1450, 650); }); await p.waitForTimeout(1500);
+  },
+  realm: async (p) => {
+    await p.goto(origin + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&heropick=0&tutorial=0&seed=12345');
+    await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active, null, { timeout: 30000 }); await p.waitForTimeout(3500);
   },
   'boss-tundra': (p) => bossScene(p, 'tundra', ['glacier_shellback', 'shagtusk', 'sabrefang', 'icicle_bat']),
   'boss-mars': (p) => bossScene(p, 'mars', ['regolith_roly', 'rustbeetle', 'crater_strider', 'dust_devil']),
@@ -43,7 +51,7 @@ async function bossScene(p, isle, species) {
   const browser = await chromium.launch();
   for (const sc of scenes) for (const vk of Object.keys(VPS)) {
     const ctx = await browser.newContext({ viewport: { width: VPS[vk].width, height: VPS[vk].height }, isMobile: !!VPS[vk].isMobile, hasTouch: !!VPS[vk].hasTouch });
-    await blockDb(ctx);
+    if (sc === 'town') await offlineStub(ctx); else await blockDb(ctx);
     const page = await ctx.newPage(); const errs = [];
     page.on('pageerror', (e) => errs.push(e.message));
     try { await SCENES[sc](page); } catch (e) { errs.push('scene: ' + e.message); }
