@@ -3,6 +3,7 @@
 //  b09-13 Lantern Dash: back-to-back Perfect floats never overprint each other
 //  b09-05 Stack Tower: back-to-back near-miss floats never overprint each other
 //  b10-r2-10 Bug Safari: the summary leads with a large score line; the run facts are one labelled panel
+//  b09-12 Pixel Pop: a six-figure score / best fits its HUD box at 390 px
 //  b10-r2-07 Campfire Jam: the song progress bar is not left over the song list
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-d4-arcade.test.js
 const { chromium } = require('playwright');
@@ -107,6 +108,18 @@ const SHOTS = process.env.SHOTS || null;
       return { menu0, play, wPlay, menu1, wMenu };
     });
     check('Jam: the progress bar shows during a song and is hidden + emptied back on the song list', r.menu0 === 'hidden' && r.play === 'visible' && r.menu1 === 'hidden' && (r.wMenu === '0%' || r.wMenu === ''), JSON.stringify(r));
+    await ctx.close();
+  }
+  {
+    // b09-12 Pixel Pop HUD at 390: a 6-digit score / best stays inside its stat box
+    const { ctx, page } = await mk();
+    await page.goto(ROOT + 'game/games/pop/index.html');
+    await page.waitForSelector('#h-best', { timeout: 10000 });
+    const r = await page.evaluate(() => {
+      ['h-score', 'h-best'].forEach((id) => { document.getElementById(id).textContent = '193820'; }); document.getElementById('h-time').textContent = '90'; document.getElementById('h-tile').textContent = '2048';
+      return [...document.querySelectorAll('#hud .stat')].map((b) => { const v = b.querySelector('strong'); const br = b.getBoundingClientRect(); const vr = v.getBoundingClientRect(); return { id: v.id, l: vr.left - br.left, r: br.right - vr.right, over: v.scrollWidth > v.clientWidth + 1 }; });
+    });
+    check('Pop 390: six-figure score / best (and time / tile) stay inside every HUD stat box (no overrun past the border)', r.length >= 2 && r.every((b) => b.l >= 0 && b.r >= 0 && !b.over), JSON.stringify(r));
     await ctx.close();
   }
   check('no page errors', errors.length === 0, errors.join('|'));

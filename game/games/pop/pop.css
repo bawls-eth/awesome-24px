@@ -47,3 +47,9 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 .stat strong { overflow-wrap:normal; white-space:nowrap; font-variant-numeric:tabular-nums; font-size:min(calc(18px * var(--ui-scale,1)), calc(4.6vw * var(--ui-scale,1))); }
 
 /* R4 D4: every font size follows the shared Text size setting (--ui-scale from mm-side-access.js) */
+/* R4 D4 (b09-12): on a phone the Score and Best boxes get the room (Time and Tile are short) and the value font is capped at
+   3.9vw, so a six-figure score fits inside its border; tabular figures keep the width steady */
+@media (max-width:480px) {
+  #hud { grid-template-columns:1.45fr 1fr 1fr 1.45fr; }
+  #hud .stat strong { font-size:min(calc(20px * var(--ui-scale,1)), calc(3.9vw * var(--ui-scale,1))); letter-spacing:0; }
+}
