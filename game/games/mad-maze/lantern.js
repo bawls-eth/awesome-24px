@@ -730,6 +730,7 @@
   $('import-yes').addEventListener('click', doImport);
   $('import-no').addEventListener('click', function () { offerHidden = true; render(); });
   $('new-class').addEventListener('change', function () { updateClassNote(); paintArt(); });
+  $('new-name').addEventListener('invalid', function () { say('Please give your hero a name.', true); }); // b11-09: an empty-name Create never leaves a stale status
   $('new-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var mode = (document.querySelector('input[name=mode]:checked') || {}).value;

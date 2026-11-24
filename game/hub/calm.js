@@ -32,15 +32,28 @@
   }
   function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
 
+  // b08-r2 (round 4): on a fresh profile Home's one first move is the guided Realm adventure (hub/home.js G-14), so the map's first idea is
+  // that too, not "Make a first friend (Isles)". Same rule as Home: no medals and no place to continue. Not stored, not dismissible.
+  const REALM_FIRST = Object.freeze({ key: 'realm:first', game: 'realm', place: 'realm', url: 'game/games/mad-maze/index.html', href: '../games/mad-maze/index.html?mode=world&from=hub', icon: '⚔️', title: 'Start the guided adventure', gameName: 'Realm', text: 'A coach shows you moving, shooting and loot. Your first hero waits on the Shore.', fixed: true });
+  function fresh() {
+    try {
+      const m = medals(); if (!Object.keys(m).every((k) => !(Array.isArray(m[k]) && m[k].length))) return false;
+      if (window.MMNav && typeof MMNav.continueTarget === 'function' && typeof MMNav.state === 'function') {
+        const st = MMNav.state(); if (MMNav.continueTarget(st, 'map') || (st.prev && MMNav.continueTarget({ v: 1, last: st.prev }, 'map'))) return false;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
   let state = load();
   let shown = [];
   function render() {
     while (list.firstChild) list.removeChild(list.firstChild);
     shown = MMCalmGoals.suggest(medals(), { dismissed: state.dismissed }, SEED).filter((s) => hrefFor(s));
+    if (fresh()) shown = [REALM_FIRST].concat(shown.filter((s) => s.key !== 'isles:tame1')).slice(0, 3);
     shown.forEach((s) => {
       const li = el('li', 'calm-item');
       const a = el('a', 'calm-go');
-      a.setAttribute('href', hrefFor(s));
+      a.setAttribute('href', s.fixed ? s.href : hrefFor(s));
       a.dataset.key = s.key; a.dataset.place = s.place;
       a.setAttribute('aria-label', s.title + ' in ' + s.gameName + ': ' + s.text);
       const ic = el('span', 'calm-ico', s.icon); ic.setAttribute('aria-hidden', 'true');
@@ -50,11 +63,11 @@
       t.appendChild(el('span', 'calm-desc', s.text));
       a.appendChild(t);
       li.appendChild(a);
-      const x = el('button', 'calm-x', '×');
+      if (!s.fixed) { const x = el('button', 'calm-x', '×');
       x.type = 'button'; x.dataset.key = s.key;
       x.setAttribute('aria-label', 'Put this idea away: ' + s.title);
       x.addEventListener('click', () => dismiss(s.key));
-      li.appendChild(x);
+      li.appendChild(x); }
       list.appendChild(li);
     });
     card.hidden = state.hidden === 1 || shown.length === 0;

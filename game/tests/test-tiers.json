@@ -1788,5 +1788,53 @@
   "beta-s08-town-three-lazy.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-b02-08-stats-delta.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b08-shore-survival.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b05-05-oakback-food.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-r4-b08-touch-words.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-o07-stalk-neighbour-cap.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-r4-b11-09-lantern-name.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b10-15-tour-card.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b09-12-pop-hud-fit.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-b11-12-creative-goals.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-statue.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-isles.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

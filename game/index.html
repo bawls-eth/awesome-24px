@@ -47,6 +47,7 @@
     <span>🦋</span><span>✨</span><span>🌸</span><span>🍃</span><span>⭐</span><span>🦋</span><span>✨</span>
   </div>
   <div class="join-card">
+    <div class="join-top"><button id="join-menu-btn" type="button" class="join-menu-btn" aria-haspopup="dialog" aria-controls="mm-nav-sheet" title="Menu: go to another world or game">🧭 Menu</button></div>
     <h1>🏝️ Hearthvale</h1>
     <p class="tagline">Walk, chat, fish, chop wood, and build — with your friends, live.</p>
     <p id="online-count" class="online-count"></p>
@@ -59,7 +60,8 @@
     <div id="avatar-grid"></div>
 
     <a id="join-continue" class="hidden" href="#">↩️ Continue</a>
-    <button id="join-btn" disabled>Join Town</button>
+    <button id="join-btn" disabled aria-describedby="join-hint">Join Town</button>
+    <p id="join-hint" class="join-hint">Type your name to join.</p>
     <p id="join-error" class="error"></p>
     <p id="join-status" class="join-status" role="status" aria-live="polite"></p>
     <button id="join-offline-btn" type="button" class="hidden">Play offline</button>

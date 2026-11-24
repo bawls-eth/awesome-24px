@@ -11,6 +11,8 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 .stat { background:var(--panel); border-radius:8px; padding:6px 8px; display:flex; flex-direction:column; min-width:0; }
 .stat .lbl { font-size:12px; color:var(--dim); }
 .stat strong { font-size:18px; overflow-wrap:anywhere; }
+/* b09-12: Score / Best get the room their 6-7 digits need (Time and Tile are 1-2 digits); the numbers shrink a little on narrow phones */
+#hud { grid-template-columns:minmax(0,1.5fr) minmax(0,.75fr) minmax(0,.75fr) minmax(0,1.5fr); }
 #timebar { height:10px; background:#0a0816; border-radius:6px; overflow:hidden; }
 #timefill { height:100%; width:100%; background:linear-gradient(90deg,#7fd18b,#ffd166); transform-origin:left; }
 #board { width:100%; height:auto; display:block; background:#120f22; border:3px solid #0a0816; border-radius:12px; touch-action:none; cursor:pointer; }
@@ -45,3 +47,7 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 }
 /* W-09 (b09-01): a 5-6 digit score stays on one line (the stat box never grows / the HUD row never jumps) */
 .stat strong { overflow-wrap:normal; white-space:nowrap; font-variant-numeric:tabular-nums; font-size:min(18px, 4.6vw); }
+/* b09-12: Score / Best (6-7 digits) fit inside their boxes with room to spare at 320-390 px: they get the wider columns above, and the
+   numbers shrink a little on narrow phones. #hud scope so the shared 8-bit arcade sheet (20 px, loaded later) does not undo it. */
+#hud .stat { padding:6px 6px; }
+#hud .stat strong { font-size:clamp(13px, 4.2vw, 18px); letter-spacing:0; }

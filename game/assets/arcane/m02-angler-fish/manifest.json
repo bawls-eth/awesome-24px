@@ -1,0 +1,1198 @@
+{
+  "batch": "m02",
+  "label": "angler-fish",
+  "assets": [
+    {
+      "id": "fish_minnow_swim_right",
+      "path": "fish/minnow/fish_minnow_swim_right.png",
+      "category": "fish",
+      "species": "minnow",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_minnow_flop_right",
+      "path": "fish/minnow/fish_minnow_flop_right.png",
+      "category": "fish",
+      "species": "minnow",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_minnow_icon",
+      "path": "fish/minnow/fish_minnow_icon.png",
+      "category": "ui",
+      "species": "minnow",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_perch_swim_right",
+      "path": "fish/perch/fish_perch_swim_right.png",
+      "category": "fish",
+      "species": "perch",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_perch_flop_right",
+      "path": "fish/perch/fish_perch_flop_right.png",
+      "category": "fish",
+      "species": "perch",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_perch_icon",
+      "path": "fish/perch/fish_perch_icon.png",
+      "category": "ui",
+      "species": "perch",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_sunfish_swim_right",
+      "path": "fish/sunfish/fish_sunfish_swim_right.png",
+      "category": "fish",
+      "species": "sunfish",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_sunfish_flop_right",
+      "path": "fish/sunfish/fish_sunfish_flop_right.png",
+      "category": "fish",
+      "species": "sunfish",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_sunfish_icon",
+      "path": "fish/sunfish/fish_sunfish_icon.png",
+      "category": "ui",
+      "species": "sunfish",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_bluegill_swim_right",
+      "path": "fish/bluegill/fish_bluegill_swim_right.png",
+      "category": "fish",
+      "species": "bluegill",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_bluegill_flop_right",
+      "path": "fish/bluegill/fish_bluegill_flop_right.png",
+      "category": "fish",
+      "species": "bluegill",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_bluegill_icon",
+      "path": "fish/bluegill/fish_bluegill_icon.png",
+      "category": "ui",
+      "species": "bluegill",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_smelt_swim_right",
+      "path": "fish/smelt/fish_smelt_swim_right.png",
+      "category": "fish",
+      "species": "smelt",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_smelt_flop_right",
+      "path": "fish/smelt/fish_smelt_flop_right.png",
+      "category": "fish",
+      "species": "smelt",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_smelt_icon",
+      "path": "fish/smelt/fish_smelt_icon.png",
+      "category": "ui",
+      "species": "smelt",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_goby_swim_right",
+      "path": "fish/goby/fish_goby_swim_right.png",
+      "category": "fish",
+      "species": "goby",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_goby_flop_right",
+      "path": "fish/goby/fish_goby_flop_right.png",
+      "category": "fish",
+      "species": "goby",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_goby_icon",
+      "path": "fish/goby/fish_goby_icon.png",
+      "category": "ui",
+      "species": "goby",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_tetra_swim_right",
+      "path": "fish/tetra/fish_tetra_swim_right.png",
+      "category": "fish",
+      "species": "tetra",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_tetra_flop_right",
+      "path": "fish/tetra/fish_tetra_flop_right.png",
+      "category": "fish",
+      "species": "tetra",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_tetra_icon",
+      "path": "fish/tetra/fish_tetra_icon.png",
+      "category": "ui",
+      "species": "tetra",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_guppy_swim_right",
+      "path": "fish/guppy/fish_guppy_swim_right.png",
+      "category": "fish",
+      "species": "guppy",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_guppy_flop_right",
+      "path": "fish/guppy/fish_guppy_flop_right.png",
+      "category": "fish",
+      "species": "guppy",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_guppy_icon",
+      "path": "fish/guppy/fish_guppy_icon.png",
+      "category": "ui",
+      "species": "guppy",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_trout_swim_right",
+      "path": "fish/trout/fish_trout_swim_right.png",
+      "category": "fish",
+      "species": "trout",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_trout_flop_right",
+      "path": "fish/trout/fish_trout_flop_right.png",
+      "category": "fish",
+      "species": "trout",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_trout_icon",
+      "path": "fish/trout/fish_trout_icon.png",
+      "category": "ui",
+      "species": "trout",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_bass_swim_right",
+      "path": "fish/bass/fish_bass_swim_right.png",
+      "category": "fish",
+      "species": "bass",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_bass_flop_right",
+      "path": "fish/bass/fish_bass_flop_right.png",
+      "category": "fish",
+      "species": "bass",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_bass_icon",
+      "path": "fish/bass/fish_bass_icon.png",
+      "category": "ui",
+      "species": "bass",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_carp_swim_right",
+      "path": "fish/carp/fish_carp_swim_right.png",
+      "category": "fish",
+      "species": "carp",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_carp_flop_right",
+      "path": "fish/carp/fish_carp_flop_right.png",
+      "category": "fish",
+      "species": "carp",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_carp_icon",
+      "path": "fish/carp/fish_carp_icon.png",
+      "category": "ui",
+      "species": "carp",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_catfish_swim_right",
+      "path": "fish/catfish/fish_catfish_swim_right.png",
+      "category": "fish",
+      "species": "catfish",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_catfish_flop_right",
+      "path": "fish/catfish/fish_catfish_flop_right.png",
+      "category": "fish",
+      "species": "catfish",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_catfish_icon",
+      "path": "fish/catfish/fish_catfish_icon.png",
+      "category": "ui",
+      "species": "catfish",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_pike_swim_right",
+      "path": "fish/pike/fish_pike_swim_right.png",
+      "category": "fish",
+      "species": "pike",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_pike_flop_right",
+      "path": "fish/pike/fish_pike_flop_right.png",
+      "category": "fish",
+      "species": "pike",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_pike_icon",
+      "path": "fish/pike/fish_pike_icon.png",
+      "category": "ui",
+      "species": "pike",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_char_swim_right",
+      "path": "fish/char/fish_char_swim_right.png",
+      "category": "fish",
+      "species": "char",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_char_flop_right",
+      "path": "fish/char/fish_char_flop_right.png",
+      "category": "fish",
+      "species": "char",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_char_icon",
+      "path": "fish/char/fish_char_icon.png",
+      "category": "ui",
+      "species": "char",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_mackerel_swim_right",
+      "path": "fish/mackerel/fish_mackerel_swim_right.png",
+      "category": "fish",
+      "species": "mackerel",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_mackerel_flop_right",
+      "path": "fish/mackerel/fish_mackerel_flop_right.png",
+      "category": "fish",
+      "species": "mackerel",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_mackerel_icon",
+      "path": "fish/mackerel/fish_mackerel_icon.png",
+      "category": "ui",
+      "species": "mackerel",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_sea_bream_swim_right",
+      "path": "fish/sea_bream/fish_sea_bream_swim_right.png",
+      "category": "fish",
+      "species": "sea_bream",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_sea_bream_flop_right",
+      "path": "fish/sea_bream/fish_sea_bream_flop_right.png",
+      "category": "fish",
+      "species": "sea_bream",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_sea_bream_icon",
+      "path": "fish/sea_bream/fish_sea_bream_icon.png",
+      "category": "ui",
+      "species": "sea_bream",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_salmon_swim_right",
+      "path": "fish/salmon/fish_salmon_swim_right.png",
+      "category": "fish",
+      "species": "salmon",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_salmon_flop_right",
+      "path": "fish/salmon/fish_salmon_flop_right.png",
+      "category": "fish",
+      "species": "salmon",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_salmon_icon",
+      "path": "fish/salmon/fish_salmon_icon.png",
+      "category": "ui",
+      "species": "salmon",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_sturgeon_swim_right",
+      "path": "fish/sturgeon/fish_sturgeon_swim_right.png",
+      "category": "fish",
+      "species": "sturgeon",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_sturgeon_flop_right",
+      "path": "fish/sturgeon/fish_sturgeon_flop_right.png",
+      "category": "fish",
+      "species": "sturgeon",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_sturgeon_icon",
+      "path": "fish/sturgeon/fish_sturgeon_icon.png",
+      "category": "ui",
+      "species": "sturgeon",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_eel_swim_right",
+      "path": "fish/eel/fish_eel_swim_right.png",
+      "category": "fish",
+      "species": "eel",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_eel_flop_right",
+      "path": "fish/eel/fish_eel_flop_right.png",
+      "category": "fish",
+      "species": "eel",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_eel_icon",
+      "path": "fish/eel/fish_eel_icon.png",
+      "category": "ui",
+      "species": "eel",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_koi_swim_right",
+      "path": "fish/koi/fish_koi_swim_right.png",
+      "category": "fish",
+      "species": "koi",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_koi_flop_right",
+      "path": "fish/koi/fish_koi_flop_right.png",
+      "category": "fish",
+      "species": "koi",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_koi_icon",
+      "path": "fish/koi/fish_koi_icon.png",
+      "category": "ui",
+      "species": "koi",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_ice_cod_swim_right",
+      "path": "fish/ice_cod/fish_ice_cod_swim_right.png",
+      "category": "fish",
+      "species": "ice_cod",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_ice_cod_flop_right",
+      "path": "fish/ice_cod/fish_ice_cod_flop_right.png",
+      "category": "fish",
+      "species": "ice_cod",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_ice_cod_icon",
+      "path": "fish/ice_cod/fish_ice_cod_icon.png",
+      "category": "ui",
+      "species": "ice_cod",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_lanternfish_swim_right",
+      "path": "fish/lanternfish/fish_lanternfish_swim_right.png",
+      "category": "fish",
+      "species": "lanternfish",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_lanternfish_flop_right",
+      "path": "fish/lanternfish/fish_lanternfish_flop_right.png",
+      "category": "fish",
+      "species": "lanternfish",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_lanternfish_icon",
+      "path": "fish/lanternfish/fish_lanternfish_icon.png",
+      "category": "ui",
+      "species": "lanternfish",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_mangrove_snapper_swim_right",
+      "path": "fish/mangrove_snapper/fish_mangrove_snapper_swim_right.png",
+      "category": "fish",
+      "species": "mangrove_snapper",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_mangrove_snapper_flop_right",
+      "path": "fish/mangrove_snapper/fish_mangrove_snapper_flop_right.png",
+      "category": "fish",
+      "species": "mangrove_snapper",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_mangrove_snapper_icon",
+      "path": "fish/mangrove_snapper/fish_mangrove_snapper_icon.png",
+      "category": "ui",
+      "species": "mangrove_snapper",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_moonfish_swim_right",
+      "path": "fish/moonfish/fish_moonfish_swim_right.png",
+      "category": "fish",
+      "species": "moonfish",
+      "action": "swim",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_moonfish_flop_right",
+      "path": "fish/moonfish/fish_moonfish_flop_right.png",
+      "category": "fish",
+      "species": "moonfish",
+      "action": "flop",
+      "dir": "right",
+      "frames": 3,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 128
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "fish_moonfish_icon",
+      "path": "fish/moonfish/fish_moonfish_icon.png",
+      "category": "ui",
+      "species": "moonfish",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "fish_lanternfish_glow",
+      "path": "fish/lanternfish/fish_lanternfish_glow.png",
+      "category": "effect",
+      "species": "lanternfish",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 96
+      },
+      "anchor_kind": "body_center"
+    }
+  ]
+}

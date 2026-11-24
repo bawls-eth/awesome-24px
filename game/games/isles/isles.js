@@ -444,6 +444,61 @@
     return c;
   }
   let bigN = 0;
+  let howtoHide = null; // set while the first-visit how-to card is open
+  // R4-D2 (b06-r2-09): the card covered the centre during first fights and boss intros. It now closes as soon as a hostile creature is
+  // within 9 tiles or a boss lair is in sight (the fight needs the screen), checked on the 0.5 s spawn tick.
+  function howtoTick() {
+    if (!howtoHide) return;
+    const near = creatures.some((c) => c.hostile && Math.hypot(c.x - hero.x, c.y - hero.y) < 9 * TILE)
+      || (world.bossSites || []).some((b) => Math.hypot((b.x + 0.5) * TILE - hero.x, (b.y + 0.5) * TILE - hero.y) <= BOSS_SEE_R);
+    if (near) { howtoHide(); howtoStat.auto++; }
+  }
+  const howtoStat = { auto: 0 };
+  // R4-D2 (b06-r2-05): islands put the nearest group up to 20+ tiles from the arrival point (meadow: 22), so the first screen was empty.
+  // When nothing is within 8 tiles after the first tick, 2-3 creatures of the nearest CALM small species (never hostile, never L / XL)
+  // stand 8.5-11 tiles above or below the hero (|dx| <= 3): on screen on a phone (portrait) and on desktop, but outside the 8-tile
+  // sighting radius, so arriving never fires a journal toast over the arrival / redirect toast; the first sighting happens when the
+  // player walks up. Ordinary wild creatures with no group (gi -1), despawned by distance.
+  // ON by default (?firstfill=0 turns it off). R4 D1: three tameable greeters pulled a new player (and the isles-first-ten bot) into a
+  // feeding stall before any gather (jungle firstGather 113 s vs the 60 s gate). Now ONE greeter, preferably one you cannot feed yet,
+  // standing beyond the nearest gather node, and only on an empty meadow / jungle start.
+  const ARRIVAL_N = 1; // D1 (b06-r2-05 + first-ten gate): ONE calm creature greets you. Three tameable ones in a row made a 2-minute tame-only stall before the first gather (jungle 113 s)
+  const arrival = { n: 0, sp: '' };
+  function arrivalFill(htx, hty) {
+    if (creatures.length > 0 || (PACK_ID !== 'meadow' && PACK_ID !== 'jungle')) return; // D1: only a really empty start on the open warm isles (b06-r2-05: meadow 0, jungle 0; tundra already starts with 2; reef / mars are not open-field starts)
+    // D1: prefer a calm small creature you cannot feed yet from what you carry (or one that is not tameable at all): it fills the first
+    // screen and shows in the journal, and its food is something you gather, so the first thing to do is still gather (no tame-first stall).
+    // Only when the island has no such creature does a feedable one come (one of them, ARRIVAL_N).
+    const calms = O.nearestSpawnGroups(world, htx, hty, 80).filter((gr) => { const s = specOf(gr.creature, IC.kindOf(gr.creature, -1)); return s.mood !== 'hostile' && s.size !== 'L' && s.size !== 'XL'; });
+    const feedNow = (gr) => { try { const d = CR.get(IC.kindOf(gr.creature, -1)) || CR.get(gr.creature); if (!d || !d.tame) return false; const f = foodOf(d); return !!(f && f.have); } catch (e) { return true; } };
+    const calm = calms.find((gr) => !feedNow(gr)) || calms[0];
+    if (!calm) return;
+    const r = RNG.create('isles|' + SEED + '|arrival');
+    // D1: stand the greeter BEYOND the nearest gather node (2-6 tiles away), so walking over to say hello crosses the node: the first thing
+    // a new player does on the way is a gather, not a long feeding stall. No node that close: the old seeded spot above / below.
+    let lead = null, ld = 6.5;
+    try { const now = clock.now(); for (let i = 0; i < nodes.length; i++) { const n = nodes[i]; if (n.sparkle || n.until > now) continue; const d = Math.hypot(n.x - htx, n.y - hty); if (d >= 2 && d < ld) { ld = d; lead = n; } } } catch (e) { lead = null; }
+    if (lead) {
+      const ux = (lead.x - htx) / ld, uy = (lead.y - hty) / ld;
+      for (let k = 0; k < 9 && arrival.n < ARRIVAL_N && creatures.length < CAP; k++) {
+        const dist = 9.5 + (k % 3) * 0.5, side = [0, 1, -1][Math.floor(k / 3)];
+        const ax = Math.round(htx + ux * dist - uy * side), ay = Math.round(hty + uy * dist + ux * side), d = Math.hypot(ax - htx, ay - hty);
+        if (d < 8.5 || d > 11 || !walkableAt(ax, ay)) continue;
+        addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n, RNG.create('isles|' + SEED + '|arrival|ai|' + arrival.n));
+        arrival.n++; arrival.lead = lead.kind;
+      }
+    }
+    for (let t = 0; t < 40 && arrival.n < ARRIVAL_N && creatures.length < CAP; t++) {
+      const ax = htx + r.int(-3, 3), ay = hty + (r.next() < 0.5 ? -1 : 1) * r.int(9, 10), d = Math.hypot(ax - htx, ay - hty);
+      if (d < 8.5 || d > 11 || !walkableAt(ax, ay)) continue;
+      addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n, RNG.create('isles|' + SEED + '|arrival|ai|' + arrival.n)); // own AI stream: the shared one (and every other creature's rolls) stays as before
+      arrival.n++;
+    }
+    arrival.sp = calm.creature;
+  }
+  // R4-D2 (b06-r2-05 empty first screen): groups closer than 7 tiles never pop in, so the spawn view stayed empty (meadow 0, jungle 0).
+  // The FIRST tick after an island loads runs arrivalFill below (on by default, ?firstfill=0 off). Groups keep the 7-tile rule.
+  let firstFill = Q.get('firstfill') !== '0';
   function spawnTick() {
     const htx = tileOf(hero.x), hty = tileOf(hero.y), now = clock.now();
     const near = O.nearestSpawnGroups(world, htx, hty, SPAWN_R);
@@ -453,9 +508,9 @@
       const gr = near[k], gi = groupIdx.get(gr), st = groupState[gi];
       if (st.alive > 0 || st.until > now) continue;
       const dd = Math.hypot(gr.x - htx, gr.y - hty);
-      if (dd < 7) continue; // never pop in on top of the hero
       const s = specOf(gr.creature, IC.kindOf(gr.creature, gi));
       const bigG = s.size === 'L' || s.size === 'XL';
+      if (dd < 7) continue; // never pop in on top of the hero
       if (bigG && bigN >= BIG_CAP) continue;
       const gr2 = RNG.create('isles|' + SEED + '|g' + gi + '|' + Math.floor(now / 1000));
       const n = Math.min(bigG ? Math.min(gr.count, BIG_CAP - bigN) : gr.count, CAP - creatures.length);
@@ -467,6 +522,8 @@
         if (bigG) bigN++;
       }
     }
+    if (firstFill) arrivalFill(htx, hty);
+    firstFill = false;
     rareTick(htx, hty);
     // despawn far creatures (their group can come back later, nothing is lost)
     creatures = creatures.filter((c) => {
@@ -853,7 +910,15 @@
     return every > 0 ? every - (c.tm.t + (c.tmAcc || 0) - c.tm.lastFeed) : 0;
   }
   let feedLbl = '', feedChew = false;
+  let chewToast = null; // b05-08: the creature an early-tap toast is about, so the toast's "ready in N s" stays the button's number
+  function chewToastText(c, nm) { const left = chewLeft(c); return left > 0.05 ? nm + ' is still chewing: ready in ' + Math.max(1, Math.ceil(left)) + ' s.' : nm + ' is ready to eat again.'; }
+  function chewToastSync() {
+    if (!chewToast) return;
+    const el = $('toast'); if (!el || !el.classList.contains('on') || el.textContent.indexOf(chewToast.nm + ' is ') !== 0) { chewToast = null; return; }
+    const t = chewToastText(chewToast.c, chewToast.nm); if (el.textContent !== t) el.textContent = t;
+  }
   function feedHud(ft) {
+    chewToastSync();
     if (btn.feed.hidden) { feedChew = false; return; }
     let lbl = 'Feed', p = 1;
     if (ft && ft.tm && ft.tm.need > 0) {
@@ -885,7 +950,7 @@
       else pouch[f.id] = Math.max(0, pouch[f.id] - 1);
       c.eatT = 0.8;
     }
-    if (ev.indexOf('toofast') >= 0) toast(nm + ' is still chewing: ready in ' + Math.max(1, Math.ceil(chewLeft(c))) + ' s.'); // BB: honest, no guessing
+    if (ev.indexOf('toofast') >= 0) { chewToast = { c, nm }; toast(chewToastText(c, nm)); } // BB: honest, no guessing; b05-08: the toast then counts down with the button
     if (ev.indexOf('refused') >= 0) toast(nm + ' turns its nose up.');
     if (c.tm.st === 'tamed') { finishTame(c); return { ok: true, tamed: true, events: ev }; }
     syncTame(c, ev);
@@ -1070,7 +1135,7 @@
     if (tames.mount !== mountEnt.id) { TAMES.setMount(tames, mountEnt.id); TAMES.write(S, tames); }
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
     abilityMount(def);
-    toast('Riding ' + (mountEnt.nm || def.name) + '. R to get off.');
+    toast('Riding ' + (mountEnt.nm || def.name) + (document.body.classList.contains('touch') ? '. Tap Ride to get off.' : '. R to get off.'));
     logEvent('ride');
     return true;
   }
@@ -2561,7 +2626,9 @@
     g.globalAlpha = 0.6 + 0.3 * p; g.fillStyle = '#080a1c'; g.fillRect(0, 0, VW, VH); g.globalAlpha = 1;
     g.fillStyle = '#f4f8ff';
     for (let i = 0; i < STARS.length; i++) g.fillRect(Math.round(STARS[i][0] * VW), Math.round(STARS[i][1] * VH), STARS[i][2], STARS[i][2]);
-    const cx = Math.round(VW / 2), pad = Math.round(VH * 0.78);
+    // R4-D2 (b06-r2-08): the pad sits at 60% of the view (was 78%: the rocket rose from under the dock hint, toasts and the Sail / Decor
+    // buttons), and every overlay but the skip toast is hidden while it plays (body.launching)
+    const cx = Math.round(VW / 2), pad = Math.round(VH * 0.6);
     g.fillStyle = '#8a8e92'; g.fillRect(cx - 46, pad, 92, 10); g.fillStyle = '#c8ccd0'; g.fillRect(cx - 40, pad - 4, 80, 5);
     g.fillStyle = '#5a5e62'; g.fillRect(cx - 34, pad - 70, 6, 70);
     const shake = t < 0.6 && !REDUCED ? Math.round(Math.sin(t * 60)) : 0, by = Math.round(pad - 6 - ease * (VH * 0.9)) + shake;
@@ -2599,7 +2666,7 @@
     // TD1: to mars, a short lift-off first (never with reduced motion or ?launch=0; a tap or a key skips it). Nothing is used up.
     if (id === 'mars' && !REDUCED && Q.get('launch') !== '0') {
       if (panelKind) closePanel();
-      launch.on = true; launch.t = 0; launch.url = url; launch.n++;
+      launch.on = true; launch.t = 0; launch.url = url; launch.n++; document.body.classList.add('launching'); if (howtoHide) howtoHide();
       logEvent('launch');
       toast('Lift-off! Tap to skip.');
       return true;
@@ -3164,7 +3231,7 @@
     if (nearPedestal() && !bossAlive()) return document.body.classList.contains('touch') ? 'The trophy pedestal. Tap Trophies to look, or for a rematch.' : 'The trophy pedestal. Press P or Trophies to look, or for a rematch.';
     if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
-    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.' +
+    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + (document.body.classList.contains('touch') ? '. Tap Ride to get off.' : '. Press R or Ride to get off.') +
       (abil ? (document.body.classList.contains('touch') ? ' Tap ' : ' F or ') + abilDef.name + ': ' + abilDef.desc.charAt(0).toLowerCase() + abilDef.desc.slice(1) : '');
     { const fx = tileOf(hero.x + hero.face.x * TILE * 1.2), fy = tileOf(hero.y + hero.face.y * TILE * 1.2); if (swimAt(fx, fy) && !solidAt(fx, fy)) return 'Open water. Ride a Tidesteed or Skimray to swim across.'; }
     if (!TAME) return '';
@@ -3317,14 +3384,21 @@
     const box = $('howto');
     if (!FIRST_VISIT) return;
     box.hidden = false;
-    const hide = () => { box.hidden = true; };
-    setTimeout(hide, 9000);
+    const hide = () => { box.hidden = true; howtoHide = null; };
+    howtoHide = hide; // R4-D2 (b06-r2-09): also closed by a boss lair / a hostile creature in view and by the lift-off (howtoTick)
+    setTimeout(hide, 7000);
     const x = $('howto-close'); if (x) x.addEventListener('click', hide); // W-18 (b15-14): a real close control (44 px), keyboard / screen reader reachable
     window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
     window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
   })();
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
+  if (document.body.classList.contains('touch')) { // b08-r2-09: touch words on a phone, never key names
+    const li = document.querySelectorAll('#howto-list li');
+    if (li[0]) li[0].textContent = 'Move: the stick.';
+    if (li[1]) li[1].textContent = 'Attack: the big button.';
+    const hp = $('help'); if (hp) hp.textContent = 'Touch: the stick moves, the big button attacks. Feed, Soothe, Ride and Gather buttons appear when you can use them. Pack holds party, craft, log and help.';
+  }
   // PI2: one-thumb layout. On touch the mount ability button moves next to the move stick (the same thumb reaches both); off, it goes
   // back to its place in the action column. The DOM moves only when the mode changes.
   const actsEl = $('acts'), touchEl = $('touch');
@@ -3379,7 +3453,7 @@
     if (!GFX.fogHz) revealFog(); else if ((fogAcc += dt) >= 1 / GFX.fogHz - 1e-9) { fogAcc = 0; revealFog(); }
     nodeTick();
     spawnT -= dt;
-    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); sparkTick(); }
+    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); sparkTick(); howtoTick(); }
     stepCreatures(dt);
     if (bz.st) bossStep(dt);
     if (ENV_ON) envStep(dt);
@@ -3551,7 +3625,7 @@
       hint: () => hintText(TAME ? feedTarget() : null),
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
-      spawnTick: () => { spawnTick(); return creatures.length; },
+      spawnTick: () => { spawnTick(); return creatures.length; }, howto: () => ({ open: !$('howto').hidden, auto: howtoStat.auto }), arrival: () => Object.assign({}, arrival), launchPad: () => Math.round(VH * 0.6), // R4-D2 hooks
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },
       // PI2: the graphics tier and the access state (sparks = glints drawn in the last frame, -1 when uncapped)
       gfx: () => ({ tier: GFX.tier, low: GFX_LOW, dpr: DPR, sparks: GFX.sparks === Infinity ? null : GFX.sparks, ghosts: deadPool.length, terrainAnim: GFX.terrainAnim,

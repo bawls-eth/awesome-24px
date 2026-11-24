@@ -33,7 +33,7 @@
     N('w1-turnip', 'level', 36, 4, 'Turnip Stall', { secret: true, reward: 'key' }),
     N('w1-museum', 'level', 37, 16, 'Museum Hall'),
     N('w1-bonus', 'level', 31, 18, 'Hidden Garden'),
-    N('w1-castle', 'castle', 36, 20, "Mayor's Statue"),
+    N('w1-castle', 'castle', 36, 20, "Founder's Statue"),
     // W2 Mad Maze Wilds
     N('w2-lantern', 'game', 6, 18, 'The Lantern', { game: 'games/mad-maze/lantern.html?from=hub&node=w2-lantern' }),
     N('w2-burrow', 'level', 6, 13, 'Burrow Warren', { secret: true }),
