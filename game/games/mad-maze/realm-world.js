@@ -629,7 +629,8 @@
         }
         const zs = (Z.TABLES && Z.TABLES.ZONES) || []; const z = zi && zi.zone >= 0 && zi.zone <= 3 ? zi.zone : 0;
         const next = zs[z + 1]; const lv = arena.save && arena.save.level | 0;
-        if (next && next.name) return lv >= (next.recLv | 0) ? `Head inland to the ${next.name}` : `Reach Lv ${next.recLv} for ${next.name} (Lv ${lv})`;
+        // cyc1 U-05: no "(Lv N)" suffix: the hero's level is already on the info line right above, and the suffix wrapped the goal onto a 2nd phone line
+        if (next && next.name) return lv >= (next.recLv | 0) ? `Head inland to the ${next.name}` : `Reach Lv ${next.recLv} for the ${next.name}`;
         return 'Find a boss altar and defeat its guardian';
       } catch (e) { return ''; }
     }
