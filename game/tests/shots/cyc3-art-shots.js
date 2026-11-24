@@ -31,6 +31,11 @@ const SCENES = {
   town: town(1450, 650, ''),
   hub: async (p) => { await p.goto(origin + '/game/hub/index.html'); await p.waitForTimeout(2500); },
   realm: realm(''),
+  dungeon: async (p) => {
+    await p.goto(origin + '/game/games/mad-maze/index.html?mode=dungeon&seed=4242&lv=2&biome=crypt&test=1&offline=1&heropick=0&tutorial=0');
+    await p.waitForFunction(() => window.__mm && window.__mm.arena && window.__mm.arena.active, null, { timeout: 30000 }).catch(() => {});
+    await p.waitForTimeout(3500);
+  },
   'isles-meadow': async (p) => { await p.goto(isles('&isle=meadow')); await islesReady(p); },
   'isles-jungle': async (p) => { await p.goto(isles('&isle=jungle')); await islesReady(p); },
   // a Realm enemy's death ghost at 0, 25, 50, 75 % of its last 0.3 s, 4x, on grass; 'before' = ?dissolve=0 (the old alpha fade)
@@ -66,6 +71,30 @@ const SCENES = {
     await p.waitForTimeout(2500);
     await p.evaluate(() => { const w = window.__mm.world; w.nexus.walk.place(14.5 * 32, 9.5 * 32); });
     await p.waitForTimeout(600);
+  },
+  // R01b: 3x3-tile crops (4x) around Highlands / Godlands inner-corner seams; 'before' = ?icorner=0
+  icorner: async (p) => {
+    await realm(BEFORE ? '&icorner=0' : '')(p);
+    await p.waitForFunction(() => !window.__mm.world.artState().loading, null, { timeout: 25000 }).catch(() => {});
+    await p.evaluate(() => {
+      const W = window.__mm.world, w = W.world.w, h = W.world.h, T = W.TILE, CH = W.CPX / T, name = (x, y) => W.drawName(x, y), NAMES = ['snow', 'lava_rock', 'dry_grass', 'gravel'];
+      const out = document.createElement('canvas'); out.width = 4 * 3 * T * 3 + 40; out.height = 2 * 3 * T * 4 + 30; const o = out.getContext('2d'); o.imageSmoothingEnabled = false; o.fillStyle = '#111'; o.fillRect(0, 0, out.width, out.height);
+      const picks = []; const seenT = {};
+      for (let y = 2; y < h - 2 && picks.length < 6; y++) for (let x = 2; x < w - 2 && picks.length < 6; x++) {
+        const n = name(x, y); if (NAMES.indexOf(n) < 0 || W.hasTransition(x, y) || (seenT[n] || 0) >= 3) continue;
+        if (name(x, y - 1) !== n || name(x + 1, y) !== n || name(x, y + 1) !== n || name(x - 1, y) !== n) continue;
+        if (![[1, -1], [1, 1], [-1, 1], [-1, -1]].some(([dx, dy]) => name(x + dx, y + dy) !== n && W.hasTransition(x + dx, y) && W.hasTransition(x, y + dy))) continue;
+        if (picks.some((q) => Math.abs(q.x - x) < 4 && Math.abs(q.y - y) < 4)) continue;
+        picks.push({ x, y }); seenT[n] = (seenT[n] || 0) + 1;
+      }
+      picks.forEach((q, i) => {
+        const tile = document.createElement('canvas'); tile.width = tile.height = 3 * T; const tg = tile.getContext('2d');
+        for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) { const X = q.x + k, Y = q.y + j, cx = Math.floor(X / CH), cy = Math.floor(Y / CH); tg.drawImage(W.bakeChunk(cx, cy), (X - cx * CH) * T, (Y - cy * CH) * T, T, T, (k + 1) * T, (j + 1) * T, T, T); }
+        o.drawImage(tile, 10 + (i % 3) * (3 * T * 4 + 10), 10 + Math.floor(i / 3) * (3 * T * 4 + 10), 3 * T * 4, 3 * T * 4);
+      });
+      Object.assign(out.style, { position: 'fixed', left: '0', top: '0', zIndex: 99999, maxWidth: '100vw', imageRendering: 'pixelated' }); document.body.appendChild(out);
+    });
+    await p.waitForTimeout(300);
   },
   'isles-tundra': async (p) => { await p.goto(isles('&isle=tundra')); await islesReady(p); },
 };

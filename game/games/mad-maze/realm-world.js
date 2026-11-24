@@ -422,6 +422,28 @@
         cornerStat.filled++;
       }
     }
+    // Cycle 3 art (G), R01b stopgap: Highlands / Godlands seams (snow, lava rock, dry grass, gravel). A tile whose four cardinal
+    // neighbours are its own terrain draws its plain variant, so where the diagonal neighbour is another terrain the two neighbours' edge
+    // strips meet at a square stair-step. Here that corner (CORNER x CORNER) is copied from the terrain's OWN edge tile toward that
+    // diagonal terrain, the mask whose two sides at that corner are connected (it carries the art's notch = an inner corner in the
+    // artist's own pixels). Bake time only. ?icorner=0 = off. Hook: smoothStats().icorners.
+    const ICORNER = !(typeof location !== 'undefined' && /[?&]icorner=0(&|$)/.test(location.search));
+    const ICORNER_T = new Set(['snow', 'lava_rock', 'dry_grass', 'gravel'].filter((n) => Object.prototype.hasOwnProperty.call(T, n)).map((n) => T[n]));
+    const icornerStat = { on: ICORNER, filled: 0 };
+    function innerCorners(g, wx, wy, t, px, py) {
+      if (wx < 1 || wy < 1 || wx >= ww - 1 || wy >= wh - 1) return;
+      const banks = edgeArt[t]; if (!banks) return;
+      // [dx, dy, maskForCorner (two connected sides + the side opposite the first), ox, oy]
+      const C = [[1, -1, 1 | 2 | 4, TILE - CORNER, 0], [1, 1, 4 | 2 | 1, TILE - CORNER, TILE - CORNER], [-1, 1, 4 | 8 | 1, 0, TILE - CORNER], [-1, -1, 1 | 8 | 4, 0, 0]];
+      for (let k = 0; k < 4; k++) {
+        const c = C[k]; const d = drawT[(wy + c[1]) * ww + wx + c[0]];
+        if (d === t || !banks[d]) continue;
+        if (drawT[(wy + c[1]) * ww + wx] !== t || drawT[wy * ww + wx + c[0]] !== t) continue;
+        const src = banks[d][c[2]]; if (!src) continue;
+        g.drawImage(src, c[3], c[4], CORNER, CORNER, px + c[3], py + c[4], CORNER, CORNER);
+        icornerStat.filled++;
+      }
+    }
     function buildChunk(cx, cy) {
       // fieldStat: ms / maxMs = the field pass alone (its added bake cost); chunkMs / chunkMaxMs = the whole chunk bake, for scale
       const ft0 = performance.now(); fieldStat.cur = 0;
@@ -444,7 +466,7 @@
         if (t === T.deep_water || t === T.shallow_water) water = true;
         const transition = transitionAt(wx, wy, t);
         if (transition) { g.drawImage(transition, px, py, TILE, TILE); fillInnerCorners(g, wx, wy, t, px, py, art, pal); }
-        else if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
+        else if (art && art.length) { g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE); if (ICORNER && ICORNER_T.has(t)) innerCorners(g, wx, wy, t, px, py); }
         else {
           rect(g, pal[0], px, py, TILE, TILE);
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
@@ -2878,7 +2900,7 @@
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
-      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, fieldStats: () => Object.assign({ on: FIELD_DETAIL }, fieldStat), treeFix: () => treeFixApi(), bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
+      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, fieldStats: () => Object.assign({ on: FIELD_DETAIL }, fieldStat), treeFix: () => treeFixApi(), bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled, icorners: icornerStat.filled, icornerOn: icornerStat.on }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
       slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, danger: () => ({ on: DANGER_ON, now: dangerNow, hidden: dangerEl.classList.contains('hidden'), el: dangerEl.isConnected }), zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
