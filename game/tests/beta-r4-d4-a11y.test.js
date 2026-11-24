@@ -25,9 +25,10 @@ const AE = () => { const e = document.activeElement; return !e || e === document
     await page.waitForSelector('#play', { state: 'visible', timeout: 10000 });
     await page.waitForTimeout(500);
     const stops = [];
-    for (let i = 0; i < 8; i++) { await page.keyboard.press('Tab'); const a = await page.evaluate(AE); stops.push(a); if (a === 'play') break; }
-    const pi = stops.indexOf('play');
-    check(`${g}: Tab order starts Menu, Sound and reaches Play with no <body> stop on the way`, stops[0] === 'mm-nav-btn' && stops[1] === 'btn-mute' && pi > 1 && !stops.slice(0, pi).includes('BODY'), JSON.stringify(stops));
+    for (let i = 0; i < 8; i++) { await page.keyboard.press('Tab'); const a = await page.evaluate(AE); stops.push(a); if (a === 'mm-nav-btn') break; }
+    const pi = stops.indexOf('play'), mi = stops.indexOf('mm-nav-btn');
+    // the shared Menu stays last in the DOM (the Hub map's first stop must stay 'Play here', nav-settings.test.js)
+    check(`${g}: Tab runs Sound, ..., Play, Menu with no <body> stop on the way`, stops[0] === 'btn-mute' && pi > 0 && mi > pi && !stops.slice(0, mi).includes('BODY'), JSON.stringify(stops));
     // Enter with nothing focused starts the run (the old auto-focused Play behaviour, kept for keyboard players)
     const { ctx: c2, page: p2 } = await mk();
     await p2.goto(ROOT + `game/games/${g}/index.html`);
