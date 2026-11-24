@@ -109,7 +109,7 @@
     'pixeltown-stalk-practice-v1': { count: ['n', 'rounds'], any: ['hasBest'], maxMap: ['moodBest'] },
     'pixeltown-angler-fun-v1': { max: ['bestStreak'], min: ['bestReact'], maxMap: ['cond'] },
     'pixeltown-bugs-pb-v1': { maxMap: ['combo', 'mod'], count: ['runs'] },
-    'pixeltown-deepdelve-runs-v1': { max: ['best.score', 'best.depth', 'best.ores', 'best.combo'], count: ['runs', 'safe'] },
+    'pixeltown-deepdelve-runs-v1': { max: ['best.score', 'best.depth', 'best.ores', 'best.combo'], count: ['runs', 'safe'], maxMap: ['seedBest'] },
     medals: { union: ['m'] }
   };
   return { merge: merge, write: write, SPECS: SPECS };

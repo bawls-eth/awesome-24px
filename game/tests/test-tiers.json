@@ -1975,5 +1975,17 @@
   "realm-destroy-listeners.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc0-town-interact-shadow.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-ghost.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc0-isles-leash.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
