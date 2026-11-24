@@ -298,6 +298,11 @@
     else if (!code && !GFX_LOW && T_DETAIL && IA && IA.active() && window.MMIsleArt && window.MMIsleArt.detail) detailBaked += window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: artFreePal(), tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
     // cycle 0 art (b12-r2-09): warm volcanic black sand drawn over the baked b30 / code tiles (overlay; the PNGs stay as delivered). ?warmsand=0
     if (WARM_SAND && window.MMIsleArt && window.MMIsleArt.warmSand) sandWarmed += window.MMIsleArt.warmSand(c, world.terrain, W, cx, cy, { names: NAMES, tile: TILE, ch: CH });
+    // cycle 2 art (G): field detail overlay (flowers / pebbles / tufts on grass-like tiles; PNG terrains skipped via artFreePal). ?islefield=0
+    if (ISLE_FIELD && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.fieldDetail) {
+      const f0 = performance.now(), fr = window.MMIsleArt.fieldDetail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: code ? PAL : artFreePal(), tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003 });
+      fieldStat.flowers += fr.flowers; fieldStat.pebbles += fr.pebbles; fieldStat.tufts += fr.tufts; fieldStat.chunks++; fieldStat.ms += performance.now() - f0;
+    }
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
     const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
     for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
@@ -314,6 +319,8 @@
   const propsBaked = { png: 0, code: 0 }; // test handle counters (bake time only)
   const WARM_SAND = Q.get('warmsand') !== '0';
   const T_DETAIL = Q.get('tdetail') !== '0';
+  const ISLE_FIELD = Q.get('islefield') !== '0';
+  const fieldStat = { flowers: 0, pebbles: 0, tufts: 0, chunks: 0, ms: 0 }; // cycle 2 art: field overlay counters (bake time only)
   let detailBaked = 0, artFree = null; // cycle 0 art: tiles detailed on art bakes; the palette without the PNG terrains (built once)
   function artFreePal() {
     if (artFree) return artFree;
@@ -3645,6 +3652,7 @@
       propsBaked: () => Object.assign({}, propsBaked),
       sandWarmed: () => ({ on: WARM_SAND, tiles: sandWarmed }), // cycle 0 art
       detailBaked: () => ({ on: T_DETAIL, tiles: detailBaked }), // cycle 0 art
+      fieldDetail: () => Object.assign({ on: ISLE_FIELD && !GFX_LOW }, fieldStat), // cycle 2 art
       // cycle 0 art: distinct colours and an FNV hash of the baked pixels of terrain `name` in the chunk under the hero
       tileStats: (name) => {
         const id = NAMES.indexOf(name), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
