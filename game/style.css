@@ -2977,7 +2977,8 @@ body.a11y-hud-scaled #chat-log, body.a11y-hud-scaled #quick-chat-row button, bod
   }
   #gate-pointer-text { flex: 1 1 100%; line-height: 1.25; overflow-wrap: break-word; }
   #gate-pointer-close { margin: 0 -2px 0 0; }
-  body:has(#inventory-panel.bag-open) #gate-pointer, #player-list-panel:not(.collapsed) ~ #gate-pointer { display: none !important; }
+  body:has(#inventory-panel.bag-open) #gate-pointer, #player-list-panel:not(.collapsed) ~ #gate-pointer,
+  body:has(#emote-popup:not(.hidden)) #gate-pointer, body:has(#action-buttons.more-open) #gate-pointer { display: none !important; } /* the emote picker / Tools tray open over this column */
 }
 @media (max-width: 300px) and (max-height: 420px) { #gate-pointer { display: none !important; } }
 
