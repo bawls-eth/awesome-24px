@@ -2183,5 +2183,9 @@
   "cyc2-shore-fade.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc4-art-isles-biome-ground.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

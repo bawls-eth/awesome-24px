@@ -309,6 +309,132 @@
     return out;
   }
 
+  // Cycle 4 art (G): biome ground detail for the Frostfang Tundra and the Verdant Jungle. A SEPARATE overlay painted after detail() /
+  // warmSand() / fieldDetail() on the baked chunk (bake time only, never per frame); detail()'s own output and the b30 tile PNGs (the
+  // isle-art-bake pins) are not changed, this only draws on the chunk canvas the page owns. Seeded per world tile, pure in its inputs.
+  //  tundra: snow drifts (a lit crest over a soft blue shadow) and sparkles on snow, jagged cracks with a lit lip on ice, frost on rock / moss.
+  //  jungle: dark roots with a lit top edge, fallen leaf litter (2x1 leaves in 4 browns / olive) and small moss clumps.
+  //  seams: where a tundra / jungle tile meets another terrain, seeded bumps of the neighbour's base colour (1-2 art px deep) break the
+  //  straight 32 px seam into an uneven edge. opts.biomes: { tundra: bool, jungle: bool } (default both). Returns counts.
+  const BIOME_GROUND = {
+    snow: 's', packed_snow: 's', powder_snow: 's', deep_snow: 's', ice_sheet: 'i', ice_thin: 'i', slush: 'i', frost_rock: 'f', permafrost: 'f',
+    frozen_rock: 'f', frozen_road: 'f', tundra_moss: 'm',
+    jungle_floor: 'j', jungle_moss: 'j', fern_thicket: 'j', vine_root: 'j', temple_moss: 'j', orchid_moss: 'j', mud: 'j'
+  };
+  function mixHex(a, b, f) { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), m = (s2) => Math.round(((x >> s2) & 255) * (1 - f) + ((y >> s2) & 255) * f);
+    return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1); }
+  const SOFT = new Map(); // base|edge -> the soft seam tone (or '' when a colour is not #rrggbb)
+  function softEdge(b, e) {
+    const k = b + '|' + e; let v = SOFT.get(k);
+    if (v === undefined) { v = /^#[0-9a-f]{6}$/i.test(b) && /^#[0-9a-f]{6}$/i.test(e) ? mixHex(b, e, 0.4) : ''; if (SOFT.size > 256) SOFT.clear(); SOFT.set(k, v); }
+    return v;
+  }
+  const LEAVES = ['rgba(138,106,42,0.85)', 'rgba(168,132,58,0.85)', 'rgba(107,74,36,0.85)', 'rgba(95,122,42,0.85)'];
+  function biomeDetail(ctx, terrain, w, h, cx, cy, opts) {
+    const out = { drifts: 0, sparkles: 0, cracks: 0, frost: 0, roots: 0, litter: 0, moss: 0, seams: 0, tiles: 0 };
+    try {
+      const o = opts && typeof opts === 'object' ? opts : {};
+      const names = o.names || NAMES, pal = o.palette || PALETTE, T = o.tile | 0 || 32, CH = o.ch | 0 || 16, seed = (o.seed | 0) + 7717;
+      const bi = o.biomes && typeof o.biomes === 'object' ? o.biomes : { tundra: true, jungle: true };
+      if (!ctx || typeof ctx.fillRect !== 'function' || !terrain) return out;
+      const u = Math.max(1, Math.round(T / 16)), A = 16; // art pixels per tile side
+      const at = (x, y) => (x >= 0 && y >= 0 && x < w && y < h ? terrain[y * w + x] | 0 : -1);
+      const R = (x, y, ww, hh) => ctx.fillRect(x, y, ww, hh);
+      for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+        const wx = cx * CH + tx, wy = cy * CH + ty, t = at(wx, wy);
+        if (t < 0) continue;
+        const nm = names[t], k = BIOME_GROUND[nm];
+        if (!k || (k === 'j' ? !bi.jungle : !bi.tundra)) continue;
+        out.tiles++;
+        const px = tx * T, py = ty * T, r = dhash(wx, wy, seed), q = dhash(wy, wx, seed + 1), q2 = dhash(wx + 31, wy - 17, seed + 2);
+        const gx = (n) => px + u * n, gy = (n) => py + u * n;
+        const ax = 2 + ((q * 9) | 0), ay = 3 + ((q2 * 9) | 0); // decal anchor in art px (inside the tile, clear of the seam rows)
+        if (k === 's') {
+          if (r < 0.24) { // drift: lit crest row, a longer soft shadow row under it
+            const L = 4 + ((q2 * 4) | 0);
+            ctx.fillStyle = 'rgba(255,255,255,0.85)'; R(gx(ax + 1), gy(ay), u * L, u);
+            ctx.fillStyle = 'rgba(70,100,150,0.20)'; R(gx(ax), gy(ay + 1), u * (L + 2), u);
+            ctx.fillStyle = 'rgba(70,100,150,0.10)'; R(gx(ax + 1), gy(ay + 2), u * L, u);
+            out.drifts++;
+          } else if (r < 0.40) { // sparkle: a white pixel with a faint blue twin
+            ctx.fillStyle = 'rgba(255,255,255,0.95)'; R(gx(ax), gy(ay), u, u);
+            ctx.fillStyle = 'rgba(120,160,220,0.35)'; R(gx(ax + 3), gy(ay + 2), u, u);
+            out.sparkles++;
+          }
+        } else if (k === 'i') {
+          if (r < (nm === 'ice_thin' ? 0.5 : 0.3)) { // crack: a jagged 1 art px line, each step with a lit lip below-right
+            let x = ax, y = Math.min(ay, 6);
+            const n = 5 + ((q2 * 4) | 0);
+            for (let s = 0; s < n; s++) {
+              ctx.fillStyle = 'rgba(30,60,110,0.50)'; R(gx(x), gy(y), u, u);
+              ctx.fillStyle = 'rgba(255,255,255,0.50)'; R(gx(x + 1), gy(y + 1), u, u);
+              const d = dhash(wx * 7 + s, wy * 5 - s, seed + 3);
+              if (d < 0.45) x++; else if (d < 0.6 && x > 1) x--; y++;
+              if (x > A - 3 || y > A - 3) break;
+            }
+            out.cracks++;
+          } else if (r < 0.45) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; R(gx(ax), gy(ay), u * 2, u); out.sparkles++; }
+        } else if (k === 'f' || k === 'm') {
+          if (r < (k === 'm' ? 0.3 : 0.4)) { // frost: a small cluster of pale pixels (moss also gets a 3x2 snow patch)
+            ctx.fillStyle = 'rgba(232,242,255,0.80)'; R(gx(ax), gy(ay), u, u); R(gx(ax + 1), gy(ay + 1), u, u); R(gx(ax + 3), gy(ay), u, u); R(gx(ax + 2), gy(ay + 3), u, u);
+            if (k === 'm') { ctx.fillStyle = 'rgba(240,246,255,0.9)'; R(gx(ax + 5), gy(ay + 2), u * 3, u); R(gx(ax + 6), gy(ay + 1), u, u); ctx.fillStyle = 'rgba(70,100,150,0.2)'; R(gx(ax + 5), gy(ay + 3), u * 3, u); }
+            out.frost++;
+          }
+        } else if (k === 'j') {
+          if (r < 0.12) { // root: a dark meandering run with a lit top edge
+            let y = ay; const L = 6 + ((q2 * 5) | 0);
+            for (let s = 0; s < L && ax + s < A - 1; s++) {
+              ctx.fillStyle = 'rgba(46,30,18,0.75)'; R(gx(ax + s), gy(y), u, u);
+              ctx.fillStyle = 'rgba(150,110,64,0.55)'; R(gx(ax + s), gy(y - 1), u, u);
+              const d = dhash(wx * 3 + s, wy * 11, seed + 4); if (d < 0.25 && y > 3) y--; else if (d > 0.75 && y < A - 3) y++;
+            }
+            out.roots++;
+          } else if (r < 0.34) { // leaf litter: 2-3 leaves of 2x1 art px with a dark under pixel
+            const n = 2 + ((q2 * 2) | 0);
+            for (let s = 0; s < n; s++) {
+              const lx = ax + ((dhash(wx, wy + s, seed + 5) * 6) | 0) - 2, ly = ay + ((dhash(wy, wx + s, seed + 6) * 6) | 0) - 2, c = LEAVES[(dhash(wx + s, wy, seed + 7) * 4) | 0];
+              ctx.fillStyle = c; R(gx(lx), gy(ly), u * 2, u);
+              ctx.fillStyle = 'rgba(30,20,12,0.35)'; R(gx(lx + 1), gy(ly + 1), u, u);
+            }
+            out.litter++;
+          } else if (r < 0.44) { // moss clump: 2x2 bright moss and one lit pixel
+            ctx.fillStyle = 'rgba(112,178,72,0.60)'; R(gx(ax), gy(ay), u * 2, u * 2); R(gx(ax + 2), gy(ay + 1), u, u);
+            ctx.fillStyle = 'rgba(176,220,120,0.65)'; R(gx(ax), gy(ay), u, u);
+            out.moss++;
+          }
+        }
+        // seam softening on all four sides: neighbour-colour bumps pushed into this tile at seeded spots
+        const sides = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+        for (let sd = 0; sd < 4; sd++) {
+          const n2 = at(wx + sides[sd][0], wy + sides[sd][1]);
+          if (n2 < 0 || n2 === t) continue;
+          const np = pal[names[n2]], op = pal[nm];
+          if (!np) continue;
+          // the bake's 2 px dark edge line plus detail()'s neighbour dashes read as a dashed box: the outer art row becomes a soft mid tone
+          const soft = op ? softEdge(op[0], op[3]) : null;
+          if (soft) {
+            ctx.fillStyle = soft;
+            if (sd === 0) R(px, py, T, u); else if (sd === 2) R(px, py + T - u, T, u); else if (sd === 1) R(px + T - u, py, u, T); else R(px, py, u, T);
+          }
+          ctx.fillStyle = np[0];
+          let any = false;
+          for (let i = 1; i < A - 2; i += 3) {
+            const b = dhash(wx * 17 + i, wy * 13 + sd, seed + 8);
+            if (b > 0.55) continue;
+            const len = b < 0.2 ? 3 : 2, dep = b < 0.12 ? 2 : 1;
+            if (sd === 0) R(gx(i), py, u * len, u * dep);
+            else if (sd === 2) R(gx(i), py + T - u * dep, u * len, u * dep);
+            else if (sd === 1) R(px + T - u * dep, gy(i), u * dep, u * len);
+            else R(px, gy(i), u * dep, u * len);
+            any = true;
+          }
+          if (any) out.seams++;
+        }
+      }
+    } catch (e) { /* the bake keeps going without the overlay */ }
+    return out;
+  }
+
   // Cycle 0 art (b12-r2-09): the b30 black-sand tiles are 95% #323039 blue-black and read as a void block beside the jungle start.
   // The tile PNGs stay untouched (tests/isle-art-bake pins them); this is an OVERLAY pass the Isles page runs on its own baked chunk:
   // every black_sand tile is re-lit into a warm volcanic-sand ramp by each pixel's brightness (so the b30 grain pattern survives) plus
@@ -343,7 +469,7 @@
     } catch (e) { return 0; }
   }
 
-  return { WARM_SAND: WARM_SAND, warmSand: warmSand, fieldDetail: fieldDetail, FIELD_TERRAINS: FIELD_TERRAINS, DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
+  return { BIOME_GROUND: BIOME_GROUND, biomeDetail: biomeDetail, WARM_SAND: WARM_SAND, warmSand: warmSand, fieldDetail: fieldDetail, FIELD_TERRAINS: FIELD_TERRAINS, DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
     MEADOW_ALIAS: MEADOW_ALIAS, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });
