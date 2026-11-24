@@ -1018,8 +1018,10 @@ const BEACH_PICKUP_RADIUS = 36;
 const BEACH_RESPAWN_MS = 20000;
 const FLOWER_TYPES = ['🌸', '🌷', '🌻', '🌹'];
 const FLOWER_SPOTS = [
+  // cyc0-S: the 4th patch sat 22 px from the Kart Rally door, and flowers answer E before doors in interact(), so E at that
+  // door picked the flower (door reachable over 40% of its range). It now sits in the middle of the four doors, clear of each.
   { x: 400, y: 450 }, { x: 650, y: 420 }, { x: 1700, y: 750 },
-  { x: 1850, y: 950 }, { x: 2150, y: 600 }, { x: 350, y: 880 },
+  { x: 1900, y: 915 }, { x: 2150, y: 600 }, { x: 350, y: 880 },
 ];
 const FLOWER_PICKUP_RADIUS = 34;
 

@@ -1935,5 +1935,9 @@
   "beta-r4-realm-density.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc0-town-interact-shadow.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
