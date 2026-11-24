@@ -192,6 +192,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "deepdelve-frame-alloc.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-perf.test.js": {
     "class": "browser",
     "tier": "full"
@@ -505,6 +509,10 @@
     "tier": "smoke"
   },
   "shared-mm-biomes.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-chunks-last-chunk.test.js": {
     "class": "node",
     "tier": "smoke"
   },
