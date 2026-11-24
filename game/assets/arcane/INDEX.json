@@ -781,19 +781,6 @@
       "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
     },
     {
-      "id": "r09",
-      "label": "jungle-core",
-      "path": "assets/arcane/r09-jungle-core",
-      "manifest": "assets/arcane/r09-jungle-core/manifest.json",
-      "files": 48,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/r09-jungle-core-master-review",
-      "remake_of": "b31a",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
       "id": "m01",
       "label": "isleback-turtle",
       "path": "assets/arcane/m01-isleback-turtle",
