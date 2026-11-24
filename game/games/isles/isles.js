@@ -454,10 +454,13 @@
     if (near) { howtoHide(); howtoStat.auto++; }
   }
   const howtoStat = { auto: 0 };
-  // R4-D2 (b06-r2-05): some islands put the nearest group 20+ tiles from the arrival point (meadow: 22), so the first screen was empty
-  // even with the arrival rule. When nothing is within 8 tiles after the first tick, 2-3 creatures of the nearest CALM small species
-  // (never hostile, never L / XL) wander 4-7 tiles from the hero on a seeded spot. They are ordinary wild creatures with no group (gi -1),
-  // despawned by distance like any other. ?firstfill=0: off.
+  // R4-D2 (b06-r2-05): islands put the nearest group up to 20+ tiles from the arrival point (meadow: 22), so the first screen was empty.
+  // When nothing is within 8 tiles after the first tick, 2-3 creatures of the nearest CALM small species (never hostile, never L / XL)
+  // stand 8.5-11 tiles above or below the hero (|dx| <= 3): on screen on a phone (portrait) and on desktop, but outside the 8-tile
+  // sighting radius, so arriving never fires a journal toast over the arrival / redirect toast; the first sighting happens when the
+  // player walks up. Ordinary wild creatures with no group (gi -1), despawned by distance.
+  // OPT-IN for now (?firstfill=1): every calm small species on meadow / jungle is tameable, so the arrival creatures pull the
+  // first-ten-minutes bot off its first gather (isles-first-ten: jungle firstGather 113 s vs the 60 s gate). D1 (new player) decides.
   const arrival = { n: 0, sp: '' };
   function arrivalFill(htx, hty) {
     if (creatures.some((c) => Math.hypot(c.x - hero.x, c.y - hero.y) < 8 * TILE)) return;
@@ -465,17 +468,16 @@
     if (!calm) return;
     const r = RNG.create('isles|' + SEED + '|arrival');
     for (let t = 0; t < 40 && arrival.n < 3 && creatures.length < CAP; t++) {
-      const ax = htx + r.int(-7, 7), ay = hty + r.int(-6, 6), d = Math.hypot(ax - htx, ay - hty);
-      if (d < 4 || d > 7 || !walkableAt(ax, ay)) continue;
-      addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n);
+      const ax = htx + r.int(-3, 3), ay = hty + (r.next() < 0.5 ? -1 : 1) * r.int(9, 10), d = Math.hypot(ax - htx, ay - hty);
+      if (d < 8.5 || d > 11 || !walkableAt(ax, ay)) continue;
+      addCreature(calm.creature, (ax + 0.5) * TILE, (ay + 0.5) * TILE, -1, arrival.n, 'arrival_' + calm.creature + '_' + arrival.n, RNG.create('isles|' + SEED + '|arrival|ai|' + arrival.n)); // own AI stream: the shared one (and every other creature's rolls) stays as before
       arrival.n++;
     }
     arrival.sp = calm.creature;
   }
   // R4-D2 (b06-r2-05 empty first screen): groups closer than 7 tiles never pop in, so the spawn view stayed empty (meadow 0, jungle 0).
-  // The FIRST tick after an island loads is the arrival, not a pop-in: calm (non-hostile, non-big) groups from 3 tiles out are already
-  // there, so the first screen shows wildlife. Hostiles and big creatures keep the 7-tile rule. ?firstfill=0 restores the old start.
-  let firstFill = Q.get('firstfill') !== '0';
+  // The FIRST tick after an island loads runs arrivalFill below when ?firstfill=1 (opt-in, see arrivalFill). Groups keep the 7-tile rule.
+  let firstFill = Q.get('firstfill') === '1';
   function spawnTick() {
     const htx = tileOf(hero.x), hty = tileOf(hero.y), now = clock.now();
     const near = O.nearestSpawnGroups(world, htx, hty, SPAWN_R);
@@ -487,7 +489,7 @@
       const dd = Math.hypot(gr.x - htx, gr.y - hty);
       const s = specOf(gr.creature, IC.kindOf(gr.creature, gi));
       const bigG = s.size === 'L' || s.size === 'XL';
-      if (dd < (firstFill && !bigG && s.mood !== 'hostile' ? 3 : 7)) continue; // never pop in on top of the hero (arrival: calm groups from 3 tiles)
+      if (dd < 7) continue; // never pop in on top of the hero
       if (bigG && bigN >= BIG_CAP) continue;
       const gr2 = RNG.create('isles|' + SEED + '|g' + gi + '|' + Math.floor(now / 1000));
       const n = Math.min(bigG ? Math.min(gr.count, BIG_CAP - bigN) : gr.count, CAP - creatures.length);

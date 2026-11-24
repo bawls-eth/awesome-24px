@@ -1,6 +1,6 @@
 // R4-D2 Isles first screen (b06-r2-05 / b06-r2-06), how-to card (b06-r2-09) and lift-off framing (b06-r2-08). Phone 390x844.
-// (1) meadow and jungle: wildlife in view on arrival (calm groups from 3 tiles), never a hostile or big creature within 7 tiles;
-//     ?firstfill=0 keeps the old empty start; (2) the first-visit how-to closes when a hostile creature comes within 9 tiles;
+// (1) meadow and jungle with ?firstfill=1 (opt-in): calm wildlife in view on arrival, 8.5-11 tiles above / below (outside the sighting radius), never a hostile
+//     or big creature within 7 tiles; the default start is unchanged; (2) the first-visit how-to closes when a hostile creature comes within 9 tiles;
 // (3) the lift-off pad sits at 60% of the view. Fresh storage per context = first visit. Firebase blocked in every context.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/r4-d2-isles.test.js
 const { chromium } = require('playwright');
@@ -21,23 +21,25 @@ async function open(browser, q) {
 const VIEW = () => { const I = window.__isles, h = I.hero(), T = I.tile; const cs = I.creatures();
   const inView = cs.filter((c) => Math.abs(c.x - h.x) < 195 && Math.abs(c.y - h.y) < 422);
   const close = cs.filter((c) => Math.hypot(c.x - h.x, c.y - h.y) < 7 * T);
-  return { n: cs.length, view: inView.length, closeBad: close.filter((c) => c.mood === 'hostile' || c.size === 'L' || c.size === 'XL').length, close: close.length }; };
+  const unsighted = inView.filter((c) => Math.hypot(c.x - h.x, c.y - h.y) > 8 * T).length;
+  return { n: cs.length, view: inView.length, unsighted, closeBad: close.filter((c) => c.mood === 'hostile' || c.size === 'L' || c.size === 'XL').length, close: close.length }; };
 
 (async () => {
   const browser = await chromium.launch(); const errs = [];
   for (const isle of ['meadow', 'jungle']) {
-    const A = await open(browser, 'isle=' + isle);
+    const A = await open(browser, 'isle=' + isle + '&firstfill=1');
     const a = await A.page.evaluate(VIEW);
-    const B = await open(browser, 'isle=' + isle + '&firstfill=0');
+    const B = await open(browser, 'isle=' + isle);
     const b = await B.page.evaluate(VIEW);
-    console.log('INFO ' + isle + ' first screen: now ' + JSON.stringify(a) + ', ?firstfill=0 ' + JSON.stringify(b));
-    check(isle + ': wildlife on the first screen at arrival (b06-r2-05)', a.view >= 1, JSON.stringify(a));
+    console.log('INFO ' + isle + ' first screen: ?firstfill=1 ' + JSON.stringify(a) + ', default ' + JSON.stringify(b));
+    check(isle + ': ?firstfill=1 (opt-in): wildlife on the first screen at arrival (b06-r2-05)', a.view >= 1, JSON.stringify(a));
     check(isle + ': no hostile or big creature placed within 7 tiles of the arrival', a.closeBad === 0, JSON.stringify(a));
-    check(isle + ': ?firstfill=0 keeps the old start (nothing within 7 tiles)', b.close === 0, JSON.stringify(b));
+    check(isle + ': arrival wildlife stands outside the 8-tile sighting radius (no journal toast over the arrival toast)', a.unsighted === a.view, JSON.stringify(a));
+    check(isle + ': default start unchanged (arrival is opt-in until D1 re-tunes the first-ten gate)', b.close === 0, JSON.stringify(b));
     errs.push(...A.errors, ...B.errors); await A.ctx.close(); await B.ctx.close();
   }
   { // how-to card: open on a first visit, closes when a hostile comes close
-    const C = await open(browser, 'isle=jungle&firstfill=0');
+    const C = await open(browser, 'isle=jungle');
     const before = await C.page.evaluate(() => window.__isles.howto());
     const r = await C.page.evaluate(async () => {
       const I = window.__isles, h = I.hero(); const sp = I.packSpecies.find((s) => !/turtle|tyrant|tusktop|stegolith/.test(s)) || I.packSpecies[0];
