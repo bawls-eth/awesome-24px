@@ -1792,5 +1792,9 @@
   "beta-r4-o04-backup.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-r4-o04-town-hub-backup.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -4591,18 +4591,36 @@ class TownScene extends Phaser.Scene {
     }
   }
 
+  // R4 O-04: the Town Backup is the same full bundle as the Lantern and the Hub (every save key + settings, MMBackup.bundle).
+  // If the backup tool cannot load (offline, first visit), it falls back to the old town-only file and says so.
   exportSave() {
-    const data = JSON.stringify(loadSave(), null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pixeltown-save-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'save backed up!');
+    const download = (data, name) => {
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    };
+    this.addChatLine({ system: true, text: 'Making your backup…' });
+    loadBackupModules().then((B) => {
+      if (!B) {
+        download(JSON.stringify(loadSave(), null, 2), `pixeltown-save-${Date.now()}.json`);
+        this.addChatLine({ system: true, text: 'Could not load the full backup tool, so this file holds the town save only.' });
+        return;
+      }
+      let bun;
+      try { bun = B.bundle(localStorage); } catch (e) { this.addChatLine({ system: true, text: 'Could not read your saves here (site data is blocked), so there is nothing to back up.' }); return; }
+      download(JSON.stringify(bun, null, 1), `pixeltown-backup-${Date.now()}.json`);
+      try { window.__lastBackup = bun; } catch (e) { /* test hook only */ }
+      const warn = bun.warnings && bun.warnings.length ? bun.warnings.map((w) => w.label).join(', ') : '';
+      const n = Object.keys(bun.keys).length;
+      this.addChatLine({ system: true, text: warn ? `Backup saved (${n} items), but this was damaged on this device and was left out: ${warn}.` : `Backup saved: ${n} saves and settings in one file. Keep it somewhere safe.` });
+      if (this.localBody) this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'save backed up!');
+    });
   }
 
   // Beta S-01: Restore validates the file. A Lantern backup bundle is planned and applied with MMBackup (every key, after a
@@ -4651,15 +4669,20 @@ class TownScene extends Phaser.Scene {
   }
 
   restoreBundle(text) {
+    // b14-r2-N02: the backup tool lazy-loads (1-2 s on a slow phone); say so at once instead of showing nothing until the confirm
+    if (!window.MMBackup) this.addChatLine({ system: true, text: 'Reading the backup…' });
     loadBackupModules().then((B) => {
       if (!B) { this.addChatLine({ system: true, text: 'Could not load the restore tool. Check your connection and try again. Nothing was changed.' }); return; }
       let plan;
       try { plan = B.plan(text); } catch (e) { plan = { ok: false }; }
       if (!plan || !plan.ok) { this.addChatLine({ system: true, text: ((plan && plan.message) || 'That backup file is damaged.') + ' Nothing was changed.' }); return; }
-      const lines = plan.keys.map((k) => '- ' + B.labelOf(k));
-      // beta S-03: damaged entries are skipped by MMBackup.plan (the town save first); say so plainly, they stay as they are here
-      const bad = Array.isArray(plan.skipped) && plan.skipped.length ? '\n\nCannot restore (damaged in the file), kept as they are on this device:\n' + plan.skipped.map((x) => '- ' + x.label).join('\n') : '';
-      const ok = window.confirm('Restore this backup? It will replace these saves on this device:\n' + lines.join('\n') + bad + '\n\nNothing changes if you cancel.');
+      const lines = (plan.saves || plan.keys).map((k) => '- ' + B.labelOf(k));
+      // R4 O-04 preview: settings are listed apart; build / date stamp when the file has one
+      const sets = Array.isArray(plan.settings) && plan.settings.length ? '\n\nSettings (' + plan.settings.length + '): ' + plan.settings.map((k) => B.labelOf(k)).join(', ') : '';
+      const made = plan.made ? '\nMade ' + String(plan.made).slice(0, 10) + (plan.build ? ' by build ' + plan.build : '') + (plan.newer ? ' (a newer version of the game)' : '') + '.' : '';
+      // beta S-03: damaged / unknown entries are skipped by MMBackup.plan (the town save first); say so plainly, they stay as they are here
+      const bad = Array.isArray(plan.skipped) && plan.skipped.length ? '\n\nSkipped (damaged or not known by this version), kept as they are on this device:\n' + plan.skipped.map((x) => '- ' + x.label).join('\n') : '';
+      const ok = window.confirm('Restore this backup?' + made + '\nIt will replace these saves on this device:\n' + lines.join('\n') + sets + bad + '\n\nNothing changes if you cancel.');
       if (!ok) { this.addChatLine({ system: true, text: 'Restore cancelled. Nothing was changed.' }); return; }
       this.commitRestore(() => { const r = B.apply(localStorage, plan); return r && r.ok ? true : ((r && r.message) || 'Restore failed, nothing was changed.'); });
     });

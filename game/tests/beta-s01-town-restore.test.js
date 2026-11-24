@@ -86,8 +86,9 @@ async function restoreFile(page, name, body) {
   check('no safety copy written by refused files', (await page.evaluate((k) => localStorage.getItem(k), PREV_KEY)) === null);
 
   // ---- 3: an old town-only export (made by today's exportSave) still restores ----
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.evaluate(() => window.__g.scene.getScene('Town').exportSave())]);
-  const exported = require('fs').readFileSync(await dl.path(), 'utf8');
+  // R4 O-04 changed exportSave to the full bundle (checked in beta-r4-o04-town-hub-backup); the old town-only file is what the
+  // pre-R4 exportSave wrote: JSON.stringify(loadSave(), null, 2). Built here the same way so old files on players' disks stay covered.
+  const exported = JSON.stringify(JSON.parse(await raw(page)), null, 2);
   const file = JSON.parse(exported);
   await page.evaluate(() => { const t = window.__g.scene.getScene('Town'); t.gainResource('wood', 4, t.localBody.x, t.localBody.y); });
   const preRestore = await raw(page);
