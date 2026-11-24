@@ -443,7 +443,17 @@
   $('play').textContent = save.hint ? 'Play' : 'Got it, play';
   rng = MMRng.create('pixel-pop:preview'); fill(); run.maxTile = 0;
   medalList($('i-medals'));
-  try { $('play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  // R4 D4 (b15-r2-17): Play is no longer auto-focused (that made Tab go Play -> Menu -> off the page before Sound). Focus
+  // starts at the top, so Tab runs Menu, Sound, board, Play in screen order; Enter / Space with nothing focused still
+  // presses Play while the start card is up, so keyboard players start as fast as before.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae !== document.documentElement && ae.id !== 'board') return; // the focused board starts the round too
+    const pb = $('play');
+    if (!pb || pb.offsetParent === null || pb.disabled || (window.MMNav && MMNav.isOpen && MMNav.isOpen())) return;
+    ev.preventDefault(); pb.click();
+  });
   hud();
   requestAnimationFrame(frame);
 

@@ -296,8 +296,16 @@
     if (!tabsEl || !gridEl) return;
     var cur = pickStart(currentKey, currentFrame).cls;
     tabsEl.innerHTML = '';
+    // R4 D4 (b07-r2-04): there is one group of heroes, so a lone "Heroes" tab did nothing. The slot is now a real control:
+    // "Surprise me" picks a random hero (UI only, nothing saved until Join / Wear it).
     var tab = document.createElement('button');
-    tab.type = 'button'; tab.className = 'species-tab active'; tab.textContent = 'Heroes';
+    tab.type = 'button'; tab.className = 'species-tab hero-random-tab'; tab.textContent = '🎲 Surprise me';
+    tab.setAttribute('aria-label', 'Pick a random hero');
+    tab.addEventListener('click', function () {
+      var others = HEROES.filter(function (h) { return h.cls !== cur; });
+      var pick = others[Math.floor(Math.random() * others.length)] || HEROES[0];
+      onPick(PREFIX + pick.cls, 0);
+    });
     tabsEl.appendChild(tab);
     gridEl.innerHTML = '';
     HEROES.forEach(function (h) {

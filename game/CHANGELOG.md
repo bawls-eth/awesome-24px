@@ -47,7 +47,7 @@ for how each feature actually works and plays.
 - A real 3D voxel cave underground (Three.js) — wood veins, a hotbar,
   placeable torches and walls
 - The player's 2D sprite extrudes into a 3D voxel figure underground
-- One-way portal doors to other browser games (GTA 3, NFS Underground 2)
+- Portal doors to other browser games in the Arcade District
 - A resident NPC, Professor Byte, near the Mayor statue with random
   flavor-text dialogue
 
@@ -169,7 +169,7 @@ for how each feature actually works and plays.
   southeast of the statue — these were scattered across the whole map
   (the tournament sign in particular sat all the way on the opposite
   side, by the main pond), meaning a lot of walking just to find them.
-  Also dropped the second, redundant GTA 3 door down to one, now that
+  Also dropped the second, redundant portal door down to one, now that
   there's a single obvious spot for all of this
 - Zoomed the main camera out further (2×/1.5× → 1.6×/1.2×, desktop/
   touch) so more of the surroundings are visible at once; the town
@@ -237,8 +237,7 @@ for how each feature actually works and plays.
   camera made this worse. It now renders above everything and pulses
   with a scale animation on top of its color change when a fish bites,
   so the catch window is much harder to miss and let expire unnoticed
-- Two more portal doors in the Arcade District — Kart Racing and Vice
-  City, alongside the existing GTA 3 and NFS Underground 2 doors
+- Two more portal doors in the Arcade District, alongside the existing two
 - A real 🎣 Fish button that appears on screen whenever there's a
   rod-related action available (close enough to cast, already
   waiting, or a bite ready to reel in), changing label/color with the

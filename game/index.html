@@ -55,8 +55,8 @@
     <label for="name-input">Your name</label>
     <input id="name-input" maxlength="16" placeholder="e.g. Ben" autocomplete="off" />
 
-    <label>Pick your villager</label>
-    <div id="species-tabs"></div>
+    <label id="hero-pick-label">Pick your hero</label>
+    <div id="species-tabs" role="group" aria-labelledby="hero-pick-label"></div>
     <div id="avatar-grid"></div>
 
     <a id="join-continue" class="hidden" href="#">↩️ Continue</a>
@@ -121,7 +121,7 @@
     </div>
   </div>
 
-  <div id="achievements-overlay" class="hidden">
+  <div id="achievements-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Achievements">
     <div class="achievements-card">
       <button id="achievements-close-btn" type="button" aria-label="Close">✕</button>
       <h2>🏆 Achievements</h2>
@@ -245,7 +245,7 @@
     <div id="action-buttons">
       <button id="emote-toggle-btn" type="button" aria-label="Emotes">😀 Emotes</button>
       <button id="tilt-toggle-btn" type="button">🎮 Tilt</button>
-      <button id="hud-more-btn" type="button" aria-expanded="false" aria-label="More buttons: build, photo, tilt">☰ More</button>
+      <button id="hud-more-btn" type="button" aria-expanded="false" aria-label="Tools: build, photo, tilt">🧰 Tools</button>
       <button id="build-toggle-btn" class="ab-btn" type="button" aria-label="Build (B)"><span class="ab-letter">B</span><span class="ab-emoji">🧱</span></button>
       <button id="interact-btn" class="ab-btn" type="button" aria-label="Interact (A)"><span class="ab-letter">A</span><span class="ab-emoji">✋</span></button>
       <button id="mobile-photo-btn" class="ab-btn" type="button" aria-label="Photo (P)"><span class="ab-letter">P</span><span class="ab-emoji">📸</span></button>
@@ -254,14 +254,14 @@
   </div>
 </div>
 
-<div id="outfit-overlay" class="hidden">
+<div id="outfit-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Able Sisters: change your look">
   <div class="join-card">
     <button id="outfit-close-btn" type="button" aria-label="Close">✕</button>
     <h1>👗 Able Sisters</h1>
     <p class="tagline">Pick a new look — everyone in town sees it too.</p>
 
-    <label>Pick your villager</label>
-    <div id="outfit-species-tabs"></div>
+    <label id="outfit-pick-label">Pick your hero</label>
+    <div id="outfit-species-tabs" role="group" aria-labelledby="outfit-pick-label"></div>
     <div id="outfit-avatar-grid"></div>
 
     <button id="outfit-random-btn" type="button">🎲 Randomize</button>
@@ -289,6 +289,15 @@
     <p class="tagline">Everything you can do today. Finish every chore that applies for a bonus.</p>
     <ul id="dailies-list" class="guestbook-list"></ul>
     <p id="dailies-summary" class="tagline"></p>
+  </div>
+</div>
+
+<div id="door-soon-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="door-soon-title">
+  <div class="join-card">
+    <button id="door-soon-close-btn" type="button" aria-label="Close">✕</button>
+    <h1 id="door-soon-title">🚪 Arcade door</h1>
+    <p class="tagline">Coming soon. This arcade door is still being built; check back after an update.</p>
+    <button id="door-soon-ok-btn" type="button">OK</button>
   </div>
 </div>
 
@@ -336,7 +345,7 @@
   </div>
 </div>
 
-<div id="guestbook-overlay" class="hidden">
+<div id="guestbook-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Guestbook">
   <div class="join-card">
     <button id="guestbook-close-btn" type="button" aria-label="Close">✕</button>
     <h1>📖 Guestbook</h1>
@@ -351,7 +360,7 @@
   </div>
 </div>
 
-<div id="keys-help-overlay" class="hidden">
+<div id="keys-help-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
   <div class="join-card">
     <button id="keys-help-close-btn" type="button" aria-label="Close">✕</button>
     <h1>❓ Keyboard Shortcuts</h1>
@@ -375,7 +384,7 @@
   </div>
 </div>
 
-<div id="map-overlay" class="hidden">
+<div id="map-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Town map">
   <div class="join-card">
     <button id="map-close-btn" type="button" aria-label="Close">✕</button>
     <h1>🗺️ Town Map</h1>
@@ -384,7 +393,7 @@
   </div>
 </div>
 
-<div id="changelog-overlay" class="hidden">
+<div id="changelog-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Changelog">
   <div class="join-card">
     <button id="changelog-close-btn" type="button" aria-label="Close">✕</button>
     <h1>📜 Changelog</h1>
@@ -393,7 +402,7 @@
   </div>
 </div>
 
-<div id="trivia-overlay" class="hidden">
+<div id="trivia-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Professor Byte's trivia">
   <div class="join-card">
     <button id="trivia-close-btn" type="button" aria-label="Close">✕</button>
     <h1>📝 Professor Byte's Trivia</h1>
@@ -402,7 +411,7 @@
   </div>
 </div>
 
-<div id="polyroll-overlay" class="hidden">
+<div id="polyroll-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Polyroll">
   <div class="polyroll-card">
     <button id="polyroll-close-btn" type="button" aria-label="Close">✕</button>
     <h2>🎲 Polyroll</h2>

@@ -102,6 +102,9 @@ const AUDIT = () => {
       inter.forEach((e) => {
         if (e === nav || nav.contains(e) || e.contains(nav) || e.closest('#mm-nav-root')) return;
         const b = e.getBoundingClientRect();
+        // R4 D4: a focusable full-screen game view (canvas, role=application, >= half the viewport, the Menu wholly on top of it) is the
+        // backdrop every HUD control sits on, not a competing tap target (Isles #view became a Tab stop for keyboard users, b15-10)
+        if (e.tagName === 'CANVAS' && e.getAttribute('role') === 'application' && b.width * b.height >= 0.5 * vw * vh && b.left <= r.left && b.top <= r.top && b.right >= r.right && b.bottom >= r.bottom) return;
         const ox = Math.min(r.right, b.right) - Math.max(r.left, b.left), oy = Math.min(r.bottom, b.bottom) - Math.max(r.top, b.top);
         if (ox > 2 && oy > 2) add('menu', 'overlap:' + sel(e), `overlaps ${sel(e)} by ${Math.round(ox)}x${Math.round(oy)}`);
       });

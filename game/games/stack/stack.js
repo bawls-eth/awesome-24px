@@ -98,7 +98,12 @@
     }
     if (parts.length > 160) parts.splice(0, parts.length - 160);
   }
-  function floatText(x, y, text, color) { floats.push({ x, y, text, color: color || '#fff', t: 1 }); }
+  // R4 D4 (b09-05): back-to-back near-miss floats ('13 px from perfect' then '11 px ...') rose into each other. A new float
+  // retires older floats it would overlap; floats added for the same drop (t still 1) are spaced on purpose and kept.
+  function floatText(x, y, text, color) {
+    floats = floats.filter((f) => f.t >= 1 || Math.abs(f.y - y) >= 20);
+    floats.push({ x, y, text, color: color || '#fff', t: 1 });
+  }
   function bump(n) { if (!reduced) shake = Math.max(shake, n); }
   const msg = (t) => { $('msg').textContent = t; };
   const floorY = (i) => CH - GROUND - (i + 1) * BH; // world y of floor i (0 = base)
@@ -373,7 +378,17 @@
   $('play').textContent = save.hint ? 'Play' : 'Got it, play';
   rng = MMRng.create('stack-tower:preview'); reset();
   medalList($('i-medals'));
-  try { $('play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  // R4 D4 (b15-r2-17): Play is no longer auto-focused (that made Tab go Play -> Menu -> off the page before Sound). Focus
+  // starts at the top, so Tab runs Menu, Sound, board, Play in screen order; Enter / Space with nothing focused still
+  // presses Play while the start card is up, so keyboard players start as fast as before.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && ae !== document.documentElement && ae.id !== 'board') return; // the focused board starts the round too
+    const pb = $('play');
+    if (!pb || pb.offsetParent === null || pb.disabled || (window.MMNav && MMNav.isOpen && MMNav.isOpen())) return;
+    ev.preventDefault(); pb.click();
+  });
   try { if (save.medals.length && window.MMHubProfile) MMHubProfile.sync(localStorage, 'stack', save.medals.slice()); } catch (e) { /* optional */ }
   hud();
   requestAnimationFrame(frame);
@@ -383,6 +398,6 @@
     get mover() { return mover; }, get tower() { return tower.map((b) => ({ x: b.x, w: b.w })); },
     align(off) { const top = tower[tower.length - 1]; if (mover) mover.x = top.x + (off || 0); },
     drop, start, end, step(dt) { update(dt, true); },
-    counts: () => ({ parts: parts.length, floats: floats.length, falling: falling.length, shake, flash }),
+    counts: () => ({ parts: parts.length, floats: floats.length, falling: falling.length, shake, flash, floatBoxes: floats.map((f) => ({ x: f.x, y: f.y, text: f.text })) }),
   };
 }());

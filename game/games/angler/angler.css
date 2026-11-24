@@ -165,3 +165,15 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
   #scene { flex:1 1 0; height:auto; min-height:0; max-height:100%; width:auto; }
   #msg { min-height:calc(2 * 1.25em + 12px); }
 }
+
+/* R4 D4 (b10-r2 260 px note): at 150% zoom (260 css px) the title showed "WES..." and the Bells chip was cut at the edge.
+   Journal becomes an icon + count (its accessible name stays "Journal 0/48"), the weather keeps its icon (name in the
+   title tooltip and for screen readers) and the bait type is shortened, so title, Bait and Bells all fit; the four buttons
+   still scroll in the same row. */
+@media (max-width:340px) {
+  #journal-btn .jb-word, #weather-name { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  #journal-btn::before { content:"\1F4D6"; margin-right:4px; }
+  #journal-btn { padding-left:8px; padding-right:8px; flex:0 0 auto; }
+  .bar h1 { flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #bait-type { display:inline-block; max-width:4.5em; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
+}

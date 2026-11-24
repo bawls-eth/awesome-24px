@@ -497,6 +497,9 @@
       b.appendChild(el('span', open ? stars(save.stars[a.id]) : 'Locked'));
       if (open && MODS_ON) { var nm0 = peekNext(a.id).mod, mt = el('small', 'Next run: ' + B.MODS[nm0].name, 'cardmod'); mt.dataset.mod = nm0; mt.title = B.MODS[nm0].line; b.appendChild(mt); }
       var ns = save.stars[a.id]; var sm = el('small', open ? 'Best ' + save.best[a.id] + '  |  ' + (ns < 3 ? 'next star at ' + a.stars[ns] : 'all 3 stars') : 'Needs ' + needStars(i) + ' stars'); sm.className = 'cardnext'; b.appendChild(sm); // FUN1: the next target, not a bare 60/120/200
+      // R4 D4 (a11y sweep festival-bugs keyboard-primary): the spoken name says what the card does ("Play Meadow, ...") and keeps
+      // every visible part (arena, stars, next modifier, best / next star), so the visible label is still inside the name
+      b.setAttribute('aria-label', (open ? 'Play ' : '') + [].map.call(b.children, function (c) { return c.textContent; }).join(', '));
       grid.appendChild(b);
     });
     overlay.appendChild(grid);
@@ -568,7 +571,7 @@
     var lines = [];
     if (s.mod) lines.push({ id: 'sum-mod', text: B.MODS[s.mod].name + ': ' + B.MODS[s.mod].line, cls: 'modline' });
     lines.push({ id: 'sum-stars', text: stars(s.stars), cls: 'stars' });
-    lines.push({ id: 'sum-score', text: 'Score ' + s.score + (s.newBest ? '  (new best!)' : '  (best ' + s.best + ')'), cls: '' });
+    lines.push({ id: 'sum-score', text: 'Score ' + s.score + (s.newBest ? '  (new best!)' : '  (best ' + s.best + ')'), cls: 'sum-score' + (s.newBest ? ' win' : '') }); // R4 D4 (b10-r2-10): the score leads the card
     // the personal-best chase in one honest line
     lines.push({ id: 'sum-chase', text: s.score === 0 && s.best === 0 ? 'Walk up close, then swing the net.' : s.newBest ? (s.prevBest > 0 ? 'New best by ' + (s.score - s.prevBest) + ' points!' : 'First score on the board!') : (s.best - s.score === 0 ? 'Tied your best!' : (s.best - s.score) + ' points to beat your best.'), cls: s.newBest ? 'chase win' : 'chase' });
     var card = K.panel(sumCard, K.result({
@@ -581,9 +584,12 @@
     if (card.again) card.again.classList.add('again');
     if (card.more[0]) card.more[0].title = 'Same bugs, same start, same modifier';
     overlay.appendChild(el('p', 'Enter or R plays again.', 'dim keyhint'));
-    overlay.appendChild(el('p', 'Bugs caught: ' + s.caught));
-    var gp = el('p', 'Stars gained: ' + s.gained); gp.id = 'sum-gained'; overlay.appendChild(gp);
-    var cp = el('p', 'Best combo: ' + s.bestCombo + (s.bestCombo > 1 ? ' (x' + mult(s.bestCombo).toFixed(2).replace(/0$/, '') + ')' : '')); cp.id = 'sum-combo'; overlay.appendChild(cp);
+    // R4 D4 (b10-r2-10): the run facts are one labelled panel instead of three plain lines
+    var facts = el('div', undefined, 'sum-facts'); facts.id = 'sum-facts'; facts.setAttribute('role', 'group'); facts.setAttribute('aria-label', 'This run');
+    facts.appendChild(el('p', 'Bugs caught: ' + s.caught));
+    var gp = el('p', 'Stars gained: ' + s.gained); gp.id = 'sum-gained'; facts.appendChild(gp);
+    var cp = el('p', 'Best combo: ' + s.bestCombo + (s.bestCombo > 1 ? ' (x' + mult(s.bestCombo).toFixed(2).replace(/0$/, '') + ')' : '')); cp.id = 'sum-combo'; facts.appendChild(cp);
+    overlay.appendChild(facts);
     var cl = el('div'); cl.id = 'sum-counts';
     SPECIES.concat(B.GLADE_SPECIES).forEach(function (sp) { if (s.counts[sp]) { var li = el('div', SP_NAME[sp] + ' x' + s.counts[sp]); li.dataset.species = sp; cl.appendChild(li); } });
     if (!cl.firstChild) cl.appendChild(el('div', 'No bugs this time', 'dim'));

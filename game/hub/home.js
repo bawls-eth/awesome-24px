@@ -237,12 +237,24 @@
     try { if (window.MMAccess && MMAccess.prefs && MMAccess.prefs.load(localStorage).lowGfx) return true; } catch (e) { /* defaults */ }
     return false;
   }
+  let moonY = 6;
   function sizeSky() {
     const w = Math.max(40, Math.ceil(home.clientWidth / PX)), h = Math.max(40, Math.ceil(home.clientHeight / PX));
     if (sky.width !== w || sky.height !== h) { sky.width = w; sky.height = h; }
+    // R4 D4 (b15-r2-18): on narrow screens (200% zoom, ~195 px) the logo reaches the top-right corner and the moon sat on
+    // "TOWN". There the moon drops just below the title row instead.
+    moonY = 6;
+    try {
+      const t = $('home-title');
+      if (t && home.clientWidth < 360) {
+        const hr = home.getBoundingClientRect(), tr = t.getBoundingClientRect();
+        if (tr.right > hr.left + (w - 16) * PX) moonY = Math.max(6, Math.ceil((tr.bottom - hr.top) / PX) + 2);
+      }
+    } catch (e) { moonY = 6; }
   }
   function drawSky() {
     const W = sky.width, H = sky.height;
+    window.__homeMoon = { x: (W - 15) * PX, y: moonY * PX, w: 8 * PX, h: 6 * PX }; // test hook (css px inside #home)
     const band = Math.ceil(H * 0.7 / SKY.length);
     SKY.forEach((col, i) => { sc.fillStyle = col; sc.fillRect(0, i * band, W, band + 1); });
     sc.fillStyle = SKY[SKY.length - 1]; sc.fillRect(0, SKY.length * band, W, H);
@@ -253,7 +265,8 @@
       sc.fillRect(x, y, 1, 1);
     }
     // moon
-    sc.fillStyle = '#ffec27'; sc.fillRect(W - 14, 6, 6, 6); sc.fillRect(W - 15, 7, 8, 4); sc.fillStyle = SKY[0]; sc.fillRect(W - 12, 6, 3, 3);
+    const my = moonY;
+    sc.fillStyle = '#ffec27'; sc.fillRect(W - 14, my, 6, 6); sc.fillRect(W - 15, my + 1, 8, 4); sc.fillStyle = SKY[Math.min(SKY.length - 1, Math.floor(my / band))]; sc.fillRect(W - 12, my, 3, 3);
     HILLS.forEach((L, li) => {
       const off = skyT * L.sp;
       sc.fillStyle = L.col;
