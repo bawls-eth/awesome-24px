@@ -508,6 +508,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "cyc0-d-quest-level-hint.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-quests.test.js": {
     "class": "node",
     "tier": "smoke"
