@@ -435,9 +435,9 @@ async function keyboardPass(p, page, vpId) {
           // U-03 / U-09 found by hand in the Town: stick under the action strip, bag bar over Where to?)
           if (pf.id === 'text-200') {
             au.offenders.filter((o) => o.check === 'tap').forEach((o) => record(pg, key, 'tap:' + o.key, o.detail, pf.id));
-            // the overlap check is opt-in (A11Y_OVERLAP=1) until its 4 known offenders are fixed (Realm leave/minimap + ability/aim,
-            // Isles pack/soothe/fire at 195x422: design/beta/cycle2-ui.md); it is NOT allow-listed, so turning it on shows them all
-            if (process.env.A11Y_OVERLAP === '1') (await run.p.evaluate(OVERLAP)).forEach((o) => record(pg, key, 'overlap:' + o.key, o.detail, pf.id));
+            // cyc3 U: always on (the 4 cycle-2 offenders, Realm leave/minimap + ability/aim and Isles pack/soothe/fire at 195x422, are
+            // fixed in realm-ui.css / isles.css); never allow-listed
+            (await run.p.evaluate(OVERLAP)).forEach((o) => record(pg, key, 'overlap:' + o.key, o.detail, pf.id));
           }
         }
         if (pf.id === 'high-contrast') {
