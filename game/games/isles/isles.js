@@ -428,6 +428,10 @@
   const CAP = LOW ? 12 : 24, BIG_CAP = 4;
   const SPAWN_R = 22, DESPAWN_R = 34, LEASH = 14 * TILE;
   const SLIDE = Q.get('slide') !== '0'; // cycle 1 S: wall-slide steering (steer); ?slide=0 = the old straight aim
+  // cycle 2 S: wanderers turn along a wall instead of bouncing off it (wanderTurn). OPT-IN (?wslide=1) for now: on by default it moved
+  // the isles-first-ten bot's reward cadence over its 45 s gap limit (mars-b 48.7 s, then tundra-b 45.8 s with a 90-degree-first variant).
+  const WSLIDE = SLIDE && Q.get('wslide') === '1';
+  let wallBumps = 0; // test handle: per-axis wall hits of wandering creatures (the old bounce)
   const LEASH_BACK = 4 * TILE, LEASH_GIVEUP = 8; // cyc0-S: a leashed creature walks back to within 4 tiles of home (or gives up after 8 s)
   let creatures = [];
   let uid = 0, simT = 0;
@@ -611,6 +615,18 @@
     for (let si = 0; si < 2; si++) for (let k = 1; k <= 3; k++) { const a = a0 + sides[si] * k * Math.PI / 4; if (free(a)) { c.slide = sides[si]; go(a); return; } }
     c.slide = 0; go(a0); // boxed in: the old straight aim (the per-axis step still slides where it can)
   }
+  // cycle 2 S: a wandering creature (random heading, no target) whose heading is blocked a short probe ahead turns 45/90/135 degrees
+  // to a sticky side and keeps its speed, so it walks along the wall instead of bumping it (per-axis flip) every few frames. It draws
+  // NO random numbers (the creature's seeded stream is untouched); boxed in = leave the heading (the old bounce still frees it).
+  function wanderTurn(c) {
+    const sp = Math.hypot(c.vx, c.vy); if (sp < 1) { c.wslide = 0; return; }
+    const a0 = Math.atan2(c.vy, c.vx), pr = (c.rad || 8) + TILE * 0.6;
+    const free = (a) => !creatureSolid(c, tileOf(c.x + Math.cos(a) * pr), tileOf(c.y + Math.sin(a) * pr));
+    if (free(a0)) return;
+    const sides = c.wslide ? [c.wslide, -c.wslide] : [1, -1];
+    for (let si = 0; si < 2; si++) for (let k = 1; k <= 3; k++) { const a = a0 + sides[si] * k * Math.PI / 4; if (free(a)) { c.wslide = sides[si]; c.vx = Math.cos(a) * sp; c.vy = Math.sin(a) * sp; return; } }
+    c.wslide = 0;
+  }
   function think(c) {
     const s = specOf(c.sp, c.kind);
     // taming clock (10 Hz with the accumulated time)
@@ -649,6 +665,7 @@
       if (R.next() < 0.45) { c.vx = 0; c.vy = 0; }
       else { const a = R.next() * Math.PI * 2; c.vx = Math.cos(a) * s.speed * 0.5; c.vy = Math.sin(a) * s.speed * 0.5; }
     }
+    if (WSLIDE) wanderTurn(c);
   }
   function curious(c, d) {
     if (!TAME || !POUCH || hero.dead || hero.shotT > 0 || c.angry > 0 || !c.tm || c.tm.st !== 'wild' || d > 7 * TILE || d < 1.5 * TILE) return false;
@@ -690,8 +707,9 @@
       if (c.ph) attackStep(c, s, dt);
       if (c.ko) { c.vx = 0; c.vy = 0; }
       const nx = c.x + c.vx * dt, ny = c.y + c.vy * dt;
-      if (!creatureSolid(c, tileOf(nx), tileOf(c.y))) c.x = nx; else { c.vx = -c.vx; }
-      if (!creatureSolid(c, tileOf(c.x), tileOf(ny))) c.y = ny; else { c.vy = -c.vy; }
+      const wand = !c.ph && !c.ko && !c.calm && !c.ret && !c.hostile; // test count only: a non-chasing walker hitting a wall
+      if (!creatureSolid(c, tileOf(nx), tileOf(c.y))) c.x = nx; else { c.vx = -c.vx; if (wand && c.vx) wallBumps++; }
+      if (!creatureSolid(c, tileOf(c.x), tileOf(ny))) c.y = ny; else { c.vy = -c.vy; if (wand && c.vy) wallBumps++; }
       c.moving = Math.abs(c.vx) + Math.abs(c.vy) > 4;
       c.awake = !c.ko;
       c.hostile = !c.ko && !c.calm && s.dmg > 0 && (c.mood === 'hostile' || c.angry > 0);
@@ -1119,6 +1137,7 @@
     let ent = null;
     if (rule.allow) ent = TAMES.add(tames, { sp: def.id, nm: def.name, isle: ISLE, d: today(), bond: bond });
     else if (owned[0]) TAMES.addAffinity(tames, owned[0].id, 30);
+    if (window.MMNotebook && !/[?&]notebook=0(&|$)/.test(location.search)) { try { window.MMNotebook.record(localStorage, window.MMNotebook.ids.tame(def.id)); } catch (e) { /* storage blocked */ } } // ID-04: first tame of a species (a known page writes nothing)
     if (ent && alpha) { TAMES.setCosmetic(tames, ent.id, 'alpha'); ent.lv = Math.max(1, Math.min(TAMES.MAX_LV, (def.lv && def.lv[0]) | 0)); }
     if (ent) {
       if (tames.party.length < Math.min(TAMES.MAX_PARTY, LOW ? 1 : CMP.MAX_ACTIVE)) {
@@ -3729,6 +3748,7 @@
       setTime: (t) => { simT = Number(t) || 0; hero.t = simT; return simT; }, // PI2: one sim time on two pages (seeded frame comparisons)
       hint: () => hintText(TAME ? feedTarget() : null),
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
+      wallBumps: () => wallBumps, wslide: WSLIDE,
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
       spawnTick: () => { spawnTick(); return creatures.length; }, howto: () => ({ open: !$('howto').hidden, auto: howtoStat.auto }), arrival: () => Object.assign({}, arrival), launchPad: () => Math.round(VH * 0.6), // R4-D2 hooks
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },

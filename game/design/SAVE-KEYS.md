@@ -27,7 +27,7 @@ Backup: yes = exported by `MMBackup` (shared/mm-backup.js KNOWN), **NO** = not e
 | `pixeltown-jam-v1` | games/jam/jam.js, mm-jam-songs.js | `{v, best:{song:{diff:{stars,score}}}, plays, fullCombo, prefs}` | 1 | jam.js load + MMHubMedals.clean | progress | yes |
 | `pixeltown-jam-assist-v1` | jam.js `persistAssist` | `{on, best, section}` | none | jam.js `cleanAssist` | progress | yes |
 | `pixeltown-deepdelve-v1` | games/deepdelve/deepdelve.js | `{v, mode, goals:{bronze,silver,maxDepth,...}, cave}` | 1 | deepdelve.js meta cleaner | progress | yes |
-| `pixeltown-deepdelve-runs-v1` | games/deepdelve/dd-run.js (MMDDRun.save) | `{v, runs, safe, best:{score,depth,ores,combo}, seedBest?:{"<seed>":depth}}` (cyc0-S: additive `seedBest`, deepest dive per world seed, max 32, merged by max) | 1 | MMDDRun.clean | progress | yes |
+| `pixeltown-deepdelve-runs-v1` | games/deepdelve/dd-run.js (MMDDRun.save) | `{v, runs, safe, best:{score,depth,ores,combo}, seedBest?:{"<seed>":depth}}` (cyc0-S: additive `seedBest`, deepest dive per world seed, max 32, merged by max; cyc2-S: additive `seedPath:{"<seed>":[[x,y,z],...]}`, a sparse path of that deepest dive, <= 64 half-block points, <= 8 seeds, only seeds with a seedBest, merged with the deeper tab's seedBest) | 1 | MMDDRun.clean | progress | yes |
 | `pixeltown-deepdelve-creative-v1` | deepdelve.js | creative world meta `{v, ...}` | 1 | deepdelve.js | progress | yes |
 | `pixeltown-angler-v1` | games/angler/angler.js | journal `{v, caught:{sp:{n,best}}, cove, tour, ...}` | 1 | MMAngler.journal.clean | progress | yes |
 | `pixeltown-angler-fun-v1` | angler.js `saveFun` | `{v, bestStreak, bestReact, streak, cond:{name:{size,react,n}}}` | 1 | angler.js `cleanFun` | progress | yes |
@@ -49,6 +49,7 @@ Backup: yes = exported by `MMBackup` (shared/mm-backup.js KNOWN), **NO** = not e
 | `pixeltown-medals-stack-v1` | stack.js | `{v, m:[id]}` | 1 | MMHubMedals.clean | progress | yes |
 | `pixeltown-medals-stalk-v1` | stalk.js | `{v, m:[id]}` | 1 | MMHubMedals.clean | progress | yes |
 | `pixeltown-arms-v1` | games/mad-maze/mad-maze.js | `{v, seen:[id], ...}` weapon unlocks | 1 | mad-maze.js | progress | yes |
+| `pixeltown-notebook-v1` | shared/mm-notebook.js `record` (re-reads before every write; first meet only), written from realm-world.js (first kill per creature per zone, first world-boss kill), dungeon.js (first clear per biome), isles.js (first tame per species) | `{v, e:{<page id>: <first time, epoch ms>}}`, ids `kill:<pattern>:<creature>@<zone>`, `boss:<boss>@<zone>`, `clear:<biome>`, `tame:<species>`, max 300 pages (cyc2-S ID-04) | 1 | MMNotebook.clean | progress | yes |
 | `pixeltown-gift-v1` | shared/mm-gift.js, hub/gift.js | `{v, days, last:'YYYY-MM-DD'}` | 1 | MMGift.clean | progress | yes |
 | `pixeltown-feedback-v1` | shared/mm-feedback.js (re-reads before every add / delete) | `{v, entries:[{id,t,k,page,text,ua}]}` | 1 | MMFeedback.clean | progress | yes |
 | `pixeltown-backup-pregear-v1` | shared/mm-backup.js `snapshotPregear` | backup bundle `{format, v, at, keys:{key:raw}}` (<= 1 MB) | 2 | MMBackup.planRestorePregear | progress | n/a (is a backup) |

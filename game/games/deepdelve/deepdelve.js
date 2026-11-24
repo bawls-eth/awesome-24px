@@ -199,7 +199,23 @@
     if (!RUNS) return;
     if (!runRec) runRec = RUNS.load(LS);
     run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id, CREATIVE ? null : SEED); pbDepthShown = false; comboShown = false; ghostPassed = false; $('combo').textContent = '';
-    renderDive();
+    renderDive(); ghostPathBuild();
+  }
+  // cyc2-S DD5 path replay: the deepest dive on this seed drawn as a faint trail of <= 64 points (one THREE.Points + one THREE.Line,
+  // a static BufferGeometry built once per dive: 2 draw calls, no per-frame work). Measured on software GL at 1280x720 with 120
+  // points: no frame-time change beyond noise. ?ghost=0 hides it with the rest of the ghost; reduce motion changes nothing (it is still).
+  let ghostPath = null; const ghostPathStat = { builds: 0, n: 0 };
+  function ghostPathBuild() {
+    if (ghostPath && scene) { ghostPath.forEach((o) => { scene.remove(o); o.geometry.dispose(); o.material.dispose(); }); }
+    ghostPath = null; ghostPathStat.n = 0;
+    if (!GHOST_ON || !scene || !window.THREE || !run || !run.seed || !runRec || !runRec.seedPath) return;
+    const pts = runRec.seedPath[run.seed]; if (!pts || pts.length < 2) return;
+    const a = new Float32Array(pts.length * 3); pts.forEach((q, i) => { a[i * 3] = q[0]; a[i * 3 + 1] = q[1] + 0.9; a[i * 3 + 2] = q[2]; }); // at head height
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    const dots = new THREE.Points(g, new THREE.PointsMaterial({ color: 0x9fe8ff, size: 0.22, transparent: true, opacity: 0.75, depthWrite: false }));
+    const line = new THREE.Line(g.clone(), new THREE.LineBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.3, depthWrite: false }));
+    dots.renderOrder = line.renderOrder = 5; scene.add(line); scene.add(dots);
+    ghostPath = [dots, line]; ghostPathStat.builds++; ghostPathStat.n = pts.length;
   }
   // G-10: cells the player placed this session (cap 4096, oldest out); mining one gives the item back but scores nothing
   const placedCells = new Set(); const PLACED_CAP = 4096;
@@ -222,6 +238,7 @@
     if (!run) return;
     if (comboShown && !RUNS.comboLive(run, nowS())) { comboShown = false; $('combo').textContent = ''; }
     const wasArmed = run.armed;
+    if (GHOST_ON) RUNS.sample(run, player.x, player.y, player.z, nowS()); // DD5 replay: one sparse point per second (thinned on long dives)
     if (RUNS.depth(run, absDepth)) {
       if (!pbDepthShown && runRec.best.depth > 0 && run.depth > runRec.best.depth) { pbDepthShown = true; pop('New depth record!', 'pb'); sfx('levelup'); }
       const gb = GHOST_ON && run.seed && runRec.seedBest ? runRec.seedBest[run.seed] || 0 : 0;
@@ -1890,7 +1907,7 @@
         return lightAt(x, y, z);
       }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
       introText, prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
-      run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, bank: () => bankText(), bankEl: () => ($('hud-bank') || {}).textContent || '', depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
+      run: { get state() { return run; }, get rec() { return runRec; }, ghostPath: () => ({ on: GHOST_ON, shown: !!ghostPath && ghostPath.every((o) => o.parent === scene), n: ghostPathStat.n, builds: ghostPathStat.builds }), start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, bank: () => bankText(), bankEl: () => ($('hud-bank') || {}).textContent || '', depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
       craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), programs: () => (renderer && renderer.info && renderer.info.programs ? renderer.info.programs.length : -1), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
@@ -1959,6 +1976,7 @@
     wyrmInit();
     applyTime(true);
     initRenderer();
+    ghostPathBuild(); // DD5 replay: the first dive started before the scene existed
     prewarmPrograms();
     applyLowGfx();
     window.addEventListener('mm-settings-change', (ev) => {

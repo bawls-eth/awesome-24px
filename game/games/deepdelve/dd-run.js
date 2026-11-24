@@ -35,7 +35,7 @@
     if (typeof raw === 'string') { try { o = JSON.parse(raw); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const b = o.best && typeof o.best === 'object' && !Array.isArray(o.best) ? o.best : {};
-    return { v: 1, runs: ci(o.runs, 999999), safe: ci(o.safe, 999999), best: { score: ci(b.score, 9999999), depth: ci(b.depth, 999), ores: ci(b.ores, 99999), combo: ci(b.combo, 9999) }, seedBest: cleanSeeds(o.seedBest) };
+    return { v: 1, runs: ci(o.runs, 999999), safe: ci(o.safe, 999999), best: { score: ci(b.score, 9999999), depth: ci(b.depth, 999), ores: ci(b.ores, 99999), combo: ci(b.combo, 9999) }, seedBest: cleanSeeds(o.seedBest), seedPath: cleanPaths(o.seedPath, cleanSeeds(o.seedBest)) };
   }
   // cyc0-S (NEXT-SLICES-5 DD5, depth ghost): the deepest dive per world seed, additive field `seedBest: {"<seed>": depth}` inside
   // this key. Keys are integer seeds (as strings), values 1..999; at most SEED_CAP entries (the deepest kept); junk dropped.
@@ -47,6 +47,32 @@
     Object.keys(raw).filter((k) => /^-?\d{1,10}$/.test(k)).map((k) => [k, ci(raw[k], 999)]).filter((e) => e[1] > 0)
       .sort((a, b) => b[1] - a[1]).slice(0, SEED_CAP).forEach((e) => { out[e[0]] = e[1]; });
     return out;
+  }
+  // cyc2-S (DD5 path replay): a SPARSE path of the deepest dive per seed, additive field `seedPath: {"<seed>": [[x, y, z], ...]}`.
+  // Points are half-block rounded, at most PATH_MAX per dive (a long dive is thinned to every other point, then sampled half as
+  // often), only for seeds that still have a seedBest and at most PATH_SEEDS of them (the deepest), so the key stays a few kB.
+  const PATH_MAX = 64; const PATH_SEEDS = 8; const PATH_EVERY = 1; // seconds between samples at the start of a dive
+  const okc = (v) => typeof v === 'number' && isFinite(v) && Math.abs(v) <= 100000;
+  function cleanPath(a) {
+    if (!Array.isArray(a)) return null;
+    const out = [];
+    for (let i = 0; i < a.length && out.length < PATH_MAX; i++) { const q = a[i]; if (Array.isArray(q) && q.length === 3 && okc(q[0]) && okc(q[1]) && okc(q[2])) out.push([Math.round(q[0] * 2) / 2, Math.round(q[1] * 2) / 2, Math.round(q[2] * 2) / 2]); }
+    return out.length >= 2 ? out : null;
+  }
+  function cleanPaths(raw, seeds) {
+    const out = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    Object.keys(seeds || {}).sort((a, b) => seeds[b] - seeds[a]).slice(0, PATH_SEEDS).forEach((k) => { const p = Object.prototype.hasOwnProperty.call(raw, k) ? cleanPath(raw[k]) : null; if (p) out[k] = p; });
+    return out;
+  }
+  // One sample of the hero during a dive (call often; it records at most one point per `run.pEvery` seconds)
+  function sample(run, x, y, z, now) {
+    if (!run || !run.seed || !okc(x) || !okc(y) || !okc(z) || !okc(now)) return false;
+    if (!run.path) { run.path = []; run.pEvery = PATH_EVERY; run.pNext = now; }
+    if (now < run.pNext) return false;
+    run.path.push([Math.round(x * 2) / 2, Math.round(y * 2) / 2, Math.round(z * 2) / 2]); run.pNext = now + run.pEvery;
+    if (run.path.length >= PATH_MAX) { run.path = run.path.filter((q, i) => i % 2 === 0); run.pEvery *= 2; }
+    return true;
   }
   function load(storage) { try { return clean(storage.getItem(KEY)); } catch (e) { return clean(null); } }
   // Merge-on-write (bugbash/saves.md S2/S7): bests and counters only go up against what storage holds now, so a stale second tab
@@ -63,6 +89,8 @@
       Object.keys(mine.best).forEach((k) => { out.best[k] = Math.max(mine.best[k], cur.best[k]); });
       const sb = Object.assign({}, cur.seedBest); Object.keys(mine.seedBest).forEach((k) => { sb[k] = Math.max(sb[k] || 0, mine.seedBest[k]); });
       out.seedBest = cleanSeeds(sb);
+      const sp = {}; Object.keys(out.seedBest).forEach((k) => { const m = mine.seedPath[k], c = cur.seedPath[k]; const p = (mine.seedBest[k] || 0) >= (cur.seedBest[k] || 0) ? (m || c) : (c || m); if (p) sp[k] = p; });
+      out.seedPath = cleanPaths(sp, out.seedBest); // the path of whichever tab holds the deeper dive on that seed
       storage.setItem(KEY, JSON.stringify(out));
       return true;
     } catch (e) { return false; }
@@ -103,7 +131,11 @@
     if (pb.score) b.score = s; if (pb.depth) b.depth = run.depth; if (pb.ores) b.ores = run.ores; if (pb.combo) b.combo = run.bestCombo;
     const sk = run.seed, ghost = sk && rec.seedBest ? rec.seedBest[sk] || 0 : 0; // DD5: the deepest dive on this seed so far
     pb.seed = !!sk && run.depth > ghost; prev.seedDepth = ghost;
-    if (pb.seed) { rec.seedBest = cleanSeeds(Object.assign({}, rec.seedBest, { [sk]: run.depth })); }
+    if (pb.seed) {
+      rec.seedBest = cleanSeeds(Object.assign({}, rec.seedBest, { [sk]: run.depth }));
+      const sp = Object.assign({}, rec.seedPath); if (cleanPath(run.path)) sp[sk] = run.path; else delete sp[sk]; // DD5 replay: the new deepest dive's path
+      rec.seedPath = cleanPaths(sp, rec.seedBest);
+    }
     rec.runs = Math.min(999999, rec.runs + 1); if (safe) rec.safe = Math.min(999999, rec.safe + 1);
     // "so close" feedback: how far short of the old best this dive ended (only when it did not beat it)
     const short = !pb.depth && prev.depth > 0 ? prev.depth - run.depth : 0;
@@ -117,5 +149,5 @@
     const armed = !!run.armed, fall = score(run, false), ghost = run.seed && rec && rec.seedBest ? rec.seedBest[run.seed] || 0 : 0;
     return { armed, fall, surface: armed ? score(run, true) : fall, toArm: armed ? 0 : Math.max(0, SAFE_DEPTH - run.depth), ghost, ahead: ghost ? run.depth - ghost : 0 };
   }
-  return { KEY, MODS, modFor, COMBO_GAP, SAFE_DEPTH, SAFE_BONUS, ORE, SEED_CAP, clean, load, save, start, depth, mined, comboLive, score, finish, bank };
+  return { KEY, MODS, modFor, COMBO_GAP, SAFE_DEPTH, SAFE_BONUS, ORE, SEED_CAP, PATH_MAX, PATH_SEEDS, clean, load, save, start, depth, mined, comboLive, score, finish, bank, sample, cleanPath };
 }));

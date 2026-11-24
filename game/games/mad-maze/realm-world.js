@@ -1081,7 +1081,7 @@
       return { on: GEAR_ON, b: gp.b, d: gp.d, text: v ? v.text : '', cryptText: v ? v.cryptText : '', bonusPct: v ? v.bonusPct : 0, bossKillsLeft: v ? v.bossKillsLeft : 60 };
     }
     function giveBag(x, y, bag, info) {
-      const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
+      const got = { zone: info.zone, boss: !!info.boss, src: info.src || (info.boss ? 'boss' : 'mob'), tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
       const rolls = []; let toasted = false;
       // review F12: the pity counter lives in storage and another world tab may have spent (or raised) it since this page loaded: re-read it right
       // before a boss roll / pityStep, so two tabs at b = 60 give ONE forced T12, not two. Unreadable storage keeps the in-memory value.
@@ -1154,6 +1154,22 @@
         const k = Math.min(d - 12, FIRSTBAG_SPEED * dt) / d; b.x += dx * k; b.y += dy * k;
       }
     }
+    // ---- ID-04 Hero notebook (MMNotebook, own key pixeltown-notebook-v1): a page on the FIRST meet only. The in-memory copy answers
+    // "seen already?" per kill (no storage read); a new page re-reads, merges and writes once. Knowledge only: no stat, drop or price changes.
+    const NB = window.MMNotebook && !/[?&]notebook=0(&|$)/.test(qs0) ? window.MMNotebook : null;
+    let nbSave = null; let nbNew = 0;
+    function nbLoad() { if (NB) { try { nbSave = NB.load(localStorage); } catch (e) { nbSave = NB.defaults(); } } return nbSave; }
+    function nbMeet(id, name) {
+      if (!NB || !id) return false;
+      if (!nbSave) nbLoad();
+      if (NB.has(nbSave, id)) return false;
+      try { NB.record(localStorage, id); } catch (e) { /* storage blocked */ }
+      nbLoad(); // what is on disk now: this page plus any other tab's pages
+      if (!NB.has(nbSave, id) && !NB.add(nbSave, id, Date.now())) return false; // blocked storage keeps the page for this visit; a full notebook takes nothing
+      nbNew++; nbSyncBtn();
+      try { arena._floatText(arena.player.x, arena.player.y - 60, 'New notebook page: ' + name, '#ffe27a'); } catch (e) { /* no float text */ }
+      return true;
+    }
     function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
       if (e.rushStep) { rushKilled(e); return; }
@@ -1164,7 +1180,11 @@
         const info = zones.markDead(e.zid, arena.clock); live.delete(e.zid); e.zid = -1;
         if (!info) return;
         kills++; save.stats.kills++; nxQuestEvent({ type: 'kill', zone: info.zone, n: 1 });
-        rollFor({ zone: info.zone, tier: info.tier, src: e.type === 'giant_spider_queen' ? 'elite' : 'mob', bossId: e.type === 'giant_spider_queen' ? e.type : '' }, e.x, e.y, 'g' + info.group);
+        nbMeet(NB ? NB.ids.kill(info.type, info.creature, info.zone) : null, info.creature); // ID-04: first kill of this creature in this zone
+        // cyc2-S bug fix: the elite test read e.type, which is the bolt pattern ('aimed'), never 'giant_spider_queen', so the elite never rolled
+        // its own gear row (MMGearDrops ELITE). The creature id lives on the zone group (info.creature).
+        const elite = info.creature === 'giant_spider_queen';
+        rollFor({ zone: info.zone, tier: info.tier, src: elite ? 'elite' : 'mob', bossId: elite ? info.creature : '' }, e.x, e.y, 'g' + info.group);
         spawnPickups(e.x, e.y, 'g' + info.group, kills, info.tier);
         return;
       }
@@ -1172,6 +1192,7 @@
         if (bossLive[i] !== e) continue;
         const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
+        nbMeet(NB ? NB.ids.boss(site.boss, site.zone) : null, BOSS_NAME[i]); // ID-04
         rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss }, e.x, e.y + 30, 'boss' + i);
         spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
         dropKey(e.x + 24, e.y + 26, 'boss' + i); // BK2: every world boss drops a boss key
@@ -1945,6 +1966,11 @@
       // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
       + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
       + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
+    // ID-04 notebook panel: the same .nx-board card as the quest board (EIGHTBIT-STYLE: pixel border, no blur), one list per category
+    nxCss.textContent += '#rw-nexus .nx-notebook{background:#221d3a;border-color:#7a63c9}#rw-nexus .nx-nb-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-nb-head h3{margin:0;font-size:16px}'
+      + '#rw-nexus .nx-nb-note{margin:4px 0 8px;font-size:13px;color:#c9bff0}#rw-nexus .nx-nb-cat{margin:10px 0 4px;font-size:13px;color:#ffe27a}#rw-nexus .nx-nb-list{list-style:none;margin:0;padding:0}'
+      + '#rw-nexus .nx-nb-list li{padding:6px 0;border-top:1px solid #3b3166;font-size:max(13px,1em);overflow-wrap:anywhere}#rw-nexus .nx-nb-list li:first-child{border-top:0}#rw-nexus .nx-nb-list b{color:#fff}#rw-nexus .nx-nb-list em{color:#8fe9ff;font-style:normal;margin-left:6px}#rw-nexus .nx-nb-list span{display:block;color:#d9d1f5}'
+      + '#rw-nexus .nx-nb-empty{color:#a59cc4;font-size:13px;margin:2px 0}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
       if (nxPortrait[id] !== undefined || !opts.assetRoot || !artOn) return;
@@ -2219,7 +2245,7 @@
       setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
     let nxStallKind = 'shop';
-    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
     // nxReturn remembers that origin only for a panel opened from the stall; any other panel, a death or a leave forgets it.
     let nxReturn = null;
@@ -2241,6 +2267,13 @@
       const head = document.createElement('div'); head.className = 'nx-head';
       const back = document.createElement('button'); back.type = 'button'; back.id = 'rw-nx-back'; back.textContent = 'Back to the Realm'; back.setAttribute('aria-label', 'Back to the Realm');
       const h = document.createElement('h2'); h.textContent = 'The Nexus'; head.appendChild(back); head.appendChild(h);
+      let nbBtn = null; let notebook = null;
+      if (NB) { // ID-04: the hero notebook, a real button in the header (keyboard / touch / screen reader), Esc closes it
+        nbBtn = document.createElement('button'); nbBtn.type = 'button'; nbBtn.id = 'rw-nx-notebook-btn'; nbBtn.setAttribute('aria-controls', 'rw-nx-notebook'); nbBtn.setAttribute('aria-expanded', 'false');
+        nbBtn.addEventListener('click', () => (nxDom && nxDom.notebook && !nxDom.notebook.classList.contains('hidden') ? nbHide(true) : nbShow()));
+        head.appendChild(nbBtn);
+        notebook = document.createElement('div'); notebook.className = 'nx-board nx-notebook hidden'; notebook.id = 'rw-nx-notebook'; notebook.setAttribute('role', 'region'); notebook.setAttribute('aria-label', 'Hero notebook');
+      }
       const stage = document.createElement('div'); stage.className = 'nx-stage';
       const cv = document.createElement('canvas'); cv.width = NX_WALK ? NX_VW : NX.W * TILE; cv.height = NX_WALK ? NX_VH : NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
       let plaza = cv; let act = null;
@@ -2267,10 +2300,49 @@
       const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = nxHint();
       const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
       const stall = document.createElement('div'); stall.className = 'nx-board nx-stall hidden'; stall.id = 'rw-nx-stall'; stall.setAttribute('role', 'region'); stall.setAttribute('aria-label', 'Vendor stall');
-      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
+      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (notebook) root.appendChild(notebook); /* after the quest board: '#rw-nexus .nx-board' still finds the board first */ if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
       back.addEventListener('click', () => nexusClose());
-      nxDom = { root, cv, plaza, act, stage, talk, board, stall, back, last: null };
+      nxDom = { root, cv, plaza, act, stage, talk, board, stall, back, nbBtn, notebook, last: null };
+      nbSyncBtn();
       return nxDom;
+    }
+    function nbSyncBtn() {
+      if (!nxDom || !nxDom.nbBtn) return;
+      const n = NB.count(nbSave || nbLoad());
+      nxDom.nbBtn.textContent = 'Notebook (' + n + ')';
+      nxDom.nbBtn.setAttribute('aria-label', 'Hero notebook: ' + n + (n === 1 ? ' page' : ' pages') + (nbNew ? ', ' + nbNew + ' new this visit' : ''));
+    }
+    function nbShow() {
+      if (!NB || !nxOpen || !nxDom || !nxDom.notebook) return false;
+      nxDom.board.classList.add('hidden'); nxStallHide();
+      const el = nxDom.notebook; el.textContent = ''; nbLoad();
+      const hd = document.createElement('div'); hd.className = 'nx-nb-head';
+      const h3 = document.createElement('h3'); h3.id = 'rw-nx-nb-title'; h3.textContent = 'Hero notebook'; hd.appendChild(h3);
+      const close = document.createElement('button'); close.type = 'button'; close.id = 'rw-nx-nb-close'; close.textContent = 'Close'; close.setAttribute('aria-label', 'Close the notebook'); close.addEventListener('click', () => nbHide(true)); hd.appendChild(close);
+      el.appendChild(hd); el.setAttribute('aria-labelledby', 'rw-nx-nb-title');
+      const note = document.createElement('p'); note.className = 'nx-nb-note'; note.textContent = NB.count(nbSave) + ' pages. A page fills in the first time you beat, clear or tame something. Knowledge only: pages never change your stats.'; el.appendChild(note);
+      NB.sections(nbSave).forEach((sec) => {
+        const c = document.createElement('h4'); c.className = 'nx-nb-cat'; c.textContent = sec.title + ' (' + sec.pages.length + ')'; el.appendChild(c);
+        if (!sec.pages.length) { const p = document.createElement('p'); p.className = 'nx-nb-empty'; p.textContent = sec.id === 'kill' ? 'Beat a creature to start this page.' : sec.id === 'boss' ? 'Beat a world boss at its altar.' : sec.id === 'clear' ? 'Beat a dungeon boss.' : 'Tame a creature on the Isles.'; el.appendChild(p); return; }
+        const ul = document.createElement('ul'); ul.className = 'nx-nb-list'; ul.dataset.cat = sec.id;
+        sec.pages.forEach((pg) => {
+          const li = document.createElement('li'); li.dataset.page = pg.id;
+          const b = document.createElement('b'); b.textContent = pg.title; li.appendChild(b);
+          if (pg.where) { const w = document.createElement('em'); w.textContent = pg.where; li.appendChild(w); }
+          if (pg.hint) { const t = document.createElement('span'); t.textContent = pg.hint; li.appendChild(t); }
+          ul.appendChild(li);
+        });
+        el.appendChild(ul);
+      });
+      el.classList.remove('hidden'); nxDom.nbBtn.setAttribute('aria-expanded', 'true');
+      close.focus({ preventScroll: true }); el.scrollIntoView({ block: 'nearest' });
+      return true;
+    }
+    function nbHide(refocus) {
+      if (!nxDom || !nxDom.notebook || nxDom.notebook.classList.contains('hidden')) return false;
+      nxDom.notebook.classList.add('hidden'); nxDom.notebook.textContent = ''; nxDom.nbBtn.setAttribute('aria-expanded', 'false');
+      if (refocus) nxDom.nbBtn.focus({ preventScroll: true });
+      return true;
     }
     function nxTouch() { return document.body.classList.contains('touch-device'); }
     function nxHint() {
@@ -2392,7 +2464,7 @@
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
-      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxStallHide();
+      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxStallHide(); nbHide(false); nbSyncBtn();
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
       nxDom.talk.textContent = nxHint();
       if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
@@ -2406,6 +2478,7 @@
     window.addEventListener('keydown', (ev) => {
       if (nxOpen && ev.key === 'Escape') { // G-12: Esc closes the quest board / stall first, the Nexus on the next press
         ev.preventDefault(); ev.stopImmediatePropagation();
+        if (nbHide(true)) return; // ID-04: the notebook closes first
         if (nxDom && !nxDom.board.classList.contains('hidden')) { nxDom.board.classList.add('hidden'); return; }
         if (nxDom && nxDom.stall && !nxDom.stall.classList.contains('hidden')) { nxStallHide(); return; }
         nexusClose(); return;
@@ -2578,7 +2651,7 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
+    function nxBoardOpen() { nxBuild(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {
@@ -2805,6 +2878,7 @@
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       ttk: { on: TTK_ON }, quiet: () => ({ on: QUIET_ON, nudges: quietNudges }), firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
+      notebook: { on: !!NB, save: () => JSON.parse(JSON.stringify(nbSave || nbLoad() || {})), meet: (id, name) => nbMeet(id, name || id), open: () => nbShow(), close: () => nbHide(false), newThisVisit: () => nbNew },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
         walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), floor: () => Object.assign({ classic: NX_FLOOR_CLASSIC }, nxFloorStat), codeHero: () => nxHeroStat.code, tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
