@@ -22,9 +22,8 @@ counts as "missing"); M03 rimewolf stays unwired while `shared-mm-creature-strip
 | TOP SCORES board flat (audit) | The Town leaderboard board gets the same `bake({ finish: 'board' })`. | `cyc1-art-town-buildings` ALL PASSED (8 textures incl. board); `beta-w06-town-board` ALL PASSED (board text still readable). Shots `cyc1-art-town-after-*` (re-shot). |
 | Hit feedback (Isles) | The hit flash was a white circle laid over the creature and the ground round it. Now the creature's own white silhouette (PNG strip or code frame), fading over the 0.12 s flash; white copies built once per source canvas on the first hit (WeakMap). Measured per-frame cost 0.3-0.4 ms per flashing creature including the first-hit build, one extra blit after that. `?hitflash=0` = circle. | `tests/cyc1-art-isles-hitflash.test.js` ALL PASSED (meadow PNG: silhouette, 0 circles; tundra code-drawn: silhouette; `?hitflash=0`: circle, no silhouette; cost < 1 ms). Shots `cyc1-art-isles-hit-{before,after}-{d,p}.jpg`. |
 
-Existing tests run after the changes: `beta-w03-terrain` ALL PASSED; `r4-d2-art` 1 FAIL "first-hero pick: class sprite applied within
-3 s (W-01) ms=12920" (hero class-art load timing on a loaded 4-core box; no terrain / prop check failed; not touched by this branch:
-needs a solo rerun by the coordinator). `isle-creature-art` ALL PASSED. Town: `town-front-door`, `cyc0-town-interact-shadow` ALL PASSED; `beta-s07-town-cull` failed once
+Existing tests run after the changes: `beta-w03-terrain` ALL PASSED; `r4-d2-art` failed once under load ("first-hero pick: class sprite applied within
+3 s", 12920 ms) and ALL PASSED on a solo rerun (310 ms): load flake, no terrain / prop check failed. `isle-creature-art` ALL PASSED. Town: `town-front-door`, `cyc0-town-interact-shadow` ALL PASSED; `beta-s07-town-cull` failed once
 ("game-owned visible flags untouched by culling", load factor 4.8) and PASSED on a solo rerun, and PASSED on a 86eda4b archive: load flake. `archipelago-perf` ALL PASSED (low tier frame work median
 0.8 ms p95 4.2 ms, default median 1.5 p95 4.7, 132 / 98 draw calls: per-frame Isles work unchanged within noise).
 
