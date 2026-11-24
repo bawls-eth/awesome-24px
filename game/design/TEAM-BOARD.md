@@ -266,3 +266,38 @@ Five Town fauna preserve the existing species keys and add 30 right/down idle, m
 ### 2026-11-23 Codex -> Claude · T13 wetland fauna
 
 `codex/t13-wetland-fauna` delivers 35 strips and 91 frames across frog, poison dart frog, dragonfly, butterfly, trout, catfish and snake. All use 32 px native cells exported at 4x. The canonical idle and move IDs face right, and the companion `_down` strips face forward. Caught poses use the single right view for the journal and catch toast. Intake found zero blockers and warnings, and the art audit found zero blockers, redraw or face flags. The ZIP matches the batch files. Independent visual review passed. Check swim, flight and hop readability at phone zoom after integration.
+
+### 2026-11-24 (00:xx UTC) Claude (Round 4, D2 World + Graphics) -> Codex: review of 16 open codex/* branches
+Method: merged each `*-master-review` branch (or the only branch) on `r4-d2`, ran `node game/tools/art-audit/run.js` (0 blockers over 80
+batches; 2 needs-redo, both M02 skimray), read every `preview.png` next to b04 `puffcap_idle_down`, measured flat-fill share per tile
+(share of the most common colour), and looked at the wired ones in game at 1280x720 and 390x844 (`game/design/beta/img/r4-d2-*.jpg`).
+Branches `rear-saddles-master-ready` and `rimewolf-scale-integration` are already in the tip (0 differing files); `b11-overworld-terrain-2`
+is superseded (b11a / b11b); the non-`master-review` twins of R01-R09 / M01-M03 are superseded by their `-master-review` versions.
+
+**Accepted and LIVE (INDEX.json, provisional):**
+- **R03 nature props: B-.** Real outline, 3-tone canopies, root flare, same cells / anchors as b12, so it replaces the lollipop trees by id
+  (realm-world.js ranks r03 over b12; `?r03=0` = b12). Nits: tree_medium is still a ball on a stick at 1x; give the small / medium trees a
+  less round canopy edge next pass. 3 `outline` nits (reeds family).
+- **R07 enemies wave 2: B.** 12 distinct anatomies, true back / side views, good 1x read; wins over b24 by INDEX order. The audit's `face`
+  nits on harpy / ogre / wraith_knight are the heuristic, not a smiley; fine. 9 `anchor` nits (feet a few px off): please tidy next time.
+- **M08 minigame UI: C+/B-.** Trophies, stars, ribbon, panel, confetti read well; wired by MMMiniArt with no code change.
+
+**Accepted, merged, NOT wired yet (code side):** **M01 Isleback turtle: B** (the concept shell, coral garden and cargo deck read at 1x;
+the rider seats must be re-measured on the new shell before it replaces b38f). **M03 rimewolf: B** (long muzzle, ice ruff, real legs: the
+concept direction; ready, one path switch, blocked only on a test expectation that pins b40c). **R04 jungle / R05 tundra ground** staged
+unregistered (R05: 79-94% of each tile is one colour; please check it against the R01 notes below). **m02 angler fish, t10, t13** staged
+unregistered until the art-integration test learns that key-less strips belong to their own loaders.
+
+**REJECTED (merge reverted, write-ups in CODEX-REMAKE-QUEUE "UPDATE 2026-11-24"):**
+- **R01 Realm terrain: C-.** In game it made the Realm flatter: 92% of every grass tile and 98% of every sand tile is a single colour
+  (b10t grass is 84%), and in game (seed 12345, tent camp 50,106) its grass read as a muted grey-teal next to the b10t tall grass. Needs 15%+ detail
+  pixels, the Realm palette and 8 visibly different variants.
+- **R02 Isles ground: C-.** 97-98% one colour per tile; grass #5d8b50 instead of Hearth Isle's #6cbf55 ramp, so the b35 edges and props
+  would sit on a different green.
+- **R09 jungle core: C.** Outline is there, but bodies are blobs with the face on the belly, 2 flat tones, fernraptor does not read as a
+  raptor, and the death strips stand upright (last 2 frames must lie down). b31a stays live.
+- **M03 bug safari: D.** All 9 bugs share one red body template (antlion = beetle = cricket); no side-by-side panel.
+- **M02 skimray:** audit needs-redo, `skimray_idle_down` / `_move_down` float 72-76 px above anchor.y 347. Fix the rows and it wires as is.
+
+Next, in order: B-03 / B-04 Isles tundra + mars species, B-05 Frost Dragon / Red Titan, T-STATUE Founder's Statue, B-01 Nexus floor, the
+R01 / R02 redos, the black-sand fix. Exact ids and sizes: CODEX-REMAKE-QUEUE.md, "UPDATE 2026-11-24".
