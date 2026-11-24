@@ -2183,5 +2183,9 @@
   "cyc2-shore-fade.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc4-tames-perks-shared.test.js": {
+    "class": "node",
+    "tier": "full"
   }
 }
