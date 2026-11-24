@@ -990,7 +990,9 @@
       if (deg !== arrowDeg) { arrowDeg = deg; zArrow.style.transform = `rotate(${deg}deg)`; }
       const ct = `${tx},${ty} · centre ${dist}`;
       if (zCoords.textContent !== ct) zCoords.textContent = ct;
-      const w = document.getElementById('realm-wave'); if (w && w.textContent !== zi.name) w.textContent = zi.name;
+      // cyc2 U-10: on a phone (<= 560 px, the one-line zone HUD) the zone line below already names the zone; the info line drops it
+      const wn = window.innerWidth <= 560 ? '' : zi.name;
+      const w = document.getElementById('realm-wave'); if (w && w.textContent !== wn) w.textContent = wn;
       const b = document.getElementById('realm-biome'); if (b && b.textContent !== zi.danger) b.textContent = zi.danger;
       if (fogOn) { const fk = tx + ',' + ty; if (fk !== fogKey) { fogKey = fk; revealAt(tx, ty); } }
       drawMini(force);

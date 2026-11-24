@@ -167,3 +167,10 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
   #pads { gap: 3px; padding: 0; }
   .pad { min-width: 0; padding: 0; } /* 4 pads of >= 44 px still fit 195 px */
 }
+
+/* cyc2 U-06: at 200% zoom on a phone (<= 260 css px) the four pads were 39 px wide: a tighter gap keeps each >= 44 px */
+@media (max-width: 260px) {
+  #pads { gap:3px; }
+  #pads .pad { margin:0; box-shadow:inset -4px -4px 0 var(--px-lo), inset 4px 4px 0 var(--px-hi), inset 0 0 0 2px var(--px-ink); } /* the ring moves inside (it was 3 px margin + 3 px outside) */
+  #pads .pad.on, #pads .pad:active { box-shadow:inset 4px 4px 0 var(--px-lo), inset 0 0 0 2px var(--px-ink); }
+}

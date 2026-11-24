@@ -2071,5 +2071,17 @@
   "cyc2-art-town-label-icons.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-pets.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc2-ui-town-narrow.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-ui-copy.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
