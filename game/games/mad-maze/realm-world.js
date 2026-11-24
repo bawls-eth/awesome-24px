@@ -1158,7 +1158,9 @@
     // "seen already?" per kill (no storage read); a new page re-reads, merges and writes once. Knowledge only: no stat, drop or price changes.
     const NB = window.MMNotebook && !/[?&]notebook=0(&|$)/.test(qs0) ? window.MMNotebook : null;
     let nbSave = null; let nbNew = 0;
-    function nbLoad() { if (NB) { try { nbSave = NB.load(localStorage); } catch (e) { nbSave = NB.defaults(); } } return nbSave; }
+    // cycle 3 (L): the disk copy is MERGED into what this page already knows, never put in its place. With storage that refuses the write
+    // (quota, private window) the disk never holds this visit's pages, so replacing wiped them on every new page: A, B, A announced A twice.
+    function nbLoad() { if (NB) { let disk = null; try { disk = NB.load(localStorage); } catch (e) { disk = null; } nbSave = nbSave && disk ? NB.merge(nbSave, disk) : (nbSave || disk || NB.defaults()); } return nbSave; }
     function nbMeet(id, name) {
       if (!NB || !id) return false;
       if (!nbSave) nbLoad();

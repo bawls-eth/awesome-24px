@@ -2095,5 +2095,13 @@
   "cyc2-dd-path-replay.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-chunks-cache-fuzz.test.js": {
+    "class": "node",
+    "tier": "full"
+  },
+  "cyc3-notebook-blocked.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
