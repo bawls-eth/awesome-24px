@@ -6,20 +6,20 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 
 | id | title | effort | risk | status |
 |---|---|---|---|---|
-| ID-01 | Lantern-light Shore ramp | S | low | proposed |
-| ID-02 | Zone-border danger meter | S | low | approved (coordinator, cycle 1; L/U may revoke with a reason) |
-| ID-03 | Quest rewards that scale with zone | S | low | approved (coordinator, cycle 1; L/U may revoke with a reason) |
-| ID-04 | Hero notebook (knowledge meta-progression) | M | low | proposed |
-| ID-05 | Bullet-readability presets | M | medium | proposed |
-| ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | proposed |
-| ID-07 | Tame bond hearts (Isles) | M | low | proposed |
-| ID-08 | Dungeon first-clear milestones | S | low | proposed |
-| ID-09 | Cozy daily chore card (no streak) | S | low | proposed |
-| ID-10 | Shared result card across arcade games | M | medium | proposed |
-| ID-11 | Realm retreat flag (safe walk-back) | M | medium | proposed |
-| ID-12 | Town-to-Realm errand chain | M | low | proposed |
-| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | proposed |
-| ID-14 | Hit-pause and telegraph timing audit | S | low | proposed |
+| ID-01 | Lantern-light Shore ramp | S | low | needs-change (L, cycle 1): fade XP by hero level in the world kill path, not in `ZONE_MUL.xp` (zone data shared with `world-ttk`); Lv 1-5 untouched |
+| ID-02 | Zone-border danger meter | S | low | approved (L confirms, cycle 1): pure label function + one HUD line; no save; write the label on change only |
+| ID-03 | Quest rewards that scale with zone | S | low | approved (L confirms, cycle 1): data-only in `mm-quests.js`; keep the bag tiers, test a reward cap |
+| ID-04 | Hero notebook (knowledge meta-progression) | M | low | approved (L, cycle 1): pure module + additive `notebook` key; cap entries, write on first meet only (not per kill) |
+| ID-05 | Bullet-readability presets | M | medium | needs-change (L, cycle 1): ship High contrast only first, style chosen once per frame (not per bullet), `realm-bullet-bench` before/after |
+| ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | needs-change (L, cycle 1): damage and aim sliders only; no game-speed slider (scaling dt touches every timer, telegraph and seeded test) |
+| ID-07 | Tame bond hearts (Isles) | M | low | needs-change (L, cycle 1): `mm-tames.js` already saves `bond` and `aff`; show and extend those, add no second field |
+| ID-08 | Dungeon first-clear milestones | S | low | needs-change (L, cycle 1): store first clears in the Realm save (the dungeon is its writer), Hub only reads; no write to the Hub medals key |
+| ID-09 | Cozy daily chore card (no streak) | S | low | needs-change (L, cycle 1): feasible, but the Town still pays login and sell streaks; owner decides their fate first (with L-08), else two daily systems |
+| ID-10 | Shared result card across arcade games | M | medium | needs-change (L, cycle 1): `mm-minikit.js` already has `result` + `panel`; this is a migration, one game per commit with its page test |
+| ID-11 | Realm retreat flag (safe walk-back) | M | medium | needs-change (L, cycle 1): no crafted item; reuse the dungeon-trip path (`save.returnTo` + `safeReturn` shield and hop) for the Nexus trip |
+| ID-12 | Town-to-Realm errand chain | M | low | approved (L, cycle 1): other saves read-only through their clean functions; chain state additive in the Town save; no network |
+| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | approved (L, cycle 1): additive per-zone first-kill flag in the Realm save + a floor on the bag tier; node test on the roll |
+| ID-14 | Hit-pause and telegraph timing audit | S | low | needs-change (L, cycle 1): telegraph audit approved; hit pause must freeze draw only (never the sim clock) and be off under reduce motion |
 
 ## ID-01 Lantern-light Shore ramp
 - Player-facing: the Shore's first 10 minutes keep their gentle start, but past Lv 5 the Shore stops giving full XP (a soft fade to 60 percent), and a one-line toast says "The Midlands has better prey". A hero who lingers is nudged inland, never blocked.
@@ -116,6 +116,18 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 - Files: `shared/mm-telegraph.js`, `realm.js` boss attack table.
 - Test: node: every boss pattern has telegraph >= 0.4 s; telegraph existing tests extended.
 - Effort S. Risk: low.
+
+## Feasibility review (L, cycle 1)
+Read against the code at 86eda4b. `approved` = S may start; `needs-change` = S may start once the change in the status line is in the proposal; none rejected.
+- ID-01: `ZONE_MUL.xp` feeds `mm-zones` stats for every hero level and the `world-ttk` test; a level-based fade belongs where the kill pays XP. Loot stays untouched.
+- ID-02 / ID-03: confirmed, not revoked. ID-02: write the label only when it changes (L-04 / L-09 removed per-frame HUD writes; do not add one). ID-03: `shards: 30 + zone * 10 + need` is one line in `mm-quests.js`; the reward itself has no cap today (the 1000 clamp there is on progress events), so the test must add one.
+- ID-05: the bullet draw loop is the hottest draw path; one preset with a per-frame choice is cheap, per-bullet style switches are not.
+- ID-06: a speed slider multiplies `dt` for bullets, cooldowns, telegraphs, the first-minute floor and the seeded tests. Damage taken (one multiply where the player is hit) and aim strength are safe. Mark assisted runs in the run summary.
+- ID-07: `cleanTame` already keeps `bond` (1..MAX_BOND) and `aff`, and `bond` rises with `aff / 100`. Hearts are a view of that; a new field would fork the data.
+- ID-08: one writer per key (SAVE-KEYS.md). The dungeon may write only its own save.
+- ID-09: the IDEAS hard limits forbid streaks across days, yet `setupLoginStreak` / `updateSellStreak` pay them today. A chore card beside a streak counter is two daily systems; the owner decides (with L-08) whether the card replaces them.
+- ID-11: the walk back is real. `realm-world.js` already stores `save.returnTo` and lands a hero back from a dungeon with `safeReturn` (3 s shield, hop away from a live event), but only for the `?at=` arrival. Using the same record for the Nexus trip gives the feature with no new item, no crafting cost and the exploit rule already solved (the tile was visited).
+- ID-14: a real 50 ms sim pause would shift bullet timings that tests pin (realm.js header: "Bullet counts and timings never change").
 
 ## Top five to approve first
 1. ID-02 Zone-border danger meter (cheap, fixes the measured Highlands spike).
