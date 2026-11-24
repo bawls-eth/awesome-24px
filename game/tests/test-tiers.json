@@ -1796,5 +1796,9 @@
   "beta-r4-b08-shore-survival.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-b05-05-oakback-food.test.js": {
+    "class": "node",
+    "tier": "full"
   }
 }
