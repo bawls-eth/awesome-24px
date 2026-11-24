@@ -106,8 +106,12 @@
     var d = DIRS.indexOf(dir) >= 0 ? dir : 'down';
     var t = Math.max(0, Number(tMs) || 0) + (Number(phase) || 0);
     var i = Math.floor(t * spec.fps / 1000) % spec.frames;
-    return a + '_' + d + '_' + i;
+    // cycle 4 (L hot path): the name comes from a table built on first use. It was concatenated for every hero sprite on every frame
+    // (about 20 names a frame in the Town: 1.3 KB per frame of short-lived strings).
+    var byA = FRAME_NAMES[a] || (FRAME_NAMES[a] = {}); var row = byA[d] || (byA[d] = []);
+    return row[i] || (row[i] = a + '_' + d + '_' + i);
   }
+  var FRAME_NAMES = {};
   // Box filter: one SIZE x SIZE frame from an RGBA buffer (width srcW), crop origin (sx, sy), FACTOR x FACTOR blocks.
   // Coverage >= 3/8 -> opaque pixel with the alpha-weighted mean colour; else transparent (crisp pixel-art edges).
   function downsample(data, srcW, srcH, sx, sy, size, factor) {

@@ -2195,5 +2195,9 @@
   "cyc4-zk-stale-tab.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc4-hero-frame-names.test.js": {
+    "class": "node",
+    "tier": "full"
   }
 }
