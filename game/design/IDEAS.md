@@ -7,8 +7,8 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 | id | title | effort | risk | status |
 |---|---|---|---|---|
 | ID-01 | Lantern-light Shore ramp | S | low | proposed |
-| ID-02 | Zone-border danger meter | S | low | proposed |
-| ID-03 | Quest rewards that scale with zone | S | low | proposed |
+| ID-02 | Zone-border danger meter | S | low | approved (coordinator, cycle 1; L/U may revoke with a reason) |
+| ID-03 | Quest rewards that scale with zone | S | low | approved (coordinator, cycle 1; L/U may revoke with a reason) |
 | ID-04 | Hero notebook (knowledge meta-progression) | M | low | proposed |
 | ID-05 | Bullet-readability presets | M | medium | proposed |
 | ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | proposed |
