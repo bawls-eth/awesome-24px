@@ -278,13 +278,18 @@
       const c = document.createElement('canvas'); c.width = 48; c.height = 28; c.id = 'res-sprite'; c.className = 'res-sprite'; c.setAttribute('aria-hidden', 'true');
       const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false; drawFish(cx, 24, 14, 16, g.fish, false); extra.push(c);
     }
-    const ul = mk('ul', 'mk-medals'); ul.id = 'res-medals'; ul.setAttribute('aria-label', 'Medals');
-    medals.forEach((m) => { const li = mk('li', m.earned ? 'on' : '', (m.earned ? '\u2605 ' : '\u2606 ') + m.label); li.dataset.medal = m.id; ul.appendChild(li); });
-    extra.push(ul);
+    // b10-15: a tournament cast card shows the run (cast N/5, points so far, casts left) instead of the generic medal / next-goal list
+    const tr = g.tour && journal.tour && journal.tour.run ? journal.tour.run : null;
+    const tourLine = tr ? [{ id: 'res-tour', text: 'Tournament: cast ' + tr.used + '/' + D.CASTS + ' - ' + tr.score + ' points so far - ' + (tr.used >= D.CASTS ? 'that was the last cast.' : (D.CASTS - tr.used) + (D.CASTS - tr.used === 1 ? ' cast' : ' casts') + ' left.'), cls: 'tour' }] : [];
+    if (!tr) {
+      const ul = mk('ul', 'mk-medals'); ul.id = 'res-medals'; ul.setAttribute('aria-label', 'Medals');
+      medals.forEach((m) => { const li = mk('li', m.earned ? 'on' : '', (m.earned ? '\u2605 ' : '\u2606 ') + m.label); li.dataset.medal = m.id; ul.appendChild(li); });
+      extra.push(ul);
+    }
     const vm = MK.result({
       title, headline: [{ text: title, id: 'res-title' }], stats: resultStats(outcome),
-      lines: [{ id: 'res-detail', text: detail, cls: 'dim' }].concat(funLine ? [{ id: 'res-fun', text: funLine, cls: 'fun' }] : []),
-      medals, value: A.journal.speciesCount(journal), menuHref: '../../hub/index.html', menuLabel: 'Hub', ids: { again: 'res-ok', head: 'res-head' },
+      lines: tourLine.concat([{ id: 'res-detail', text: detail, cls: 'dim' }]).concat(funLine ? [{ id: 'res-fun', text: funLine, cls: 'fun' }] : []),
+      medals: tr ? [] : medals, value: A.journal.speciesCount(journal), menuHref: '../../hub/index.html', menuLabel: 'Hub', ids: { again: 'res-ok', head: 'res-head' },
     });
     const pn = MK.panel(el, vm, { again: dismiss, extra, holdMs: TEST ? 0 : 300, keyReady: () => g.state === 'result' });
     pn.again.textContent = again;

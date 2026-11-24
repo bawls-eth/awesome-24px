@@ -1812,5 +1812,9 @@
   "beta-r4-b11-09-lantern-name.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-b10-15-tour-card.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
