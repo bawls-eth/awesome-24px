@@ -1,0 +1,212 @@
+{
+  "local_blockers": 0,
+  "assets": [
+    {
+      "id": "icicle_bat_idle_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 4,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_move_down",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 6,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_attack_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 5,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_death_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 5,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_idle_up",
+      "dimensions": [
+        768,
+        192
+      ],
+      "colors": 8,
+      "baseline": [
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 4,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_move_up",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "colors": 8,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 6,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_attack_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "colors": 8,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 5,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_death_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "colors": 8,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 5,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_idle_right",
+      "dimensions": [
+        768,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 4,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_move_right",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 6,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_attack_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 5,
+      "passed": true
+    },
+    {
+      "id": "icicle_bat_death_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "colors": 10,
+      "baseline": [
+        171,
+        171,
+        171,
+        171,
+        171
+      ],
+      "distinct_frames": 5,
+      "passed": true
+    }
+  ],
+  "repository_audit": "not run",
+  "reference_comparison": "not run",
+  "gameplay": "not run"
+}
