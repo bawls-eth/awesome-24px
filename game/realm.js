@@ -4575,6 +4575,9 @@ class RealmArena {
         const opts = this.reforgeOptions(it.n);
         if (opts && opts.length) {
           box.appendChild(mk('div', 'rm-forge-h', 'Reforge: add one forged affix (exact value and cost):'));
+          const cheap = opts.filter((o) => !o.current).sort((x, y) => (x.cost.dust + x.cost.shards) - (y.cost.dust + y.cost.shards))[0]; // ID-40: which side is short (fixed income table)
+          let hint = null; try { hint = cheap && !cheap.afford && typeof MMGearForge.shortHint === 'function' ? MMGearForge.shortHint(cheap.cost, { dust: sv.dust || 0, shards: sv.shards }) : null; } catch (e) { hint = null; }
+          if (hint) { const h = mk('div', 'rm-forge-short dim', hint.text); h.title = 'Counted in Godlands kills with every bag salvaged'; box.appendChild(h); }
           opts.forEach((o) => {
             const b = btn(`${o.text} · ${cost(o.cost)}${o.current ? ' · forged now' : !o.afford ? ' · not enough' : ''}`, { forgePick: o.id, uid: it.n });
             b.dataset.dust = String(o.cost.dust); b.dataset.shards = String(o.cost.shards); b.dataset.v = String(o.v);

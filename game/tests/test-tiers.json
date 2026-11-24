@@ -2191,5 +2191,9 @@
   "cyc4-assist-realm.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc4-forge-hint.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
