@@ -1909,5 +1909,19 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "beta-r4-b08-passive-2min.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 600
+  },
+  "beta-r4-ftue-day-sweep.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 3600
+  },
+  "beta-r4-b08-10-home-footer.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

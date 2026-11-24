@@ -22,6 +22,7 @@ const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'ftue-pro
 const METRICS = path.join(__dirname, '..', 'design', 'ftue-metrics.json');
 const TG = FX.targets; const KNOWN = FX.knownIssues || {};
 const DT = FX.dt || 1 / 60;
+const DAY = Number(process.env.FT_DAY) || 0; // R4 D1: run the profiles n days from today (beta-r4-ftue-day-sweep.test.js); default 0 = today, unchanged
 const ONLY = process.env.FT_ONLY || ''; // run one profile while debugging (FT_ONLY=world-shore-c); FT_TRACE=1 prints the bot's 5 s trace
 const r1 = (v) => (v === null || v === undefined ? null : Math.round(v * 10) / 10);
 
@@ -53,7 +54,7 @@ async function newPage(browser, freeze) {
   await page.addInitScript(() => { let s = 0x2f6b1c3d; window.__ftReseed = (n) => { s = n | 0; }; Math.random = () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
   // freeze: page time stands still (performance.now and the rAF timestamp), so the real frames before the bot takes over all have
   // dt 0 and the simulated run starts from the same state every time (the bot then steps the update itself with a fixed dt)
-  if (freeze !== undefined && freeze !== false) await page.addInitScript((off) => { const T0 = 1000; performance.now = () => T0; const D0 = Date.now(); const DZ = D0 - (D0 % 86400000) + 43200000 + off; Date.now = () => DZ; /* noon UTC today + the profile's offset: the arena seeds its rng from Date.now() */ const raf = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = (cb) => raf(() => { if (!window.__ftHold) cb(T0); }); }, Number(freeze) || 0);
+  if (freeze !== undefined && freeze !== false) await page.addInitScript(([off, day]) => { const T0 = 1000; performance.now = () => T0; const D0 = Date.now() + day * 86400000; const DZ = D0 - (D0 % 86400000) + 43200000 + off; Date.now = () => DZ; if (day) { const RD = Date; const FD = function (...a) { return a.length ? new RD(...a) : new RD(DZ); }; FD.now = () => DZ; FD.UTC = RD.UTC; FD.parse = RD.parse; FD.prototype = RD.prototype; window.Date = FD; } /* FT_DAY=n (R4 D1): the whole page lives n days from today (Date.now and new Date()), for the day-sweep test */ /* noon UTC today + the profile's offset: the arena seeds its rng from Date.now() */ const raf = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = (cb) => raf(() => { if (!window.__ftHold) cb(T0); }); }, [Number(freeze) || 0, DAY]);
   return { ctx, page, errors, db };
 }
 

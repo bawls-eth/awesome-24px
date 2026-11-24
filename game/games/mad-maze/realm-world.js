@@ -722,6 +722,26 @@
       const xp = Math.max(1, Math.round(n * EXPLORE_PCT * rmXpNeeded(arena.save.level || 1)));
       exploreXp += xp; arena._gainXp(xp);
     }
+    // R4 D1 quiet-stretch pity (first-ten world-shore-f: a 62 s stretch with no reward on some days): when nothing has paid (no xp, no kill,
+    // no shards, no item) for QUIET_AFTER s and no enemy is alive within QUIET_R, the nearest cleared group in range respawns now instead of
+    // waiting out its zone timer (Shore 60 s), and the nearest live enemy is provoked and comes over; again every QUIET_AGAIN s while it stays quiet. ?quietpity=0 turns it off.
+    const QUIET_ON = !/[?&]quietpity=0(&|$)/.test(qs0); const QUIET_AFTER = 15; const QUIET_AGAIN = 6; const QUIET_R = 14 * TILE;
+    let quietSig = ''; let quietT = 0; let quietNudges = 0;
+    function quietTick(dt) {
+      if (!QUIET_ON || !zones || arena.state !== 'play' || typeof zones.hurry !== 'function') return;
+      const sv = arena.save || {}; const sig = (sv.level | 0) + '|' + (sv.xp | 0) + '|' + kills + '|' + (sv.shards | 0) + '|' + (sv.items ? sv.items.length : 0) + '|' + (sv.nextUid | 0);
+      if (sig !== quietSig) { quietSig = sig; quietT = 0; return; }
+      if ((quietT += dt) < QUIET_AFTER) return;
+      quietT = QUIET_AFTER - QUIET_AGAIN; // still quiet: nudge again every QUIET_AGAIN s until something pays
+      const p = arena.player; let near = false;
+      live.forEach((e) => { if (!near && e.active && Math.hypot(e.x - p.x, e.y - p.y) < QUIET_R) near = true; });
+      if (near) return;
+      if (zones.hurry(p.x, p.y) >= 0) quietNudges++; // a cleared group in range respawns now
+      // and the nearest live enemy (the live groups may stand out of reach, e.g. across water) is provoked and comes to the hero
+      let best = null, bd = Infinity;
+      live.forEach((e) => { if (!e.active) return; const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; best = e; } });
+      if (best) { best.provT = Math.max(best.provT || 0, 12); quietNudges++; }
+    }
     function buildMiniBase() {
       const c = document.createElement('canvas'); c.width = ww; c.height = wh;
       const g = c.getContext('2d'); const img = g.createImageData(ww, wh); const d = img.data;
@@ -2508,7 +2528,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); rushTick();
+        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick();
         if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
@@ -2614,7 +2634,7 @@
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
-      ttk: { on: TTK_ON }, firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
+      ttk: { on: TTK_ON }, quiet: () => ({ on: QUIET_ON, nudges: quietNudges }), firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
