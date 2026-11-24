@@ -1978,7 +1978,7 @@
   },
   "shared-mm-save-medal-write.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   },
   "town-streak-clock.test.js": {
     "class": "browser",
