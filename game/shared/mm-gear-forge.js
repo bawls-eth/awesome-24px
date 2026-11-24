@@ -104,5 +104,17 @@
     return Object.freeze({ dust: Math.floor(MMGear.sellValue(c.r, c.t) * BUYBACK_RATIO) });
   }
 
-  return Object.freeze({ MIN_T, BUYBACK_RATIO, PRICE_MULT, RARITY_FACTOR, salvage, reforgeOptions, reforge, vendorStock, buyBack });
+  // cyc4-S ID-40 dust-first hint: a FIXED income table (Godlands kill, all bags salvaged; beta/cycle3-design.md item 3, tools/economy-sim.js),
+  // no tracking of what the player really earns. shortHint(cost, have) -> null when both sides are covered, else
+  // frozen { dustKills, shardKills, text }: "12 more kills of dust, shards are enough" (dust is the usual gate of a reforge).
+  const INCOME = Object.freeze({ dust: 4.74, shards: 9.75 }); // per Godlands kill
+  function shortHint(cost, have) {
+    if (!cost || !have) return null;
+    const need = (c, h, per) => { const s = Math.max(0, (Number(c) || 0) - (Number(h) || 0)); return s > 0 ? Math.max(1, Math.ceil(s / per)) : 0; };
+    const dk = need(cost.dust, have.dust, INCOME.dust), sk = need(cost.shards, have.shards, INCOME.shards);
+    if (!dk && !sk) return null;
+    const text = dk && sk ? `${dk} more kills of dust and ${sk} of shards` : dk ? `${dk} more kills of dust, shards are enough` : `${sk} more kills of shards, dust is enough`;
+    return Object.freeze({ dustKills: dk, shardKills: sk, text: text });
+  }
+  return Object.freeze({ MIN_T, BUYBACK_RATIO, PRICE_MULT, RARITY_FACTOR, INCOME, salvage, reforgeOptions, reforge, vendorStock, buyBack, shortHint });
 });
