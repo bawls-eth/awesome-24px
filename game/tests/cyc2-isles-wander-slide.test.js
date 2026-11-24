@@ -1,8 +1,8 @@
 // Cycle 2 S: wandering Isles creatures bounced off walls (the per-axis step flips vx / vy on a blocked tile, so a walker that picked a
-// heading into a cliff bumped it every few frames). isles.js wanderTurn turns a wanderer's heading 45/90/135 degrees along the wall
+// heading into a cliff bumped it every few frames). isles.js wanderTurn (?wslide=1) turns a wanderer's heading 45/90/135 degrees along the wall
 // (sticky side, no extra random numbers). Layout: a walled 7x7 pen on open land (world.solid set in the test, this page only), one
 // passive (non-hostile) creature in the middle, the hero 30+ tiles away so nothing chases, flees or gets curious. 40 s of sim at 20 Hz.
-// Baseline ?wslide=0 (the old bounce) vs default: wall bumps must drop to at most a third, the walker must keep moving (path length),
+// Baseline = the default (the old bounce; wanderTurn is opt-in until the isles-first-ten bot gaps are re-tuned) vs ?wslide=1: wall bumps must drop to at most a third, the walker must keep moving (path length),
 // stay inside the pen and never sit inside a wall. wanderTurn draws no random numbers. OFFLINE: blockDb; 0 DB requests.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc2-isles-wander-slide.test.js
 const { chromium } = require('playwright');
@@ -17,7 +17,7 @@ async function run(browser, wslide, dbs, errors) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => { if (sessionStorage.seeded) return; sessionStorage.seeded = '1'; localStorage.clear(); });
-  await page.goto(PAGE + '?test=1&seed=123' + (wslide ? '' : '&wslide=0'));
+  await page.goto(PAGE + '?test=1&seed=123' + (wslide ? '&wslide=1' : ''));
   await page.waitForFunction(() => window.__isles && window.__isles.world, null, { timeout: 60000 });
   const r = await ev(page, (I) => {
     I.pause(true); I.god(true); I.clearCreatures();
@@ -66,7 +66,7 @@ async function run(browser, wslide, dbs, errors) {
   console.log('  wslide=0: ' + JSON.stringify(before));
   console.log('  wslide=1: ' + JSON.stringify(after));
   check('setup: an open patch, a wandering (not hostile, not shy) creature in a walled pen', !before.err && !after.err && before.sp === after.sp, before.err || after.err);
-  check('flag: ?wslide=0 turns the turn off, the default has it on', before.on === false && after.on === true);
+  check('flag: opt-in for now (isles-first-ten reward gaps): the default is the old bounce, ?wslide=1 turns it on', before.on === false && after.on === true);
   check('baseline: the old bounce hits the pen walls (>= 6 bumps in 40 s)', before.bumps >= 6, JSON.stringify(before));
   check('wall-turn: wall bumps drop to at most a third of the baseline', after.bumps * 3 <= before.bumps, JSON.stringify({ before: before.bumps, after: after.bumps }));
   check('wall-turn: the walker still wanders (path >= 70% of the baseline path and >= 5 tiles)', after.path >= 5 && after.path >= 0.7 * before.path, JSON.stringify({ before: before.path, after: after.path }));

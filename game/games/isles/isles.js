@@ -421,7 +421,9 @@
   const CAP = LOW ? 12 : 24, BIG_CAP = 4;
   const SPAWN_R = 22, DESPAWN_R = 34, LEASH = 14 * TILE;
   const SLIDE = Q.get('slide') !== '0'; // cycle 1 S: wall-slide steering (steer); ?slide=0 = the old straight aim
-  const WSLIDE = SLIDE && Q.get('wslide') !== '0'; // cycle 2 S: wanderers turn along a wall instead of bouncing off it (wanderTurn); ?wslide=0 = the old bounce
+  // cycle 2 S: wanderers turn along a wall instead of bouncing off it (wanderTurn). OPT-IN (?wslide=1) for now: on by default it moved
+  // the isles-first-ten bot's reward cadence over its 45 s gap limit (mars-b 48.7 s, then tundra-b 45.8 s with a 90-degree-first variant).
+  const WSLIDE = SLIDE && Q.get('wslide') === '1';
   let wallBumps = 0; // test handle: per-axis wall hits of wandering creatures (the old bounce)
   const LEASH_BACK = 4 * TILE, LEASH_GIVEUP = 8; // cyc0-S: a leashed creature walks back to within 4 tiles of home (or gives up after 8 s)
   let creatures = [];
