@@ -2183,5 +2183,13 @@
   "cyc2-shore-fade.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc4-assist-scale.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc4-assist-realm.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
