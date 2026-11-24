@@ -3057,3 +3057,29 @@ body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: no
   /* the narrower people chip / Where to? wrap their words instead of clipping them */
   body.touch-device #player-list-panel.collapsed #panel-toggle, body.touch-device #player-list-panel.collapsed #where-to-btn { white-space: normal; overflow-wrap: normal; height: auto; min-height: 44px; line-height: 1.15; padding-top: 3px; padding-bottom: 3px; }
 }
+
+/* Cycle 2 U-09: very narrow phones (< 280 css px: a 320x568 phone at 200% zoom is 160x284) had the 128 px stick and the
+   Emotes / Tools / A / C strip (122 px) on top of each other. Here the stick is 88 px and the strip is ONE column on the right
+   edge (Emotes, Tools, A, C top to bottom, A and C nearest the thumb). The Tools tray (B / Tilt / Photo) and the emote picker
+   open as a second column over the stick's corner, so the stick steps aside (hidden) only while one of them is open. */
+@media (max-width: 279px) {
+  body.touch-device #joystick { width: 88px; height: 88px; }
+  body.touch-device #joystick-knob { width: 40px; height: 40px; }
+  body.touch-device #action-buttons, body.a11y-hud-scaled.touch-device #action-buttons { zoom: 1; gap: 4px; grid-template-columns: 48px; grid-template-rows: repeat(4, 44px); }
+  body.touch-device #action-buttons button, body.touch-device #action-buttons #hud-more-btn,
+  body.touch-device #action-buttons #emote-toggle-btn, body.touch-device #action-buttons #tilt-toggle-btn { width: 48px !important; height: 44px !important; padding: 0 2px; font-size: 11px !important; }
+  body.touch-device #action-buttons #emote-toggle-btn { grid-column: 1; grid-row: 1; }
+  body.touch-device #action-buttons #hud-more-btn { grid-column: 1; grid-row: 2; }
+  body.touch-device #action-buttons #interact-btn { grid-column: 1; grid-row: 3; }
+  body.touch-device #action-buttons #mobile-chat-btn { grid-column: 1; grid-row: 4; }
+  body.touch-device #action-buttons.more-open { grid-template-columns: 48px 48px; grid-template-rows: repeat(4, 44px); }
+  body.touch-device #action-buttons.more-open #build-toggle-btn { grid-column: 1; grid-row: 2; }
+  body.touch-device #action-buttons.more-open #tilt-toggle-btn { grid-column: 1; grid-row: 3; }
+  body.touch-device #action-buttons.more-open #mobile-photo-btn { grid-column: 1; grid-row: 4; }
+  body.touch-device #action-buttons.more-open #emote-toggle-btn { grid-column: 2; grid-row: 1; }
+  body.touch-device #action-buttons.more-open #hud-more-btn { grid-column: 2; grid-row: 2; }
+  body.touch-device #action-buttons.more-open #interact-btn { grid-column: 2; grid-row: 3; }
+  body.touch-device #action-buttons.more-open #mobile-chat-btn { grid-column: 2; grid-row: 4; }
+  body.touch-device #emote-popup { left: calc(8px + env(safe-area-inset-left, 0px)) !important; right: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important; grid-template-columns: repeat(2, 44px); gap: 4px; z-index: 20; }
+  body.touch-device:has(#action-buttons.more-open) #joystick, body.touch-device:has(#emote-popup:not(.hidden)) #joystick { visibility: hidden; }
+}
