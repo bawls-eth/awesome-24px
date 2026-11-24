@@ -2243,5 +2243,21 @@
   "cyc4-forge-hint.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc5-lead-back.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc5-lead-notices.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc5-lead-angler-midnight.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc5-lead-backup-key.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

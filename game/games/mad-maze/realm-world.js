@@ -1197,7 +1197,7 @@
       nbLoad(); // what is on disk now: this page plus any other tab's pages
       if (!NB.has(nbSave, id) && !NB.add(nbSave, id, Date.now())) return false; // blocked storage keeps the page for this visit; a full notebook takes nothing
       nbNew++; nbSyncBtn();
-      try { arena._floatText(arena.player.x, arena.player.y - 60, 'New notebook page: ' + name, '#ffe27a'); } catch (e) { /* no float text */ }
+      try { arena._notice('New notebook page: ' + name, '#ffe27a'); } catch (e) { /* no float text */ }
       return true;
     }
     // ---- ID-12 Town-to-Realm errand (MMErrands): this page writes ONLY the Realm save's `errand`; the Town save is read, never written ----
@@ -1207,7 +1207,7 @@
       if (!ER || !save.errand) return false; // nothing delivered yet: no work per kill
       const r = ER.trophy(save.errand, zone); if (!r.ok) return false;
       save.errand = r.realm; writeSave(save);
-      try { arena._floatText(arena.player.x, arena.player.y - 72, 'Trophy for Mocha! Take it back to town.', '#ffe27a'); } catch (e) { /* no float text */ }
+      try { arena._notice('Trophy for Mocha! Take it back to town.', '#ffe27a'); } catch (e) { /* no float text */ }
       return true;
     }
     // the Vendor's errand line (and the delivery itself), or null when the Town has no errand running

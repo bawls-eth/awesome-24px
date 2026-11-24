@@ -57,6 +57,10 @@ async function shoreKill(page, lv) {
   const k6 = await shoreKill(s.page, 6);
   check('Lv 6 Shore kill: max(1, round(raw * 0.70)) XP', !!k6 && k6.got === Math.max(1, Math.round(k6.raw * 0.7)) && k6.got < Math.round(k6.raw), JSON.stringify(k6));
   const k7 = await shoreKill(s.page, 7);
+  // cycle 5 L (b01-r3-01): sentence notices are queued so they never overprint; this one waits behind "New notebook page" from
+  // the kills above (0.8 s each). Wait for it, then still require exactly one, with the exact text.
+  await s.page.waitForFunction(() => window.__ft.some((t) => /better prey/.test(t)), null, { timeout: 8000 }).catch(() => null);
+  await s.page.waitForTimeout(1200);
   const toasts = await s.page.evaluate(() => window.__ft.filter((t) => /better prey/.test(t)));
   check('Lv 7 Shore kill: x0.60; the toast showed exactly once in the session and has no number or penalty word', !!k7 && k7.got === Math.max(1, Math.round(k7.raw * 0.6)) && toasts.length === 1 && toasts[0] === 'The Midlands has better prey', JSON.stringify({ k7, toasts }));
   check('no page errors', s.errors.length === 0, s.errors.join(' | '));

@@ -598,7 +598,7 @@ class RealmArena {
     if (!ok) {
       this.saveFails = (this.saveFails || 0) + 1;
       const now = Date.now();
-      if (this.active && this.player && !(now - (this._saveWarnAt || 0) < 20000)) { this._saveWarnAt = now; try { this._floatText(this.player.x, this.player.y - 60, 'Storage full: progress not saved yet', '#ff9a8a'); } catch (e) { /* cosmetic */ } }
+      if (this.active && this.player && !(now - (this._saveWarnAt || 0) < 20000)) { this._saveWarnAt = now; try { this._notice('Storage full: progress not saved yet', '#ff9a8a'); } catch (e) { /* cosmetic */ } }
     }
     return ok;
   }
@@ -2527,7 +2527,7 @@ class RealmArena {
     this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
     if (this._raf) cancelAnimationFrame(this._raf);
     clearTimeout(this._bannerTimer);
-    this._panel(null); // never leave a panel covering a stopped run
+    this._panel(null, true); // never leave a panel covering a stopped run (the page is leaving: the Back entry is not popped)
     this._hideBanner();
   }
 
@@ -2788,8 +2788,29 @@ class RealmArena {
   _floatText(x, y, text, color) {
     const t = this._take(this.texts);
     if (!t) return null;
-    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color; t.ico = ''; t.plain = ''; t.outline = '';
+    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color; t.ico = ''; t.plain = ''; t.outline = ''; t.notice = false;
     return t;
+  }
+
+  // Cycle 5 L (b01-r3-01): sentence notices above the hero ("The Midlands has better prey", "New notebook page: ...", the trophy
+  // and storage lines) used to be float texts spawned on the same kill a few px apart, so one printed over the other. They now
+  // go through ONE queue: a notice shows at once when none is up, otherwise it waits until the one before it has faded.
+  // Numbers (+xp, damage, shards) stay plain float texts. At most 6 wait; a line already waiting is not queued twice.
+  _notice(text, color) {
+    const q = this._noticeQ || (this._noticeQ = []);
+    if (!(this._noticeT > 0) && !q.length) return this._noticeShow(text, color);
+    if (q.length < 6 && !q.some((n) => n.text === text)) q.push({ text, color });
+    return null;
+  }
+  _noticeShow(text, color) {
+    const p = this.player; if (!p) return null;
+    const t = this._floatText(p.x, p.y - 58, text, color);
+    if (t) { t.notice = true; t.outline = '#0b0d1a'; this._noticeT = 0.8; } // 0.7 s life + a short gap before the next one
+    return t;
+  }
+  _noticeTick(dt) {
+    if (this._noticeT > 0) this._noticeT -= dt;
+    if (!(this._noticeT > 0) && this._noticeQ && this._noticeQ.length) { const n = this._noticeQ.shift(); this._noticeShow(n.text, n.color); }
   }
 
   // ---------- simulation ----------
@@ -2824,6 +2845,7 @@ class RealmArena {
       if (t.life <= 0) { t.active = false; continue; }
       t.y += t.vy * dt;
     }
+    this._noticeTick(dt);
 
     if (this.role === 'guest' && this.team) { // the guest only moves itself; the host runs everything else
       this._guestSlow();
@@ -3260,7 +3282,7 @@ class RealmArena {
     const fade = this._shoreFadeOn && e.zone === 0 && typeof MMZones !== 'undefined' && MMZones.shoreFade ? MMZones.shoreFade(this.save.level, 0) : 1;
     const xpRaw = RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp;
     this._gainXp(fade < 1 ? Math.max(1, Math.round(xpRaw * fade)) : Math.round(xpRaw));
-    if (fade < 1 && !this._shoreFadeToast) { this._shoreFadeToast = true; this._floatText(this.player.x, this.player.y - 56, 'The Midlands has better prey', '#ffe27a'); } // once per session, no number
+    if (fade < 1 && !this._shoreFadeToast) { this._shoreFadeToast = true; this._notice('The Midlands has better prey', '#ffe27a'); } // once per session, no number
     if (this.mode !== 'world' && this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity()); // a world rolls its own zone drops (onEnemyKilled)
     this.shake = Math.max(this.shake, 3);
     this.saveSoon(); // review F16: a splash that kills 8 in one frame persists once (a bag pickup, wave or death that follows persists at once anyway)
@@ -4157,10 +4179,20 @@ class RealmArena {
   // ---------- backpack UI ----------
 
   // One panel at a time (backpack or kill board); either one pauses the fight.
-  _panel(name) {
+  // Cycle 5 L (b15-13): on the standalone page (menu mode) an open panel (Menu, backpack, board, heroes, shop) owns the shared
+  // Back entry (MMNav.backLayer), so the browser / phone Back gesture closes the panel and the run goes on instead of the
+  // page leaving for the Hub. Never in the Town gate (no menu mode there) and never inside an iframe (MMNav refuses).
+  _backGuard(on, keepEntry) {
+    const N = typeof window !== 'undefined' && this._menuMode ? window.MMNav : null;
+    if (!N || !N.backLayer) return;
+    try { if (on) N.backLayer('realm-panel', () => { if (this.panel) this._panel(null); }); else N.backRelease('realm-panel', keepEntry === true); } catch (e) { /* history unavailable */ }
+  }
+
+  _panel(name, keepEntry) {
     if (name && this.state === 'dead') return; // no panels while the death message runs (it would freeze the exit)
     const prev = this.panel || null;
     this._panelSet(name);
+    this._backGuard(!!name, keepEntry);
     if (prev !== (name || null)) this._snd(name ? 'ui_open' : 'ui_close'); // CHIP-AUDIO: panel open / close blips (rate-limited by MMSfx)
     if (this.onPanel && prev !== (name || null)) { try { this.onPanel(name || null, prev); } catch (e) { /* a page hook never breaks the panels */ } } // optional page hook (realm-world: Nexus return)
   }
@@ -4521,7 +4553,7 @@ class RealmArena {
     const ok = this.onSave(this.save);
     if (ok !== false || !rmReadStoredRealm()) return true;
     this._adopt(rmCleanSave(undo)); this.displayShards = this.save.shards;
-    try { if (this.player) this._floatText(this.player.x, this.player.y - 60, 'Not saved (storage full): nothing was charged', '#ff9a8a'); } catch (e) { /* cosmetic */ }
+    try { if (this.player) this._notice('Not saved (storage full): nothing was charged', '#ff9a8a'); } catch (e) { /* cosmetic */ }
     this._syncHud(); this.renderBackpack();
     return false;
   }

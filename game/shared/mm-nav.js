@@ -397,7 +397,58 @@
     if (ui && ui.isOpen && typeof requestAnimationFrame === 'function') padRaf = requestAnimationFrame(padLoop);
   }
 
-  let popSkip = 0;
+  // Cycle 5 L (b15-13): ONE shared Back guard for every in-page overlay (this Menu sheet, the Realm pause menu and panels,
+  // the Isles Pack / chart panels). While any layer is open the page owns one extra history entry (same URL, only the state
+  // flag mmNavSheet), so the browser / phone Back gesture closes the overlay instead of leaving the page mid-run. Closing the
+  // last layer any other way pops that entry again (deferred one tick, so close-then-open swaps make no history traffic).
+  // Nothing is pushed inside an iframe (the Realm in the Town) or without the History API.
+  const layers = []; // [{ key, close }]
+  let popSkip = 0, popSkipT = 0, syncT = 0, leaving = false; // leaving: the page is navigating away, never traverse then
+  const histOk = () => { try { return typeof window !== 'undefined' && !!window.history && typeof history.pushState === 'function' && window.parent === window; } catch (e) { return false; } };
+  const flagged = () => { try { return !!(history.state && history.state.mmNavSheet); } catch (e) { return false; } };
+  function backSync() {
+    syncT = 0;
+    if (!histOk() || popSkip > 0 || leaving) return; // a pop of ours is in flight: its popstate runs this again
+    try {
+      if (layers.length && !flagged()) history.pushState(Object.assign({}, history.state && typeof history.state === 'object' ? history.state : {}, { mmNavSheet: true }), '');
+      else if (!layers.length && flagged()) {
+        popSkip++; history.back();
+        clearTimeout(popSkipT); popSkipT = setTimeout(() => { popSkip = 0; if (layers.length) backSync(); }, 800); // a traversal that never lands must not eat a real Back
+      }
+    } catch (e) { /* history unavailable */ }
+  }
+  // backLayer(key, closeFn): call when an overlay opens; returns release() to call when it closes by itself.
+  // closeFn runs when the player presses Back while the overlay is open.
+  // keepEntry true = the page is about to navigate away (Leave): the entry stays on top, which is harmless.
+  function backRelease(key, keepEntry) {
+    const i = layers.findIndex((l) => l.key === key);
+    if (i < 0) return false;
+    layers.splice(i, 1);
+    if (!layers.length && keepEntry !== true && histOk() && !syncT) syncT = setTimeout(backSync, 40);
+    return true;
+  }
+  function backLayer(key, closeFn) {
+    const i = layers.findIndex((l) => l.key === key);
+    if (i >= 0) layers.splice(i, 1);
+    layers.push({ key, close: closeFn });
+    backSync();
+    return () => backRelease(key);
+  }
+  function onPop() {
+    if (popSkip > 0) { popSkip--; if (!popSkip) clearTimeout(popSkipT); backSync(); return; }
+    if (layers.length && !flagged()) { // the player's Back: close every open overlay, stay on the page
+      const open = layers.splice(0, layers.length);
+      open.reverse().forEach((l) => { try { l.close(); } catch (e) { /* page hook */ } });
+      return;
+    }
+    if (!layers.length && flagged()) backSync(); // Forward onto a left-over Menu entry: step off it again
+  }
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('beforeunload', () => { leaving = true; });
+    window.addEventListener('pagehide', () => { leaving = true; });
+    window.addEventListener('pageshow', () => { leaving = false; });
+  }
   function open() {
     if (!ui) return false;
     if (ui.isOpen) return true;
@@ -416,24 +467,12 @@
     hooks.open.forEach((fn) => { try { fn(); } catch (e) { /* page hook */ } });
     // R4 D4 (b15-13): the open Menu is a history entry (same URL, state flag only), so the browser / phone Back gesture
     // closes the Menu instead of leaving the page. Closing it any other way pops that entry again.
-    try {
-      if (window.history && typeof history.pushState === 'function' && !(history.state && history.state.mmNavSheet)) {
-        history.pushState(Object.assign({}, history.state && typeof history.state === 'object' ? history.state : {}, { mmNavSheet: true }), '');
-        ui.pushed = true;
-      }
-    } catch (e) { ui.pushed = false; }
+    backLayer('mm-nav-sheet', () => close());
     return true;
   }
-  function onPop() {
-    if (popSkip > 0) { popSkip--; return; }
-    if (ui && ui.isOpen && ui.pushed) { ui.pushed = false; close(true); }
-  }
-  function close(fromPop) {
+  function close() {
     if (!ui || !ui.isOpen) return false;
-    if (ui.pushed && fromPop !== true) {
-      ui.pushed = false;
-      try { if (history.state && history.state.mmNavSheet) { popSkip++; history.back(); } } catch (e) { /* history unavailable */ }
-    }
+    backRelease('mm-nav-sheet');
     ui.isOpen = false;
     ui.sheet.hidden = true;
     ui.backdrop.hidden = true;
@@ -515,13 +554,12 @@
     }
     document.body.classList.add('mm-nav-on');
     window.addEventListener('keydown', onKey, true);
-    window.addEventListener('popstate', onPop);
     // Arriving on a history entry left over from an open Menu (Back after following a Menu link): clear the flag so the
     // next open pushes a fresh entry.
     try { if (history.state && history.state.mmNavSheet) { const st = Object.assign({}, history.state); delete st.mmNavSheet; history.replaceState(st, ''); } } catch (e) { /* ignore */ }
     // Following a Menu link leaves the page with the Menu's history entry still on top; that is harmless (Back returns to
     // this same URL), so nothing is popped then. A page restored from the back/forward cache never shows the Menu open.
-    window.addEventListener('pageshow', (e) => { if (e.persisted && ui && ui.isOpen) { ui.pushed = false; close(true); } });
+    window.addEventListener('pageshow', (e) => { if (e.persisted && ui && ui.isOpen) close(); });
     return true;
   }
   // Record a sub-place for the current page (e.g. the isle), additive storage only.
@@ -546,6 +584,7 @@
     KEY, PLACES, GROUPS, mount, open, close, markPlace, setCovered, openSettings,
     isOpen: () => !!(ui && ui.isOpen),
     mounted: () => !!ui,
+    backLayer, backRelease,
     current: () => Object.assign({}, cur),
     last: () => load().last,
     state: load,

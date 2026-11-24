@@ -747,13 +747,18 @@
     box.appendChild(mk('p', 'rule', 'Medals: ' + tr.medals.bronze + ' bronze, ' + tr.medals.silver + ' silver, ' + tr.medals.gold + ' gold.'));
     const bd = Object.keys(journal.badges).map((k) => D.BADGE_TITLES[k] || (k.indexOf('set_') === 0 ? A.SPOT_NAMES[k.slice(4)] + ' set' : k));
     box.appendChild(mk('p', 'rule', 'Badges: ' + (bd.length ? bd.join(', ') : 'none yet') + '. Cosmetic only.'));
+    // Cycle 5 L (b10-r3-01): a Final that belongs to an EARLIER day (the run ended past midnight, or the card was left open
+    // over the day turn) no longer hides the new day's tournament. It is still shown, labelled "Yesterday's final", above the
+    // new day's own line (Start / wait / complete); the Final of the current day still stands alone, as before.
+    const old = !!g.tourResult && Number.isFinite(g.tourResult.day) && g.tourResult.day !== day;
     if (g.tourResult) {
       const r = g.tourResult, rp = mk('p', 'rank rank-' + r.rank);
       rp.id = 'tour-result';
-      rp.textContent = 'Final: ' + r.score + ' points - ' + (r.rank === 'none' ? 'no medal this time' : r.rank.toUpperCase() + ' medal') + ' - streak ' + r.streak
+      rp.textContent = (old ? (day - r.day === 1 ? 'Yesterday\'s final: ' : 'Last final: ') : 'Final: ') + r.score + ' points - ' + (r.rank === 'none' ? 'no medal this time' : r.rank.toUpperCase() + ' medal') + ' - streak ' + r.streak
         + (r.badges.length ? ' - new badge: ' + r.badges.map((k) => D.BADGE_TITLES[k]).join(', ') : '');
       box.appendChild(rp);
-    } else if (g.tour && tr.run) {
+    }
+    if (g.tourResult && !old) { /* today's Final: nothing more to offer until the next calendar day */ } else if (g.tour && tr.run) {
       box.appendChild(mk('p', '', 'In progress: ' + tr.run.used + '/' + D.CASTS + ' casts, ' + tr.run.score + ' points.'));
     } else if (done) {
       box.appendChild(mk('p', 'rule', 'Today\'s tournament is complete. A new one starts with the next calendar day.'));

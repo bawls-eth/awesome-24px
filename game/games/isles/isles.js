@@ -2942,6 +2942,7 @@
     const was = !panel.hidden;
     if (was) cue('ui_close');
     panel.hidden = true; panelKind = ''; paused = false; document.body.classList.remove('panel-open');
+    if (window.MMNav && window.MMNav.backRelease) { try { window.MMNav.backRelease('isles-panel'); } catch (e) { /* ignore */ } }
     const back = panelOpener; panelOpener = null;
     if (was && viaKeys && back && back.focus && document.activeElement && (document.activeElement === document.body || panel.contains(document.activeElement)) && back.offsetParent !== null) { try { back.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
   }
@@ -3049,6 +3050,8 @@
     $('howto').hidden = true; // 8B: the first-visit how-to never sits under a panel
     paused = true;
     if (window.MMNav) { try { window.MMNav.close(); } catch (e) { /* ignore */ } } // never two dialogs at once
+    // Cycle 5 L (b15-13): an open panel owns the shared Back entry, so the browser / phone Back closes it and the island stays
+    if (window.MMNav && window.MMNav.backLayer) { try { window.MMNav.backLayer('isles-panel', () => { if (!panel.hidden) closePanel(); }); } catch (e) { /* ignore */ } }
     const first = (kind === 'party' && !$('btn-home').hidden ? $('btn-home') : null) || panelBody.querySelector('button') || $('panel-close');
     try { first.focus(); } catch (e) { /* ignore */ }
   }
