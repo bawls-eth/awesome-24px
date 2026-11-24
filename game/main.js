@@ -504,7 +504,8 @@ if (IS_TOUCH) document.body.classList.add('touch-device');
       show = show.slice(0, -1);
     }
   };
-  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+  // cyc3 U: short landscape touch screens fold too (844x390 showed all 12 counts in the top row on the first visit)
+  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px), (max-height: 500px) and (pointer: coarse)') : null;
   const sync = () => {
     const on = !!(phone && phone.matches);
     panel.classList.toggle('bag-compact', on);

@@ -3,6 +3,7 @@
 //     "Realm Gate", which b08 players took for a place label, not the thing to do first).
 //   - The chip fits the screen and covers no other control at 390x844, 844x390 (landscape phone), 1280x720, 320x568 and 390x844 at
 //     150% text.
+//   - The phone bag bar is folded (bag + at most 3 counts) on touch screens, landscape too: at 844x390 it showed all 12 counts.
 //   - HUD diet guard at 390x844: at most 10 visible HUD elements covering at most 16% of the screen (cycle 3 measured 10 / 14.9%
 //     before and 10 / 15.6% after the goal words; b08-r2 counted 12 counters + a mid-screen quick-emote bar + the walkie). Nothing
 //     may grow back.
@@ -31,8 +32,10 @@ const CENSUS = () => {
   let c = 0; g.forEach((v) => (c += v));
   const gp = document.getElementById('gate-pointer'); const gr = gp.getBoundingClientRect(); const txt = document.getElementById('gate-pointer-text');
   const hits = items.filter((o) => o.btn && !gp.contains(o.e) && Math.min(o.r.right, gr.right) - Math.max(o.r.left, gr.left) > 2 && Math.min(o.r.bottom, gr.bottom) - Math.max(o.r.top, gr.top) > 2).map((o) => o.id);
+  const inv = document.getElementById('inventory-panel');
+  const chips = Array.from(inv.children).filter((e) => e.id !== 'bag-icon' && e.querySelector('b') && vis(e)).length;
   return {
-    n: items.length, pct: +(c * 4 / (vw * vh) * 100).toFixed(1), ids: items.map((o) => o.id),
+    bag: { compact: inv.classList.contains('bag-compact'), chips }, n: items.length, pct: +(c * 4 / (vw * vh) * 100).toFixed(1), ids: items.map((o) => o.id),
     gp: { vis: vis(gp) && !gp.classList.contains('hidden'), text: (txt.textContent || '').replace(/\s+/g, ' ').trim(), L: Math.round(gr.left), R: Math.round(gr.right), vw, clip: txt.scrollWidth > txt.clientWidth + 1, hits }
   };
 };
@@ -71,6 +74,7 @@ async function sample(browser, vp, extra) {
     check(`${L} it says the first-minute goal in words ("Goal: ... Realm Gate")`, /^Goal: .*Realm Gate/.test(r.gp.text), r.gp.text);
     check(`${L} the chip fits the screen and its text is not clipped`, r.gp.L >= 0 && r.gp.R <= r.gp.vw && !r.gp.clip, JSON.stringify(r.gp));
     check(`${L} the chip covers no other control`, r.gp.hits.length === 0, r.gp.hits.join(', '));
+    if (vp.touch) check(`${L} phone bag bar: folded to the bag + at most 3 counts (b08: 12 counters on the first screen)`, r.bag.compact && r.bag.chips <= 3, JSON.stringify(r.bag));
     if (vp.id === '390x844') {
       console.log(`INFO ${L} first-visit HUD: ${r.n} elements, ${r.pct}% of the screen: ${r.ids.join(', ')}`);
       check(`${L} HUD diet guard: <= 10 visible HUD elements, <= 16% of the screen`, r.n <= 10 && r.pct <= 16, r.n + ' / ' + r.pct + '%');
