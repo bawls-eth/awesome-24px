@@ -2006,7 +2006,13 @@
     nxCss.textContent += '#rw-nexus .nx-notebook{background:#221d3a;border-color:#7a63c9}#rw-nexus .nx-nb-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-nb-head h3{margin:0;font-size:16px}'
       + '#rw-nexus .nx-nb-note{margin:4px 0 8px;font-size:13px;color:#c9bff0}#rw-nexus .nx-nb-cat{margin:10px 0 4px;font-size:13px;color:#ffe27a}#rw-nexus .nx-nb-list{list-style:none;margin:0;padding:0}'
       + '#rw-nexus .nx-nb-list li{padding:6px 0;border-top:1px solid #3b3166;font-size:max(13px,1em);overflow-wrap:anywhere}#rw-nexus .nx-nb-list li:first-child{border-top:0}#rw-nexus .nx-nb-list b{color:#fff}#rw-nexus .nx-nb-list em{color:#8fe9ff;font-style:normal;margin-left:6px}#rw-nexus .nx-nb-list span{display:block;color:#d9d1f5}'
-      + '#rw-nexus .nx-nb-empty{color:#a59cc4;font-size:13px;margin:2px 0}';
+      + '#rw-nexus .nx-nb-empty{color:#a59cc4;font-size:13px;margin:2px 0}'
+      // cyc3 U review (EIGHTBIT-STYLE / phone / a11y): square card with a hard ring and a whole-pixel drop shadow (no 10 px blob), pixel
+      // font titles, the Text size preference scales the panel, and the walking Nexus move stick steps aside while the notebook is open
+      + '#rw-nexus .nx-notebook{border-radius:0;border:2px solid #7a63c9;box-shadow:0 0 0 2px #000,4px 4px 0 2px #000}'
+      + '#rw-nexus .nx-nb-head h3,#rw-nexus .nx-nb-cat{font-family:var(--px-font,ui-monospace,Menlo,Consolas,monospace);letter-spacing:.04em;text-transform:uppercase}'
+      + 'body.mm-hud-big #rw-nexus .nx-nb-head h3{font-size:calc(16px * var(--mm-hud-scale,1))}body.mm-hud-big #rw-nexus .nx-nb-note,body.mm-hud-big #rw-nexus .nx-nb-cat,body.mm-hud-big #rw-nexus .nx-nb-empty,body.mm-hud-big #rw-nexus .nx-nb-list li{font-size:calc(13px * var(--mm-hud-scale,1))}'
+      + 'body.nx-walking:has(#rw-nx-notebook:not(.hidden)) .realm-stick{display:none !important}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
       if (nxPortrait[id] !== undefined || !opts.assetRoot || !artOn) return;

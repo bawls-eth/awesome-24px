@@ -3033,8 +3033,9 @@ body.a11y-hud-scaled #action-buttons { zoom: var(--hud-scale); }
 body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: none !important; }
 
 /* Cycle 1 U-02: phone bag bar = ONE row (the bag + the 3 most recently changed counts, most recent first); the bag is a
-   44 px button that expands every count (bag-open) and folds them again. main.js setupBagBar sets the classes. */
-@media (max-width: 720px) {
+   44 px button that expands every count (bag-open) and folds them again. main.js setupBagBar sets the classes.
+   cyc3 U: short landscape touch screens (844x390) fold too. */
+@media (max-width: 720px), (max-height: 500px) and (pointer: coarse) {
   #inventory-panel.bag-compact { flex-wrap: nowrap; }
   #inventory-panel.bag-compact.bag-open { flex-wrap: wrap; }
   #inventory-panel.bag-compact #bag-icon { order: 0; min-width: 44px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px 0 0; cursor: pointer; touch-action: manipulation; }

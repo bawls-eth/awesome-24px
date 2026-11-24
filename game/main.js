@@ -504,7 +504,8 @@ if (IS_TOUCH) document.body.classList.add('touch-device');
       show = show.slice(0, -1);
     }
   };
-  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+  // cyc3 U: short landscape touch screens fold too (844x390 showed all 12 counts in the top row on the first visit)
+  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px), (max-height: 500px) and (pointer: coarse)') : null;
   const sync = () => {
     const on = !!(phone && phone.matches);
     panel.classList.toggle('bag-compact', on);
@@ -7350,9 +7351,11 @@ class TownScene extends Phaser.Scene {
     g.setDepth(y + h);
     g.bake({ finish: 'shop' });
 
-    this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
+    // cyc3 U: three stacked lines over the roof, each in its own row: title, today's deal, the turnip price (y - 50, just above the roof apex at y - 45).
+    // The deal and the turnip price both sat at y - 38 and printed over each other.
+    this.add.text(x + w / 2, y - 80, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
     const deal = this.todaysDeal();
-    this.add.text(x + w / 2, y - 38, `💰 ${deal.icon} +50% today`, { fontSize: '11px', color: '#2a6b2a' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.add.text(x + w / 2, y - 64, `💰 ${deal.icon} +50% today`, { fontSize: '11px', color: '#2a6b2a' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 20, width: w, height: h - 20 });
   }
 
@@ -8152,7 +8155,7 @@ class TownScene extends Phaser.Scene {
     this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
     // R4 D4 (b07-r2-13): the price sat at y+20, exactly where a shopper's name label is drawn. It now sits above the sign.
     this.turnipBuyLabel = this.add.text(x, y - 62, '', { fontSize: '11px', color: '#ffe066', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
-    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 38, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + 1);
+    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 50, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + HOUSE_POS.h + 1); // cyc3 U: drawn over the Shop roof like the title and deal lines
   }
 
   updateTurnipPriceLabels(time) {
@@ -8597,7 +8600,7 @@ class TownScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
-    // Bubble bottom above the quest sign (centred at y - 46, up to two lines), so the line never sits on "bring 4🪵".
+    // Bubble bottom above the quest sign (one line, bottom at ly - 46), so the line never sits on "bring 4🪵".
     this.npcBubble = this.add.text(x, ly - 64, '', {
       fontSize: '11px',
       color: '#1c2430',
@@ -8614,7 +8617,7 @@ class TownScene extends Phaser.Scene {
       strokeThickness: 3,
       align: 'center',
       wordWrap: { width: 150 },
-    }).setOrigin(0.5).setDepth(y + 1);
+    }).setOrigin(0.5, 1).setDepth(y + 1); // cyc3 U: bottom-anchored above the name (centred at ly - 46 it covered the name by 7 px)
     this.questClaimedBucket = Number(loadSave().questClaimedBucket) || -1;
     this.triviaAnsweredBucket = Number(loadSave().triviaAnsweredBucket) || -1;
     this.refreshNpcQuestSign();
