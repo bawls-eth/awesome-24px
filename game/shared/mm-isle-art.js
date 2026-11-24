@@ -268,7 +268,41 @@
     } catch (e) { return 0; }
   }
 
-  return { DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
+  // Cycle 0 art (b12-r2-09): the b30 black-sand tiles are 95% #323039 blue-black and read as a void block beside the jungle start.
+  // The tile PNGs stay untouched (tests/isle-art-bake pins them); this is an OVERLAY pass the Isles page runs on its own baked chunk:
+  // every black_sand tile is re-lit into a warm volcanic-sand ramp by each pixel's brightness (so the b30 grain pattern survives) plus
+  // seeded light / dark grains. Bake time only (one get/putImageData per black-sand tile), never per frame. Returns the tile count.
+  const WARM_SAND = ['#3b3029', '#4d4038', '#5a4e45', '#6b5d52', '#83725f'];
+  function warmSand(ctx, terrain, w, cx, cy, opts) {
+    try {
+      const o = opts && typeof opts === 'object' ? opts : {};
+      const names = o.names || NAMES, T = o.tile | 0 || 32, CH = o.ch | 0 || 16, id = names.indexOf('black_sand');
+      if (id < 0 || !ctx || typeof ctx.getImageData !== 'function' || !terrain) return 0;
+      const ramp = WARM_SAND.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+      const u = Math.max(1, Math.round(T / 16));
+      let n = 0;
+      for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+        const wx = cx * CH + tx, wy = cy * CH + ty;
+        if (wx < 0 || wy < 0 || wx >= w || (terrain[wy * w + wx] | 0) !== id) continue;
+        const im = ctx.getImageData(tx * T, ty * T, T, T), d = im.data;
+        let sum = 0; for (let i = 0; i < d.length; i += 4) sum += d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15;
+        const mean = sum / (d.length / 4);
+        for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+          const i = (y * T + x) * 4, L = d[i] * 0.3 + d[i + 1] * 0.55 + d[i + 2] * 0.15;
+          let k = L < mean - 10 ? 1 : L > mean + 18 ? 4 : L > mean + 6 ? 3 : 2;
+          const g = dhash(wx * 16 + ((x / u) | 0), wy * 16 + ((y / u) | 0), 9173); // one grain per art pixel, seeded by world tile
+          if (k === 2) { if (g < 0.07) k = 1; else if (g > 0.985) k = 4; else if (g > 0.93) k = 3; }
+          if (k === 1 && g < 0.02) k = 0;
+          const c = ramp[k]; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+        }
+        ctx.putImageData(im, tx * T, ty * T);
+        n++;
+      }
+      return n;
+    } catch (e) { return 0; }
+  }
+
+  return { WARM_SAND: WARM_SAND, warmSand: warmSand, DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
     MEADOW_ALIAS: MEADOW_ALIAS, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });

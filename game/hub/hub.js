@@ -58,6 +58,10 @@
   // medals and the unlock rules are unchanged: they are a bonus goal (walking the map), never a gate on a game.
   const GAME_ICON = { 'w1-hearthvale': '\u{1F3E1}', 'w2-lantern': '\u{1F3EE}', 'w3-deepdelve': '\u26CF\uFE0F', 'w4-angler': '\u{1F3A3}',
     'w5-safari': '\u{1F98B}', 'w5-jam': '\u{1F3B8}', 'w5-stalk': '\u{1F96C}', 'w5-pop': '\u{1F9E9}', 'w5-dash': '\u{1F56F}\uFE0F', 'w5-stack': '\u{1F3EF}', 'w5-echo': '\u{1F337}', 'w7-isles': '\u{1F3DD}\uFE0F' };
+  // cycle 0 art (b12-r2-11): map node -> MMPixelIcons id (code-drawn 16x16); ?pxicons=0 keeps the emoji
+  const PX_OF = { 'w1-hearthvale': 'town', 'w2-lantern': 'lantern', 'w3-deepdelve': 'deepdelve', 'w4-angler': 'angler', 'w5-safari': 'bugs', 'w5-jam': 'jam',
+    'w5-stalk': 'stalk', 'w5-pop': 'pop', 'w5-dash': 'dash', 'w5-stack': 'stack', 'w5-echo': 'echo', 'w7-isles': 'isles' };
+  const PXI = !/(?:^|&)pxicons=0(?:&|$)/.test(location.search.slice(1)) && window.MMPixelIcons ? window.MMPixelIcons : null;
   const playable = (n) => !!n && (n.type === 'game' || n.type === 'gate') && !!LINKS[n.id];
   const GAME_NODES = MAP.nodes.filter((n) => n.type === 'game' && LINKS[n.id]);
 
@@ -746,6 +750,7 @@
       b.type = 'button'; b.dataset.node = n.id;
       b.setAttribute('aria-label', n.name + ' (' + wName[n.world] + ')');
       const ic = document.createElement('span'); ic.className = 'g-ico'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = GAME_ICON[n.id] || '';
+      if (PXI && PX_OF[n.id]) PXI.apply(ic, PX_OF[n.id], 16, GAME_ICON[n.id] || ''); // cycle 0 art: pixel icon, emoji kept as hidden fallback
       b.appendChild(ic);
       b.appendChild(document.createTextNode(n.name));
       b.addEventListener('click', () => { if (!walker.wps) openNode(n.id); });
@@ -768,6 +773,7 @@
     a.dataset.place = t.id;
     a.setAttribute('aria-label', t.label);
     a.querySelector('.c-ico').textContent = t.icon || '';
+    if (PXI && PXI.has(t.id)) PXI.apply(a.querySelector('.c-ico'), t.id, 16, t.icon || '');
     a.querySelector('.c-txt').textContent = t.label;
     a.hidden = false;
   }());

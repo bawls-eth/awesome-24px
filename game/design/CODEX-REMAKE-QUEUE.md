@@ -573,3 +573,22 @@ wiring), M03 rimewolf (accepted, a one-line path switch in mm-creature-strips.js
 url), R04 jungle and R05 tundra ground (staged, unregistered; R05 tiles are 79-94% one colour, so check against the R01 rejection first),
 m02 angler fish and t10 / t13 Town fauna (staged, unregistered: their strips carry no class key and tests/art-integration.test.js counts
 that as "missing").
+
+## UPDATE 2026-11-24 (cycle 0, Claude G): status of the list above + new asks
+Code changes this cycle (they are fallbacks; a delivery replaces each by id, same rules as above):
+- #1 / #2 (tundra + mars species, Frost Dragon / Red Titan): the code templates now have a colour-matched outline and crisp alpha, and the
+  two bosses have their own features (dragon wings / tail / snout / horns, titan spines / shoulder rocks / horns / lava seams). Still
+  placeholders: the strips are still wanted, top priority.
+- #7 (R02 Isles ground): grass / sand on Hearth Isle now get code detail pixels and stepped edges; the large interiors still read calm.
+  The R02 redo is still wanted.
+- #8 (black sand): an overlay pass re-lights b30 black sand into a warm volcanic ramp in game. A real `tile_black_sand_a..d` (base
+  ~#5a4e45) is still welcome and will replace the overlay (`?warmsand=0`).
+- #13 (R13 HUD / Hub icons): the Hub cards now use code-drawn 16x16 icons (`shared/mm-pixel-icons.js`). A 24x24 set in the b19 / M08
+  style (ids `hub_town, hub_realm, hub_isles, hub_lantern, hub_pop, hub_dash, hub_stack, hub_echo, hub_jam, hub_angler, hub_bugs,
+  hub_stalk, hub_deepdelve`) would replace them; lower priority now.
+
+New:
+| # | Id | What | Size / format | Fallback live today | Why |
+|---|----|------|---------------|---------------------|-----|
+| 14 | T-BLD (new) | Town buildings: house (pink), Able Sisters shop, turnip stand, shop front. Flat fills with no outline today next to outlined trees / statue / workbench | down view, 1 frame each, Town 1x scale (hero 24 px) | code rectangles | cycle 0 audit #5 |
+| 15 | R03b (new) | `prop_tree_medium` (and small): break the round canopy edge (3-4 leaf clumps, a notch or two), keep cell / anchor | as R03 | R03 as delivered | R03 review nit, cycle 0 audit #7 |

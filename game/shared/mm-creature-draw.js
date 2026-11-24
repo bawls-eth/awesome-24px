@@ -134,6 +134,78 @@
     }
   };
 
+  // Cycle 0 art (b06-r2-03): per-id features for the two Isles bosses that have no PNG strips yet, drawn on top of (front) and behind
+  // (back) their archetype body so they read as the creature they are instead of a recoloured humanoid. Palette colours only.
+  const EXTRAS = {
+    frost_dragon: {
+      back(c, f, a, P) { // bat wings (flap per frame), a spiked tail
+        const b = BOB[a][f] * 0.5, wy = (a === 'move' ? [-14, -4, 8, 1] : [-6, -3, 0, -2])[f]; // every frame a different wing pose
+        [[-1, 30], [1, 70]].forEach(([s, x0]) => {
+          c.beginPath(); c.moveTo(x0, 40 + b); c.lineTo(50 + s * 48, 8 + b + wy); c.lineTo(50 + s * 44, 40 + b + wy * 0.5); c.lineTo(50 + s * 34, 34 + b + wy * 0.6);
+          c.lineTo(50 + s * 30, 56 + b + wy * 0.3); c.lineTo(50 + s * 20, 50 + b); c.lineTo(x0, 58 + b); c.closePath(); c.fillStyle = P.accent; c.fill();
+          line(c, x0, 40 + b, 50 + s * 48, 8 + b + wy, 2.5, P.line); line(c, x0 + s * 4, 44 + b, 50 + s * 44, 40 + b + wy * 0.5, 1.5, P.line);
+          line(c, x0 + s * 2, 48 + b, 50 + s * 30, 56 + b + wy * 0.3, 1.5, P.line);
+        });
+        c.beginPath(); c.moveTo(40, 72 + b); c.quadraticCurveTo(18, 92, 4, 78 + (f % 2 ? 2 : 0)); c.lineWidth = 7; c.strokeStyle = P.body; c.stroke();
+        tri(c, 2, 74, 10, 78, 4, 86, P.belly); tri(c, 16, 84, 22, 80, 24, 88, P.belly);
+      },
+      front(c, f, a, P) { // long snout, swept horns, frost crest, belly scales, cold eyes
+        const b = BOB[a][f] * 0.5;
+        tri(c, 56, 16 + b, 76, 24 + b, 56, 30 + b, P.body); line(c, 60, 27 + b, 74, 25 + b, 1.5, P.line);
+        tri(c, 40, 16 + b, 28, 2 + b, 44, 12 + b, P.belly); tri(c, 56, 14 + b, 62, 0 + b, 60, 15 + b, P.belly);
+        for (let i = 0; i < 4; i++) tri(c, 44 - i * 3, 34 + i * 7 + b, 38 - i * 3, 30 + i * 7 + b, 41 - i * 3, 40 + i * 7 + b, P.belly);
+        for (let i = 0; i < 3; i++) line(c, 40, 52 + i * 6 + b, 60, 52 + i * 6 + b, 1.2, P.accent);
+        disc(c, 47, 20 + b, 2.2, P.accent); disc(c, 55, 20 + b, 2.2, P.accent);
+      }
+    },
+    red_titan: {
+      back(c, f, a, P) { // basalt spines along the back
+        const b = BOB[a][f] * 0.5;
+        tri(c, 30, 34 + b, 26, 14 + b, 40, 28 + b, P.line); tri(c, 60, 28 + b, 74, 14 + b, 70, 34 + b, P.line); tri(c, 44, 28 + b, 50, 6 + b, 56, 28 + b, P.line);
+      },
+      front(c, f, a, P) { // rock shoulder plates, curled horns, glowing lava seams and eyes (glow pulses per frame)
+        const b = BOB[a][f] * 0.5, glow = f % 2 ? P.accent : P.belly;
+        fillEll(c, 24, 38 + b, 12, 9, P.line, -0.3); fillEll(c, 76, 38 + b, 12, 9, P.line, 0.3);
+        fillEll(c, 22, 35 + b, 6, 3, P.body, -0.3); fillEll(c, 74, 35 + b, 6, 3, P.body, 0.3);
+        c.beginPath(); c.moveTo(42, 16 + b); c.quadraticCurveTo(30, 4 + b, 34, 20 + b); c.lineWidth = 4; c.strokeStyle = P.belly; c.stroke();
+        c.beginPath(); c.moveTo(58, 16 + b); c.quadraticCurveTo(70, 4 + b, 66, 20 + b); c.lineWidth = 4; c.strokeStyle = P.belly; c.stroke();
+        c.beginPath(); c.moveTo(38, 44 + b); c.lineTo(46, 52 + b); c.lineTo(42, 60 + b); c.lineTo(50, 68 + b); c.lineWidth = 2; c.strokeStyle = glow; c.stroke();
+        c.beginPath(); c.moveTo(62, 42 + b); c.lineTo(56, 50 + b); c.lineTo(62, 58 + b); c.lineWidth = 2; c.strokeStyle = glow; c.stroke();
+        disc(c, 45, 20 + b, 2.4, P.accent); disc(c, 55, 20 + b, 2.4, P.accent);
+      }
+    }
+  };
+  function drawExtra(ctx, id, layer, w, h, frame, action, pal) {
+    const E = typeof id === 'string' && has(EXTRAS, id) ? EXTRAS[id][layer] : null;
+    if (!E || !ctx || typeof ctx.save !== 'function') return false;
+    const act = action === 'move' ? 'move' : 'idle', f = ((Math.floor(num(frame, 0)) % FRAMES) + FRAMES) % FRAMES;
+    ctx.save();
+    ctx.scale(clamp(num(w, 64), 1, 1024) / 100, clamp(num(h, 64), 1, 1024) / 100);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    try { E(ctx, f, act, palette(pal, 'jungle')); } finally { ctx.restore(); }
+    return true;
+  }
+  // Cycle 0 art: pixel finish for a baked frame on a real canvas (needs get/putImageData; test stubs skip it). Alpha is snapped to
+  // 0 / 255 (no soft vector edge) and every empty pixel touching the shape gets the palette's dark line colour, t px thick
+  // (t = dpr bucket, i.e. one art pixel), the same colour-matched outline the PNG creatures have. Bake time only.
+  function pixelFinish(g, W, H, lineHex, t) {
+    if (!g || typeof g.getImageData !== 'function' || typeof g.putImageData !== 'function') return false;
+    const im = g.getImageData(0, 0, W, H), d = im.data, n = W * H, on = new Uint8Array(n);
+    for (let i = 0; i < n; i++) { const a = d[i * 4 + 3]; if (a >= 128) { on[i] = 1; d[i * 4 + 3] = 255; } else d[i * 4 + 3] = 0; }
+    const lr = parseInt(lineHex.slice(1, 3), 16), lg = parseInt(lineHex.slice(3, 5), 16), lb = parseInt(lineHex.slice(5, 7), 16);
+    const r = Math.max(1, t | 0);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x; if (on[i]) continue;
+      let hit = false;
+      for (let dy = -r; dy <= r && !hit; dy++) for (let dx = -r; dx <= r && !hit; dx++) {
+        const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < W && Y < H && on[Y * W + X]) hit = true;
+      }
+      if (hit) { const o = i * 4; d[o] = lr; d[o + 1] = lg; d[o + 2] = lb; d[o + 3] = 255; }
+    }
+    g.putImageData(im, 0, 0);
+    return true;
+  }
+
   // Draw one frame onto ctx, filling a w x h box (scaled from the 100-unit design box). Returns true when drawn.
   function drawFrame(ctx, archetype, w, h, frame, action, pal) {
     if (!ctx || typeof ctx.save !== 'function' || typeof ctx.arc !== 'function') return false;
@@ -161,8 +233,10 @@
   // makeBaker(create, cap): bake(spec, opts) -> {key, id, archetype, sizeClass, px, dpr, w, h, frames:{idle:[4],move:[4]}, shadow, ax, ay, hit}
   //   spec = {id, archetype, size:'S|M|L|XL', palette:{body,belly,accent,eye,line} | biome:'jungle'}; opts = {dpr}
   // The same spec returns the SAME cached object. Returns null when no canvas can be made.
-  function makeBaker(create, cap) {
+  // opts3 = {finish: false} turns the cycle-0 pixel finish (alpha snap + outline) off for this baker.
+  function makeBaker(create, cap, opts3) {
     const make = typeof create === 'function' ? create : defaultCreate;
+    const finish = !(isObj(opts3) && opts3.finish === false);
     const max = clamp(Math.floor(num(cap, CACHE_CAP)), 1, 512);
     const cache = new Map(), shadows = new Map();
     function shadowFor(sizeClass, dpr) {
@@ -181,7 +255,7 @@
         const biome = typeof s.biome === 'string' && has(PALETTES, s.biome) ? s.biome : 'jungle';
         const P = palette(s.palette, biome);
         const id = typeof s.id === 'string' && /^[a-z0-9_]{1,24}$/.test(s.id) ? s.id : arch;
-        const key = [id, arch, sc, dpr, PAL_KEYS.map((k) => P[k]).join('')].join('|');
+        const key = [id, arch, sc, dpr, PAL_KEYS.map((k) => P[k]).join('')].join('|') + (finish ? '' : '|raw');
         if (cache.has(key)) { const v = cache.get(key); cache.delete(key); cache.set(key, v); return v; }
         const W = px(sc, dpr);
         const frames = { idle: [], move: [] };
@@ -189,7 +263,11 @@
           for (let f = 0; f < FRAMES; f++) {
             const cv = make(W, W);
             const g = cv && cv.getContext && cv.getContext('2d');
-            if (!g || !drawFrame(g, arch, W, W, f, ACTIONS[ai], P)) return null;
+            if (!g) return null;
+            drawExtra(g, id, 'back', W, W, f, ACTIONS[ai], P);
+            if (!drawFrame(g, arch, W, W, f, ACTIONS[ai], P)) return null;
+            drawExtra(g, id, 'front', W, W, f, ACTIONS[ai], P);
+            if (finish) pixelFinish(g, W, W, P.line, dpr >= 2 ? 2 : 1);
             frames[ACTIONS[ai]].push(cv);
           }
         }
@@ -209,6 +287,7 @@
   return {
     ARCHETYPES: ARCHETYPES, ACTIONS: ACTIONS, FRAMES: FRAMES, SIZES: SIZES, HIT_RADIUS: HIT_RADIUS, PALETTES: PALETTES, SHADOW: SHADOW,
     dprBucket: dprBucket, px: px, palette: palette, paletteFor: paletteFor, drawFrame: drawFrame, drawShadow: drawShadow,
+    EXTRA_IDS: Object.keys(EXTRAS), drawExtra: drawExtra, pixelFinish: pixelFinish,
     makeBaker: makeBaker, bake: shared.bake, frameAt: frameAt, defaultCreate: defaultCreate
   };
 });
