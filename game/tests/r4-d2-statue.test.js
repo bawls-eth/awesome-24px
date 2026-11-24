@@ -24,6 +24,7 @@ const MAP = require('../shared/mm-map.js');
       return {
         has: !!st, key: st && st.texture.key, scale: st && [st.scaleX, st.scaleY], h: st && st.displayHeight, ph: s.localVisual.displayHeight,
         npc: [s.npcSprite, s.npc2Sprite, s.merchantSprite, s.graveZombie].map((o) => (o ? o.scaleX : null)),
+        ff: (() => { const o = {}; (s.ffSpecimens || []).forEach((f) => { if (!o[f.id]) o[f.id] = Math.round(f.sprite.displayHeight); }); return o; })(),
         label: texts.filter((t) => /Statue/.test(t)), mayor: texts.filter((t) => /Mayor|🐵/.test(t)), apes: s.children.list.filter((o) => o.texture && o.texture.key === 'boredapes').length,
       };
     });
@@ -31,6 +32,10 @@ const MAP = require('../shared/mm-map.js');
     check(vp.width + ': statue at the player\'s pixel scale (1x, same display height as the hero)', r.scale && r.scale[0] === 1 && r.scale[1] === 1 && r.h === r.ph, JSON.stringify(r));
     check(vp.width + ': label reads "🦸 Founder\'s Statue"; no "Mayor" / monkey label left', r.label.indexOf("🦸 Founder's Statue") >= 0 && r.mayor.length === 0, JSON.stringify(r.label.concat(r.mayor)));
     check(vp.width + ': W-06 one pixel scale: Professor, dock resident, merchant and graveyard zombie at 1x (were 1.8-2x)', r.npc.every((v) => v === 1), JSON.stringify(r.npc));
+    const f = r.ff; const fauna = ['fox', 'deer', 'butterfly', 'frog', 'caribou'].filter((k) => f[k]);
+    check(vp.width + ': W-06 wildlife scale table: fox ~hero height (22-27 px), deer / caribou <= 32 px, butterfly / frog <= 16 px (were 56 / 68 / 32 px)',
+      fauna.length >= 3 && (!f.fox || (f.fox >= 22 && f.fox <= 27)) && (!f.deer || f.deer <= 32) && (!f.caribou || f.caribou <= 32) && (!f.butterfly || f.butterfly <= 16) && (!f.frog || f.frog <= 16), JSON.stringify({ hero: r.ph, f: fauna.map((k) => k + ':' + f[k]) }));
+    check(vp.width + ': flora keeps its size (oak tree 88 px)', !f.oak_tree || f.oak_tree === 88, String(f.oak_tree));
     check(vp.width + ': no DB writes', db.count() >= 0);
     await ctx.close();
   }

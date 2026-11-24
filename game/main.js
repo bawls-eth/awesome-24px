@@ -722,6 +722,12 @@ const STATUE_POS = { x: 1450, y: 600 };
 const TOWN_NPC_SCALE = (() => { try { return /[?&]npcscale=classic(&|$)/.test(location.search) ? 0 : 1; } catch (e) { return 1; } })();
 const npcScale = (classic) => (TOWN_NPC_SCALE ? TOWN_NPC_SCALE : classic);
 const npcFeetShift = (classic) => 12 * (classic - npcScale(classic)); // 24 px cell, origin centre: feet at y + 12 * scale
+// W-06 wildlife scale table: Town fauna drew at their SVG sizes (fox 56, deer 68, butterfly 32 px) next to the 24 px hero, i.e. 2-3x.
+// Display size is now 0.45x of that, clamped 14..32 px: insects / frogs ~14, birds / snakes 16-18, fox / otter ~25, deer / caribou /
+// shark ~31 (a deer is a little taller than the hero, a fox about hero height), baked 1:1 so the pixels match the hero's density.
+// Flora keeps its size. Catch reach, speed and wander range still use the old size, so gameplay is unchanged. ?npcscale=classic: old.
+const FF_FAUNA_K = 0.45;
+const ffDisplaySize = (a) => (TOWN_NPC_SCALE && a.kind === 'fauna' ? Math.max(14, Math.min(32, Math.round(Math.max(a.w, a.h) * FF_FAUNA_K))) : Math.max(14, a.w, a.h));
 const NPC_POS = { x: 1550, y: 540 };
 const NPC_RADIUS = 48;
 const NPC_NAME = '🧪 Professor Byte';
@@ -6430,7 +6436,7 @@ class TownScene extends Phaser.Scene {
       try {
         const img = this.textures.get(src).getSourceImage();
         if (!img || !(img.naturalWidth || img.width)) return;
-        const px = Math.max(8, Math.round(Math.max(14, a.w, a.h) / 2));
+        const px = TOWN_NPC_SCALE && a.kind === 'fauna' ? ffDisplaySize(a) : Math.max(8, Math.round(Math.max(14, a.w, a.h) / 2)); // W-06: fauna 1:1 with the hero's pixels
         const ent = MMPixelize.bake(img, { size: px, key: `ff_${a.id}@${px}` });
         if (ent && ent.canvas && ent.w > 0) { this.textures.addCanvas(`ffpx_${a.id}`, ent.canvas); this.ffPixelized++; }
       } catch (e) { /* this species keeps its SVG */ }
@@ -6446,9 +6452,10 @@ class TownScene extends Phaser.Scene {
     // The SVGs are square, so a non-square w/h used to squash the art
     // (pine 72x96, joshua tree 80x104...). Keep the bigger side, square;
     // never below 14px so the microscopic species stay findable specks.
-    const size = Math.max(14, a.w, a.h);
+    const size = Math.max(14, a.w, a.h); // gameplay size (reach / speed / range), unchanged
     const fly = move === 'fly';
-    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(size, size).setDepth(fly ? s.y + 40 : s.y);
+    const shown = ffDisplaySize(a); // W-06: what is drawn
+    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(shown, shown).setDepth(fly ? s.y + 40 : s.y);
     const inWater = !!s.pond && FF_IN_WATER.has(a.id);
     const spec = {
       id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean,
