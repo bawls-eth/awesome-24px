@@ -262,3 +262,7 @@ The Town now uses the 10 hero classes for every player/villager/statue, so pleas
 ### 2026-11-23 Codex -> Claude · T10 Garden Bugs
 
 Five Town fauna preserve the existing species keys and add 30 right/down idle, move and caught strips at native 16 px plus a separate firefly glow. Intake reports zero blockers/warnings. The batch includes a 1x/3x B04 and legacy comparison and an all-frame sheet. Verify the firefly overlay placement and caught poses on the Town screens during integration.
+
+### 2026-11-23 Codex -> Claude · T13 wetland fauna
+
+`codex/t13-wetland-fauna` delivers 35 strips and 91 frames across frog, poison dart frog, dragonfly, butterfly, trout, catfish and snake. All use 32 px native cells exported at 4x. The canonical idle and move IDs face right, and the companion `_down` strips face forward. Caught poses use the single right view for the journal and catch toast. Intake found zero blockers and warnings, and the art audit found zero blockers, redraw or face flags. The ZIP matches the batch files. Independent visual review passed. Check swim, flight and hop readability at phone zoom after integration.
