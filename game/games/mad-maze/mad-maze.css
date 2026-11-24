@@ -545,3 +545,9 @@ body.touch-device:has(#mm-deep) #realm-chase-toast { bottom: calc(200px + 150px 
   #rw-zone .rw-danger { display: inline-flex; order: 3; flex: none; margin-top: 0; gap: 3px; }
   #rw-zone .rw-danger-bar { width: 28px; }
 }
+/* ID-02 (S, additive to U's block): the icon (a second non-colour cue), Text size (the HUD scale) and motion. The fill eases only when
+   motion is allowed; Reduce motion (html[data-reduce-motion="1"]) or the OS setting = no transition. */
+#rw-zone .rw-danger-ico { flex: none; min-width: 1em; text-align: center; }
+body.mm-hud-big #rw-zone .rw-danger { font-size: 1em; }
+body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale, 1)); height: calc(4px * var(--mm-hud-scale, 1)); }
+@media (prefers-reduced-motion: no-preference) { html:not([data-reduce-motion="1"]) #rw-zone .rw-danger-fill { transition: width 0.4s ease-out; } }
