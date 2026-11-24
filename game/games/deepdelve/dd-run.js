@@ -89,7 +89,7 @@
       Object.keys(mine.best).forEach((k) => { out.best[k] = Math.max(mine.best[k], cur.best[k]); });
       const sb = Object.assign({}, cur.seedBest); Object.keys(mine.seedBest).forEach((k) => { sb[k] = Math.max(sb[k] || 0, mine.seedBest[k]); });
       out.seedBest = cleanSeeds(sb);
-      const sp = {}; Object.keys(out.seedBest).forEach((k) => { const m = mine.seedPath[k], c = cur.seedPath[k]; const p = (mine.seedBest[k] || 0) >= (cur.seedBest[k] || 0) ? (m || c) : (c || m); if (p) sp[k] = p; });
+      const sp = {}; Object.keys(out.seedBest).forEach((k) => { const m = mine.seedPath[k], c = cur.seedPath[k]; const md = mine.seedBest[k] || 0, cd = cur.seedBest[k] || 0; const p = md > cd ? m : cd > md ? c : (m || c); if (p) sp[k] = p; }); // cycle 3 (L): strictly the deeper dive's path, or none (a deeper dive without a path used to bring the shallower dive's path back from disk)
       out.seedPath = cleanPaths(sp, out.seedBest); // the path of whichever tab holds the deeper dive on that seed
       storage.setItem(KEY, JSON.stringify(out));
       return true;

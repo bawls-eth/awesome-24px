@@ -2103,5 +2103,9 @@
   "cyc3-notebook-blocked.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-dd-path-merge.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
