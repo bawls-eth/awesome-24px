@@ -175,12 +175,30 @@
     const el = $('hud-dive'); if (!el) return;
     if (!run || !runRec) { el.textContent = ''; return; }
     el.textContent = modName(run.mod) + ': ' + run.depth + ' deep | Best ' + (runRec.best.depth || '-') + (run.armed ? ' | Climb out for x' + RUNS.SAFE_BONUS : '');
+    renderBank();
+  }
+  // cyc0-S (NEXT-SLICES-5 DD5): the bank line says what the dive is worth if you climb out now (x1.5) versus a fall, and the
+  // depth ghost is the deepest dive on this world seed so far (saved in pixeltown-deepdelve-runs-v1 seedBest). ?ghost=0 hides
+  // the ghost part only. textContent only, rewritten only when the text changes.
+  const GHOST_ON = params.get('ghost') !== '0';
+  let bankTxt = null, ghostPassed = false;
+  function bankText() {
+    const b = run && runRec && RUNS.bank ? RUNS.bank(run, runRec) : null;
+    if (!b) return '';
+    const head = b.armed ? 'Climb out now: ' + b.surface + ' pts (a fall keeps ' + b.fall + ')' : 'Dig ' + b.toArm + ' more to bank x' + RUNS.SAFE_BONUS + ' (now ' + b.fall + ' pts)';
+    const ghost = !GHOST_ON || !b.ghost ? '' : b.ahead > 0 ? ' | Past your seed ghost by ' + b.ahead : ' | Seed ghost: ' + b.ghost + ' deep (' + (-b.ahead) + ' to go)';
+    return head + ghost;
+  }
+  function renderBank() {
+    const el = $('hud-bank'); if (!el) return;
+    const t = bankText(); if (t === bankTxt) return;
+    bankTxt = t; el.textContent = t; el.dataset.armed = run && run.armed ? '1' : '0';
   }
   const modName = (id) => { const m = RUNS && RUNS.MODS.filter((x) => x.id === id)[0]; return m ? m.name : 'Dive'; };
   function startRun() {
     if (!RUNS) return;
     if (!runRec) runRec = RUNS.load(LS);
-    run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id); pbDepthShown = false; comboShown = false; $('combo').textContent = '';
+    run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id, CREATIVE ? null : SEED); pbDepthShown = false; comboShown = false; ghostPassed = false; $('combo').textContent = '';
     renderDive();
   }
   // G-10: cells the player placed this session (cap 4096, oldest out); mining one gives the item back but scores nothing
@@ -191,6 +209,7 @@
     if (!run) return null;
     const r = RUNS.mined(run, item, now === undefined ? nowS() : now, placed ? { placed: true } : undefined);
     if (r.placed) { sfx('hit'); return r; }
+    renderBank(); // the block / ore points just changed what the dive is worth
     if (r.ore) { pop('+' + (r.ore * (run.mod === 'veins' ? 16 : 8)) + ' ' + item.replace(/_ore$/, '').replace(/_/g, ' '), 'ore'); sfx('pickup'); shake(0.06, 0.16); }
     else { sfx('hit'); shake(0.025, 0.08); }
     if (r.combo >= 2) {
@@ -205,6 +224,8 @@
     const wasArmed = run.armed;
     if (RUNS.depth(run, absDepth)) {
       if (!pbDepthShown && runRec.best.depth > 0 && run.depth > runRec.best.depth) { pbDepthShown = true; pop('New depth record!', 'pb'); sfx('levelup'); }
+      const gb = GHOST_ON && run.seed && runRec.seedBest ? runRec.seedBest[run.seed] || 0 : 0;
+      if (!ghostPassed && !pbDepthShown && gb > 0 && run.depth > gb) { ghostPassed = true; pop('Past your seed ghost!', 'pb'); sfx('pickup'); }
       renderDive();
     } else if (wasArmed !== run.armed) renderDive();
     if (!wasArmed && run.armed && !climbTipShown) { climbTipShown = true; toast('Deep enough! Climb back out for a x' + RUNS.SAFE_BONUS + ' bonus: look down, jump and Place a block under you.'); }
@@ -236,7 +257,7 @@
     });
     const nx = RUNS.MODS.filter((m) => m.id === run.mod)[0];
     $('run-next').textContent = 'This dive: ' + modName(sum.mod) + '. Next dive: ' + nx.name + ' (' + nx.desc + ')';
-    $('run-tip').textContent = sum.short > 0 && sum.short <= 5 ? 'Only ' + sum.short + ' blocks short of your deepest dive!' : sum.safe ? 'Surfacing alive pays x' + RUNS.SAFE_BONUS + '. Go deeper next time?' : 'Tip: climb back out alive for a x' + RUNS.SAFE_BONUS + ' score bonus. Chain breaks within ' + RUNS.COMBO_GAP + ' s for combos.';
+    $('run-tip').textContent = sum.pb.seed && sum.prev.seedDepth > 0 && GHOST_ON ? 'You passed your seed ghost: ' + sum.depth + ' deep (it was ' + sum.prev.seedDepth + ').' : sum.short > 0 && sum.short <= 5 ? 'Only ' + sum.short + ' blocks short of your deepest dive!' : sum.safe ? 'Surfacing alive pays x' + RUNS.SAFE_BONUS + '. Go deeper next time?' : 'Tip: climb back out alive for a x' + RUNS.SAFE_BONUS + ' score bonus. Chain breaks within ' + RUNS.COMBO_GAP + ' s for combos.';
     togglePanel('craft', false); togglePanel('goals', false);
     $('run-panel').hidden = false;
     try { document.exitPointerLock(); } catch (e) { /* ignore */ }
@@ -1850,7 +1871,7 @@
         return lightAt(x, y, z);
       }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
       introText, prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
-      run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
+      run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, bank: () => bankText(), bankEl: () => ($('hud-bank') || {}).textContent || '', depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
       craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), programs: () => (renderer && renderer.info && renderer.info.programs ? renderer.info.programs.length : -1), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }

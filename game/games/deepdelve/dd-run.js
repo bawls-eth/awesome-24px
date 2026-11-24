@@ -35,7 +35,18 @@
     if (typeof raw === 'string') { try { o = JSON.parse(raw); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const b = o.best && typeof o.best === 'object' && !Array.isArray(o.best) ? o.best : {};
-    return { v: 1, runs: ci(o.runs, 999999), safe: ci(o.safe, 999999), best: { score: ci(b.score, 9999999), depth: ci(b.depth, 999), ores: ci(b.ores, 99999), combo: ci(b.combo, 9999) } };
+    return { v: 1, runs: ci(o.runs, 999999), safe: ci(o.safe, 999999), best: { score: ci(b.score, 9999999), depth: ci(b.depth, 999), ores: ci(b.ores, 99999), combo: ci(b.combo, 9999) }, seedBest: cleanSeeds(o.seedBest) };
+  }
+  // cyc0-S (NEXT-SLICES-5 DD5, depth ghost): the deepest dive per world seed, additive field `seedBest: {"<seed>": depth}` inside
+  // this key. Keys are integer seeds (as strings), values 1..999; at most SEED_CAP entries (the deepest kept); junk dropped.
+  const SEED_CAP = 32;
+  const seedKey = (seed) => (typeof seed === 'number' && isFinite(seed) && Math.floor(seed) === seed && Math.abs(seed) < 1e10 ? String(seed) : null);
+  function cleanSeeds(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    Object.keys(raw).filter((k) => /^-?\d{1,10}$/.test(k)).map((k) => [k, ci(raw[k], 999)]).filter((e) => e[1] > 0)
+      .sort((a, b) => b[1] - a[1]).slice(0, SEED_CAP).forEach((e) => { out[e[0]] = e[1]; });
+    return out;
   }
   function load(storage) { try { return clean(storage.getItem(KEY)); } catch (e) { return clean(null); } }
   // Merge-on-write (bugbash/saves.md S2/S7): bests and counters only go up against what storage holds now, so a stale second tab
@@ -50,12 +61,14 @@
       if (raw) Object.keys(raw).forEach((k) => { if (k !== '__proto__' && k !== 'constructor' && k !== 'prototype') out[k] = raw[k]; });
       Object.assign(out, mine, { runs: Math.max(mine.runs, cur.runs), safe: Math.max(mine.safe, cur.safe), best: {} });
       Object.keys(mine.best).forEach((k) => { out.best[k] = Math.max(mine.best[k], cur.best[k]); });
+      const sb = Object.assign({}, cur.seedBest); Object.keys(mine.seedBest).forEach((k) => { sb[k] = Math.max(sb[k] || 0, mine.seedBest[k]); });
+      out.seedBest = cleanSeeds(sb);
       storage.setItem(KEY, JSON.stringify(out));
       return true;
     } catch (e) { return false; }
   }
 
-  function start(startDepth, mod) { return { mod: MODS.some((m) => m.id === mod) ? mod : 'plain', start: ci(startDepth, 999), depth: 0, blocks: 0, ores: 0, orePts: 0, combo: 0, bestCombo: 0, lastBreak: -99, armed: false }; }
+  function start(startDepth, mod, seed) { return { mod: MODS.some((m) => m.id === mod) ? mod : 'plain', start: ci(startDepth, 999), depth: 0, blocks: 0, ores: 0, orePts: 0, combo: 0, bestCombo: 0, lastBreak: -99, armed: false, seed: seedKey(seed) }; }
   // Depth below where the dive started (blocks). Returns true when it became a new dive maximum.
   function depth(run, absDepth) {
     const d = Math.max(0, ci(absDepth, 999) - run.start);
@@ -88,10 +101,21 @@
     const pb = { score: s > b.score && s > 0, depth: run.depth > b.depth, ores: run.ores > b.ores, combo: run.bestCombo > b.combo };
     const prev = { score: b.score, depth: b.depth, ores: b.ores, combo: b.combo };
     if (pb.score) b.score = s; if (pb.depth) b.depth = run.depth; if (pb.ores) b.ores = run.ores; if (pb.combo) b.combo = run.bestCombo;
+    const sk = run.seed, ghost = sk && rec.seedBest ? rec.seedBest[sk] || 0 : 0; // DD5: the deepest dive on this seed so far
+    pb.seed = !!sk && run.depth > ghost; prev.seedDepth = ghost;
+    if (pb.seed) { rec.seedBest = cleanSeeds(Object.assign({}, rec.seedBest, { [sk]: run.depth })); }
     rec.runs = Math.min(999999, rec.runs + 1); if (safe) rec.safe = Math.min(999999, rec.safe + 1);
     // "so close" feedback: how far short of the old best this dive ended (only when it did not beat it)
     const short = !pb.depth && prev.depth > 0 ? prev.depth - run.depth : 0;
     return { score: s, safe: !!safe, mod: modOf(run), depth: run.depth, blocks: run.blocks, ores: run.ores, combo: run.bestCombo, pb, prev, short, any: pb.score || pb.depth || pb.ores || pb.combo };
   }
-  return { KEY, MODS, modFor, COMBO_GAP, SAFE_DEPTH, SAFE_BONUS, ORE, clean, load, save, start, depth, mined, comboLive, score, finish };
+  // DD5 bank line: what this dive is worth right now. `fall` = the score if it ended here in a fall, `surface` = climbing out
+  // alive (x SAFE_BONUS, only once armed), `toArm` = blocks still to dig before the bonus applies, `ghost` = the deepest dive
+  // on this seed before this one (0 = none yet), `ahead` = blocks past it (negative = still above it).
+  function bank(run, rec) {
+    if (!run) return null;
+    const armed = !!run.armed, fall = score(run, false), ghost = run.seed && rec && rec.seedBest ? rec.seedBest[run.seed] || 0 : 0;
+    return { armed, fall, surface: armed ? score(run, true) : fall, toArm: armed ? 0 : Math.max(0, SAFE_DEPTH - run.depth), ghost, ahead: ghost ? run.depth - ghost : 0 };
+  }
+  return { KEY, MODS, modFor, COMBO_GAP, SAFE_DEPTH, SAFE_BONUS, ORE, SEED_CAP, clean, load, save, start, depth, mined, comboLive, score, finish, bank };
 }));

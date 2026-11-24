@@ -1939,5 +1939,9 @@
   "cyc0-town-interact-shadow.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "deepdelve-ghost.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

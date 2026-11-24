@@ -27,7 +27,7 @@ Backup: yes = exported by `MMBackup` (shared/mm-backup.js KNOWN), **NO** = not e
 | `pixeltown-jam-v1` | games/jam/jam.js, mm-jam-songs.js | `{v, best:{song:{diff:{stars,score}}}, plays, fullCombo, prefs}` | 1 | jam.js load + MMHubMedals.clean | progress | yes |
 | `pixeltown-jam-assist-v1` | jam.js `persistAssist` | `{on, best, section}` | none | jam.js `cleanAssist` | progress | yes |
 | `pixeltown-deepdelve-v1` | games/deepdelve/deepdelve.js | `{v, mode, goals:{bronze,silver,maxDepth,...}, cave}` | 1 | deepdelve.js meta cleaner | progress | yes |
-| `pixeltown-deepdelve-runs-v1` | games/deepdelve/dd-run.js (MMDDRun.save) | `{v, runs, safe, best:{score,depth,ores,combo}}` | 1 | MMDDRun.clean | progress | yes |
+| `pixeltown-deepdelve-runs-v1` | games/deepdelve/dd-run.js (MMDDRun.save) | `{v, runs, safe, best:{score,depth,ores,combo}, seedBest?:{"<seed>":depth}}` (cyc0-S: additive `seedBest`, deepest dive per world seed, max 32, merged by max) | 1 | MMDDRun.clean | progress | yes |
 | `pixeltown-deepdelve-creative-v1` | deepdelve.js | creative world meta `{v, ...}` | 1 | deepdelve.js | progress | yes |
 | `pixeltown-angler-v1` | games/angler/angler.js | journal `{v, caught:{sp:{n,best}}, cove, tour, ...}` | 1 | MMAngler.journal.clean | progress | yes |
 | `pixeltown-angler-fun-v1` | angler.js `saveFun` | `{v, bestStreak, bestReact, streak, cond:{name:{size,react,n}}}` | 1 | angler.js `cleanFun` | progress | yes |
