@@ -76,7 +76,7 @@
   const FOOD_NODES = {
     meadow: [N('flower', 4, ['flower_meadow', 'grass']), N('hay', 4, ['tall_grass']), N('nectar', 3, ['flower_meadow', 'clover_patch']),
       N('bug', 4, ['tall_grass', 'grass'], { near: 'spawn', r: 30 }), N('fish', 3, ['wet_sand', 'sand', 'dock_planks'], { near: 'dock', r: 8 }),
-      N('golden_apple', 4, ['grass'], { zone: [2, 3], respawn: 300 })], // b05-05: Oakback needs 12; was 1 glint per 900 s (hours per tame)
+      N('golden_apple', 6, ['grass'], { zone: [2, 3], respawn: 120 })], // b05-05/b05-r3: Oakback needs 14 (Strider 11): was 1 glint per 900 s, then 4 per 300 s (~15 min); now 6 per 120 s (~6 min, cyc5-d-oakback-pace)
     jungle: [N('vine_rope', 3, ['fern_thicket', 'jungle_moss', 'jungle_floor', 'sand'], { near: 'dock', r: 15, respawn: 150, label: 'vine rope' }),
       N('nectar', 3, ['orchid_moss', 'jungle_moss']), N('bug', 4, ['jungle_floor'])],
     reef: [N('fish', 5, ['shell_beach', 'reef_sand'], { near: 'spawn', r: 40 }), N('sea_melon', 3, ['sandbar', 'seagrass'], { zone: [2] })],
