@@ -9,7 +9,7 @@
 // OFFLINE ONLY: blockDb + the Firebase SDK answered empty, "Play offline"; never chats, never writes to Firebase.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-replay-town.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const LS = require('./lib/load-scale');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const THREE_RE = /three(\.module)?(\.min)?\.js|\/npm\/three@/;
@@ -28,8 +28,7 @@ const MISSING = () => {
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-r4-replay-town */' }));
+  const db = await offlineStub(ctx); // database blocked + Firebase SDK answered empty: the join can only be "Play offline"
   await ctx.route('**/main.js*', async (route) => {
     try { const resp = await route.fetch(); const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);'); await route.fulfill({ response: resp, body }); } catch (e) { /* page closed */ }
   });

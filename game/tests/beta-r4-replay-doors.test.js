@@ -9,7 +9,7 @@
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/r4-open/beta-r4-replay-doors.test.js
 const { chromium } = require('playwright');
 const HERE = require('fs').existsSync(require('path').join(__dirname, 'helpers.js')) ? '.' : '..'; // lives in tests/r4-open/ until r4-d4 is merged, then moves to tests/
-const { check, done, blockDb } = require(HERE + '/helpers');
+const { check, done, offlineStub } = require(HERE + '/helpers');
 const LS = require(HERE + '/lib/load-scale');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const HOST = new URL(BASE).host;
@@ -20,7 +20,7 @@ const WANT = ['City Drive', 'Kart Rally', 'Neon Coast', 'Night Racer'];
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-  const db = await blockDb(ctx);
+  const db = await offlineStub(ctx); // database blocked + Firebase SDK answered empty: the join can only be "Play offline"
   const outside = [];
   await ctx.route((u) => u.host !== HOST && !/firebaseio|firebasedatabase|identitytoolkit|securetoken/.test(u.host), (r) => {
     const u = r.request().url();
