@@ -1804,5 +1804,9 @@
   "beta-r4-b08-touch-words.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-o07-stalk-neighbour-cap.test.js": {
+    "class": "node",
+    "tier": "full"
   }
 }

@@ -275,11 +275,13 @@
     { id: 'bramble', name: 'Bramble' },
   ];
   const NEIGHBOUR_FEE = 15; // bells, fixed per deal
+  const NEIGHBOUR_CAP = 0.15; // O-07: neighbour offer <= stall price * 1.15 (owner default, ROUND4)
   function neighbourWeek(id, week) { return generateWeek('neighbour|' + String(id) + '|' + int(week, 0, MAX_WEEK, 0)); }
   function neighbourPrice(id, week, slot) {
     slot = clampSlot(slot);
     if (slot === 0) return 0; // neighbours only buy Monday to Saturday
-    return Math.min(MAX_PRICE, neighbourWeek(id, week).sell[slot - 1]);
+    const stall = generateWeek(int(week, 0, MAX_WEEK, 0)).sell[slot - 1]; // O-07 (b11-04, b11-13): a neighbour pays at most the stall price +15%
+    return Math.max(1, Math.min(MAX_PRICE, neighbourWeek(id, week).sell[slot - 1], Math.floor(stall * (1 + NEIGHBOUR_CAP))));
   }
   // Offers at `slot`, plus which neighbour pays the most (ties go to the first listed).
   function neighbourOffers(week, slot) {
@@ -368,7 +370,7 @@
   return {
     CURRENCY, PATTERNS, PATTERN_NAMES, PATTERN_HINTS, SLOTS, SELL_SLOTS, MAX_HOLD, START_BALANCE, ALLOWANCE_FLOOR, MEDALS,
     clampWeek, weekNumber, slotOf, clampSlot, slotLabel, generateWeek, priceAt, knownPrices,
-    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor, advise, GOALS, MAX_PRICE, goalsDone, latchGoals, goalStatus, lifetime, NEIGHBOURS, NEIGHBOUR_FEE, neighbourWeek, neighbourPrice, neighbourOffers, sellToNeighbour,
+    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor, advise, GOALS, MAX_PRICE, goalsDone, latchGoals, goalStatus, lifetime, NEIGHBOURS, NEIGHBOUR_FEE, NEIGHBOUR_CAP, neighbourWeek, neighbourPrice, neighbourOffers, sellToNeighbour,
     weekStart, weekLabel, marketNotes, lastWeekNote,
   };
 }));
