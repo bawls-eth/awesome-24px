@@ -71,7 +71,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
     const L = (s) => `[${label}] ${s}`;
     const { ctx, page, db, sockets, errors } = await open(browser, viewport, touch, ISLES);
     const tap = (sel) => (touch ? page.tap(sel) : page.click(sel));
-    await page.goto(BASE);
+    await page.goto(BASE + '?hud=online'); // U-01: online HUD pieces (walkie) stay in the overlap checks
     await page.waitForTimeout(400);
 
     // ---- join screen: Continue (offline-safe) + species tabs ----

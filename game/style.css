@@ -3027,3 +3027,33 @@ body.a11y-hud-scaled #action-buttons { zoom: var(--hud-scale); }
   #inventory-panel, body.a11y-hud-scaled #inventory-panel { zoom: 1; left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); max-width: none; top: calc(124px + env(safe-area-inset-top, 0px)); }
   body.a11y-hud-scaled #action-buttons { zoom: 1; }
 }
+
+/* Cycle 1 U-01 (b08-r2-07): offline town (Play offline) - quick chat and Hold to talk only answer "Chat needs the online town",
+   so they leave the HUD. The chat log stays (system lines) and the input says why. Test-only ?hud=online keeps them (main.js enterTown). */
+body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: none !important; }
+
+/* Cycle 1 U-02: phone bag bar = ONE row (the bag + the 3 most recently changed counts, most recent first); the bag is a
+   44 px button that expands every count (bag-open) and folds them again. main.js setupBagBar sets the classes. */
+@media (max-width: 720px) {
+  #inventory-panel.bag-compact { flex-wrap: nowrap; }
+  #inventory-panel.bag-compact.bag-open { flex-wrap: wrap; }
+  #inventory-panel.bag-compact #bag-icon { order: 0; min-width: 44px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px 0 0; cursor: pointer; touch-action: manipulation; }
+  #inventory-panel.bag-compact #bag-icon::after { content: "\25B8"; font-size: 11px; margin-left: 2px; }
+  #inventory-panel.bag-compact.bag-open #bag-icon::after { content: "\25BE"; }
+  #inventory-panel.bag-compact #bag-icon:focus-visible { outline: 3px solid var(--tb-ink, #222); outline-offset: 1px; }
+  #inventory-panel.bag-compact:not(.bag-open) > span:not(#bag-icon):not(.bag-recent) { display: none; }
+  #inventory-panel.bag-compact:not(.bag-open) > span.bag-recent { order: var(--bag-order, 9); white-space: nowrap; }
+}
+/* Cycle 1 U-03: 160x284 (a 320x568 phone at 200% zoom). Under the people panel the bag bar sat on the stick and the action
+   buttons (128 px stick from y 144). Here the folded bag is just the 44 px bag button in the top-right corner beside the
+   people panel (which gives up 52 px of width); tapping it drops every count below the panel (the player asked for it). */
+@media (max-width: 300px) and (max-height: 420px) {
+  body.touch-device #player-list-panel.collapsed, body.a11y-hud-scaled.touch-device #player-list-panel.collapsed { right: calc(66px + env(safe-area-inset-right, 0px)); }
+  #inventory-panel.bag-compact:not(.bag-open), body.a11y-hud-scaled #inventory-panel.bag-compact:not(.bag-open) { top: calc(8px + env(safe-area-inset-top, 0px)); left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); padding: 0 2px; }
+  #inventory-panel.bag-compact:not(.bag-open) > span:not(#bag-icon) { display: none; }
+  #inventory-panel.bag-compact:not(.bag-open) #bag-icon { padding: 0; border-right: 0; }
+  #inventory-panel.bag-compact:not(.bag-open) #bag-icon::after { content: none; }
+  #inventory-panel.bag-compact.bag-open, body.a11y-hud-scaled #inventory-panel.bag-compact.bag-open { z-index: 12; top: calc(140px + env(safe-area-inset-top, 0px)); }
+  /* the narrower people chip / Where to? wrap their words instead of clipping them */
+  body.touch-device #player-list-panel.collapsed #panel-toggle, body.touch-device #player-list-panel.collapsed #where-to-btn { white-space: normal; overflow-wrap: normal; height: auto; min-height: 44px; line-height: 1.15; padding-top: 3px; padding-bottom: 3px; }
+}

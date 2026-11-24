@@ -19,7 +19,7 @@ async function open(browser, viewport, touch) {
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
     route.fulfill({ response: resp, body });
   });
-  await page.goto(BASE);
+  await page.goto(BASE + '?hud=online'); // U-01: offline hides quick chat / Hold to talk; this measures the online HUD layout
   await page.fill('#name-input', 'ADMIN8bit');
   await page.click('.species-tab'); await page.waitForTimeout(100);
   await page.click('.avatar-choice');

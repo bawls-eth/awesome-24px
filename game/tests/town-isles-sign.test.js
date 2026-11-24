@@ -74,7 +74,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const L = (s) => `[${label}] ${s}`;
     const t = await open(browser, viewport, touch);
     const { page, tap } = t;
-    await page.goto(BASE);
+    await page.goto(BASE + '?hud=online'); // U-01: online HUD pieces (walkie) stay in the overlap checks
     await joinOffline(page, tap);
     check(L('joined the town offline'), await page.evaluate(() => window.__g.scene.getScene('Town').net.offline === true));
     const plain = await pos(page);

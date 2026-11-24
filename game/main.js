@@ -485,6 +485,48 @@ const SPARKLE_CATCH_RADIUS = 26;
 
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 if (IS_TOUCH) document.body.classList.add('touch-device');
+// Cycle 1 U-02: on phones (<= 720 px) the bag bar is ONE row: the bag + the 3 most recently changed counts (style.css
+// #inventory-panel.bag-compact). Tapping the bag expands every count; tapping again folds it. Recency is watched on the
+// count text itself (any code path that updates a count), this tab only, never saved. Desktop keeps the full bar.
+(function setupBagBar() {
+  const panel = document.getElementById('inventory-panel'); const bag = document.getElementById('bag-icon');
+  if (!panel || !bag || typeof MutationObserver === 'undefined') return;
+  const chips = () => Array.from(panel.children).filter((e) => e !== bag && e.querySelector('b'));
+  const last = new Map(); let recent = chips().slice(0, 3);
+  chips().forEach((c) => last.set(c, c.textContent));
+  // At big Text size the capped one-row bar fits fewer counts: drop the oldest of the 3 until the row fits (never below 1).
+  const paint = () => {
+    let show = recent.slice();
+    for (;;) {
+      chips().forEach((c) => c.classList.toggle('bag-recent', show.includes(c)));
+      show.forEach((c, i) => c.style.setProperty('--bag-order', String(i + 1)));
+      if (show.length <= 1 || !panel.classList.contains('bag-compact') || panel.classList.contains('bag-open') || panel.scrollWidth <= panel.clientWidth + 1) break;
+      show = show.slice(0, -1);
+    }
+  };
+  const phone = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+  const sync = () => {
+    const on = !!(phone && phone.matches);
+    panel.classList.toggle('bag-compact', on);
+    if (on) { bag.setAttribute('role', 'button'); bag.tabIndex = 0; bag.setAttribute('aria-controls', 'inventory-panel'); bag.setAttribute('aria-label', 'Bag: show every count'); bag.setAttribute('aria-expanded', String(panel.classList.contains('bag-open'))); }
+    else { ['role', 'tabindex', 'aria-controls', 'aria-label', 'aria-expanded'].forEach((a) => bag.removeAttribute(a)); panel.classList.remove('bag-open'); }
+  };
+  const toggle = () => { if (!panel.classList.contains('bag-compact')) return; const open = panel.classList.toggle('bag-open'); bag.setAttribute('aria-expanded', String(open)); bag.setAttribute('aria-label', open ? 'Bag: show only recent counts' : 'Bag: show every count'); paint(); };
+  bag.addEventListener('click', toggle);
+  bag.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) toggle(); } });
+  new MutationObserver(() => {
+    let moved = false;
+    chips().forEach((c) => { const t = c.textContent; if (last.get(c) !== t) { last.set(c, t); if (!c.classList.contains('hidden')) { recent = [c].concat(recent.filter((x) => x !== c)).slice(0, 3); moved = true; } } });
+    if (moved) paint();
+  }).observe(panel, { subtree: true, characterData: true, childList: true });
+  const resync = () => { sync(); paint(); };
+  if (phone) { if (phone.addEventListener) phone.addEventListener('change', resync); else if (phone.addListener) phone.addListener(resync); }
+  // the bar first gets a size when the HUD shows (join) or Text size changes: refit then (one rAF, no loop: paint is stable)
+  let fitQ = 0; const refit = () => { if (fitQ) return; fitQ = requestAnimationFrame(() => { fitQ = 0; paint(); }); };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(refit).observe(panel);
+  window.addEventListener('resize', refit);
+  sync(); paint();
+})();
 if (IS_TOUCH) { // b08-r2-09: the join card's tip uses touch words on a phone, never key names
   const jt = document.querySelector('#join-overlay .join-tip');
   if (jt) jt.textContent = 'Drag the stick to walk · tap A to interact (fish, chop, mine, catch bugs) · tap C to chat · more in the menu';
@@ -10181,6 +10223,12 @@ function enterTown(net, data) {
   joinOverlay.classList.add('hidden');
   { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); document.body.classList.remove('has-back-pill'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
   hud.classList.remove('hidden');
+  // Cycle 1 U-01 (b08-r2-07): offline, quick chat and Hold to talk only answer "Chat needs the online town", so the HUD hides them
+  // (body.town-offline, see style.css). Test-only `?hud=online` keeps the online HUD pieces on the offline path, so the layout tests
+  // (which can never join the live town) still measure the online layout explicitly. It changes visibility only, never the network.
+  const hudOnline = /[?&]hud=online(&|$)/.test(location.search);
+  document.body.classList.toggle('town-offline', net instanceof OfflineNet && !hudOnline);
+  if (net instanceof OfflineNet && !hudOnline) { const ci = document.getElementById('chat-input'); if (ci) ci.placeholder = 'Offline: chat needs the online town'; }
   // R4 D4 (b07-r2-14): remember (this tab only, sessionStorage, never the save) that the player was in town and how, so
   // browser Back from the Isles / a game returns to the town instead of the join card.
   try { sessionStorage.setItem(TOWN_SESSION_KEY, net instanceof OfflineNet ? 'offline' : 'online'); } catch (e) { /* storage blocked */ }

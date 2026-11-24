@@ -169,3 +169,9 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
 @media (max-width: 300px) {
   #touch #btn-swing, #touch #btn-sneak { font-size: 12px; letter-spacing: 0; padding: 2px; }
 }
+/* Cycle 1 U-08: <= 300 css px, the 2-up arena grid left ~85 px per card and `overflow-wrap: anywhere` split words ("MEAD|OW").
+   One card per row there, and a word only breaks when it alone is wider than the card. */
+@media (max-width: 300px) {
+  #overlay .grid { grid-template-columns: minmax(0, 1fr); }
+  #overlay button.card { overflow-wrap: break-word; }
+}

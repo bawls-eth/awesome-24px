@@ -24,7 +24,7 @@ const hit = (a, b) => !!(a && b && a.x < b.r - 0.5 && b.x < a.r - 0.5 && a.y < b
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   await exposeGame(page);
-  await page.goto(BASE + '?from=hub');
+  await page.goto(BASE + '?from=hub&hud=online'); // U-01: Hold to talk stays in the build-banner checks
 
   // a11y: every Town overlay card (the *-overlay sheets with a close button) is announced as a named modal dialog
   const dl = await page.evaluate(() => [...document.querySelectorAll('[id$="-overlay"]')].filter((o) => o.querySelector('button[id$="close-btn"]')).map((o) => ({ id: o.id, ok: o.getAttribute('role') === 'dialog' && o.getAttribute('aria-modal') === 'true' && !!(o.getAttribute('aria-label') || o.getAttribute('aria-labelledby')) })).filter((o) => !o.ok));

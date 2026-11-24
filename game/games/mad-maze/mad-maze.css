@@ -533,3 +533,15 @@ body.touch-device:has(#mm-deep) #realm-chase-toast { bottom: calc(200px + 150px 
   html body.touch-device:not(.dungeon-mode) #realm-abilities .realm-ab { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
   html body.touch-device:not(.dungeon-mode) #realm-abilities .realm-ab .nm { display: none; }
 }
+
+/* ID-02 zone danger meter (spec: design/beta/cycle1-ui.md). Lives inside #rw-zone; S writes data-level / --rw-danger / text once a second. */
+#rw-zone .rw-danger { display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-top: 2px; font-size: 11px; font-weight: 700; color: #7be08a; }
+#rw-zone .rw-danger[data-level="tough"] { color: #ffd45a; }
+#rw-zone .rw-danger[data-level="hot"] { color: #ff6a6a; }
+#rw-zone .rw-danger.hidden { display: none; }
+#rw-zone .rw-danger-bar { flex: none; width: 36px; height: 4px; background: rgba(0, 0, 0, 0.55); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7); overflow: hidden; }
+#rw-zone .rw-danger-fill { display: block; height: 100%; width: calc(var(--rw-danger, 0) * 100%); background: currentColor; }
+@media (max-width: 560px) {
+  #rw-zone .rw-danger { display: inline-flex; order: 3; flex: none; margin-top: 0; gap: 3px; }
+  #rw-zone .rw-danger-bar { width: 28px; }
+}

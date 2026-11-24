@@ -2007,5 +2007,17 @@
   "cyc0-isles-leash.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc1-ui-town-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-ui-arena-cards.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-ui-realm-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

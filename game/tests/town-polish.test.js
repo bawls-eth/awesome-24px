@@ -18,7 +18,7 @@ async function open(browser, viewport, touch, prefs) {
   return { ctx, page, real, db };
 }
 async function joinOffline(page) {
-  await page.goto(BASE);
+  await page.goto(BASE + '?hud=online'); // U-01: offline hides Hold to talk; this measures the online HUD (PTT pill vs bag bar)
   await page.fill('#name-input', 'ADMINpolish');
   await page.click('.species-tab');
   await page.click('.avatar-choice');
