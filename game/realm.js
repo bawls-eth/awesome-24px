@@ -1969,10 +1969,52 @@ class RealmArena {
         art.draw(g, a, len, q.x, q.y, q.k, q.flip); g.globalAlpha = ga;
       } else {
         if (t > len + 0.3) { q.active = false; continue; }
+        if (t > len && this._dissolveOn()) { this._dissolveGhost(g, a, len, q, (t - len) / 0.3); continue; }
         const ga = g.globalAlpha; if (t > len) g.globalAlpha = ga * (1 - (t - len) / 0.3);
         art.draw(g, a, t, q.x, q.y, q.k, q.flip); g.globalAlpha = ga;
       }
     }
+  }
+  // Cycle 3 art (G): death dissolve. Over the last 0.3 s (after the death strip's last frame) the corpse no longer fades as a whole: it
+  // breaks up in 2x2 screen-pixel blocks in a 4x4 ordered-dither (Bayer) order, squashing 12 % flatter and 8 % wider at the feet, the
+  // pixel-art way. One shared 256x256 scratch canvas and 17 preset dither patterns (built once); per dissolving ghost: one clear, one
+  // art.draw, one pattern fill (destination-out), one drawImage. ?dissolve=0 (or no canvas) = the old whole-sprite alpha fade.
+  // Test hooks: this.dissolveStats {draws, ms, level}.
+  _dissolveOn() {
+    if (this._dslOn === undefined) {
+      let off = false; try { off = /[?&]dissolve=0(&|$)/.test(location.search); } catch (e) { off = false; }
+      this._dslOn = !off && typeof document !== 'undefined' && !!document.createElement;
+      this.dissolveStats = { on: this._dslOn, draws: 0, ms: 0, level: -1 };
+    }
+    return this._dslOn;
+  }
+  _dissolveKit() {
+    if (this._dslKit) return this._dslKit;
+    const B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]; // 4x4 Bayer thresholds
+    const cv = document.createElement('canvas'); cv.width = cv.height = 256; const c = cv.getContext('2d');
+    const pats = [];
+    for (let lv = 0; lv <= 16; lv++) { // level lv: the cells whose threshold < lv are erased (lv 16 = all)
+      const pc = document.createElement('canvas'); pc.width = pc.height = 8; const x = pc.getContext('2d'); x.fillStyle = '#000';
+      for (let i = 0; i < 16; i++) if (B[i] < lv) x.fillRect((i % 4) * 2, ((i / 4) | 0) * 2, 2, 2);
+      pats.push(c.createPattern(pc, 'repeat'));
+    }
+    this._dslKit = { cv, c, pats };
+    return this._dslKit;
+  }
+  _dissolveGhost(g, a, len, q, p) {
+    const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+    const kit = this._dissolveKit(), c = kit.cv && kit.c, st = this.dissolveStats;
+    if (!c) { this._dslOn = false; return; }
+    const lv = Math.min(16, Math.max(1, Math.ceil(p * 16)));
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, 256, 256);
+    const sx = 1 + 0.08 * p, sy = 1 - 0.12 * p; // squash toward the feet (128, 200 in the scratch)
+    c.setTransform(sx, 0, 0, sy, 128 * (1 - sx), 200 * (1 - sy));
+    this._enemyArt.draw(c, a, len, 128, 200, q.k, q.flip);
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = 'destination-out'; c.fillStyle = kit.pats[lv]; c.fillRect(0, 0, 256, 256);
+    c.globalCompositeOperation = 'source-over';
+    g.drawImage(kit.cv, Math.round(q.x - 128), Math.round(q.y - 200));
+    st.draws++; st.level = lv; st.ms += (typeof performance !== 'undefined' ? performance.now() : 0) - t0;
   }
   // Draws one enemy's creature animation; per-enemy state lives on the pooled enemy object (no allocation). Returns true when drawn.
   // Timing uses e.t (advanced only while the game runs), so pausing freezes the animation.

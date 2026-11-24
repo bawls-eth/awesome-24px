@@ -2099,5 +2099,9 @@
   "cyc3-art-town-label-icons.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-art-death-dissolve.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

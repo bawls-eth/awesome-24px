@@ -33,6 +33,29 @@ const SCENES = {
   realm: realm(''),
   'isles-meadow': async (p) => { await p.goto(isles('&isle=meadow')); await islesReady(p); },
   'isles-jungle': async (p) => { await p.goto(isles('&isle=jungle')); await islesReady(p); },
+  // a Realm enemy's death ghost at 0, 25, 50, 75 % of its last 0.3 s, 4x, on grass; 'before' = ?dissolve=0 (the old alpha fade)
+  dissolve: async (p) => {
+    await p.goto(origin + '/game/games/mad-maze/index.html?test=1&offline=1' + (BEFORE ? '&dissolve=0' : ''));
+    await p.waitForFunction(() => window.__mm && window.__mm.arena && window.__mm.arena._enemyArt, null, { timeout: 20000 });
+    await p.evaluate(() => {
+      const a = window.__mm.arena; a.setPaused && a.setPaused(true);
+      const types = ['ring', 'aimed', 'spiral']; const out = document.createElement('canvas'); out.width = 4 * 4 * 80 + 20; out.height = 3 * 4 * 80 + 20;
+      const o = out.getContext('2d'); o.imageSmoothingEnabled = false; o.fillStyle = '#4f9a45'; o.fillRect(0, 0, out.width, out.height);
+      types.forEach((ty, row) => {
+        a._edGhosts.forEach((q) => { q.active = false; });
+        const e = a.spawnEnemy(ty, 300, 200); e.cd = 99; e.t = 0.5;
+        const tmp = document.createElement('canvas'); tmp.width = tmp.height = 400; a._drawEnemyArt(tmp.getContext('2d'), e, { r: 15 }); e.hp = 1; a._hitEnemy(e, 999);
+        const q = a._edGhosts.find((x) => x.active); if (!q) return; const an = a._enemyArt.anim(q.name, 'death', q.dir), len = an.frames / an.fps;
+        [0.0, 0.25, 0.5, 0.75].forEach((f, col) => {
+          q.active = true; q.t0 = a.clock - (len + (f ? f * 0.3 : -0.001));
+          const c = document.createElement('canvas'); c.width = a.W; c.height = a.H; const g = c.getContext('2d'); a._drawEnemyGhosts(g);
+          o.drawImage(c, q.x - 40, q.y - 64, 80, 80, 10 + col * 320, 10 + row * 320, 320, 320);
+        });
+      });
+      Object.assign(out.style, { position: 'fixed', left: '0', top: '0', zIndex: 99999, maxWidth: '100vw', imageRendering: 'pixelated' }); document.body.appendChild(out);
+    });
+    await p.waitForTimeout(300);
+  },
   'isles-tundra': async (p) => { await p.goto(isles('&isle=tundra')); await islesReady(p); },
 };
 (async () => {
