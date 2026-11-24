@@ -35,6 +35,9 @@ const RM_ENEMIES = {
   boss: { name: 'Gloomheart', hp: 120, r: 34, shards: 40, color: '#ff5fa2', speed: 50 },
 };
 const RM_ENEMY_BULLET_DAMAGE = 8;
+// ID-14 (cycle 3 S): draw-only hit pause. A hit of at least RM_HIT_PAUSE_FRAC of max HP holds the last drawn frame for RM_HIT_PAUSE_MS;
+// the sim (_update: clock, bullets, timers) keeps running every frame. Off under reduce motion and with ?hitpause=0.
+const RM_HIT_PAUSE_MS = 50; const RM_HIT_PAUSE_FRAC = 0.15;
 // ---- biomes, wanderers and the boss (B3) ----
 const RM_BIOMES = [
   { id: 'hollow', name: 'Violet Hollow', border: 'rgba(179,107,255,0.55)', floor: [26, 18, 50], hazard: null, mix: ['aimed', 'ring', 'spiral'], drifter: 'wisp' },
@@ -698,6 +701,8 @@ class RealmArena {
     this._padBack = false; // pad Back / Select (button 8): restart edge (fall screen or open menu only)
     this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
+    let hpq = ''; try { hpq = location.search || ''; } catch (e) { hpq = ''; }
+    this._hitPauseOn = !/[?&]hitpause=0(&|$)/.test(hpq); this._hitPauseAt = -1; this.hitPausedFrames = 0; // ID-14
     // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
     this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
     this._afT = null; this._afX = 0; this._afY = 0; this._afVx = 0; this._afVy = 0; // auto-fire target + its smoothed velocity (lead)
@@ -2502,7 +2507,9 @@ class RealmArena {
     if (!(this._rzAt && now - this._rzAt < 1000)) this._perfFeed(raw); // R4: frames within 1 s of a resize / rotation are not render cost
     this._update(dt);
     if (this.world || this._dv) this._camStep(dt);
-    this._draw();
+    // ID-14: the frame of a big hit is drawn, then the canvas keeps it for RM_HIT_PAUSE_MS (no redraw); the sim above ran as always
+    if (this._hitPauseAt >= 0 && now > this._hitPauseAt && now < this._hitPauseAt + RM_HIT_PAUSE_MS) this.hitPausedFrames++;
+    else this._draw();
     if (this.active) this._raf = requestAnimationFrame(this._loop); // a death exit inside _update must not leave a second loop
   };
 
@@ -3302,6 +3309,7 @@ class RealmArena {
     let hpFloor = 0; // b08-r2-04: the first-run coach may soften hits ({ mult, floor }) so a new player never falls before they have played
     if (typeof this.hurtGuard === 'function') { let g = null; try { g = this.hurtGuard(dmg); } catch (e) { g = null; } if (g) { if (g.mult > 0 && g.mult < 1) dmg = Math.max(1, Math.round(dmg * g.mult)); if (g.floor > 0) hpFloor = Math.min(p.hp, g.floor); } }
     p.hp = Math.max(hpFloor, p.hp - dmg);
+    if (this._hitPauseOn && !this._reduced && dmg >= RM_HIT_PAUSE_FRAC * (this.stats.maxHp || 1)) this._hitPauseAt = this._lastT || 0; // ID-14: draw-only hold (see _loop)
     this._heroHurtAt = performance.now() / 1000; this._gHurtT = this._stT; // _gHurtT: game time of the last hit (G8 regen waits 3 s)
     this._snd('hurt');
     p.iframes = this.stats.iframes;

@@ -5,7 +5,7 @@ let failed = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' ' + extra)); if (!cond) failed++; }
 
 check('tier 1 and 2 have no windup', T.forVolley('ring', 1, false).windup === 0 && T.forVolley('ring', 2, false).windup === 0);
-check('tier 3+ windup is 0.35s', T.forVolley('ring', 3, false).windup === 0.35 && T.forVolley('aimed', 5, false).windup === 0.35);
+check('tier 3+ windup is 0.4s (ID-14 audit: raised from 0.35)', T.forVolley('ring', 3, false).windup === 0.4 && T.forVolley('aimed', 5, false).windup === 0.4);
 check('bosses windup is 0.6s at any tier', T.forVolley('ring', 1, true).windup === 0.6 && T.forVolley('ring', 4, true).windup === 0.6);
 check('shapes: ring / line / cone', T.forVolley('ring', 3, false).shape === 'ring' && T.forVolley('aimed', 3, false).shape === 'line' && T.forVolley('fan', 3, false).shape === 'cone');
 check('pattern object accepted', T.forVolley({ kind: 'spread' }, 3, false).shape === 'cone' && T.forVolley({ type: 'line' }, 3, false).shape === 'line');
@@ -28,7 +28,7 @@ let safe = true;
 for (const h of [null, undefined, NaN, 'x', {}, [], 1e9, -1, Infinity, '3']) {
   try {
     const d = T.forVolley(h, h, h, h);
-    if (!['ring', 'line', 'cone'].includes(d.shape) || ![0, 0.35, 0.6].includes(d.windup) || typeof d.color !== 'string') safe = false;
+    if (!['ring', 'line', 'cone'].includes(d.shape) || ![0, 0.4, 0.6].includes(d.windup) || typeof d.color !== 'string') safe = false;
   } catch (e) { safe = false; }
 }
 check('hostile input never throws and yields a valid descriptor', safe);

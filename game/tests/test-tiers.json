@@ -2103,5 +2103,17 @@
   "cyc3-errands-wired.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-bond-hearts.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-hit-pause.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-telegraph-audit.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

@@ -3,7 +3,9 @@
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./mm-access.js'));
   else root.MMTelegraph = factory(root.MMAccess);
 })(typeof self !== 'undefined' ? self : this, function (Access) {
-  const WINDUP_T3 = 0.35, WINDUP_BOSS = 0.6, FALLBACK = '#ffb347';
+  const WINDUP_T3 = 0.4, WINDUP_BOSS = 0.6, FALLBACK = '#ffb347';
+  // ID-14 audit (cycle 3 S): WINDUP_T3 raised from 0.35 to 0.4 s so every telegraphed volley warns for at least 0.4 s (draw only: the
+  // wind-up is shown over the last part of the existing cooldown; no timing changes).
   const SHAPES = { ring: 'ring', burst: 'ring', nova: 'ring', spiral: 'ring', radial: 'ring', aimed: 'line', line: 'line', beam: 'line', shot: 'line', fan: 'cone', spread: 'cone', cone: 'cone', arc: 'cone' };
   const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   function shapeFor(pattern) {
