@@ -256,6 +256,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "cyc0-art-black-sand.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc0-art-hub-icons.test.js": {
     "class": "browser",
     "tier": "full"

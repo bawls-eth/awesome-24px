@@ -292,6 +292,8 @@
     const c = cv.getContext('2d');
     // 8B: the code-drawn terrain gets seeded detail pixels (8 tile variants) and stepped edges, once per chunk bake
     if (code && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.detail) window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
+    // cycle 0 art (b12-r2-09): warm volcanic black sand drawn over the baked b30 / code tiles (overlay; the PNGs stay as delivered). ?warmsand=0
+    if (WARM_SAND && window.MMIsleArt && window.MMIsleArt.warmSand) sandWarmed += window.MMIsleArt.warmSand(c, world.terrain, W, cx, cy, { names: NAMES, tile: TILE, ch: CH });
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
     const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
     for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
@@ -306,6 +308,8 @@
     return cv;
   }
   const propsBaked = { png: 0, code: 0 }; // test handle counters (bake time only)
+  const WARM_SAND = Q.get('warmsand') !== '0';
+  let sandWarmed = 0; // black-sand tiles re-lit by the warm overlay (bake time only)
   function chunkCanvas(cx, cy) {
     return chunkCache.get(cx + ',' + cy, () => { if (bakesLeft <= 0) return null; bakesLeft--; return ART ? bakeArt(cx, cy) : bakeFlat(cx, cy); });
   }
@@ -3577,6 +3581,19 @@
       stripSize: (kind, act, dir) => { const s = STRIPS && STRIPS.has(kind) ? STRIPS.get(kind, act || 'idle', dir | 0) : null; return s ? { id: s.id, w: s.w, h: s.h, ax: s.ax, ay: s.ay, top: s.top, span: s.span } : null; },
       propsReady: () => (IA ? IA.ready.then(() => ({ props: IA.propsActive() ? Object.keys(IA.props()).sort() : [], tiles: IA.active() })) : { props: [], tiles: false }),
       propsBaked: () => Object.assign({}, propsBaked),
+      sandWarmed: () => ({ on: WARM_SAND, tiles: sandWarmed }), // cycle 0 art
+      // cycle 0 art: mean colour of the baked black-sand tiles in the chunk under the hero (null when none baked there)
+      sandColor: () => {
+        const id = NAMES.indexOf('black_sand'), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
+        const cv = chunkCache.get(cx + ',' + cy, () => null); if (!cv || id < 0) return null;
+        const c = cv.getContext('2d'); let r = 0, g = 0, b = 0, n = 0;
+        for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+          if (O.tileAt(world, cx * CH + tx, cy * CH + ty) !== id) continue;
+          const d = c.getImageData(tx * TILE, ty * TILE, TILE, TILE).data;
+          for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+        }
+        return n ? { r: r / n, g: g / n, b: b / n, px: n } : null;
+      },
       craftIcons: () => Object.keys(craftIcon).sort(),
       isleArt: () => (IA ? IA.ready.then(() => ({ pack: IA.pack, tiles: IA.active(), props: IA.propsActive() ? Object.keys(IA.props()).sort() : [] })) : { pack: '', tiles: false, props: [] }),
       deathsShown: () => deathsShown,
