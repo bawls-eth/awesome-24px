@@ -1,12 +1,12 @@
-// OPEN item replay (not in the test tiers: this folder is outside the *.test.js glob). b03-r2-05 (P2, owner D4).
+// b03-r2-05 (P2, owner D4): D5's open replay, promoted to a test once the fix landed (R4 D4: the pad sits in the band below the room).
 // Round 3 (ce67ff7) moved the floor-choice card off the ability pad, but the tester's first symptom is unchanged on the round-3 tip:
 // on a 390x844 phone the 2x2 ability pad (250..370 x 562..682) lies on the bottom-right corner of the dungeon room (0..389 x 215..721)
 // and hides 120x120 px of the floor, where enemies and doors can be.
 // This replay is RED on d08838a (measured by D5). When the fix lands: move this file to game/tests/beta-r4-dungeon-pad.test.js,
 // register it in test-tiers.json (class browser, tier full) and tell D5 in fixes/r4-d4.md.
-// Run: BASE=http://localhost:8440/game/index.html node game/tests/r4-open/b03-r2-05-pad.replay.js
+// Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-dungeon-pad.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('../helpers');
+const { check, done, blockDb } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const DUNGEON = ORIGIN + '/game/games/mad-maze/index.html?mode=dungeon&test=1&lv=2&biome=crypt&seed=31';
 

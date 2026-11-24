@@ -504,3 +504,15 @@ body.touch-device:has(#mm-deep) #realm-chase-toast { bottom: calc(200px + 150px 
 @media (orientation: landscape) and (max-height: 500px) {
   body #realm-info { flex-wrap: wrap; white-space: normal; gap: 0 8px; row-gap: 0; line-height: 1.15; max-height: 44px; align-content: center; font-size: 12px; }
 }
+
+/* R4 D4 (b03-r2-05, phone portrait dungeon): the 2x2 ability pad sat on the room's lower-right floor (120x120 px of the room
+   hidden at 390x844 and 360x640). It now lives in the free band BELOW the room, between the two sticks: a compact 2x2 of
+   44 px buttons with the gear button beside it (sticks moved 12 px out to make room). Nothing of the room canvas is covered. */
+@media (max-width: 600px) and (orientation: portrait) {
+  html body.dungeon-mode.touch-device #realm-stick-move { left: calc(8px + env(safe-area-inset-left, 0px)); }
+  html body.dungeon-mode.touch-device #realm-stick-aim { right: calc(8px + env(safe-area-inset-right, 0px)); }
+  html body.dungeon-mode.touch-device #realm-abilities { left: calc(50% - 70px); right: auto; top: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); transform: none; grid-template-columns: repeat(2, 44px); gap: 4px; }
+  html body.dungeon-mode.touch-device #realm-abilities .realm-ab { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  html body.dungeon-mode.touch-device #realm-abilities .realm-ab .nm { display: none; } /* the level / name chip does not fit 44 px; the icon, key and cooldown stay */
+  html body.dungeon-mode.touch-device #mm-gear-btn { left: calc(50% + 26px); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}

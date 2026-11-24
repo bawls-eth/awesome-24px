@@ -1909,5 +1909,9 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "beta-r4-dungeon-pad.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
