@@ -2259,5 +2259,21 @@
   "cyc5-lead-backup-key.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc5-ui-isles-compact.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc5-ui-nexus-board-phone.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc5-ui-town-map.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc5-ui-195-jam-deepdelve.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

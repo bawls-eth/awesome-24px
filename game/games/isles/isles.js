@@ -505,6 +505,20 @@
     if (near) { howtoHide(); howtoStat.auto++; }
   }
   const howtoStat = { auto: 0 };
+  // cyc5-ui (b06-r3-04): at 195 px the action column (Decor / Soothe / Sail) grows up into the hint line. On the 0.5 s tick, a hint
+  // that would touch a visible action button is lifted to sit just above the column (and dropped back when the column shrinks).
+  function fitHint() {
+    const h = $('hint'); if (!h || !document.body.classList.contains('touch')) return;
+    if (h.style.bottom) h.style.bottom = '';
+    if (h.hidden) return;
+    const hr = h.getBoundingClientRect();
+    let top = Infinity;
+    document.querySelectorAll('#acts button, #touch-btns button').forEach((b) => {
+      if (b.hidden || !b.offsetParent) return; const r = b.getBoundingClientRect();
+      if (r.width && r.left < hr.right && hr.left < r.right && r.top < hr.bottom && hr.top < r.bottom) top = Math.min(top, r.top);
+    });
+    if (top < Infinity) h.style.bottom = Math.max(0, Math.round(innerHeight - top + 6)) + 'px';
+  }
   // R4-D2 (b06-r2-05): islands put the nearest group up to 20+ tiles from the arrival point (meadow: 22), so the first screen was empty.
   // When nothing is within 8 tiles after the first tick, 2-3 creatures of the nearest CALM small species (never hostile, never L / XL)
   // stand 8.5-11 tiles above or below the hero (|dx| <= 3): on screen on a phone (portrait) and on desktop, but outside the 8-tile
@@ -3047,7 +3061,7 @@
     if (panel.hidden) { cue('ui_open'); const a = document.activeElement; panelOpener = a && a !== document.body && !panel.contains(a) ? a : null; }
     panel.hidden = false;
     document.body.classList.add('panel-open'); // BB: the hint line hides under an open panel
-    $('howto').hidden = true; // 8B: the first-visit how-to never sits under a panel
+    if (howtoHide) howtoHide(); else $('howto').hidden = true; // 8B: the first-visit how-to never sits under a panel
     paused = true;
     if (window.MMNav) { try { window.MMNav.close(); } catch (e) { /* ignore */ } } // never two dialogs at once
     // Cycle 5 L (b15-13): an open panel owns the shared Back entry, so the browser / phone Back closes it and the island stays
@@ -3449,7 +3463,7 @@
     return def.name + ' is shy. Walk up slowly and do not attack.';
   }
   let toastT = 0;
-  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
+  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); document.body.classList.add('toast-on'); clearTimeout(toastT); toastT = setTimeout(() => { el.classList.remove('on'); document.body.classList.remove('toast-on'); }, 2200); } // cyc5-ui: toast-on lets the phone hint line wait (staggered)
 
   // ---------- save (own key, throttled) ----------
   let dirty = true, saveT = 0;
@@ -3577,12 +3591,22 @@
     const box = $('howto');
     if (!FIRST_VISIT) return;
     box.hidden = false;
-    const hide = () => { box.hidden = true; howtoHide = null; };
+    document.body.classList.add('howto-open');
+    let pinned = false; // cyc5-ui: opened with Tips: stays until closed (X) or a fight needs the screen
+    const hide = () => { box.hidden = true; howtoHide = null; document.body.classList.remove('howto-open'); };
+    const soft = () => { if (!pinned) hide(); };
     howtoHide = hide; // R4-D2 (b06-r2-09): also closed by a boss lair / a hostile creature in view and by the lift-off (howtoTick)
-    setTimeout(hide, 7000);
+    setTimeout(soft, 7000);
     const x = $('howto-close'); if (x) x.addEventListener('click', hide); // W-18 (b15-14): a real close control (44 px), keyboard / screen reader reachable
-    window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
-    window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
+    // cyc5-ui (b05-r3-05, b06-r3-04): on a phone (<= 600 px wide) the card starts as one compact row; Tips opens / folds the list
+    const more = $('howto-more');
+    if (more && window.innerWidth <= 600) {
+      more.hidden = false; box.classList.add('compact'); more.setAttribute('aria-expanded', 'false');
+      more.addEventListener('click', () => { const open = box.classList.toggle('compact') === false; more.setAttribute('aria-expanded', String(open)); pinned = open; if (!open) setTimeout(soft, 2500); });
+    }
+    const inCard = (e) => !!(e && e.target && e.target.closest && e.target.closest('#howto'));
+    window.addEventListener('keydown', function once(e) { if (inCard(e)) return; setTimeout(soft, 2500); window.removeEventListener('keydown', once); });
+    window.addEventListener('pointerdown', function once(e) { if (inCard(e)) return; setTimeout(soft, 2500); window.removeEventListener('pointerdown', once); });
   })();
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
@@ -3647,7 +3671,7 @@
     if (!GFX.fogHz) revealFog(); else if ((fogAcc += dt) >= 1 / GFX.fogHz - 1e-9) { fogAcc = 0; revealFog(); }
     nodeTick();
     spawnT -= dt;
-    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); sparkTick(); howtoTick(); }
+    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); sparkTick(); howtoTick(); fitHint(); }
     stepCreatures(dt);
     if (bz.st) bossStep(dt);
     if (ENV_ON) envStep(dt);
