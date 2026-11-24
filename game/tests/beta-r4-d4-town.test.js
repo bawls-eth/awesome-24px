@@ -26,6 +26,10 @@ const hit = (a, b) => !!(a && b && a.x < b.r - 0.5 && b.x < a.r - 0.5 && a.y < b
   await exposeGame(page);
   await page.goto(BASE + '?from=hub');
 
+  // a11y: every Town overlay card (the *-overlay sheets with a close button) is announced as a named modal dialog
+  const dl = await page.evaluate(() => [...document.querySelectorAll('[id$="-overlay"]')].filter((o) => o.querySelector('button[id$="close-btn"]')).map((o) => ({ id: o.id, ok: o.getAttribute('role') === 'dialog' && o.getAttribute('aria-modal') === 'true' && !!(o.getAttribute('aria-label') || o.getAttribute('aria-labelledby')) })).filter((o) => !o.ok));
+  check('every Town overlay with a close button is role=dialog, aria-modal and named', dl.length === 0, JSON.stringify(dl));
+
   // b07-r2-04
   const pick = await page.evaluate(() => ({ label: (document.querySelector('label[id="hero-pick-label"]') || {}).textContent || '', tabs: [...document.querySelectorAll('#species-tabs .species-tab')].map((b) => b.textContent), old: /villager/i.test(document.getElementById('join-overlay').textContent.match(/Pick your \w+/) || '') }));
   check('join card: "Pick your hero" (no "Pick your villager")', pick.label === 'Pick your hero' && !pick.old, JSON.stringify(pick));
