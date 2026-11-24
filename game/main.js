@@ -1223,7 +1223,7 @@ const PANEL_PHONE_QUERY = '(max-width: 600px), (max-height: 500px) and (pointer:
 // and a villager's birthday (when there is one). Finishing every chore that
 // applies today pays a one-time bonus. Local only; paid-day lives in the
 // additive `dailies: {day, paid, days}` save key.
-const DAILY_BONUS = 5;
+const DAILY_BONUS = 40; // cycle 4 D: was 5 (15 s of gathering at 33 stars/min); 40 is about 1.2 min, once a day, and the only chore payout above the daily quest (~11) so finishing the card is worth a detour
 // ---------- villager birthdays ----------
 // Every BIRTHDAY_CYCLE_DAYS (UTC) days one villager has a birthday: purely
 // deterministic (day number -> villager), so it needs no network and is the

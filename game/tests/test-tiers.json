@@ -2148,6 +2148,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc4-daily-bonus.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc3-ui-notebook.test.js": {
     "class": "browser",
     "tier": "full"
