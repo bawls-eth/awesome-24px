@@ -2320,7 +2320,11 @@
       setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
     let nxStallKind = 'shop';
-    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    // cyc4 U: the board / stall replaces an open notebook; when focus was inside the notebook (its Close), it moves to the new panel's
+    // first button instead of falling to <body> (the notebook is emptied). Focus anywhere else is left alone.
+    const nbHadFocus = () => !!(nxDom && nxDom.notebook && !nxDom.notebook.classList.contains('hidden') && nxDom.notebook.contains(document.activeElement));
+    const nxFocusFirst = (el) => { const f = el && el.querySelector('button:not([disabled])'); if (f) { try { f.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } };
+    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); const had = nbHadFocus(); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); if (had) nxFocusFirst(nxDom.stall); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
     // nxReturn remembers that origin only for a panel opened from the stall; any other panel, a death or a leave forgets it.
     let nxReturn = null;
@@ -2757,7 +2761,7 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
+    function nxBoardOpen() { nxBuild(); const had = nbHadFocus(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); if (had) nxFocusFirst(nxDom.board); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {
