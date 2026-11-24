@@ -203,3 +203,25 @@ Evidence tags as above; [M1] = measured in cycle 1 play (`beta/cycle1-design.md`
 - `mm-labyrinth` (seeded 12x12 cells, Hedge Tide timer) and the `MMDaily` Daily Maze seed exist but no page loads them. A 2-minute maze run with a rising hedge tide, swipe on phone. Gives arcade variety and wires L-13's mm-labyrinth. L / medium (new page, hub card, medals key, test).
 
 Sources (generic queries, cycle 1): [feeding-based taming in cozy games](https://berkeleyhistoricalsociety.org/disney-dreamlight-valley/), [Of Peaks and Tides taming wiki](https://thegameswiki.com/of-peaks-and-tides/wiki/taming), [daily runs, shared seed and modifiers](https://gamedeveloper.com/design/the-24-hour-ticket-examining-daily-runs-), [runner progression](https://gamedeveloper.com/design/studying-gameplay-progression-on-runners).
+
+## Cycle 3 ideas (D, all `proposed`; generic web queries only; evidence [M3] = `beta/cycle3-design.md`)
+
+| ID | Idea | Size | Risk | Status |
+|---|---|---|---|---|
+| ID-34 | Show-hitbox option for the hero (small core dot, device pref) | S | low | proposed |
+| ID-35 | Bolt colour roles: one colour per threat class (aimed / ring / spiral / minion), never two colours that behave the same | S | low | proposed |
+| ID-36 | Trial of Six ramp: fights 1-3 stay, fights 4-6 add one pattern layer each, and a carried-HP readout | M | medium | proposed |
+| ID-37 | Gear sink ladder: reforge shards 25 x (t-6) (shipped as data in cycle 3) plus a Godlands-only shard sink that never touches outcomes | M | low | proposed |
+| ID-38 | Cozy 20-minute day: a Town "that's the day" card once the chores are done (names tomorrow's board, no streak, no timer) | S | low | proposed |
+| ID-39 | Species temperaments on the Isles: each tameable has a liked verb (feed / sing / ride) shown in the journal after first sighting; bond grows faster with it | M | low | proposed |
+| ID-40 | Dust-first reforge hint: the Forge says which side is short ("12 more kills of dust, shards are enough") | S | low | proposed |
+
+- ID-34: the hit radius is 15 px (RM_PLAYER.r 11 + 4) against a much larger drawn hero [M3]; players of bullet games ask for a visible hitbox (itch.io dev threads) and Brotato ships Projectile Visibility under Visual Aids. A dot only, no change to the hit test.
+- ID-35: Danmaku guides and player reviews: many bolt colours that behave the same read as clutter; readable bosses use colour to say what a bolt does. Audit `bolt-art` colours against the pattern classes; pair with ID-05.
+- ID-36: [M3] fights are flat at 66-80 s and cost 0 HP at Lv 20 with a common wand when the dodge samples at 55 Hz or better. The Game Developer ARPG readability article: raise difficulty by adding patterns, never by lowering readability.
+- ID-37: sources and sinks (dev.to economy guide: inflation = sources outrun sinks; crafting is the main sink; perfect crafted items reachable but rarely reached). [M3]: Godlands makes 9.6 shards and 4.6 dust per kill while a reforge cost 3 shards.
+- ID-38: Cozy Grove ends its loop at about 20 minutes and tells players to log off (Vice); Stardew uses daily goals without timers. Fits the no-streak rule: a closing card, not a counter.
+- ID-39: Of Peaks and Tides (care-based bond: feeding, grooming, travelling) and a RuneScape taming proposal (favourite foods) both make bond a view of care; ID-07 defines the hearts, this adds the liked verb.
+- ID-40: from the economy sim, dust (salvage) not shards is the pacing gate of a reforge (13-22 Godlands kills for dust against 8-13 for shards).
+
+Sources (generic queries, cycle 3): [Designing for difficulty readability in ARPGs](https://www.gamedeveloper.com/game-platforms/designing-for-difficulty-readability-in-arpgs), [bullet hell bosses readability](https://choost-site.pages.dev/blog/bullet-hell-games-best-bosses), [visible hitbox thread](https://itch.io/post/14220428), [Brotato accessibility options](https://www.ludo.guide/guide/brotato/getting-started/controls-keybindings/accessibility-options), [Cozy Grove logging off (Vice)](https://www.vice.com/en/article/bvx9vw/cozy-grove-is-ok-telling-players-to-log-off-its-delightful), [stress-free game loop](https://dev.to/tatomamo_games/designing-a-stress-free-game-loop-balancing-engagement-vs-pressure-2976), [game economy sources and sinks](https://dev.to/hiroshi_takamura_c851fe71/how-to-design-a-game-economy-sources-sinks-loops-and-balance-j05), [roguelite meta progression](https://bugnet.io/blog/how-to-design-a-roguelite-meta-progression), [Of Peaks and Tides taming](https://thegameswiki.com/of-peaks-and-tides/wiki/taming).

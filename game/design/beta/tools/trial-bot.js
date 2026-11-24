@@ -1,8 +1,8 @@
 // Cycle 2 D: Trial of Six bot. Fires through the REAL input path (page.mouse.move for aim, keyboard Space held to fire, keyboard WASD to move),
 // dodges enemy bolts by short-horizon lookahead (9 move options, 0.45 s), orbits the boss at ~240 px. Offline (blockDb-style abort + WebSocket close), 0 DB requests.
-// Run: BASE_ORIGIN=http://localhost:9724 NODE_PATH=$(npm root -g) node trial-bot.js <level> <rarity> <trials>
+// Run: BASE_ORIGIN=http://localhost:9734 NODE_PATH=$(npm root -g) node trial-bot.js <level> <rarity> <trials>
 const { chromium } = require('playwright');
-const ORIGIN = process.env.BASE_ORIGIN || 'http://localhost:9724';
+const ORIGIN = process.env.BASE_ORIGIN || 'http://localhost:9734';
 const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345&qdate=2030-05-01';
 const LEVEL = +process.argv[2] || 20, RAR = +process.argv[3] || 0, TRIALS = +process.argv[4] || 2;
 const sv = { realm: { level: LEVEL, xp: 0, shards: 50, bestWave: 2, items: [{ n: 1, id: 'sparkwand', r: RAR }], nextUid: 2, eq: { weapon: 1 }, gv: 1, gp: { b: 0, d: 0 } } };
@@ -20,6 +20,8 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
   await page.evaluate(([v, w]) => { localStorage.clear(); localStorage.setItem('pixeltown-save-v1', v); localStorage.setItem('pixeltown-realm-v1', w); localStorage.setItem('mm-aim-assist', '0'); }, [JSON.stringify(sv), JSON.stringify({ gp: sv.realm.gp })]);
   await page.goto(WORLD);
   await page.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 30000 });
+  // Cycle 3 instrumentation: count REAL _hitPlayer calls (hits that the hp delta could miss: shield soaks, hurtGuard floor) and every bolt-to-hero distance.
+  await page.evaluate(() => { const a = window.__mm.arena; window.__hp = { calls: 0, shield: 0, dmgs: [] }; const o = a._hitPlayer.bind(a); a._hitPlayer = function (d) { window.__hp.calls++; if (a.shield && a.shield.hits > 0) window.__hp.shield++; window.__hp.dmgs.push(d); return o(d); }; });
   await page.mouse.move(500, 300);
   const out = [];
   const held = new Set();
@@ -34,16 +36,17 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
       await page.waitForTimeout(200);
       const info = await E(page, (a, w) => { const e = w.rush.entity(); return e ? { boss: e.art, hp: e.maxHp, hp0: a.player.hp, maxHp: a.stats.maxHp, dmgMul: e.dmgMul } : null; });
       if (!info) { trial.fights.push({ step, error: 'no boss' }); break; }
-      const t0 = Date.now(); let dmg = 0, last = info.hp0, hits = 0, outcome = 'timeout', n = 0;
+      const t0 = Date.now(); let dmg = 0, last = info.hp0, hits = 0, outcome = 'timeout', n = 0; const sec = {}; let minD = 1e9, nearMiss = 0, prR = 0, seenIds = new Set(); await page.evaluate(() => { window.__hp.calls = 0; window.__hp.shield = 0; window.__hp.dmgs = []; });
       while (Date.now() - t0 < 100000) {
         const s = await E(page, (a, w) => {
           const e = w.rush.entity(); const st = w.rush.state(); const p = a.player;
           const cr = a.canvas.getBoundingClientRect();
-          const bl = []; for (const b of a.eBullets) if (b.active) { const d = Math.hypot(b.x - p.x, b.y - p.y); if (d < 260) bl.push([b.x, b.y, b.vx, b.vy]); }
-          return { alive: !!e && e.active, hp: p.hp, st, ex: e ? e.x : 0, ey: e ? e.y : 0, px: p.x, py: p.y, cx: a.camera.x, cy: a.camera.y, cw: cr.width, ch: cr.height, cl: cr.left, ct: cr.top, W: a._dv ? a._dv.vw : a.W, H: a.H, bl, dead: a.state === 'dead' || !st.on };
+          const bl = []; let live = 0, md = 1e9; for (const b of a.eBullets) if (b.active) { live++; const d = Math.hypot(b.x - p.x, b.y - p.y); if (d < md) md = d; if (d < 260) bl.push([b.x, b.y, b.vx, b.vy]); }
+          return { live, md, pr: 14 + 4, alive: !!e && e.active, hp: p.hp, st, ex: e ? e.x : 0, ey: e ? e.y : 0, px: p.x, py: p.y, cx: a.camera.x, cy: a.camera.y, cw: cr.width, ch: cr.height, cl: cr.left, ct: cr.top, W: a._dv ? a._dv.vw : a.W, H: a.H, bl, dead: a.state === 'dead' || !st.on };
         });
         if (s.dead) { outcome = 'died'; break; }
         if (s.st.phase !== 'fight' || !s.alive) { outcome = 'won'; break; }
+        { const k = Math.floor((Date.now() - t0) / 1000); const r = sec[k] || (sec[k] = { n: 0, liveSum: 0, liveMax: 0, md: 1e9 }); r.n++; r.liveSum += s.live; r.liveMax = Math.max(r.liveMax, s.live); r.md = Math.min(r.md, s.md); minD = Math.min(minD, s.md); if (s.md < 40) nearMiss++; }
         if (s.hp < last) { dmg += last - s.hp; hits++; } last = s.hp;
         const sx = (s.ex - s.cx) / s.W * s.cw + s.cl, sy = (s.ey - s.cy) / s.H * s.ch + s.ct;
         await page.mouse.move(Math.max(0, Math.min(999, sx)), Math.max(0, Math.min(699, sy)));
@@ -66,8 +69,9 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
         n++;
       }
       const secs = +((Date.now() - t0) / 1000).toFixed(1);
+      const hpc = await page.evaluate(() => window.__hp); const secs2 = Object.keys(sec).length; const liveAvg = +(Object.values(sec).reduce((x, r) => x + r.liveSum / r.n, 0) / secs2).toFixed(1); const liveMaxAll = Math.max(...Object.values(sec).map((r) => r.liveMax)); const loopHz = +(n / secs).toFixed(1);
       const left = await E(page, (a, w) => { const e = w.rush.entity(); return e ? e.hp : 0; });
-      trial.fights.push({ step, boss: info.boss, bossHp: info.hp, maxHp: info.maxHp, dmgMul: info.dmgMul, secs, dmgTaken: dmg, hits, outcome, bossHpLeft: left, loops: n });
+      trial.fights.push({ step, boss: info.boss, bossHp: info.hp, maxHp: info.maxHp, dmgMul: info.dmgMul, secs, dmgTaken: dmg, hits, outcome, bossHpLeft: left, loops: n, loopHz, boltsAliveAvg: liveAvg, boltsAliveMax: liveMaxAll, closestPx: +minD.toFixed(1), samplesWithin40px: nearMiss, hitPlayerCalls: hpc.calls, shieldSoaks: hpc.shield, hitDmgs: hpc.dmgs, perSec: Object.keys(sec).filter((k) => k % 10 === 0).map((k) => [+k, +(sec[k].liveSum / sec[k].n).toFixed(1), sec[k].liveMax, +sec[k].md.toFixed(0)]) });
       console.log(JSON.stringify(trial.fights[trial.fights.length - 1]));
       if (outcome !== 'won') break;
     }
