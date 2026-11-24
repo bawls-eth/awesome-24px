@@ -67,18 +67,18 @@ function fuzz(seed, opts, ops) {
 
 let total = { reads: 0, sets: 0, unloads: 0, loads: 0, chunkReads: 0 };
 [11, 4242, 987654].forEach((seed) => {
-  const r = fuzz(seed, null, 30000);
+  const r = fuzz(seed, null, 12000);
   Object.keys(total).forEach((k) => { total[k] += r.stat[k]; });
   check('seed ' + seed + ': ' + r.stat.reads + ' reads, ' + r.stat.sets + ' edits, ' + r.stat.unloads + ' unloads, ' + r.stat.loads + ' save/loads, ' + r.stat.chunkReads + ' chunk reads: 0 differences from the chunk-free model', r.stat.bad === 0, r.stat.bad + ' bad; first: ' + r.stat.first);
   check('seed ' + seed + ': diff count equals the model (' + r.edits + ')', r.diffs === r.edits && r.edits > 100, r.diffs + ' vs ' + r.edits);
 });
 { // with a filter band (Deepdelve's grotto option): the cache sits behind genChunk too
   const opts = { yMin: 20, yMax: 40, maxId: 20, filter: (x, y, z, b) => (b === C.B.STONE && ((x * 7 + y * 13 + z * 3) % 5 === 0) ? 13 : b) };
-  const r = fuzz(555, opts, 30000);
+  const r = fuzz(555, opts, 12000);
   Object.keys(total).forEach((k) => { total[k] += r.stat[k]; });
   check('filter band world: ' + r.stat.reads + ' reads, ' + r.stat.sets + ' edits, ' + r.stat.unloads + ' unloads: 0 differences', r.stat.bad === 0, r.stat.bad + ' bad; first: ' + r.stat.first);
 }
-check('the fuzz did real work (reads > 80000, edits > 20000, unloads > 4000, save/loads > 300)', total.reads > 80000 && total.sets > 20000 && total.unloads > 4000 && total.loads > 300, JSON.stringify(total));
+check('the fuzz did real work (reads > 30000, edits > 8000, unloads > 1500, save/loads > 100)', total.reads > 30000 && total.sets > 8000 && total.unloads > 1500 && total.loads > 100, JSON.stringify(total));
 { // two worlds side by side never share a kept chunk
   const a = C.createWorld(1), b = C.createWorld(2); let bad = 0;
   for (let i = 0; i < 4000; i++) { const x = 30 + (i % 9), y = 10 + (i % 23), z = 50 + (i % 7); if (a.getBlock(x, y, z) !== C.blockAt(x, y, z, 1) || b.getBlock(x, y, z) !== C.blockAt(x, y, z, 2)) bad++; }

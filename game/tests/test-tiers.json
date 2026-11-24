@@ -2098,7 +2098,7 @@
   },
   "cyc3-chunks-cache-fuzz.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   },
   "cyc3-notebook-blocked.test.js": {
     "class": "browser",
