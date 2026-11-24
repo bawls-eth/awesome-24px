@@ -24,6 +24,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "angler-tournament-midnight.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "angler-economy.test.js": {
     "class": "browser",
     "tier": "smoke"
