@@ -139,14 +139,21 @@
     // b08-r2-04: early-game survival. While the coach teaches, the first minute of play is gentle: hits do 40% (rising to full by 2 min),
     // the hero cannot fall in the first minute (HP stops at 1), and after 3 s with no hit the hero heals 5% max HP a second. A one-time
     // toast says how to heal / escape the first time HP drops under half. Skipping or finishing the coach ends it (normal rules).
-    const G = { full: 60, end: 120, mult: 0.4, regenWait: 3, regen: 0.05 };
-    const guard = { playT: 0, lastHit: -1e9, acc: 0, warned: false, last: 0 };
-    function guardOn() { return !rec.s.finished && MT.realmCurrent(rec.s) !== 'done' && guard.playT < G.end; }
-    function guardMult() { const t = guard.playT; return t <= G.full ? G.mult : G.mult + (1 - G.mult) * Math.min(1, (t - G.full) / (G.end - G.full)); }
+    // R4 D1b (D5 replay: a zero-input hero still fell at ~60 s on 2 of 3 seeds): until the player has ACTED (the coach is still on its
+    // first step, 'move'), the hero is shielded: hits do 25% and never take HP below half. The 40%-to-full schedule and the 1 HP floor
+    // of the first minute count from the moment the player first acts, not from page load.
+    const G = { full: 60, end: 120, mult: 0.4, idleMult: 0.25, idleFloor: 0.5, regenWait: 3, regen: 0.05 };
+    const guard = { playT: 0, lastHit: -1e9, acc: 0, warned: false, last: 0, actedAt: null };
+    function acted() { if (guard.actedAt === null && MT.realmCurrent(rec.s) !== 'move') guard.actedAt = guard.playT; return guard.actedAt !== null; }
+    function sinceAct() { return acted() ? guard.playT - guard.actedAt : 0; }
+    function guardOn() { return !rec.s.finished && MT.realmCurrent(rec.s) !== 'done' && sinceAct() < G.end; }
+    function guardMult() { if (!acted()) return G.idleMult; const t = sinceAct(); return t <= G.full ? G.mult : G.mult + (1 - G.mult) * Math.min(1, (t - G.full) / (G.end - G.full)); }
     arena.hurtGuard = function () {
       if (!guardOn()) return null;
       guard.lastHit = guard.playT;
-      return { mult: guardMult(), floor: guard.playT < G.full ? 1 : 0 };
+      const mx = arena.stats && arena.stats.maxHp > 0 ? arena.stats.maxHp : 0;
+      if (!acted()) return { mult: G.idleMult, floor: Math.max(1, Math.ceil(mx * G.idleFloor)) };
+      return { mult: guardMult(), floor: sinceAct() < G.full ? 1 : 0 };
     };
     function guardTick() {
       const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
@@ -156,7 +163,7 @@
       guard.playT += dt;
       if (!guardOn()) return;
       const mx = arena.stats && arena.stats.maxHp > 0 ? arena.stats.maxHp : 0; if (!mx) return;
-      if (!guard.warned && p.hp > 0 && p.hp < mx * 0.5) {
+      if (!guard.warned && p.hp > 0 && p.hp <= mx * 0.5) {
         guard.warned = true;
         say(coarse ? 'Low HP! Walk away from enemies with the left stick. Nothing hits you for 3 s = you heal.' : 'Low HP! Walk away from enemies. Nothing hits you for 3 s = you heal.');
       }
@@ -168,7 +175,7 @@
     const iv = setInterval(() => { poll(); try { guardTick(); } catch (e) { /* never break the page */ } if (rec.s.finished) { clearInterval(iv); } }, 120);
     window.addEventListener('pagehide', () => { try { if (portals() > rec.p0 || world.lastPortalUrl) event('portalEntered'); } catch (e) { /* ignore */ } });
     render();
-    const api = { state: () => JSON.parse(JSON.stringify(rec)), current: () => MT.realmCurrent(rec.s), event, poll, KEY, root, guard: () => ({ on: guardOn(), mult: guardMult(), playT: Math.round(guard.playT * 10) / 10, warned: guard.warned }), guardAdvance: (s) => { guard.playT += Math.max(0, Number(s) || 0); } };
+    const api = { state: () => JSON.parse(JSON.stringify(rec)), current: () => MT.realmCurrent(rec.s), event, poll, KEY, root, guard: () => ({ on: guardOn(), mult: guardMult(), playT: Math.round(guard.playT * 10) / 10, acted: acted(), sinceAct: Math.round(sinceAct() * 10) / 10, warned: guard.warned }), guardAdvance: (s) => { guard.playT += Math.max(0, Number(s) || 0); } };
     window.__mmTutorial = api;
     return api;
   }
