@@ -309,7 +309,7 @@
     };
 
     const unlocked = {}; const granted = [];
-    let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
+    let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let hudWaveEl = null; let hudBiomeEl = null; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
     // G12 boss ground-slam: from phase 2 the boss winds up a ring zone for MMSplash.SLAM.WIND (0.9 s, drawn in drawOver), then hits whoever is still inside.
     // ?bosses=classic, ?telegraph=0 (no warning, so no slam) and ?bossslam=0 turn it off. Damage: MMSplash.slamDmg of the boss dmgMul (MMDifficulty), capped.
@@ -910,7 +910,7 @@
         pickTick(dt);
         // pick-ups
         const near = (s, r) => Math.hypot(p.x - s.x, p.y - s.y) < r;
-        if (hasKey() && !state.doorsClosed() && near(keySpot(), 26)) { L[current].keyTaken = true; keyFound = state.pickKey(); arena._snd('pickup'); arena._floatText(p.x, p.y - 30, '🗝 Key!', '#ffd45a'); mapSig = ''; }
+        if (hasKey() && !state.doorsClosed() && near(keySpot(), 26)) { L[current].keyTaken = true; state.pickKey(); arena._snd('pickup'); arena._floatText(p.x, p.y - 30, '🗝 Key!', '#ffd45a'); mapSig = ''; }
         if (hasChest() && !rs.chestOpen && !state.doorsClosed() && near(chestSpot(), 30)) openChest();
         if (hasPortal() && near(portalSpot(), 30)) { finish(); return; }
         if (hasPortal() && canStairs()) { const sq = stairsSpot(); if (!near(sq, 70)) stairsArmed = true; else if (stairsArmed && near(sq, 26)) { takeStairs(); return; } }

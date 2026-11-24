@@ -1171,12 +1171,11 @@
     ride = null; rideArt = null; rideKind = null; rideDrawn = ''; saddleDrawn = '';
     // off a swim mount in open water: step ashore onto the nearest walkable tile
     const land = nearestWalkable(hero.x, hero.y);
-    if (land) { hero.x = (land.x + 0.5) * TILE; hero.y = (land.y + 0.5) * TILE; lastShore = land; }
+    if (land) { hero.x = (land.x + 0.5) * TILE; hero.y = (land.y + 0.5) * TILE; }
     hero.scale = moveScaleAt(tileOf(hero.x), tileOf(hero.y));
     if (tames.party.indexOf(id) >= 0) spawnCompanion(TAMES.find(tames, id), hero.x + 36, hero.y + 12);
     return true;
   }
-  let lastShore = null;
   // X4 saddles: the saddle id a mount needs (null for saddle:null mounts and with ?saddles=0); a saddle is kept, not used up
   const saddleNeed = (def) => (SADDLES && def && def.ride && def.ride.saddle ? def.ride.saddle : null);
   const hasSaddle = (id) => !!id && has(save.inv, id) && save.inv[id] > 0;
@@ -1748,7 +1747,7 @@
   // PI2: reduced motion = the OS setting or the shared "screen flashes off" pref (MMSideAccess sets data-reduce-motion on <html>)
   const REDUCED = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })() || !!(window.MMSideAccess && window.MMSideAccess.reduced());
   const STILL = REDUCED || !GFX.terrainAnim; // still terrain decor: reduced motion, or the low graphics tier (telegraphs keep their own rule)
-  let sparkLeft = 0, sparksDrawn = 0, drawCalls = 0;
+  let sparkLeft = 0, sparksDrawn = 0;
   // the wind-up telegraph: the full shape outlined, filled as the wind-up runs out (big creatures: thicker, hotter colour)
   function drawTelegraph(c, sx, sy) {
     const s = specOf(c.sp, c.kind), a = s.atk;
@@ -2720,7 +2719,7 @@
       if (ISL.noteBoss(save, b.boss)) { dirty = true; toast('You spotted the lair of the ' + b.boss.replace(/_/g, ' ') + '.'); checkMedals(); }
     });
   }
-  const firstVisit = ISL.noteVisit(save, ISLE); // saved by the first save tick
+  ISL.noteVisit(save, ISLE); // saved by the first save tick
   // ground layer drawn each frame from cached canvases: decor, pen guests, gather sparkles
   function drawGround() {
     if (HOME) {

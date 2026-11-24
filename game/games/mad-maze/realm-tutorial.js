@@ -63,7 +63,6 @@
       }
     }
     // G-15 (b08-04): the 'bag' step guarantees a bag within 6 tiles of the hero (one tutorial bag, dropped two tiles ahead) and says where it is
-    let tuBag = null;
     function bagNear() {
       const p = arena.player; if (!p || !Array.isArray(arena.bags)) return null;
       let best = null, bd = 6 * 32;
@@ -73,7 +72,7 @@
     function ensureBag() {
       if (bagNear() || !arena.player || typeof arena.dropBag !== 'function' || arena.state !== 'play') return;
       const p = arena.player; const b = arena.dropBag(p.x + 140, p.y, 0, 'heartcharm'); // 4.4 tiles: inside 6, outside the 110 px pickup drift, so the hero walks to it
-      if (b) { b.id = 'heartcharm'; b.vx = 0; b.vy = 0; b.tutorial = true; tuBag = b; }
+      if (b) { b.id = 'heartcharm'; b.vx = 0; b.vy = 0; b.tutorial = true; }
     }
     function bagWhere() {
       const b = bagNear(), p = arena.player; if (!b || !p) return '';
