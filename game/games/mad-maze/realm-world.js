@@ -155,6 +155,34 @@
     const WW = world.w * TILE; const WH = world.h * TILE;
     const ww = world.w; const wh = world.h;
     const terrain = world.terrain; const solid = world.solid;
+    // R4-D2 (b12-r2-04, b04-03): the DRAWN terrain. The generator thresholds a detail noise, which leaves 1-tile holes inside snow (the
+    // "snow frames with square holes") and plus / cross shaped lava specks. Two passes of a cardinal-majority filter, on walkable land
+    // tiles only (never water, roads or solid tiles, so the drawn ground always matches collision): a tile with 3-4 neighbours of one other
+    // terrain, or with no same-terrain neighbour, draws as that neighbour terrain. Gameplay terrain (speed, zone, spawns) is untouched.
+    // ?smooth=0 draws the raw generator terrain.
+    const SMOOTH = !/[?&]smooth=0(&|$)/.test(qs0);
+    const drawT = new Uint8Array(terrain);
+    const smoothStat = { changed: 0 };
+    if (SMOOTH) {
+      const keep = (t) => t === T.deep_water || t === T.shallow_water || t === T.dirt_road;
+      for (let pass = 0; pass < 2; pass++) {
+        const src = new Uint8Array(drawT);
+        for (let y = 1; y < wh - 1; y++) for (let x = 1; x < ww - 1; x++) {
+          const i = y * ww + x; const t = src[i];
+          if (solid[i] || keep(t)) continue;
+          const nb = [src[i - ww], src[i + 1], src[i + ww], src[i - 1]];
+          let same = 0; for (let k = 0; k < 4; k++) if (nb[k] === t) same++;
+          if (same >= 2) continue;
+          let best = -1, bestN = 0;
+          for (let k = 0; k < 4; k++) {
+            const o = nb[k]; if (o === t || keep(o)) continue;
+            let n = 0; for (let j = 0; j < 4; j++) if (nb[j] === o) n++;
+            if (n > bestN) { bestN = n; best = o; }
+          }
+          if (best >= 0 && (bestN >= 3 || (same === 0 && bestN >= 2))) { drawT[i] = best; smoothStat.changed++; }
+        }
+      }
+    }
 
     // ---------- collision: every solid tile blocks walking; deep water lets bolts fly over it ----------
     let slowUntil = 0; // zone gradient: a brief slow on the first crossing into a zone above the hero's level (arena clock, s)
@@ -179,7 +207,11 @@
     world.structures.forEach((s) => { if (s.kind !== 'event_site') return; const k = Math.floor(s.y / CH) * ccols + Math.floor(s.x / CH); (propsBy[k] = propsBy[k] || []).push({ x: s.x, y: s.y, kind: 'event_ring' }); });
 
     // ---------- optional terrain art: tile_<terrain>_a..d from any registered batch (none delivered yet: code fallback) ----------
-    const tileArt = Object.create(null); // terrain id -> fixed a-d slots
+    const tileArt = Object.create(null); // terrain id -> fixed a-h slots
+    // R4-D2: batches load in parallel, so a remake must win BY RANK, not by load order: r01 (Codex R01 realm terrain remake, 8 variants a-h,
+    // organic transitions) beats the older b10t / b11a / b11b art for the same id; any terrain or blend r01 lacks keeps its old art.
+    const tileRank = new Map(); // image bank slot -> rank of the batch that filled it
+    const TILE_RANK = (folder) => (/^r01-/.test(folder) && !/[?&]r01=0(&|$)/.test(qs0) ? 2 : /^r01-/.test(folder) ? -1 : 1);
     const edgeArt = Object.create(null); // terrain id -> blend id -> mask slots
     let artTiles = 0;
     function loadTileArt(root) {
@@ -191,10 +223,11 @@
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
           if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id)) return null;
+          const rank = TILE_RANK(id); if (rank < 0) return null;
           return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
-              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d]|edge_\d{2})$/.exec(a.id) : null;
+              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-h]|edge_\d{2})$/.exec(a.id) : null;
               if (!mt || !Object.prototype.hasOwnProperty.call(T, mt[1]) || !okPath(a.path)) return null;
               const tid = T[mt[1]];
               const variant = mt[2].length === 1;
@@ -207,8 +240,11 @@
                   if (img.naturalWidth === TILE && img.naturalHeight === TILE) {
                     const banks = variant ? tileArt : (edgeArt[tid] ||= Object.create(null));
                     const bank = (banks[variant ? tid : T[a.blend]] ||= []);
+                    const rk = tileRank.get(bank) || []; if (!variant) tileRank.set(bank, rk);
+                    if (variant) { const vr = tileRank.get(banks) || {}; tileRank.set(banks, vr); const cur = vr[tid] || 0; if (rank < cur) { res(); return; } if (rank > cur) { if (bank.length) { artTiles -= bank.filter(Boolean).length; bank.length = 0; } vr[tid] = rank; } }
+                    else if ((rk[slot] || 0) > rank) { res(); return; }
                     if (!bank[slot]) artTiles++;
-                    bank[slot] = img;
+                    bank[slot] = img; if (!variant) rk[slot] = rank;
                   }
                   res();
                 };
@@ -225,7 +261,7 @@
       const blends = edgeArt[t];
       if (!blends || x === 0 || y === 0 || x === ww - 1 || y === wh - 1) return null;
       const i = y * ww + x;
-      const neighbours = [terrain[i - ww], terrain[i + 1], terrain[i + ww], terrain[i - 1]];
+      const neighbours = [drawT[i - ww], drawT[i + 1], drawT[i + ww], drawT[i - 1]];
       let mask = 0;
       let blend = null;
       for (let dir = 0; dir < neighbours.length; dir++) {
@@ -314,7 +350,11 @@
     const GOD_LOOK = TILE_DETAIL && !/[?&]godlook=0(&|$)/.test(qs0); // W-03: ?godlook=0 = the old grey ash
     const edgeStat = { drawn: 0, skipped: 0 }, shadeStat = { dithered: 0, ash: 0 }; // bake counters (test hooks)
     // W-03 (b04-01): a patch side that borders a different shade class fades out over 8 px as a 2-colour checker (baked), not a hard seam.
-    const shadeOf = (wx, wy) => { const v = (h2(wx >> 2, wy >> 2, 501) + h2((wx + 2) >> 2, (wy + 2) >> 2, 502)) * 0.5; return v < 0.32 ? -1 : v > 0.72 ? 1 : 0; };
+    // R4-D2 (b04-01): the shade classes came from two offset 4x4-tile grids, so every patch was an axis-aligned rectangle (the quilt look).
+    // Now a smooth value noise (bilinear, smoothstep, 5-tile cells, two octaves): patches follow organic tile-step outlines instead.
+    const vnoise = (x, y, s) => { const xi = Math.floor(x), yi = Math.floor(y); let fx = x - xi, fy = y - yi; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+      const a = h2(xi, yi, s), b = h2(xi + 1, yi, s), c = h2(xi, yi + 1, s), d = h2(xi + 1, yi + 1, s); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
+    const shadeOf = (wx, wy) => { const v = vnoise(wx / 5.3, wy / 5.3, 501) * 0.7 + vnoise(wx / 2.1, wy / 2.1, 502) * 0.3; return v < 0.33 ? -1 : v > 0.68 ? 1 : 0; };
     function shadePatch(g, wx, wy, px, py, col) {
       const sc = shadeOf(wx, wy); const n = shadeOf(wx, wy - 1) === sc, s = shadeOf(wx, wy + 1) === sc, w = shadeOf(wx - 1, wy) === sc, e = shadeOf(wx + 1, wy) === sc;
       const x0 = w ? 0 : 8, x1 = e ? TILE : TILE - 8, y0 = n ? 0 : 8, y1 = s ? TILE : TILE - 8;
@@ -338,6 +378,25 @@
         rect(g, r < 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.10)', sx, sy, r < 0.25 ? 3 : 2, 2);
       }
     }
+    // R4-D2 (b12-r2-04 "snow frames with square holes"): the b10t / b11 edge tiles draw a notch of the blend terrain in every corner whose
+    // two cardinal sides are open, because the 4-bit mask cannot see diagonals. Inside a 2x2 (or larger) patch the four notches meet and
+    // read as a square hole. When the diagonal neighbour is the same terrain too, the notch is painted back with the terrain's own
+    // variant art (or its base colour), so only real concave corners keep the notch.
+    const CORNER = 10;
+    const cornerStat = { filled: 0 };
+    function fillInnerCorners(g, wx, wy, t, px, py, art, pal) {
+      if (wx < 1 || wy < 1 || wx >= ww - 1 || wy >= wh - 1) return;
+      const at = (x, y) => drawT[y * ww + x] === t;
+      const src = art && art.length ? art[Math.floor(h2(wx, wy, 91) * art.length)] : null;
+      const C = [[0, -1, 1, 0, 1, -1, TILE - CORNER, 0], [0, 1, 1, 0, 1, 1, TILE - CORNER, TILE - CORNER], [0, 1, -1, 0, -1, 1, 0, TILE - CORNER], [0, -1, -1, 0, -1, -1, 0, 0]];
+      for (let k = 0; k < 4; k++) {
+        const c = C[k];
+        if (!at(wx + c[0], wy + c[1]) || !at(wx + c[2], wy + c[3]) || !at(wx + c[4], wy + c[5])) continue;
+        if (src) g.drawImage(src, c[6], c[7], CORNER, CORNER, px + c[6], py + c[7], CORNER, CORNER);
+        else rect(g, pal[0], px + c[6], py + c[7], CORNER, CORNER);
+        cornerStat.filled++;
+      }
+    }
     function buildChunk(cx, cy) {
       chunkBuilds++;
       const cv = document.createElement('canvas'); cv.width = CPX; cv.height = CPX;
@@ -347,11 +406,11 @@
       for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
         const wx = x0 + tx; const wy = y0 + ty; const px = tx * TILE; const py = ty * TILE;
         if (wx >= ww || wy >= wh) { rect(g, PAL.deep_water[0], px, py, TILE, TILE); continue; }
-        const i = wy * ww + wx; const t = terrain[i]; const pal = PAL[TN[t]] || PAL.grass;
+        const i = wy * ww + wx; const t = drawT[i]; const pal = PAL[TN[t]] || PAL.grass;
         const art = variants[t];
         if (t === T.deep_water || t === T.shallow_water) water = true;
         const transition = transitionAt(wx, wy, t);
-        if (transition) g.drawImage(transition, px, py, TILE, TILE);
+        if (transition) { g.drawImage(transition, px, py, TILE, TILE); fillInnerCorners(g, wx, wy, t, px, py, art, pal); }
         else if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
         else {
           rect(g, pal[0], px, py, TILE, TILE);
@@ -369,7 +428,7 @@
         // W-03 (b12-03): one edge per border. A neighbour that draws a transition tile (b10t edge art) already paints this boundary, so the
         // 2 px line is skipped there (it used to run parallel to the blend, one tile away: the double outline).
         const e = pal[3];
-        const edgeTo = (nx, ny) => { const nt = terrain[ny * ww + nx]; if (nt === t) return false; if (transitionAt(nx, ny, nt)) { edgeStat.skipped++; return false; } edgeStat.drawn++; return true; };
+        const edgeTo = (nx, ny) => { const nt = drawT[ny * ww + nx]; if (nt === t) return false; if (transitionAt(nx, ny, nt)) { edgeStat.skipped++; return false; } edgeStat.drawn++; return true; };
         if (wx + 1 < ww && edgeTo(wx + 1, wy)) rect(g, e, px + TILE - 2, py, 2, TILE);
         if (wx > 0 && edgeTo(wx - 1, wy)) rect(g, e, px, py, 2, TILE);
         if (wy + 1 < wh && edgeTo(wx, wy + 1)) rect(g, e, px, py + TILE - 2, TILE, 2);
@@ -391,7 +450,7 @@
         const wg = wcv.getContext('2d');
         for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
           const wx = x0 + tx; const wy = y0 + ty; if (wx >= ww || wy >= wh) continue;
-          const t = terrain[wy * ww + wx]; if (t !== T.deep_water && t !== T.shallow_water) continue;
+          const t = drawT[wy * ww + wx]; if (t !== T.deep_water && t !== T.shallow_water) continue;
           for (let k = 0; k < 2; k++) rect(wg, 'rgba(220,240,255,0.55)', tx * TILE + Math.floor(h2(wx, wy, 31 + k) * 22), ty * TILE + Math.floor(h2(wx, wy, 41 + k) * 28), 8, 2);
         }
       }
@@ -456,7 +515,9 @@
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-          if (!/^(b1[2345]|b2[26])-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
+          if (!/^(b1[2345]|b2[26]|r03)-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
+          // R4-D2: r03 (Codex R03 nature props remake: same ids, cells and anchors as b12, outlined and shaded) wins over b12 by rank, not load order. ?r03=0: b12.
+          const rank = /^r03-/.test(id) ? (/[?&]r03=0(&|$)/.test(qs0) ? -1 : 2) : 1; if (rank < 0) return null;
           return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
@@ -468,7 +529,7 @@
               const ax = an && Number.isFinite(an.x) ? an.x : fw / 2; const ay = an && Number.isFinite(an.y) ? an.y : fh - 2;
               return new Promise((res) => {
                 const img = new Image();
-                img.onload = () => { if (img.naturalWidth === fw * frames && img.naturalHeight === fh) { wArt[a.id] = { img, frames, fw, fh, fps: Number(a.fps) > 0 ? Math.min(Number(a.fps), 24) : 8, ax, ay }; got++; } res(); };
+                img.onload = () => { if (img.naturalWidth === fw * frames && img.naturalHeight === fh && !(wArt[a.id] && wArt[a.id].rank > rank)) { wArt[a.id] = { img, frames, fw, fh, fps: Number(a.fps) > 0 ? Math.min(Number(a.fps), 24) : 8, ax, ay, rank, src: id }; got++; } res(); };
                 img.onerror = () => res();
                 img.src = join(join(root, id), a.path);
               });
@@ -2470,13 +2531,13 @@
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
-      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, terrain[ty * ww + tx]), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
+      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
       slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
       syncHud, loadTileArt, loadWorldArt,
-      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim, base: q.base || null })),
+      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artSrc: (id) => (wArt[id] ? wArt[id].src : null), tileSrcRank: () => { const o = {}; const vr = tileRank.get(tileArt) || {}; Object.keys(vr).forEach((k) => { o[TN[k]] = vr[k]; }); return o; }, tileVariants: (name) => (tileArt[T[name]] || []).filter(Boolean).length, artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim, base: q.base || null })),
       b26: () => ({ on: B26_ON, ids: Object.keys(B26_SET), loaded: Object.keys(B26_SET).filter((id) => !!wArt[id]), draws: artDraws.b26, codeProps: world.props.filter((p) => b26Code(p)).length, codeCandidates: world.props.filter((p) => B26_CODE[p.kind] && GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] === 1).length, codeIds: Array.from(new Set(world.props.filter((p) => b26Code(p)).map((p) => b26Pick(B26_CODE[p.kind], p.x, p.y)))) }), propsClassic: () => PROPS_CLASSIC, godPropPalette: () => godPropPalette(), chunkGrid: () => ({ cols: ccols, rows: crows }),
       panelHidden: () => panelHid,
       // minimap fog (slice A1)
