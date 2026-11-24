@@ -165,18 +165,21 @@
   }
   // armAngles(t) -> the two angles of the slow arm at layer time t s (turning LAYERS.arm.turnDeg per second, the second arm opposite).
   function armAngles(t) { const a = (isNum(t) ? clamp(t, 0, 1e6) : 0) * LAYERS.arm.turnDeg * Math.PI / 180; return Object.freeze([a, a + Math.PI]); }
-  // sweepLine(k, px, py) -> sweep number k centred on the hero at (px,py): { dir: travel angle, pts: [{x,y}] x9, gapFrom, slots }.
+  // sweepLine(k, px, py, half) -> sweep number k centred on the hero at (px,py): { dir: travel angle, pts: [{x,y}] x9, gapFrom, slots }.
+  // half (optional): half the view along the travel axis; the line then spawns inside the view (its telegraph must be seen, e.g. on a
+  // phone) at min(LAYERS.sweep.dist, half - 24) px, never closer than 140 px (1 s of travel at 140 px/s).
   // The direction turns a quarter each sweep (from the west, north, east, south) and the 3-slot gap alternates between the two halves.
-  function sweepLine(k, px, py) {
+  function sweepLine(k, px, py, half) {
     const C = LAYERS.sweep; const kk = toInt(k, 0, 1e6, 0); const x0 = isNum(px) ? px : 0, y0 = isNum(py) ? py : 0;
+    const dist = isNum(half) && half > 0 ? clamp(half - 24, 140, C.dist) : C.dist;
     const dir = (kk % 4) * Math.PI / 2; const dx = Math.cos(dir), dy = Math.sin(dir); const ux = -dy, uy = dx;
     const slots = C.bolts + C.gap; const gapFrom = kk % 2 ? slots - C.gap - 2 : 2; const pts = [];
     for (let i = 0; i < slots; i++) {
       if (i >= gapFrom && i < gapFrom + C.gap) continue;
       const o = (i - (slots - 1) / 2) * C.spacing;
-      pts.push(Object.freeze({ x: r3(x0 - dx * C.dist + ux * o), y: r3(y0 - dy * C.dist + uy * o) }));
+      pts.push(Object.freeze({ x: r3(x0 - dx * dist + ux * o), y: r3(y0 - dy * dist + uy * o) }));
     }
-    return Object.freeze({ dir: r3(dir), pts: Object.freeze(pts), gapFrom, slots, speed: C.speed, warn: C.warn });
+    return Object.freeze({ dir: r3(dir), dist, pts: Object.freeze(pts), gapFrom, slots, speed: C.speed, warn: C.warn });
   }
 
   // rushLadder(seed, level) -> { ok, minLevel, level, text, steps: [...6], rules }. Below Lv 20: ok false and no steps.

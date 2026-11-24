@@ -2298,7 +2298,7 @@
         for (let k = 0; k < ang.length; k++) if (rushLayerFire(e, e.x, e.y, ang[k], LY.arm.speed, 1, LY.arm.life)) L.fired.arm++;
       }
       if (L.ids.indexOf('sweep') >= 0) {
-        if (!L.pend && L.t >= L.nSweep - LY.sweep.warn) { L.pend = Object.assign({ at: L.nSweep, t0: L.t }, MMEndgame.sweepLine(L.k, p.x, p.y)); L.k++; }
+        if (!L.pend && L.t >= L.nSweep - LY.sweep.warn) { L.pend = Object.assign({ at: L.nSweep, t0: L.t }, MMEndgame.sweepLine(L.k, p.x, p.y, ((L.k % 2) ? (arena._dv ? arena._dv.vh || arena.H : arena.H) : (arena._dv ? arena._dv.vw : arena.W)) / 2)); L.k++; }
         if (L.pend && L.t >= L.pend.at) {
           const q = L.pend; L.pend = null; L.nSweep += LY.sweep.every; let n = 0;
           for (let k = 0; k < q.pts.length; k++) if (rushLayerFire(e, q.pts[k].x, q.pts[k].y, q.dir, q.speed, 2, 0)) n++;

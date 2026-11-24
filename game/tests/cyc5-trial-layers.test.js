@@ -37,6 +37,8 @@ check('sweep: the gap side alternates (slots 2-4, then 7-9)', lines[0].gapFrom =
 check('sweep: the direction turns a quarter each time (from the west, north, east, south)', lines.map((l) => Math.round(l.dir * 180 / Math.PI)).join() === '0,90,180,270');
 check('sweep: neighbouring bolts are closer than two hit radii (no slip-through) and the gap leaves a corridor wider than the hero', L.sweep.spacing < 2 * PR && (L.sweep.gap + 1) * L.sweep.spacing - 2 * PR > 2 * 11);
 check('sweep: the line spawns 300 px from the hero on the far side of its travel', Math.abs(lines[0].pts[0].x - 200) < 1e-6 && Math.abs(lines[1].pts[0].y - 100) < 1e-6);
+const ph = E.sweepLine(0, 500, 400, 195);
+check('sweep: a narrow view (phone, half width 195) spawns the line inside it (171 px), never under 140 px; no view = 300 px', Math.abs(ph.pts[0].x - (500 - 171)) < 1e-6 && E.sweepLine(0, 0, 0, 50).dist === 140 && E.sweepLine(0, 0, 0).dist === 300 && E.sweepLine(0, 0, 0, 1000).dist === 300);
 check('sweep: hostile input gives a finite line', E.sweepLine('x', NaN, null).pts.every((q) => Number.isFinite(q.x) && Number.isFinite(q.y)));
 check('outputs are frozen', Object.isFrozen(lines[0]) && Object.isFrozen(lines[0].pts) && Object.isFrozen(E.rushLayers(6)) && Object.isFrozen(L.sweep));
 check('no Math.random in mm-endgame.js code (comments stripped)', !/Math\.random/.test(fs.readFileSync(path.join(__dirname, '../shared/mm-endgame.js'), 'utf8').replace(/\/\/.*$/gm, '')));
