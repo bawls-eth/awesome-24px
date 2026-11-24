@@ -351,7 +351,7 @@
     specCache[key] = s;
     return s;
   }
-  const baker = CD.makeBaker(mk, 64);
+  const baker = CD.makeBaker(mk, 64, { finish: Q.get('pxfinish') !== '0' }); // cycle 0 art: pixel finish (outline + crisp alpha); ?pxfinish=0 = soft vector bake
   // b31a / b32 PNG strips: loaded once (the jungle loads all five species, other isles only the species in your stable), baked to native
   // size; a creature without a complete set (or ?art=0) keeps the code-drawn MMCreatureDraw bake above.
   const STRIP_KINDS = MS ? MS.kindsFor(PACK_ID, tames.roster.map((t) => t.sp)) : [];

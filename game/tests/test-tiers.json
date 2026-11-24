@@ -260,6 +260,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc0-art-creature-finish.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc0-art-hub-icons.test.js": {
     "class": "browser",
     "tier": "full"

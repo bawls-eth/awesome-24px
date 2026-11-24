@@ -22,7 +22,22 @@ const SCENES = {
     await p.evaluate(() => { const I = window.__isles; I.god(true); const t = I.findTile('black_sand', 3) || I.findTile('black_sand', 1); if (t) I.teleport(t.x, t.y); });
     await p.waitForTimeout(2500);
   },
+  'boss-tundra': (p) => bossScene(p, 'tundra', ['glacier_shellback', 'shagtusk', 'sabrefang', 'icicle_bat']),
+  'boss-mars': (p) => bossScene(p, 'mars', ['regolith_roly', 'rustbeetle', 'crater_strider', 'dust_devil']),
 };
+// the isle's boss spawned at its lair with the hero 4 tiles south, plus a few code-drawn species around the hero; how-to card closed
+async function bossScene(p, isle, species) {
+  await p.goto(isles('&isle=' + isle + '&howto=0')); await islesReady(p);
+  await p.evaluate((sp) => {
+    const I = window.__isles; I.god(true); I.pause(true);
+    const b = I.boss(); if (b && b.site) { I.teleport(b.site.x, b.site.y + 4); I.bossSpawn(); }
+    const h = I.hero(), tx = Math.floor(h.x / I.tile), ty = Math.floor(h.y / I.tile);
+    sp.forEach((s, i) => I.spawn(s, tx - 6 + i * 4, ty + 3));
+    I.render();
+  }, species);
+  await p.waitForTimeout(1500);
+  await p.evaluate(() => { document.querySelectorAll('.howto, #howto').forEach((e) => { e.hidden = true; }); window.__isles.render(); });
+}
 (async () => {
   const browser = await chromium.launch();
   for (const sc of scenes) for (const vk of Object.keys(VPS)) {
