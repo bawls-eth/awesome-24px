@@ -48,15 +48,10 @@
   let base = JSON.parse(JSON.stringify(save));
   function writeSave() {
     const M = window.MMSaveMerge;
-    if (!M) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; }
+    if (!M || !M.writeMedalSave) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; } // no module (or a cached older one): plain write
     const raw = readRaw(), mine = Object.assign({}, save);
-    const v = M.merge(raw, base, mine, M.SPECS[KEY]);
-    Object.assign(v, clean(v), { medals: Array.isArray(v.medals) ? v.medals.slice(0, 200) : [] }); // ids a newer build added stay stored
-    localStorage.setItem(KEY, JSON.stringify(v)); // throws on a full storage: save / base stay as they were, the next write retries
-    Object.assign(save, clean(v)); base = JSON.parse(JSON.stringify(save));
-    let mk = null;
-    try { const s = localStorage.getItem(MKEY); mk = typeof s === 'string' && s.length < 20000 ? JSON.parse(s) : null; } catch (e) { mk = null; }
-    localStorage.setItem(MKEY, JSON.stringify(Object.assign(M.merge(mk, null, { v: 1, m: save.medals.slice() }, M.SPECS.medals), { v: 1 })));
+    // one shared block for dash / echo / pop / stack (cycle1 L-15). It throws on a full storage: save / base stay as they were, the next write retries
+    M.writeMedalSave(localStorage, KEY, MKEY, raw, base, mine, clean, (c) => { Object.assign(save, c); base = JSON.parse(JSON.stringify(save)); });
   }
   function persist() {
     try { writeSave(); } catch (e) { /* storage refused: play on */ }

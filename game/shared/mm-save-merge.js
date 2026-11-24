@@ -112,5 +112,27 @@
     'pixeltown-deepdelve-runs-v1': { max: ['best.score', 'best.depth', 'best.ores', 'best.combo'], count: ['runs', 'safe'], maxMap: ['seedBest'] },
     medals: { union: ['m'] }
   };
-  return { merge: merge, write: write, SPECS: SPECS };
+  // writeMedalSave(storage, key, mkey, raw, base, mine, clean, commit) -> the cleaned save that is now stored (cycle1 L-15).
+  // The merge-on-write block that dash / echo / pop / stack each carried, byte for byte the same stored data:
+  //  raw = the owner's parsed stored save (or null), base = the save as this tab last read / wrote it, mine = this tab's save,
+  //  clean = the owner's cleaner. The merged value keeps storage-only keys and up to 200 merged medal ids (ids a newer build
+  //  added stay stored). setItem on `key` may throw (full storage): nothing has changed then and the owner's next write retries.
+  //  commit(cleaned) runs right after the main write and BEFORE the shared medals key `mkey` is written, so the owner's
+  //  save / base are already up to date if that second write throws (a count must never be added twice).
+  function writeMedalSave(storage, key, mkey, raw, base, mine, clean, commit) {
+    var v = merge(raw, base, mine, SPECS[key]);
+    var medals = Array.isArray(v.medals) ? v.medals.slice(0, 200) : [];
+    var c = clean(v);
+    Object.keys(c).forEach(function (k) { v[k] = c[k]; });
+    v.medals = medals;
+    storage.setItem(key, JSON.stringify(v));
+    var out = clean(v);
+    if (typeof commit === 'function') commit(out);
+    var mk = null;
+    try { var t = storage.getItem(mkey); mk = typeof t === 'string' && t.length < 20000 ? JSON.parse(t) : null; } catch (e) { mk = null; }
+    var mm = merge(mk, null, { v: 1, m: out.medals.slice() }, SPECS.medals); mm.v = 1;
+    storage.setItem(mkey, JSON.stringify(mm));
+    return out;
+  }
+  return { merge: merge, write: write, writeMedalSave: writeMedalSave, SPECS: SPECS };
 }));

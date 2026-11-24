@@ -52,18 +52,13 @@
   let base = JSON.parse(JSON.stringify(save));
   function writeSave() {
     const M = window.MMSaveMerge;
-    if (!M) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; }
+    if (!M || !M.writeMedalSave) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; } // no module (or a cached older one): plain write
     const raw = readRaw(), mine = Object.assign({}, save);
     // keep a ghost another tab saved unless this tab made a new one, or it is a better run on the same course
     const rg = raw && cleanGhost(raw.ghost), mg = save.ghost;
     if (rg && (JSON.stringify(mg) === JSON.stringify(base.ghost) || (mg && rg.seed === mg.seed && rg.pv === mg.pv && rg.dist > mg.dist))) delete mine.ghost;
-    const v = M.merge(raw, base, mine, M.SPECS[KEY]);
-    Object.assign(v, clean(v), { medals: Array.isArray(v.medals) ? v.medals.slice(0, 200) : [] }); // ids a newer build added stay stored
-    localStorage.setItem(KEY, JSON.stringify(v)); // throws on a full storage: save / base stay as they were, the next write retries
-    Object.assign(save, clean(v)); base = JSON.parse(JSON.stringify(save));
-    let mk = null;
-    try { const s = localStorage.getItem(MKEY); mk = typeof s === 'string' && s.length < 20000 ? JSON.parse(s) : null; } catch (e) { mk = null; }
-    localStorage.setItem(MKEY, JSON.stringify(Object.assign(M.merge(mk, null, { v: 1, m: save.medals.slice() }, M.SPECS.medals), { v: 1 })));
+    // one shared block for dash / echo / pop / stack (cycle1 L-15). It throws on a full storage: save / base stay as they were, the next write retries
+    M.writeMedalSave(localStorage, KEY, MKEY, raw, base, mine, clean, (c) => { Object.assign(save, c); base = JSON.parse(JSON.stringify(save)); });
   }
   const hubSync = () => { try { if (window.MMHubProfile && MMHubProfile.sync) MMHubProfile.sync(localStorage, 'dash', save.medals.slice()); } catch (e) { /* hub map progress is optional */ } };
   if (save.medals.length) hubSync(); // medals won before the arcade map group existed reach the Hub map too
