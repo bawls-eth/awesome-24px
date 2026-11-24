@@ -2055,5 +2055,9 @@
   "cyc2-errands.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "cyc2-dd-path-replay.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
