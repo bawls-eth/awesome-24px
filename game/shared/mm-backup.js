@@ -235,7 +235,9 @@
       let newer = false;
       const unknown = []; // beta b14 P3: entries this version does not know are skipped (never written), not fatal
       if (obj.format === FORMAT) {
-        if (!(Number(obj.v) >= 1) || !isObj(obj.keys)) return fail('bad-bundle', 'That backup file is damaged.');
+        // Cycle 5 L (b14-r3-N01): say WHICH part of the bundle is at fault instead of a bare "damaged"
+        if (!(Number(obj.v) >= 1)) return fail('bad-bundle', 'That backup file is damaged: its version number ("v") is missing or not a number.');
+        if (!isObj(obj.keys)) return fail('bad-bundle', 'That backup file is damaged: its list of saves ("keys") is missing.');
         if (Number(obj.v) > VERSION) newer = true; // compat: a newer format still restores every key this build knows (the rest are named)
         const names = Object.keys(obj.keys);
         if (!names.length) return fail('empty', 'That backup file is empty.');
