@@ -2709,7 +2709,6 @@ class RealmArena {
   _update(dt) {
     this._readReduced(); this._readLowGfx();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
-    const p = this.player;
     this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
     if (this.state === 'play') this._cacheAliveT = (this._cacheAliveT || 0) + dt; // G-09: time alive since the last Survivor's cache
     this._accT += dt; if (this._accT >= 1) { this._accT = 0; this.refreshAccess(); }

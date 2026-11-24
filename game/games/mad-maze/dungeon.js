@@ -251,7 +251,6 @@
     const ambient = []; if (B.particles) { const ar = MMRng.create('amb:' + biome + ':' + seed); for (let i = 0; i < B.particles.n; i++) ambient.push({ x: ar.int(0, MMRooms.W * T), y: ar.int(0, MMRooms.H * T), v: 0.6 + ar.next(), ph: ar.next() * 6.28, sz: ar.int(2, 4) }); }
     document.body.dataset.dungeonBiome = biome;
     const byId = {}; dungeon.rooms.forEach((r) => { byId[r.id] = r; });
-    const ROOMS = dungeon.rooms.length;
     // One count for the HUD and the summary: the regular rooms (start .. boss, boss included); the hidden secret room is reported on its own row.
     const MAIN_ROOMS = dungeon.rooms.filter((r) => r.type !== 'secret').length;
     const visitedMain = () => dungeon.rooms.filter((r) => r.type !== 'secret' && state.room(r.id).visited).length;

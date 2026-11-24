@@ -124,7 +124,6 @@
   // Ore gating: minimum pick tier (0 wood, 1 stone, 2 iron, 3 gold).
   const NEED_TIER = {}; NEED_TIER[B.IRON] = 1; NEED_TIER[B.GOLD] = 2; NEED_TIER[B.CRYSTAL] = 2; NEED_TIER[GLOW] = 1;
   const TIER_NAME = ['Wood', 'Stone', 'Iron', 'Gold'], PICK_DUR = [0, 60, 120, 200];
-  const COLORS = ['#000', '#5fa63f', '#7a5230', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#e8541a', '#3a6fd8', '#2a2a30', '#ffb02e'];
   const SWATCH = { dirt: '#7a5230', stone: '#7d8189', coal: '#2b2b30', iron_ore: '#d8a77a', gold_ore: '#f2c744', crystal: '#7fe8ff', furnace: '#d0702a', torch: '#ffb02e', table: '#a8743a', glowstone: '#5fe0c8', glow_lamp: '#fff0b0', stone_brick: '#9a9ea8' };
 
   // ---------- state ----------

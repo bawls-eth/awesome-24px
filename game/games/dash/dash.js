@@ -543,7 +543,7 @@
   requestAnimationFrame(frame);
 
   window.__dash = {
-    get run() { return run; }, get save() { return save; }, get player() { return P; }, get ghost() { return G; }, get course() { return C; },
+    get run() { return run; }, get save() { return save; }, get player() { return P; }, get ghost() { return G; },
     get paused() { return paused; }, setPaused, get reduced() { return reduced; }, get lowGfx() { return lowGfx; },
     start, down, up, course,
     // advance n fixed steps; auto: jump when the next obstacle front is `lead` px ahead (a simple bot for tests)

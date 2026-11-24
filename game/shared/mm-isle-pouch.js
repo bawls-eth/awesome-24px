@@ -9,7 +9,6 @@
 }(typeof self !== 'undefined' ? self : this, function (RNG, C, P, X) {
   'use strict';
   const own = Object.prototype.hasOwnProperty;
-  const has = (o, k) => !!o && typeof o === 'object' && own.call(o, k);
   const BASE = Object.freeze({ jungle_berry: 12, raw_meat: 12, bug: 8 }); // = IsleCreatures.STARTER_POUCH (the classic pouch)
   // island -> the staple food added to its pouch
   const ADD = Object.freeze({

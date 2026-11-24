@@ -23,7 +23,6 @@
   const FORMAT = 'pixeltown-backup';
   const VERSION = 2; // bundle format (unchanged since keys became a map); R4 adds the build stamp in bundle()
   const BUILD = '2026-11-24-r4';
-  const PREFIX = 'pixeltown-';
   const SAVE_KEY = 'pixeltown-save-v1';
   const MAX_VALUE = 2000000;
   const MAX_KEYS = 80; // R4 O-04: raised from 50 (settings + hints joined the bundle). A build before R4 refuses a file over 50 entries, named.

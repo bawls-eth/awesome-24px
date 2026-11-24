@@ -279,7 +279,6 @@
     floats.forEach((f) => { f.y -= 24 * dt; f.t -= dt; });
     floats = floats.filter((f) => f.t > 0);
   }
-  function petal(x, y, s, c) { g.fillStyle = c; g.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
   function ptext(str, x, y, scale, color, align) {
     if (window.MM8) { MM8.text(g, str, x, y, scale, color, { align: align || 'left' }); return; }
     g.font = 'bold ' + (8 * scale) + 'px monospace'; g.textAlign = align || 'left'; g.textBaseline = 'top'; g.fillStyle = color; g.fillText(str, x, y);
