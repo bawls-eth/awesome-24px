@@ -149,3 +149,23 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
 #overlay .sum-score.win { color:var(--accent); }
 #overlay .sum-facts { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:4px 10px; background:var(--panel); padding:6px 10px; margin:6px 0; border-radius:6px; }
 #overlay .sum-facts p { margin:0; font-size:calc(14px * var(--ui-scale,1)); color:var(--ink); }
+/* cyc0-ui: <= 300 css px (200% zoom on a phone): header wraps, Sound shrinks, and the stick / Swing / Sneak row fits the width
+   (the 84 + 96 px pads ran past the edge). Every control stays >= 44 px. */
+@media (max-width: 300px) {
+  #top { flex-wrap: wrap; padding-left: 6px; padding-right: 6px; box-sizing: border-box; }
+  #top h1 { flex: 1 1 0; min-width: 0; font-size: min(calc(15px * var(--ui-scale,1)), 8vw); letter-spacing: 0; overflow-wrap: anywhere; }
+  #btn-mute { padding-left: 6px; padding-right: 6px; font-size: min(calc(12px * var(--ui-scale,1)), 6vw); letter-spacing: 0; }
+  #touch { gap: 4px; }
+  #joy { width: 72px; height: 72px; } #knob { left: 16px; top: 16px; }
+  #btn-swing { width: 64px; height: 64px; font-size: min(calc(18px * var(--ui-scale,1)), 6vw); padding: 2px; }
+  #btn-sneak { width: 48px; padding: 2px; font-size: min(calc(12px * var(--ui-scale,1)), 5vw); }
+}
+@media (max-width: 300px) {
+  #stage { padding-left: 4px; padding-right: 4px; box-sizing: border-box; }
+  #joy { width: 64px; height: 64px; } #knob { left: 12px; top: 12px; }
+  #btn-swing { width: 56px; height: 56px; }
+  #touch { padding-left: 4px; padding-right: 4px; }
+}
+@media (max-width: 300px) {
+  #touch #btn-swing, #touch #btn-sneak { font-size: 12px; letter-spacing: 0; padding: 2px; }
+}

@@ -143,3 +143,19 @@ fieldset{border:0;border-radius:0;box-shadow:0 0 0 2px #0b0d1a,0 0 0 4px #5f574f
 :focus-visible,.file:focus-within{outline:3px solid #ffec27;outline-offset:5px;box-shadow:none}
 @media (prefers-reduced-motion:reduce){.btn:active{transform:none}}
 html[data-reduce-motion="1"] .btn:active{transform:none}
+/* cyc0-ui: <= 300 css px (200% zoom on a phone): the 4-up hero stat grid ran 180 px past the edge; 2-up, cells may shrink. */
+@media (max-width: 300px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats > li { min-width: 0; gap: 4px; overflow-wrap: anywhere; }
+}
+@media (max-width: 300px) { .choice > span { min-width: 0; overflow-wrap: anywhere; } }
+@media (max-width: 300px) {
+  .card { min-width: 0; box-sizing: border-box; max-width: 100%; }
+  .card h2, .card p, .card .btn { overflow-wrap: anywhere; min-width: 0; max-width: 100%; white-space: normal; }
+}
+@media (max-width: 300px) {
+  #app * { overflow-wrap: anywhere; }
+  .plain { padding-left: 14px; }
+  .plain li, .list > li { min-width: 0; }
+}
+@media (max-width: 300px) { #app h1 { overflow-wrap: normal; font-size: min(1.6rem, 11vw); letter-spacing: .06em; } } /* words stay whole in the title */
