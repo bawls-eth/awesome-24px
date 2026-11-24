@@ -151,7 +151,7 @@ Evidence tags as above; [M1] = measured in cycle 1 play (`beta/cycle1-design.md`
 | ID-15 | Isles Oakback orchard route (food sink fix) | S | low | proposed |
 | ID-16 | Isles creature "likes" journal hint | S | low | proposed |
 | ID-17 | Isles tame verbs per species | M | low | proposed |
-| ID-18 | Town daily nudge through mm-bounties | S | low | proposed |
+| ID-18 | Town daily nudge through mm-bounties | S | low | needs-change (L, cycle 2): the module's pool is 8 Realm tasks and its reward is fame / petTreat (neither exists); needs a Town pool, one additive save key and a panel row. Spec in `beta/cycle2-lead.md` section 1; must not ship beside ID-09 |
 | ID-19 | Town neighbour gift errand (no streak) | M | low | proposed |
 | ID-20 | Arcade daily course with a shared modifier | M | low | proposed |
 | ID-21 | Stack soft first miss | S | low | proposed |
