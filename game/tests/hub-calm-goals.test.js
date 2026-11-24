@@ -35,8 +35,10 @@ const items = (page) => page.$$eval('#calm-list .calm-go', (as) => as.map((a) =>
   let s = await open(browser, {});
   check('card shows on a fresh save', await s.page.isVisible('#calm-card'));
   let it = await items(s.page);
-  check('3 ideas: first tame, first catch, first star', JSON.stringify(it.map((x) => x.key)) === JSON.stringify(['isles:tame1', 'angler:catch1', 'jam:star1']), JSON.stringify(it));
-  const want = { 'isles:tame1': '/game/games/isles/index.html', 'angler:catch1': '/game/games/angler/index.html', 'jam:star1': '/game/games/jam/index.html' };
+  // round 4 b08-r2 (intentional change): a fresh profile's first idea is Home's one first move, the guided Realm adventure (not the Isles tame)
+  check('3 ideas: the guided adventure (same as Home PLAY), first catch, first star', JSON.stringify(it.map((x) => x.key)) === JSON.stringify(['realm:first', 'angler:catch1', 'jam:star1']), JSON.stringify(it));
+  check('the guided-adventure idea cannot be put away (it is the first move, not a medal)', (await s.page.$$('#calm-list .calm-x[data-key="realm:first"]')).length === 0);
+  const want = { 'realm:first': '/game/games/mad-maze/index.html', 'angler:catch1': '/game/games/angler/index.html', 'jam:star1': '/game/games/jam/index.html' };
   for (const x of it) {
     const abs = await s.page.evaluate((h) => new URL(h, location.href).href, x.href);
     const r = await s.page.request.get(abs);
