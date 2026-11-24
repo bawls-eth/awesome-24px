@@ -37,7 +37,7 @@ async function sample(browser, q) {
     return { st: st ? { on: st.on, count: st.count, ms: st.ms, outline: st.outline, names: Object.keys(st.keys) } : null, shop: shopKey ? stat(shopKey) : null };
   });
   await ctx.close();
-  return Object.assign(r, { errors, db: db.count() });
+  return Object.assign(r, { errors, db: db.attempts() });
 }
 
 (async () => {
