@@ -67,5 +67,7 @@ Read with `git show cyc4-systems:game/design/beta/cycle4-systems.md`.
 ## Checks run (port 9745, /tmp/bt.sh)
 - New: `cyc4-assist-scale` (node, 19 checks), `cyc4-assist-realm` (browser, 16 checks), `cyc4-forge-hint` (node + browser, 9 checks). All three ALL PASSED.
 - Regression: `shared-mm-backup` (65/65), `realm-wire`, `realm-access2`, `shared-mm-pad-aim`, `shared-mm-gear-forge` (31/31), `gear-forge-ui`. All ALL PASSED.
-- Gates run alone: `first-ten-minutes` (on the ID-06 code) ALL PASSED. `isles-first-ten`: see the final report.
+- Gates run alone: `first-ten-minutes` (on the ID-06 code) ALL PASSED. `isles-first-ten` (on the final code) ALL PASSED.
+  - It overlapped with my forge tests through bt.sh slots, so it did not run strictly alone.
+- `save-compat-pages`: NOT verified. It hit my 400 s `timeout` wrapper (Terminated), so the coordinator should run it in the stamp.
 - `run-all-tiers` and `live-safety`: ALL PASSED.
