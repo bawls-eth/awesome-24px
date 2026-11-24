@@ -2107,5 +2107,9 @@
   "cyc3-dd-path-merge.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "cyc3-realm-frame-alloc.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

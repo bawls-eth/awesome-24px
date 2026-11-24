@@ -894,11 +894,12 @@
     // no shards, no item) for QUIET_AFTER s and no enemy is alive within QUIET_R, the nearest cleared group in range respawns now instead of
     // waiting out its zone timer (Shore 60 s), and the nearest live enemy is provoked and comes over; again every QUIET_AGAIN s while it stays quiet. ?quietpity=0 turns it off.
     const QUIET_ON = !/[?&]quietpity=0(&|$)/.test(qs0); const QUIET_AFTER = 15; const QUIET_AGAIN = 6; const QUIET_R = 14 * TILE;
-    let quietSig = ''; let quietT = 0; let quietNudges = 0;
+    let qS0 = -1, qS1 = -1, qS2 = -1, qS3 = -1, qS4 = -1, qS5 = -1; let quietT = 0; let quietNudges = 0;
     function quietTick(dt) {
       if (!QUIET_ON || !zones || arena.state !== 'play' || typeof zones.hurry !== 'function') return;
-      const sv = arena.save || {}; const sig = (sv.level | 0) + '|' + (sv.xp | 0) + '|' + kills + '|' + (sv.shards | 0) + '|' + (sv.items ? sv.items.length : 0) + '|' + (sv.nextUid | 0);
-      if (sig !== quietSig) { quietSig = sig; quietT = 0; return; }
+      // cycle 3 (L hot path): the six numbers are compared as numbers (a 'level|xp|kills|shards|items|uid' string was built every frame)
+      const sv = arena.save || {}; const s0 = sv.level | 0, s1 = sv.xp | 0, s2 = kills, s3 = sv.shards | 0, s4 = sv.items ? sv.items.length : 0, s5 = sv.nextUid | 0;
+      if (s0 !== qS0 || s1 !== qS1 || s2 !== qS2 || s3 !== qS3 || s4 !== qS4 || s5 !== qS5) { qS0 = s0; qS1 = s1; qS2 = s2; qS3 = s3; qS4 = s4; qS5 = s5; quietT = 0; return; }
       if ((quietT += dt) < QUIET_AFTER) return;
       quietT = QUIET_AFTER - QUIET_AGAIN; // still quiet: nudge again every QUIET_AGAIN s until something pays
       const p = arena.player; let near = false;
@@ -1637,28 +1638,33 @@
       }
       return c;
     }
+    // cycle 3 (L hot path): plain loops and plain numbers. Each frame this built 3 closures, one {x, y} object per shrine and per NPC (sPx)
+    // and two key strings per shrine, for sites that are almost always off screen. Same draws in the same order.
+    const SHRINE_GK = {}; const SHRINE_AK = {};
     function drawSites(g, vx0, vy0, vx1, vy1, tt, reduced) {
-      SITES.shrines.forEach((q) => {
-        const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 60 || c.y > vy1 + 60) return;
+      const sh = SITES.shrines, cps = SITES.camps, nps = SITES.npcs;
+      for (let i = 0; i < sh.length; i++) {
+        const q = sh[i]; const cx = (q.x + 0.5) * TILE, cy = (q.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 - 60 || cy > vy1 + 60) continue;
         const lit = shrineReady(q);
-        if (lit) { if (!sc['g' + q.kind]) sc['g' + q.kind] = glowSprite(SHRINE_COL[q.kind]); g.globalAlpha = reduced ? 0.45 : 0.35 + 0.2 * Math.sin(tt * 2.4 + q.x); g.drawImage(sc['g' + q.kind], c.x - 64, c.y - 80); g.globalAlpha = 1; }
-        const sa = wArt['shrine_' + q.kind];
-        if (sa) { if (!lit) g.globalAlpha = 0.6; drawArt(g, sa, lit ? frameOf(sa, tt, reduced) : 0, c.x, c.y + 18); g.globalAlpha = 1; artDraws.shrine++; }
-        else g.drawImage(shrineSprite(q.kind, lit), c.x - 24, c.y - 70);
-      });
-      SITES.camps.forEach((q) => {
-        const cx = (q.chest.x + 0.5) * TILE; const cy = (q.chest.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 || cy > vy1) return;
+        const gk = SHRINE_GK[q.kind] || (SHRINE_GK[q.kind] = 'g' + q.kind);
+        if (lit) { if (!sc[gk]) sc[gk] = glowSprite(SHRINE_COL[q.kind]); g.globalAlpha = reduced ? 0.45 : 0.35 + 0.2 * Math.sin(tt * 2.4 + q.x); g.drawImage(sc[gk], cx - 64, cy - 80); g.globalAlpha = 1; }
+        const sa = wArt[SHRINE_AK[q.kind] || (SHRINE_AK[q.kind] = 'shrine_' + q.kind)];
+        if (sa) { if (!lit) g.globalAlpha = 0.6; drawArt(g, sa, lit ? frameOf(sa, tt, reduced) : 0, cx, cy + 18); g.globalAlpha = 1; artDraws.shrine++; }
+        else g.drawImage(shrineSprite(q.kind, lit), cx - 24, cy - 70);
+      }
+      for (let i = 0; i < cps.length; i++) {
+        const q = cps[i]; const cx = (q.chest.x + 0.5) * TILE; const cy = (q.chest.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 || cy > vy1) continue;
         const ca = wArt.loot_chest_gold;
         if (ca) {
           const t0c = chestAnimT.get(q.id); let f = chestOpen.has(q.id) ? ca.frames - 1 : 0;
           if (t0c !== undefined && !reduced) f = Math.max(0, Math.min(ca.frames - 1, Math.floor((tt - t0c) / 0.12)));
           drawArt(g, ca, f, cx, cy + 18); artDraws.chest++;
         } else g.drawImage(chestSprite(chestOpen.has(q.id)), cx - 22, cy - 22);
-      });
-      SITES.npcs.forEach((q) => {
-        const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 50 || c.y > vy1 + 50) return;
-        const s = npcSprite(q.npc); g.drawImage(s, c.x - s.width / 2, c.y + 14 - s.height);
-      });
+      }
+      for (let i = 0; i < nps.length; i++) {
+        const q = nps[i]; const cx = (q.x + 0.5) * TILE, cy = (q.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 - 50 || cy > vy1 + 50) continue;
+        const s = npcSprite(q.npc); g.drawImage(s, cx - s.width / 2, cy + 14 - s.height);
+      }
     }
     // ---------- world status (S11): shrines show their buff as a status icon; world creatures apply debuffs from their bolts ----------
     // realm.js enemy bolts carry no `st` field and have no player-hit callback, so this hooks the instance: arena._guarded is only ever called for an

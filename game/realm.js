@@ -607,6 +607,10 @@ class RealmArena {
 
   // The nearest living player to a point — enemies aim at whoever is closest.
   _nearest(x, y) {
+    // cycle 3 (L hot path): solo (no ready partner) the answer is always this.player, so no distance is measured. Each Math.hypot
+    // call returns a boxed number (12 bytes), once per enemy per frame.
+    const t0 = this.team;
+    if (!(t0 && t0.role === 'host' && t0.partner && t0.partner.ready && !t0.partner.down)) return this.player;
     let best = this.down ? null : this.player; let bd = best ? Math.hypot(best.x - x, best.y - y) : 1e9;
     const t = this.team;
     if (t && t.role === 'host' && t.partner && t.partner.ready && !t.partner.down) {
