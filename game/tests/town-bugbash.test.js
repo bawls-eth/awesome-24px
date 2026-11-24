@@ -43,7 +43,7 @@ async function open(browser, viewport, touch, qs) {
 
   const browser = await chromium.launch();
   {
-    const p = await open(browser, { width: 390, height: 844 }, true);
+    const p = await open(browser, { width: 390, height: 844 }, true, '?hud=online') /* U-01: measure the online HUD (walkie pill) */;
     const r = await p.page.evaluate(() => {
       const s = window.__g.scene.getScene('Town');
       const P = { cx: 260, cy: 600, rx: 150, ry: 90 }; // MAIN_POND

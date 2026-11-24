@@ -84,7 +84,7 @@ const hit = (a, b) => !!(a && b && a.x < b.r - 0.5 && b.x < a.r - 0.5 && a.y < b
   {
     const { ctx, db, page } = await mk({ width: 844, height: 390 });
     await exposeGame(page);
-    await page.goto(BASE);
+    await page.goto(BASE + '?hud=online'); // U-01: the online HUD layout (quick chat / Hold to talk)
     await joinOffline(page, 'ADMINr4land');
     await page.waitForTimeout(800);
     const r = await page.evaluate(() => {

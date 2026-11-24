@@ -16,7 +16,7 @@ async function open(browser, viewport) {
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   await page.route('**/main.js*', async (route) => { const resp = await route.fetch(); const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);'); route.fulfill({ response: resp, body }); });
-  await page.goto(BASE);
+  await page.goto(BASE + '?hud=online'); // U-01: offline hides quick chat / Hold to talk; this measures the online HUD layout
   await page.fill('#name-input', 'ADMINw07');
   await page.click('.species-tab'); await page.click('.avatar-choice');
   await page.click('button:has-text("Join Town")');
