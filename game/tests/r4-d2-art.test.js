@@ -1,7 +1,7 @@
 // R4-D2 world + art integration checks (Round 4).
 // (1) hero art: the class strip is applied quickly (W-01 / b12-r2-01) and loadClass reads ONE manifest for a hero class, not all INDEX batches;
 // (2) Realm terrain: the drawn terrain has no 1-tile holes inside a patch (b12-r2-04), inner corners are filled, gameplay terrain untouched;
-// (3) Codex R01 terrain and R03 props win over b10t / b12 by rank (8 variants for grass, r03 source for prop_tree_small);
+// (3) R03 props win over b12 by rank (r03 source for prop_tree_small); R01 terrain is not registered (rejected), so b10t stays;
 // (4) shade patches are not axis-aligned 4x4-tile rectangles (b04-01): the shade class changes inside some 4x4 block;
 // (5) no page errors. Firebase blocked in every context.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/r4-d2-art.test.js
@@ -62,7 +62,9 @@ const WORLD = (seed, q) => ORIGIN + '/game/games/mad-maze/index.html?mode=world&
   check('generator still has its raw 1-tile holes (gameplay terrain untouched)', r.rawHoles > 0, JSON.stringify({ raw: r.rawHoles }));
   check('drawn terrain: no walkable 1-tile hole inside a patch (b12-r2-04)', r.holes === 0, JSON.stringify({ holes: r.holes, at: r.holeAt, smooth: r.smooth }));
   check('inner-corner notches filled inside patches (no square holes in snow)', r.smooth.corners > 0, JSON.stringify(r.smooth));
-  check('Codex R01 terrain wins over b10t: grass has 8 variants, rank 2', r.grass === 8 && r.rank.grass === 2, JSON.stringify({ grass: r.grass, rank: r.rank }));
+  // R01 was reviewed in game and rejected this round (92-98% single-colour tiles, a teal grass that clashes with b10t tall grass), so it is
+  // not registered: the b10t art stays (4 grass variants, rank 1). The rank code is kept so a redone r01 wins over b10t with no code change.
+  check('b10t grass art in use (R01 not registered after review): 4 variants, rank 1', r.grass === 4 && r.rank.grass === 1, JSON.stringify({ grass: r.grass, rank: r.rank }));
   check('Codex R03 props win over b12 by id (prop_tree_small from r03-nature-props)', r.tree === 'r03-nature-props', String(r.tree));
   await ctx.close();
   // opt-outs

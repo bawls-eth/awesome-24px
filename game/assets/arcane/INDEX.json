@@ -705,31 +705,6 @@
       "note": "codex/b12-props-quality-redraw redrew b12 in place at 2x cells; staged in its own folder so b12 stays live until realm-world draws b12r at display_scale 0.5 (hunk in game/design/bugbash/art.md)"
     },
     {
-      "id": "r01",
-      "label": "realm-terrain",
-      "path": "assets/arcane/r01-realm-terrain",
-      "manifest": "assets/arcane/r01-realm-terrain/manifest.json",
-      "files": 126,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/r01-realm-terrain-master-review",
-      "remake_of": "b10t",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
-      "id": "r02",
-      "label": "isles-ground",
-      "path": "assets/arcane/r02-isles-ground",
-      "manifest": "assets/arcane/r02-isles-ground/manifest.json",
-      "files": 113,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/r02-isles-ground-master-review",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
       "id": "r03",
       "label": "nature-props",
       "path": "assets/arcane/r03-nature-props",
@@ -740,31 +715,6 @@
       "source": "codex",
       "branch": "codex/r03-nature-props-master-review",
       "remake_of": "b12",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
-      "id": "r04",
-      "label": "jungle-terrain",
-      "path": "assets/arcane/r04-jungle-terrain",
-      "manifest": "assets/arcane/r04-jungle-terrain/manifest.json",
-      "files": 181,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/r04-jungle-terrain-master-review",
-      "remake_of": "b30",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
-      "id": "r05",
-      "label": "tundra-ground",
-      "path": "assets/arcane/r05-tundra-ground",
-      "manifest": "assets/arcane/r05-tundra-ground/manifest.json",
-      "files": 117,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/r05-tundra-ground-master-review",
       "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
     },
     {
@@ -781,31 +731,6 @@
       "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
     },
     {
-      "id": "m01",
-      "label": "isleback-turtle",
-      "path": "assets/arcane/m01-isleback-turtle",
-      "manifest": "assets/arcane/m01-isleback-turtle/manifest.json",
-      "files": 19,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/m01-isleback-master-review",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
-      "id": "m03r",
-      "label": "rimewolf",
-      "path": "assets/arcane/m03-rimewolf",
-      "manifest": "assets/arcane/m03-rimewolf/manifest.json",
-      "files": 33,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/m03-rimewolf-master-review",
-      "remake_of": "b40c",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
       "id": "m08",
       "label": "minigame-ui",
       "path": "assets/arcane/m08-minigame-ui",
@@ -815,18 +740,6 @@
       "ingested_utc": "2026-11-24T00:30:00Z",
       "source": "codex",
       "branch": "codex/m08-medals-original",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
-      "id": "m03",
-      "label": "bug-safari",
-      "path": "assets/arcane/m03-bug-safari",
-      "manifest": "assets/arcane/m03-bug-safari/manifest.json",
-      "files": 48,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/m03-bug-safari",
       "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
     }
   ]
