@@ -985,7 +985,14 @@
       sel = items[(i + (e.deltaY > 0 ? 1 : items.length - 1)) % items.length].item; renderHud(); e.preventDefault();
     }, { passive: false });
     const locked = () => document.pointerLockElement === cv;
+    // R4 (b13 "4x tap scripts hung"): a finger / pen tap also fires a compatibility mousedown. That used to request pointer lock,
+    // so a tap on a touch screen (touch laptop, emulated phone) captured and hid the mouse pointer and left the page in pointer-lock
+    // mode (in the headless emulator: long tasks of 0.3-17 s after the tap). Only a real mouse press locks the pointer now.
+    let lastTouchAt = -1e9;
+    cv.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') lastTouchAt = performance.now(); });
+    const fromTouch = (e) => (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents === true) || performance.now() - lastTouchAt < 1000;
     cv.addEventListener('mousedown', (e) => {
+      if (fromTouch(e)) return;
       if (!locked()) { try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* ignore */ } return; }
       aim();
       if (e.button === 0) input.mine = true;
