@@ -2186,7 +2186,7 @@
   },
   "cyc4-tames-perks-shared.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   },
   "cyc4-town-cull-alloc.test.js": {
     "class": "browser",
@@ -2198,6 +2198,6 @@
   },
   "cyc4-hero-frame-names.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   }
 }
