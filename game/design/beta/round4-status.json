@@ -1,0 +1,708 @@
+{
+ "_updated": "2026-11-23 (D5 seed from the 15 round-2 reports)",
+ "_log": [
+  "seed: owners from ROUND4.md file ownership; round-3 fixes entered as \"claimed\" until D5 replays them"
+ ],
+ "b01-r2-05": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "leash / aggro; not retested in round 2"
+ },
+ "b01-r2-07": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-r3-boss-bar-fall",
+  "note": "round-3 fix 4ecc4b2 (bar hidden on the fall card)"
+ },
+ "b01-r2-08": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "stick vectors on blur; not retested in round 2"
+ },
+ "b01-r2-09": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "enemy overlap; not retested in round 2"
+ },
+ "b01-r2-10": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "hero on a solid tile; not retested in round 2"
+ },
+ "b01-r2-11": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "zone HUD line after teleport"
+ },
+ "b02-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "toast over the backpack header; not retested in round 2"
+ },
+ "b02-08": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Stats tab keeps Gear-tab compare deltas"
+ },
+ "b02-11": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "T12 drop for a class that cannot equip it (balance)"
+ },
+ "b02-12": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-g03-sell-guard",
+  "note": "round-3 fix 23d7bc1 (_armButtons 400 ms)"
+ },
+ "b02-15": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Nexus labels clipped"
+ },
+ "b03-r2-05": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-w05r3-hud-narrow",
+  "note": "round-3 fix ce67ff7 (W-16 r3 phone dungeon); pad vs room not replayed yet"
+ },
+ "b03-r2-09": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Trial plays in the open Shore (design)"
+ },
+ "b03-r2-10": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Trial fall shows the generic line"
+ },
+ "b03-r2-13": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "dungeon HUD on a landscape phone"
+ },
+ "b04-01": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "terrain quilt look (W-03)"
+ },
+ "b04-03": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "snow blobs / dashed dry-grass outline"
+ },
+ "b04-09": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "beta-r3-blacksmith-godgate",
+  "note": "round-3 fix 544b5d2 (stall titled as the forge)"
+ },
+ "b04-12": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "big props walkable"
+ },
+ "b04-13": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-r3-blacksmith-godgate",
+  "note": "round-3 fix 544b5d2 (Godlands altars soft-gate a low hero)"
+ },
+ "b04-14": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Nexus hero is a yellow dot"
+ },
+ "b04-15": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Nexus plaza after rotating to landscape"
+ },
+ "b05-05": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Oakback needs golden apples, 1 glint per 900 s (balance)"
+ },
+ "b05-08": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Feed toast one tick behind"
+ },
+ "b05-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "log text gap"
+ },
+ "b05-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "how-to card covers the phone HUD"
+ },
+ "b05-11": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "getImageData readback warnings"
+ },
+ "b05-12": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "stable row text clipped under the buttons"
+ },
+ "b06-r2-01": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "tundra creature art (Codex asks W-17)"
+ },
+ "b06-r2-02": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "mars creature art (Codex asks W-17)"
+ },
+ "b06-r2-03": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "boss art: Frost Dragon / Red Titan share a body"
+ },
+ "b06-r2-05": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "open isles empty at start (initial fill)"
+ },
+ "b06-r2-06": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "start areas flat"
+ },
+ "b06-r2-08": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "lift-off rocket under toast and buttons"
+ },
+ "b06-r2-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "how-to card covers the centre"
+ },
+ "b07-r2-02": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "people panel More tab paints a black / white rectangle at 390x844"
+ },
+ "b07-r2-04": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "leftover \"Pick your villager\" wording"
+ },
+ "b07-r2-05": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "O-10 decided: \"Founder's Statue\", hero emoji, code-drawn hero statue until the Codex sprite lands"
+ },
+ "b07-r2-06": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "O-01 decided: City Drive / Night Racer / Neon Coast / Kart Rally; links new tab + rel=noopener + hint, or Coming soon card"
+ },
+ "b07-r2-08": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "build-mode banner overlaps at 390x844"
+ },
+ "b07-r2-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Town Settings lists Realm combat options"
+ },
+ "b07-r2-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "two different More buttons"
+ },
+ "b07-r2-12": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "wildlife 2-3x the hero (W-06 scale table); hint during a bite"
+ },
+ "b07-r2-13": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "stall price label on the player name; failed buy silent"
+ },
+ "b07-r2-14": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Back from the Isles lands on the join card"
+ },
+ "b08-r2-04": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "passive new player dies on the Shore in ~35 s"
+ },
+ "b08-r2-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Town phone HUD crowding"
+ },
+ "b08-r2-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "keyboard key names shown on touch"
+ },
+ "b08-r2-10": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Home shows 13 places; footer; Lantern NEW HERO form"
+ },
+ "b08-r2-11": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "\"Play offline\" appears after ~6.5 s; Join disabled without a reason"
+ },
+ "b08-r2-12": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Realm phone HUD buttons between the thumbs"
+ },
+ "b09-04": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Pop chain preview can over-promise"
+ },
+ "b09-05": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Stack near-miss floats overlap"
+ },
+ "b09-06": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Stack perfect window fixed 5 px (balance)"
+ },
+ "b09-08": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Dash result card below the fold on phone"
+ },
+ "b09-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Pop medals in round 1 (balance)"
+ },
+ "b09-11": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Dash test API getter shadowed"
+ },
+ "b09-12": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Pop 6-digit score cramped"
+ },
+ "b09-13": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Dash PERFECT floats stack"
+ },
+ "b10-r2-06": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Jam assist / relax / practice result is bare text"
+ },
+ "b10-r2-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Jam assist does not mark the two live lanes"
+ },
+ "b10-r2-08": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Jam difficulty ladder not monotonic"
+ },
+ "b10-r2-09": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "jam tests (fd3ba88)",
+  "note": "round-3 fix fd3ba88 (startSong refuses a locked song)"
+ },
+ "b10-r2-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Bug Safari summary hierarchy"
+ },
+ "b10-r2-13": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Bug Safari stars trivially reached (balance)"
+ },
+ "b10-r2-14": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Angler fish art generic; shrimp drawn as a fish"
+ },
+ "b10-r2-15": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Angler tournament: no running total / casts left"
+ },
+ "b10-r2-16": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Angler chrome crowds the scene (260 px)"
+ },
+ "b11-r2-04": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "O-07 default stands: neighbour capped at stall +15%"
+ },
+ "b11-r2-05": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "first practice week stores a loss as best"
+ },
+ "b11-r2-08": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "Deepdelve HUD says Depth 5 at the surface"
+ },
+ "b11-r2-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Lantern Start run greyed without a reason"
+ },
+ "b11-r2-10": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Realm HUD Lv 1 for a higher Lantern hero"
+ },
+ "b11-r2-12": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Deepdelve creative hotbar clipped on phone"
+ },
+ "b11-r2-13": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "same as b11-r2-04 with numbers (204 vs 122): O-07 cap +15%"
+ },
+ "b12-r2-01": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "hero is a green orb / invisible ~3 s after the pick"
+ },
+ "b12-r2-04": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "snow frames with square holes; lava plus blocks"
+ },
+ "b12-r2-05": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Town scale mismatch (W-06 scale table)"
+ },
+ "b12-r2-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Town world labels collide with each other and HUD chips"
+ },
+ "b12-r2-08": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Nexus plaza placeholder look"
+ },
+ "b12-r2-11": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "emoji glyphs over pixel art, mixed fonts"
+ },
+ "b12-r2-14": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Lich King / Shadow Hydra share a template (Codex R08)"
+ },
+ "b12-r2-15": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "phone dungeon letterboxed strip"
+ },
+ "b12-r2-16": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "lollipop trees; b12r redraw staged, not wired"
+ },
+ "b12-r2-18": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Top Scores board: fish icon on a row; half off-screen on phone"
+ },
+ "b12-r2-19": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "drop float text overlaps"
+ },
+ "b13-r2-02": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-s08-town-three-lazy",
+  "note": "round-3 fix 5a1bffb (three.js on the first cave visit)"
+ },
+ "b13-r2-03": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-s07-town-cull",
+  "note": "round-3 fix 458cc5f (camera culling); fps target still to be measured on a quiet box"
+ },
+ "b13-r2-04": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "Realm soak not reproduced on a quiet box (1 min only); needs the 10 min run alone"
+ },
+ "b13-r2-05": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "Deepdelve tap long tasks (max 601 ms)"
+ },
+ "b13-r2-07": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "Realm rotation stall (35 long tasks); Deepdelve canvas stays 195x331"
+ },
+ "b13-r2-08": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "Realm listener creep +5 / min"
+ },
+ "b13-r2-10": {
+  "owner": "D3",
+  "status": "backlog",
+  "test": "-",
+  "note": "unreferenced large images in the repo"
+ },
+ "b13-r2-11": {
+  "owner": "D3",
+  "status": "backlog",
+  "test": "-",
+  "note": "art pack URLs unversioned (S-14 note)"
+ },
+ "b13-r2-12": {
+  "owner": "D5",
+  "status": "verified",
+  "test": "beta-r4-arcane-soon",
+  "note": "O-08: Coming soon card (d37bd96). Replayed by D5: old page 15 x 404, new page 0 failed requests, 0 console errors"
+ },
+ "b14-05": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "O-04 decided: ONE backup for every game key + settings, from Town, Lantern and Hub"
+ },
+ "b14-06": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-s04-coop-save",
+  "note": "round-3 fix 84ffa19 (seatPos merge keeps the other seat)"
+ },
+ "b14-07": {
+  "owner": "D3",
+  "status": "decided",
+  "test": "-",
+  "note": "net.js is off limits (O-02): document only"
+ },
+ "b14-08": {
+  "owner": "D3",
+  "status": "decided",
+  "test": "-",
+  "note": "net.js is off limits (O-02): document only"
+ },
+ "b14-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "player list: full-width / RTL names"
+ },
+ "b14-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "player list lists every record over the 60 cap"
+ },
+ "b14-11": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "second Realm invite dropped (main.js)"
+ },
+ "b14-12": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "non-bestie walkie memos ignored, not removed (main.js; deleting is a DB write: document only)"
+ },
+ "b14-13": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "part of O-04: backup includes settings (not device flags)"
+ },
+ "b14-r2-N01": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-s03-backup-skip",
+  "note": "round-3 fix cced528 (unknown key skipped with a named message)"
+ },
+ "b14-r2-N02": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "Town Restore shows nothing for ~2 s (O-04 preview / confirm)"
+ },
+ "b15-04": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-w05r3-hud-narrow",
+  "note": "round-3 fix ce67ff7 (W-05 r3); 320x568 crowding still to be judged by a tester"
+ },
+ "b15-05": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Town on a landscape phone overlaps"
+ },
+ "b15-06": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Back pill overlaps the title icon at 320"
+ },
+ "b15-07": {
+  "owner": "D5",
+  "status": "verified",
+  "test": "beta-r4-arcane-soon",
+  "note": "O-08: Coming soon card (d37bd96). Replayed by D5 at 1280x720 and 390x844: no 404, no horizontal scroll, Home lands on the Hub"
+ },
+ "b15-08": {
+  "owner": "D3",
+  "status": "backlog",
+  "test": "-",
+  "note": "no service worker (offline reload): improvement"
+ },
+ "b15-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "arcade games expose 4-5 Tab stops; Isles canvas not reachable"
+ },
+ "b15-13": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Back with the shared Menu open leaves the page"
+ },
+ "b15-r2-15": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-w05r3-hud-narrow",
+  "note": "round-3 fix ce67ff7 (Menu vs XP bar at 150%)"
+ },
+ "b15-r2-16": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-r3-lantern-blocked",
+  "note": "round-3 fix 0ff914f (Lantern with site data blocked)"
+ },
+ "b15-r2-17": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "second Tab lands on <body> in Dash / Echo / Pop / Stack"
+ },
+ "b15-r2-18": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Hub moon overlaps the logo at 195 px"
+ }
+}
