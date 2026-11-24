@@ -1788,5 +1788,9 @@
   "beta-s08-town-three-lazy.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-b02-08-stats-delta.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

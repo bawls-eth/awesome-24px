@@ -4609,7 +4609,9 @@ class RealmArena {
   // Every id the old panel had is kept; nothing is removed, only regrouped. The open tab is remembered for this page only.
   bpTab(name) {
     if (name === 'gear' || name === 'stats' || name === 'relics') {
+      const was = this._bpTabName || 'gear';
       this._bpTabName = name;
+      if (was !== name && this._bpDeltaUid) { this._bpHoverUid = 0; this.bpShowDelta(0); } // b02-08: a Gear-tab compare never lingers on another tab
       const root = document.getElementById('realm-backpack-body');
       if (root) {
         root.querySelectorAll('[data-bp-tab]').forEach((b) => { const on = b.dataset.bpTab === name; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; b.classList.toggle('on', on); });
