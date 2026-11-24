@@ -54,6 +54,7 @@ const T = (page, src) => page.evaluate(`(function (t) { ${src} })(window.__g.sce
   }
   {
     const { ctx, page, errors, st } = await open(browser, true);
+    const reqs = []; page.on('request', (r) => { if (/three\.module/.test(r.url())) reqs.push(r.url()); });
     await T(page, 't.enterUnderground();');
     await page.waitForFunction(() => [...document.querySelectorAll('#chat-log .chat-line')].some((l) => /Could not load the cave/.test(l.textContent)), null, { timeout: 20000 }).catch(() => {});
     check('[3] unreachable three.js: the cave says it could not load', await page.evaluate(() => [...document.querySelectorAll('#chat-log .chat-line')].some((l) => /Could not load the cave/.test(l.textContent))));
@@ -62,6 +63,7 @@ const T = (page, src) => page.evaluate(`(function (t) { ${src} })(window.__g.sce
     await T(page, 't.enterUnderground();');
     const ok = await page.waitForFunction(() => window.__g.scene.getScene('Town').inUnderground, null, { timeout: 30000 }).then(() => true).catch(() => false);
     check('[3] the next try with the network back opens the cave', ok);
+    check('[3] the retry asks for a different URL than the failed one (a failed import(url) is cached per page in current Chromium)', reqs.length >= 2 && reqs[reqs.length - 1] !== reqs[0] && /retry=1/.test(reqs[reqs.length - 1]), JSON.stringify(reqs));
     await ctx.close();
   }
   await browser.close();
