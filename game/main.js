@@ -9754,7 +9754,7 @@ class TownScene extends Phaser.Scene {
     // W-06 (b12-06): a bigger board and 12 px text rendered at 2x, so TOP SCORES reads (cap height >= 8 screen px at both zooms; was 8 px, smeared).
     g.fillStyle(0xe8d9b5, 1).fillRect(x - 72, y - 78, 144, 76);
     g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 72, y - 78, 144, 76);
-    g.bake();
+    g.bake({ finish: 'board' }); // cycle 1 art: same outline / depth finish as the buildings
     this.noticeBoardText = this.add.text(x, y - 40, '', {
       fontSize: '12px',
       fontFamily: 'monospace',

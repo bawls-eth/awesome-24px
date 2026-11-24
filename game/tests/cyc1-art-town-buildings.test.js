@@ -1,5 +1,5 @@
 // Cycle 1 art (G), T-BLD "Town buildings are flat fills with no outline": the baked building textures (shop, museum, Able Sisters,
-// turnip stand, windmill, Polyroll booth, guestbook) get a pixel finish ONCE at create: alpha snapped to 0/255, a 1 px colour-matched
+// turnip stand, windmill, Polyroll booth, guestbook) and the TOP SCORES board get a pixel finish ONCE at create: alpha snapped to 0/255, a 1 px colour-matched
 // dark outline outside the silhouette, bottom / right shade and a top-left rim light, plus an eave shadow under the three roofs.
 // ?bldfinish=0 = the old flat look.
 // Serve the repo root first:  python3 -m http.server 8440 &
@@ -44,9 +44,9 @@ async function sample(browser, q) {
   const browser = await chromium.launch();
   const on = await sample(browser, '');
   const off = await sample(browser, '?bldfinish=0');
-  check('default: 7 building textures finished at create', on.st && on.st.on && on.st.count === 7, JSON.stringify(on.st));
-  check('default: every named building recorded', on.st && ['shop', 'museum', 'able', 'turnip', 'windmill', 'polyroll', 'guestbook'].every((n) => on.st.names.indexOf(n) >= 0), JSON.stringify(on.st && on.st.names));
-  check('default: outline pixels were added (>= 1500 over the 7 textures)', on.st && on.st.outline >= 1500, String(on.st && on.st.outline));
+  check('default: 8 building / board textures finished at create', on.st && on.st.on && on.st.count === 8, JSON.stringify(on.st));
+  check('default: every named building recorded', on.st && ['shop', 'museum', 'able', 'turnip', 'windmill', 'polyroll', 'guestbook', 'board'].every((n) => on.st.names.indexOf(n) >= 0), JSON.stringify(on.st && on.st.names));
+  check('default: outline pixels were added (>= 1500 over the 8 textures)', on.st && on.st.outline >= 1500, String(on.st && on.st.outline));
   check('default: the finish is a one-off create cost (< 250 ms in total)', on.st && on.st.ms < 250, String(on.st && on.st.ms));
   check('default: shop texture has no soft alpha fringe (0 semi-alpha px)', on.shop && on.shop.semi === 0, JSON.stringify(on.shop));
   check('default: shop texture has a dark outline / shade band (>= 400 dark px)', on.shop && on.shop.dark >= 400, JSON.stringify(on.shop));
