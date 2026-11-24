@@ -2095,5 +2095,9 @@
   "cyc2-dd-path-replay.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-art-town-label-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
