@@ -1943,5 +1943,9 @@
   "town-concert-once.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "realm-shard-tick-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

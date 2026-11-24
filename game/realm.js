@@ -2718,7 +2718,7 @@ class RealmArena {
       const d = this.save.shards - this.displayShards;
       this.displayShards += Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * Math.min(1, dt * 6)));
       if (Math.sign(this.save.shards - this.displayShards) !== Math.sign(d)) this.displayShards = this.save.shards;
-      this._syncHud();
+      this._syncShards(); // cycle0 L-04: only the counter changes here; a full _syncHud every frame of the tick rewrote the whole HUD (about 25 lookups, 15 DOM writes)
     }
 
     // Particles and floating numbers keep animating in every state.
@@ -5174,6 +5174,13 @@ class RealmArena {
     return 'the Realm';
   }
 
+  // The shard counter text alone (it ticks toward save.shards over a few frames, see _update). Returns the element.
+  _syncShards() {
+    const shards = document.getElementById('realm-shards');
+    if (shards) { const t = `💎 ${Math.floor(this.displayShards)}`; if (shards.textContent !== t) shards.textContent = t; }
+    return shards;
+  }
+
   _syncHud(force) {
     const hp = document.getElementById('realm-hp-fill');
     if (hp) hp.style.width = `${Math.max(0, this.player.hp) / this.stats.maxHp * 100}%`;
@@ -5183,8 +5190,7 @@ class RealmArena {
     const wave = document.getElementById('realm-wave');
     if (wave && !wc) wave.textContent = this.team && this.team.isPvp ? this.team.duelLabel() : this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready'; // world mode: the world writes the zone here
     else if (wave && /wave|get ready/i.test(wave.textContent)) wave.textContent = '';
-    const shards = document.getElementById('realm-shards');
-    if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
+    const shards = this._syncShards();
     let de = shards ? document.getElementById('realm-dust') : null;
     if (shards && (de || (this.save.dust || 0) > 0) && this.forgeOn()) { // GW: forge dust, calm (no animation), only once there is some
       if (!de) { de = document.createElement('span'); de.id = 'realm-dust'; de.style.marginLeft = '6px'; shards.insertAdjacentElement('afterend', de); }
