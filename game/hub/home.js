@@ -13,6 +13,7 @@
   const HERE = 'game/hub/index.html';
   const qs = location.search.slice(1);
   const mapParam = /(?:^|&)map=1(?:&|$)/.test(qs);
+  const PXI = !/(?:^|&)pxicons=0(?:&|$)/.test(qs) && window.MMPixelIcons ? window.MMPixelIcons : null;
 
   function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function readKey(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -68,6 +69,8 @@
         a.setAttribute('href', href);
         a.dataset.place = id;
         const ic = el('span', 'hc-ico', p.icon); ic.setAttribute('aria-hidden', 'true');
+        // cycle 0 art (b12-r2-11): a code-drawn 16x16 pixel icon at 2x replaces the emoji (kept as hidden fallback text); ?pxicons=0 = emoji
+        if (PXI) PXI.apply(ic, id, 32, p.icon);
         a.appendChild(ic);
         const t = el('span', 'hc-txt');
         t.appendChild(el('span', 'hc-name', p.name));
@@ -152,6 +155,7 @@
       next = { key: 'first-realm', place: 'realm' };
       a.setAttribute('href', FIXED.realm); a.dataset.key = 'first-realm'; a.dataset.place = 'realm';
       $('home-next-ico').textContent = '⚔️';
+      if (PXI) PXI.apply($('home-next-ico'), 'realm', 16, '⚔️');
       $('home-next-txt').textContent = 'Next: the guided adventure (Realm)';
       a.setAttribute('aria-label', 'Next step: the guided adventure in the Realm. A coach shows you moving, shooting and loot.');
       a.hidden = false;
@@ -167,6 +171,7 @@
     a.setAttribute('href', nav.urlFor(s.url, HERE));
     a.dataset.key = s.key; a.dataset.place = s.place;
     $('home-next-ico').textContent = s.icon;
+    if (PXI && PXI.has(s.place)) PXI.apply($('home-next-ico'), s.place, 16, s.icon);
     $('home-next-txt').textContent = 'Next: ' + s.title + ' (' + s.gameName + ')';
     a.setAttribute('aria-label', 'Next step: ' + s.title + ' in ' + s.gameName + '. ' + s.text);
     a.hidden = false;
