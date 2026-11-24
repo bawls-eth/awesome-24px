@@ -552,3 +552,10 @@ body #rw-zone .rw-danger { font-size: max(12px, 1em); } /* the 12 px HUD text fl
 body.mm-hud-big #rw-zone .rw-danger { font-size: 1em; }
 body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale, 1)); height: calc(4px * var(--mm-hud-scale, 1)); }
 @media (prefers-reduced-motion: no-preference) { html:not([data-reduce-motion="1"]) #rw-zone .rw-danger-fill { transition: width 0.4s ease-out; } }
+/* cyc3 U (landscape audit, 844x390 touch): the zone panel (name, danger meter, raid line) ended at y 273 and its raid line ran under
+   ability button 2 (top 256). Short landscape touch screens get the 68 px thumbnail the portrait phone uses, so the panel ends ~33 px
+   higher, above the pad; tap still opens the large map. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 561px) {
+  body.touch-device #rw-minimap:not(.big) { width: 68px; height: 68px; }
+  body.touch-device #rw-minimap:not(.big) + #rw-zone { top: calc(178px + env(safe-area-inset-top, 0px)); }
+}
