@@ -915,7 +915,7 @@
   let bobOffset = 0;
   let aimed = false; // the block outline stays hidden until the player first aims (pointer or touch), so spawn shows no stray square
   function aim() { if (!aimed) { aimed = true; rayRev++; } }
-  let skyT = -1, skyX = NaN, skyZ = NaN, skySurf = 0, skyDeep = -1, rayRev = 0, rayPoseRev = -1, lastDepth = -1;
+  let skyT = -1, skyX = NaN, skyZ = NaN, skySurf = 0, skyDeep = -1, rayRev = 0, rayPoseRev = -1, lastDepth = -2;
   const rayPose = [NaN, 0, 0, 0, 0];
   function updateCamera() {
     if (!camera) return;
@@ -945,8 +945,10 @@
       const hit = raycast(5);
       if (aimed && hit && hit.id !== B.AIR) { outline.visible = true; outline.position.set(hit.cell[0] + 0.5, -(hit.cell[1] + 0.5), hit.cell[2] + 0.5); } else outline.visible = false;
     }
-    const dn = depthNow();
-    if (dn !== lastDepth) { lastDepth = dn; $('hud-depth').textContent = 'Depth ' + dn; }
+    // cyc5 (b11-08): on or above the local ground (the column's surface, kept in skySurf) the HUD says "Surface", never "Depth 5";
+    // below it the number is the same absolute depth the medals ("Depth -8") and the dive count, so the two never disagree.
+    const dn = depthNow(), dl = Math.floor(-player.y + 0.5) - skySurf <= 0 ? -1 : dn;
+    if (dl !== lastDepth) { lastDepth = dl; $('hud-depth').textContent = dl < 0 ? 'Surface' : 'Depth ' + dn; }
   }
   // Idle frames (nothing moved, nothing animates, nothing rebuilt) re-present the previous picture instead of rasterising
   // the whole world again. Anything that moves (mobs, wyrm, camera, sky, chunks, benches) changes the key or forces a draw.

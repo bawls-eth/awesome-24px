@@ -995,7 +995,7 @@
     const ebCapFor = (z) => { const c = Z.TABLES.EB_CAP; return c && c[z] > 0 ? c[z] : (c ? c[c.length - 1] : 0); };
     function fireBudgetFor(zi) {
       if (!FB_ON || !(zi.zone >= 0 && zi.zone <= 3)) return; // the void keeps the last zone's budget
-      const cap = ebCapFor(zi.zone);
+      const cap = ebCapFor(zi.zone) + rushCapExtraNow(); // ID-36: a Trial fight 4-6 raises the cap by its layers' own bolts (0 otherwise)
       if (!arena.fireBudget || arena.fireBudget.cap !== cap) arena.fireBudget = { cap, travel: Z.TABLES.EB_TRAVEL || 0.6, zone: zi.zone };
     }
     function syncHud(force) {
@@ -2188,7 +2188,7 @@
       e.maxHp = Math.max(1, Math.ceil(RM_BOSS_HP * st.hpMul / Z.TABLES.BOSS.hp)); e.hp = e.maxHp;
       e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
       e.dmgMul = st.dmgMul; e.bossName = st.name; e.bossTier = 4; e.art = st.boss; e.bossArt = st.boss; e.rushStep = st.step;
-      arena.bossT0 = arena.clock; rush.e = e; arena._syncBoss(); rushHide();
+      arena.bossT0 = arena.clock; rush.e = e; arena._syncBoss(); rushHide(); rushLayerReset(e, st);
       arena._showBanner('Trial of Six · ' + st.text, 1.8);
       return e;
     }
@@ -2202,7 +2202,7 @@
       }
       writeSave(save);
       rush.log.push({ step: st.step, boss: st.boss, items: got ? got.items.length : 0 });
-      rush.i++; rush.phase = rush.i >= rush.ladder.steps.length ? 'done' : 'rest';
+      rush.i++; rush.phase = rush.i >= rush.ladder.steps.length ? 'done' : 'rest'; rushCapSync();
       rushPanel();
     }
     function rushBuild() {
@@ -2235,7 +2235,7 @@
     function rushEnd(why) {
       if (!rush.on) return false;
       if (rush.e) { rush.e.rushStep = 0; rush.e.active = false; rush.e = null; arena._syncBoss(); }
-      rush.on = false; rush.phase = why === 'fell' ? 'fell' : 'left'; rushHide();
+      rush.on = false; rush.phase = why === 'fell' ? 'fell' : 'left'; rushHide(); rush.lay = null; rushCapSync();
       if (why === 'leave' && nxSite && arena.state === 'play') { const p = arena.player; p.x = nxSite.x; p.y = nxSite.y + TILE; p.iframes = Math.max(p.iframes, 1.5); arena._showBanner('You left the Trial of Six with your loot', 1.8); }
       writeSave(save); arena.onSave(arena.save);
       return true;
@@ -2249,10 +2249,79 @@
       }
       if (typeof rushDcPrev === 'function') rushDcPrev(c);
     };
-    function rushTick() {
+    function rushTick(dt) {
       if (!rush.on) return;
       if (arena.state === 'dead' || !arena.active) { rushEnd('fell'); return; } // a fall ends the trial: the hero is back by the Nexus, every drop already kept
       if (rush.phase === 'fight') { if (rush.e && !rush.e.active) { rush.e.rushStep = 0; rush.e = null; } if (!rush.e) rushSpawn(); }
+      rushLayerTick(dt);
+    }
+    // ---------- ID-36 (cycle 5 S): the Trial ramp layers (MMEndgame.LAYERS; spec in game/design/beta/cycle4-design.md) ----------
+    // Fight 4 adds A "lead shot", fight 5 A + B "slow arm", fight 6 A + B + C "edge sweep". Layer bolts carry the boss's own damage multiplier.
+    // The clock is the arena sim clock from the boss's spawn; nothing fires while the boss is shielded (spawn invuln 1.2 s) or before each
+    // layer's own wind-up (0.6 s, 0.8 s for the sweep), and every layer is telegraphed (drawn in rushLayerDraw). ?trialramp=0 = fights 4-6 as before.
+    const RAMP_ON = RUSH_ON && typeof MMEndgame.rushLayers === 'function' && !/[?&]trialramp=0(&|$)/.test(qs0);
+    // The cap: the bosses' own patterns keep the zone's cap for THEIR bolts (fights 1-3 exactly as before); the layers' bolts ride on top.
+    // So the live cap is zone cap + the layer bolts alive now (rush.capAdd, at most the fight's MMEndgame.rushCapExtra), and a layer bolt is
+    // fired against zone cap + that maximum. Layer bolts carry a token (b.rl) so they are counted apart from the boss's.
+    function rushCapExtraNow() { try { return RAMP_ON && rush.on && rush.phase === 'fight' && rush.lay ? rush.lay.capAdd : 0; } catch (e) { return 0; } } // TDZ-safe (fireBudgetFor runs earlier)
+    function rushCapMaxNow() { try { return RAMP_ON && rush.on && rush.phase === 'fight' && rush.ladder && rush.ladder.steps[rush.i] ? MMEndgame.rushCapExtra(rush.ladder.steps[rush.i].step) : 0; } catch (e) { return 0; } }
+    function rushLayerReset(e, st) {
+      const LY = MMEndgame.LAYERS; const ids = RAMP_ON && st ? MMEndgame.rushLayers(st.step) : [];
+      const t0 = (e && e.invuln > 0 ? e.invuln : 0);
+      rush.lay = { ids, t: 0, hist: [], k: 0, pend: null, capAdd: 0, tok: rush.n * 10 + (st ? st.step : 0), nLead: t0 + LY.lead.windup + LY.lead.every, nArm: t0 + LY.arm.windup, nSweep: t0 + LY.sweep.every, fired: { lead: 0, arm: 0, sweep: 0 }, dropped: 0, sweeps: [] };
+      rushCapSync(); // the fire budget picks up the new cap at once
+    }
+    function rushCapSync() { const fb = arena.fireBudget; if (FB_ON && fb && fb.zone >= 0) fb.cap = ebCapFor(fb.zone) + rushCapExtraNow(); }
+    function rushLayerFire(e, x, y, ang, speed, kind, life) {
+      const L = rush.lay; const fb = arena.fireBudget; const was = arena._curDm; arena._curDm = e.dmgMul || 1;
+      if (fb && FB_ON && fb.zone >= 0) fb.cap = ebCapFor(fb.zone) + rushCapMaxNow(); // a layer bolt is checked against the full Trial cap
+      let b = null; try { b = arena.fireEnemyBullet(x, y, ang, speed, kind); } finally { arena._curDm = was; }
+      if (b) { b.rl = L.tok; if (life > 0 && b.life > life) b.life = life; L.capAdd = Math.min(rushCapMaxNow(), L.capAdd + 1); } else L.dropped++;
+      rushCapSync();
+      return b;
+    }
+    function rushLayerLive() { const L = rush.lay; let n = 0; if (!L) return 0; const eb = arena.eBullets; for (let i = 0; i < eb.length; i++) if (eb[i].active && eb[i].rl === L.tok) n++; return n; }
+    function rushLayerTick(dt) {
+      const L = rush.lay; const e = rush.e;
+      if (!L || !L.ids.length || rush.phase !== 'fight' || !e || !e.active || arena.state !== 'play') return;
+      const LY = MMEndgame.LAYERS; const p = arena.player;
+      L.capAdd = Math.min(rushCapMaxNow(), rushLayerLive()); rushCapSync(); // the bosses' own bolts keep the zone cap for themselves
+      L.t += Math.min(Math.max(dt || 0, 0), 0.1);
+      L.hist.push([L.t, p.x, p.y]); while (L.hist.length > 2 && L.hist[1][0] <= L.t - LY.lead.velWin) L.hist.shift();
+      if (e.invuln > 0) return; // shielded: the layers wait (their timers are measured from the spawn, after the shield)
+      if (L.ids.indexOf('lead') >= 0 && L.t >= L.nLead) {
+        L.nLead += LY.lead.every; const h = L.hist[0]; const w = Math.max(1e-3, L.t - h[0]);
+        const vx = (p.x - h[1]) / w, vy = (p.y - h[2]) / w;
+        if (rushLayerFire(e, e.x, e.y, MMEndgame.leadAim(e.x, e.y, p.x, p.y, vx, vy), LY.lead.speed, 0, LY.lead.life)) L.fired.lead++;
+      }
+      if (L.ids.indexOf('arm') >= 0 && L.t >= L.nArm) {
+        L.nArm += LY.arm.every; const ang = MMEndgame.armAngles(L.t);
+        for (let k = 0; k < ang.length; k++) if (rushLayerFire(e, e.x, e.y, ang[k], LY.arm.speed, 1, LY.arm.life)) L.fired.arm++;
+      }
+      if (L.ids.indexOf('sweep') >= 0) {
+        if (!L.pend && L.t >= L.nSweep - LY.sweep.warn) { L.pend = Object.assign({ at: L.nSweep, t0: L.t }, MMEndgame.sweepLine(L.k, p.x, p.y, ((L.k % 2) ? (arena._dv ? arena._dv.vh || arena.H : arena.H) : (arena._dv ? arena._dv.vw : arena.W)) / 2)); L.k++; }
+        if (L.pend && L.t >= L.pend.at) {
+          const q = L.pend; L.pend = null; L.nSweep += LY.sweep.every; let n = 0;
+          for (let k = 0; k < q.pts.length; k++) if (rushLayerFire(e, q.pts[k].x, q.pts[k].y, q.dir, q.speed, 2, 0)) n++;
+          L.fired.sweep += n; L.sweeps.push({ t: +L.t.toFixed(2), warnS: +(q.at - q.t0).toFixed(2), n, gapFrom: q.gapFrom, dir: q.dir });
+        }
+      }
+    }
+    function rushLayerDraw(g) { // telegraphs: the lead shot's aim line in its last 0.6 s, the sweep's faded bolts for 0.8 s
+      const L = rush.lay; const e = rush.e;
+      if (!L || !L.ids.length || !rush.on || rush.phase !== 'fight' || !e || !e.active) return;
+      const LY = MMEndgame.LAYERS; const p = arena.player;
+      g.save();
+      if (L.ids.indexOf('lead') >= 0 && e.invuln <= 0) {
+        const k = (L.nLead - L.t) / LY.lead.windup;
+        if (k >= 0 && k <= 1) { g.strokeStyle = '#ffb347'; g.globalAlpha = 0.25 + 0.45 * (1 - k); g.lineWidth = 2; g.setLineDash([6, 6]); g.beginPath(); g.moveTo(e.x, e.y); g.lineTo(p.x, p.y); g.stroke(); g.setLineDash([]); }
+      }
+      if (L.pend) {
+        const k = Math.max(0, Math.min(1, (L.t - L.pend.t0) / LY.sweep.warn));
+        g.fillStyle = '#c9a0ff'; g.strokeStyle = '#ffffff'; g.lineWidth = 1.5;
+        for (const q of L.pend.pts) { g.globalAlpha = 0.15 + 0.35 * k; g.beginPath(); g.arc(q.x, q.y, 7, 0, 7); g.fill(); g.globalAlpha = 0.4 * k; g.stroke(); }
+      }
+      g.restore();
     }
     const NX_LINES = {
       guide: ['Welcome to the Nexus. Every road in the Realm ends up here, sooner or later.', 'The ring of doors leads to the dungeons. The plain one takes you home.', 'Nothing here bites. Take your time.'],
@@ -2908,7 +2977,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick();
+        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick(dt);
         if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
@@ -2958,7 +3027,7 @@
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
       },
-      drawOver(g, cam) { drawPicks(g, cam); drawKeys(g, cam); drawSlams(g); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
+      drawOver(g, cam) { drawPicks(g, cam); drawKeys(g, cam); drawSlams(g); if (RUSH_ON) rushLayerDraw(g); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
         evState.forEach((st) => {
           if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
           const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0 || !(e.cd2 < 1)) return;
@@ -2998,7 +3067,8 @@
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick, bossGateWarns: () => bossGateWarn,
       // slice 7
-      rush: { on: RUSH_ON, start: rushStart, next: rushNext, rest: rushRest, leave: () => rushEnd('leave'), entity: () => rush.e, ladder: () => rush.ladder, state: () => ({ on: rush.on, phase: rush.phase, i: rush.i, kills: rush.kills, n: rush.n, log: rush.log.slice() }) },
+      rush: { on: RUSH_ON, start: rushStart, next: rushNext, rest: rushRest, leave: () => rushEnd('leave'), entity: () => rush.e, ladder: () => rush.ladder, state: () => ({ on: rush.on, phase: rush.phase, i: rush.i, kills: rush.kills, n: rush.n, log: rush.log.slice() }),
+        ramp: { on: RAMP_ON, layers: () => (rush.lay ? { ids: rush.lay.ids.slice(), t: rush.lay.t, fired: Object.assign({}, rush.lay.fired), dropped: rush.lay.dropped, sweeps: rush.lay.sweeps.slice(), pending: rush.lay.pend ? { pts: rush.lay.pend.pts.length, gapFrom: rush.lay.pend.gapFrom } : null } : null), capExtra: rushCapMaxNow, capNow: rushCapExtraNow, layerLive: rushLayerLive } },
       safeReturn: { on: SAFE_ON, shield: SAFE_SHIELD, hop: SAFE_HOP, last: () => lastReturn }, portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
       // world events (slice A): the clock hook moves the event clock (deterministic: same clock => same events, plans and rewards)
       eventClock, setEventClock: (t) => { evBase = Math.max(0, Number(t) || 0) - arena.clock; evT = 0; evTick(); return eventClock(); },
