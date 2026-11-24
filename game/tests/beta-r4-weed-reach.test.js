@@ -56,6 +56,26 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
   console.log(`  swept ${r.days} days, ${r.n} weeds (min ${r.minSpots} a day)`);
   check('a year of days, each with >= 20 weeds', r.days === 366 && r.minSpots >= 20, JSON.stringify({ days: r.days, min: r.minSpots }));
   check('no weed on any day sits inside an interaction that answers E before it, and each is the one E pulls', r.badN === 0, JSON.stringify(r.bad));
+  // Cycle 1 S (cycle0-systems note): the reverse case. Weeds answer E BEFORE the arcade doors (and the dig hole, Realm Gate and the
+  // visiting merchant), so a weed inside such a ring would steal E from it. No weed may sit where its pull range (WEED_PULL_RADIUS)
+  // overlaps the real interact ring of any of them: dist(weed, target) >= target radius + WEED_PULL_RADIUS, every day of a year.
+  const rv = await page.evaluate(() => {
+    const s = window.__g.scene.getScene('Town');
+    const today = s.questDayBucket();
+    const later = PORTALS.map((p) => ({ name: p.label, x: p.x, y: p.y, r: DOOR_RADIUS }))
+      .concat([{ name: 'dig hole', x: DIG_HOLE_POS.x, y: DIG_HOLE_POS.y, r: DIG_HOLE_RADIUS }, { name: 'realm gate', x: REALM_GATE_POS.x, y: REALM_GATE_POS.y + 30, r: REALM_GATE_RADIUS },
+        { name: 'merchant (any day)', x: MERCHANT_POS.x, y: MERCHANT_POS.y, r: MERCHANT_RADIUS }]);
+    const bad = []; let n = 0; const doorStand = [];
+    for (let d = today; d < today + 366; d++) {
+      const spots = s.weedSpotsForDay(d);
+      spots.forEach((w) => { n++; later.forEach((t) => { const dd = Math.hypot(w.x - t.x, w.y - t.y); if (dd < t.r + WEED_PULL_RADIUS) bad.push({ day: d, t: t.name, d: Math.round(dd), x: w.x, y: w.y }); }); });
+    }
+    // and a live check: standing on each door's centre with today's weeds, E goes to the door (no weed in reach)
+    PORTALS.forEach((p) => { s.localBody.x = p.x; s.localBody.y = p.y; doorStand.push(!s.findNearestWeed() && s.isNearDoor()); });
+    return { n, badN: bad.length, bad: bad.slice(0, 6), doorStand, names: later.map((t) => t.name) };
+  });
+  check('no weed on any day sits where it would steal E from an arcade door, the dig hole, the Realm Gate or the merchant (real radii)', rv.badN === 0 && rv.n > 0 && rv.names.length === 7, JSON.stringify({ badN: rv.badN, bad: rv.bad }));
+  check('standing on each of the 4 arcade doors today, E reaches the door (no weed in pull range)', rv.doorStand.length === 4 && rv.doorStand.every(Boolean), JSON.stringify(rv.doorStand));
   check('no page errors', errors.length === 0, errors.join(' | '));
   check('no database traffic', db.attempts() === 0);
   await browser.close();
