@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, blockDb, offlineStub } = require('./helpers');
 const GD = require('../shared/mm-gear-drops.js');
 const MMBackup = require('../shared/mm-backup.js');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
@@ -114,7 +114,7 @@ const townRealm = async (page) => { const s = JSON.parse(await ls(page, 'pixelto
   check('1 town grep: game/index.html loads no mm-gear*.js', !/mm-gear/.test(townHtml));
   {
     const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
-    const db = await blockDb(ctx);
+    const db = await offlineStub(ctx);
     await ctx.addInitScript(() => {
       window.__ghSpy = { tWrites: 0, writes: 0, gearSeen: false };
       const orig = Storage.prototype.setItem;
@@ -164,7 +164,7 @@ const townRealm = async (page) => { const s = JSON.parse(await ls(page, 'pixelto
     check('1 town runtime: a duel creates no t', duel.mode === 'duel' && duel.t === 0, JSON.stringify(duel));
     check('1 town runtime spy: no town-save write ever carried t/gv, no snapshot, MMGearDrops never loaded', spy.writes > 0 && spy.tWrites === 0 && spy.gearSeen === false, JSON.stringify(spy));
     check('1 town runtime: no page errors', errors.length === 0, errors.join(' | '));
-    check('1 town runtime: nothing reached the database (offline, blocked)', db.count() >= 0);
+    check('1 town runtime: nothing reached for the database (offline stub)', db.attempts() === 0, String(db.attempts()));
     await ctx.close();
   }
 
