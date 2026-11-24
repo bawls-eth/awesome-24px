@@ -1939,6 +1939,12 @@
     // W-04 (b04-07): portrait phones get a tall walk view (400x540 world px) so the plaza fills >= 55% of the screen instead of a 4:3 strip
     const NX_TALL = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth * 1.3;
     const NX_VW = NX_TALL ? 400 : 640; const NX_VH = NX_TALL ? 540 : 480; const NX_R = 10; // walk view (world px) and the hero's collision radius
+    // Cycle 3 art (G): plaza life in the walk view. Torches play their 4 b13 frames with a warm additive glow that flickers, the three
+    // banners' cloth sways (2 px row bands sheared from the crossbar, the pole and crossbar fixed), the 7 NPC portraits bob 1 px on
+    // their own phase. The animated props / portraits are left out of the baked plaza and drawn per frame (no double-draw ghosting).
+    // Reduced motion = still frame 0, steady glow. ?nxlife=0 = the old static bake. Only while the plaza is open; cost in nxLifeStat.
+    const NX_LIFE = NX_WALK && !/[?&]nxlife=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const nxLife = []; const nxLifeStat = { on: NX_LIFE, frames: 0, ms: 0, torches: 0, banners: 0, npcs: 0, lastSway: 0, lastBob: 0, lastTorchF: -1 }; let nxGlow = null;
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
     // Shown name of a Nexus portal (display only; MMNexus keeps its ids and labels): the vault says where it leads (NAV-AUDIT 4.1 renames).
     const nxPortalName = (q) => (q && q.id === 'vault' ? 'Lantern vault' : q ? q.label : '');
@@ -2017,8 +2023,10 @@
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
       const pad = wArt.spawn_pad; const sp = L.spawn;
       if (pad) drawArt(g, pad, 0, sp.x, sp.y + 16); else { g.fillStyle = '#7a63c9'; g.beginPath(); g.arc(sp.x, sp.y, 20, 0, 7); g.fill(); g.fillStyle = '#a98bff'; g.beginPath(); g.arc(sp.x, sp.y, 13, 0, 7); g.fill(); }
+      nxLife.length = 0;
       L.props.forEach((p) => {
         const a = wArt[p.art]; const x = (p.tx + 0.5) * TILE; const y = (p.ty + 0.5) * TILE + 16;
+        if (a && NX_LIFE && (/torch/.test(p.id) || /banner/.test(p.id))) { nxLife.push({ kind: /torch/.test(p.id) ? 'torch' : 'banner', p, a, x, y, ph: (MMRng.hash(p.id) % 1000) / 1000 }); return; } // cycle 3: drawn per frame
         if (a) { drawArt(g, a, 0, x, y); return; }
         if (p.id === 'fountain') { g.fillStyle = '#7d8aa3'; g.beginPath(); g.arc(x, y - 16, 44, 0, 7); g.fill(); g.fillStyle = '#4fa8e0'; g.beginPath(); g.arc(x, y - 16, 34, 0, 7); g.fill(); g.fillStyle = '#bfe6ff'; g.fillRect(x - 4, y - 44, 8, 26); }
         else if (/torch/.test(p.id)) { g.fillStyle = '#5a4026'; g.fillRect(x - 3, y - 30, 6, 28); g.fillStyle = '#ffb347'; g.beginPath(); g.arc(x, y - 34, 7, 0, 7); g.fill(); }
@@ -2042,7 +2050,8 @@
       }
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
-        if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
+        if (im && NX_LIFE) nxLife.push({ kind: 'npc', im, x, y, ph: (MMRng.hash(n.npc) % 1000) / 1000 }); // cycle 3: drawn per frame (idle bob)
+        else if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
         else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
         g.font = 'bold 18px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 2, y + 38); /* R4-D2: pixel (mono) font like the portal labels */ g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
       });
@@ -2418,12 +2427,43 @@
       px(5, 18, 2, 4 - step, BOOT); px(9, 18, 2, 3 + step, BOOT); // boots (walk alternates)
       nxHeroStat.code++;
     }
+    function nxLifeDraw(g) {
+      const t0 = performance.now(); const red = !!arena._reduced; const t = red ? 0 : t0 / 1000; const st = nxLifeStat;
+      if (!nxGlow) { // one warm radial glow, built once
+        nxGlow = document.createElement('canvas'); nxGlow.width = nxGlow.height = 96; const c = nxGlow.getContext('2d');
+        const gr = c.createRadialGradient(48, 48, 2, 48, 48, 48); gr.addColorStop(0, 'rgba(255,190,90,0.55)'); gr.addColorStop(0.5, 'rgba(255,140,50,0.18)'); gr.addColorStop(1, 'rgba(255,120,40,0)');
+        c.fillStyle = gr; c.fillRect(0, 0, 96, 96);
+      }
+      let nt = 0, nb = 0, nn = 0;
+      for (let i = 0; i < nxLife.length; i++) {
+        const it = nxLife[i];
+        if (it.kind === 'torch') {
+          const fr = it.p.frames || [it.p.art]; const k = red ? 0 : Math.floor((t + it.ph) * 8) % fr.length; const a = wArt[fr[k]] || it.a;
+          drawArt(g, a, 0, it.x, it.y); st.lastTorchF = k; nt++;
+          const fl = red ? 0.8 : 0.72 + 0.12 * Math.sin(t * 9.1 + it.ph * 6) + 0.08 * Math.sin(t * 23.7 + it.ph * 11);
+          const ga = g.globalAlpha, op = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.max(0, Math.min(1, fl));
+          g.drawImage(nxGlow, Math.round(it.x - a.ax + a.fw / 2 - 48), Math.round(it.y - a.ay + a.fh * 0.34 - 48)); g.globalAlpha = ga; g.globalCompositeOperation = op;
+        } else if (it.kind === 'banner') {
+          const a = it.a; const ox = Math.round(it.x - a.ax), oy = Math.round(it.y - a.ay); const c0 = Math.round(a.fh * 0.25), c1 = Math.round(a.fh * 0.66); // cloth rows (b13: 16..42 of 64)
+          const sw = red ? 0 : Math.sin(t * 2.2 + it.ph * 6.28);
+          g.drawImage(a.img, 0, 0, a.fw, c0, ox, oy, a.fw, c0); g.drawImage(a.img, 0, c1, a.fw, a.fh - c1, ox, oy + c1, a.fw, a.fh - c1);
+          let last = 0;
+          for (let r = c0; r < c1; r += 2) { const h = Math.min(2, c1 - r); last = Math.round(2 * sw * (r - c0) / (c1 - c0)); g.drawImage(a.img, 0, r, a.fw, h, ox + last, oy + r, a.fw, h); }
+          st.lastSway = last; nb++;
+        } else {
+          const im = it.im; const b = red ? 0 : (Math.floor((t + it.ph * 2) / 0.9) & 1);
+          g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, it.x - 40, it.y - 60 - b, 80, 80); st.lastBob = b; nn++;
+        }
+      }
+      st.torches = nt; st.banners = nb; st.npcs = nn; st.frames++; st.ms += performance.now() - t0;
+    }
     function nxWalkDraw() {
       const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
       const cl = (v, lo, hi) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v))); // W-04 (b04-05): the view stays on the floor (ring excluded); a plaza smaller than the view is centred
       nxCam.x = Math.round(cl(h.x - NX_VW / 2, TILE, (L.w - 1) * TILE - NX_VW)); nxCam.y = Math.round(cl(h.y - NX_VH / 2, TILE, (L.h - 1) * TILE - NX_VH));
       g.drawImage(nxDom.plaza, nxCam.x, nxCam.y, NX_VW, NX_VH, 0, 0, NX_VW, NX_VH);
       g.save(); g.translate(-nxCam.x, -nxCam.y);
+      if (NX_LIFE && nxLife.length) nxLifeDraw(g);
       if (nxNearI) { const r = nxNearI.ref; g.strokeStyle = '#ffe27a'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, nxNearI.kind === 'npc' ? 30 : 36, 0, Math.PI * 2); g.stroke(); }
       let ok = false;
       if (arena._heroArt && typeof arena._drawHero === 'function') { // the arena's own hero sprite (walk / idle, facing the move direction)
@@ -2881,7 +2921,7 @@
       notebook: { on: !!NB, save: () => JSON.parse(JSON.stringify(nbSave || nbLoad() || {})), meet: (id, name) => nbMeet(id, name || id), open: () => nbShow(), close: () => nbHide(false), newThisVisit: () => nbNew },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
-        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), floor: () => Object.assign({ classic: NX_FLOOR_CLASSIC }, nxFloorStat), codeHero: () => nxHeroStat.code, tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), floor: () => Object.assign({ classic: NX_FLOOR_CLASSIC }, nxFloorStat), codeHero: () => nxHeroStat.code, life: () => Object.assign({ items: nxLife.length }, nxLifeStat), tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
           place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },

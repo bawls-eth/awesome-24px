@@ -2103,5 +2103,9 @@
   "cyc3-art-death-dissolve.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-art-nexus-life.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

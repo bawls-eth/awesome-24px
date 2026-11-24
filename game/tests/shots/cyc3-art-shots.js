@@ -56,6 +56,17 @@ const SCENES = {
     });
     await p.waitForTimeout(300);
   },
+  // the Nexus walk view near the west torch and the banners; 'before' = ?nxlife=0
+  nexus: async (p) => {
+    await p.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html>town' }));
+    await p.goto(origin + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345&qdate=2030-05-01' + (BEFORE ? '&nxlife=0' : ''));
+    await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 30000 });
+    await p.waitForTimeout(2500);
+    await p.evaluate(() => { const a = window.__mm.arena, w = window.__mm.world; a.player.iframes = 1e9; a._hitPlayer = () => {}; w.nexus.open(); });
+    await p.waitForTimeout(2500);
+    await p.evaluate(() => { const w = window.__mm.world; w.nexus.walk.place(14.5 * 32, 9.5 * 32); });
+    await p.waitForTimeout(600);
+  },
   'isles-tundra': async (p) => { await p.goto(isles('&isle=tundra')); await islesReady(p); },
 };
 (async () => {
