@@ -1,12 +1,8 @@
 {
- "echo|keyboard-primary|no-effect": "Enter/Space on the focused primary action changed nothing",
- "festival-bugs|keyboard-primary|not-found": "no Tab stop within 40 matches the primary action regex /play|start|begin|go|catch|safari|enter/i (st",
- "pop|keyboard-primary|no-effect": "Enter/Space on the focused primary action changed nothing",
  "realm-dungeon|landmark|no-h1": "no visible <h1>",
  "realm-dungeon|pref:text-150|text-not-scaled": "mean text 16.4px -> 17.1px (x1.05), expected >= x1.2 (hudScale 1.5 pref ignored)",
  "realm-world|landmark|no-h1": "no visible <h1>",
  "realm-world|pref:text-150|text-not-scaled": "mean text 15.6px -> 17.4px (x1.12), expected >= x1.2 (hudScale 1.5 pref ignored)",
- "stack|keyboard-primary|no-effect": "Enter/Space on the focused primary action changed nothing",
  "town|pref:text-150|text-not-scaled": "mean text 12.7px -> 12.7px (x1.00), expected >= x1.2 (hudScale 1.5 pref ignored)",
  "town|pref:text-200|menu:covered": "covered at its centre by #gate-pointer-text",
  "town|pref:text-200|menu:overlap:#quick-chat-row > button": "overlaps #quick-chat-row > button by 122x44"
