@@ -21,11 +21,12 @@
   }
 }(typeof self !== 'undefined' ? self : this, function (getOwners) {
   const FORMAT = 'pixeltown-backup';
-  const VERSION = 2;
+  const VERSION = 2; // bundle format (unchanged since keys became a map); R4 adds the build stamp in bundle()
+  const BUILD = '2026-11-24-r4';
   const PREFIX = 'pixeltown-';
   const SAVE_KEY = 'pixeltown-save-v1';
   const MAX_VALUE = 2000000;
-  const MAX_KEYS = 50;
+  const MAX_KEYS = 80; // R4 O-04: raised from 50 (settings + hints joined the bundle). A build before R4 refuses a file over 50 entries, named.
   const MAX_TOTAL = 6000000; // all values of one bundle together
   const MAX_DEPTH = 8;
   const MAX_NODES = 60000;
@@ -111,7 +112,19 @@
     'pixeltown-stalk-practice-v1', 'pixeltown-bugs-pb-v1', 'pixeltown-dash-v1', 'pixeltown-pop-v1', 'pixeltown-stack-v1', 'pixeltown-echo-v1']
     .concat(['angler', 'bugs', 'dash', 'deepdelve', 'echo', 'pop', 'stack', 'stalk'].map((g) => 'pixeltown-medals-' + g + '-v1'))
     .forEach((k) => { CLEANERS[k] = (o, v) => cleanPlain(v); });
-  const KNOWN = Object.keys(CLEANERS).concat(['pixeltown-panel-collapsed']);
+  // R4 O-04: ONE Backup = every game save key + all settings. Settings are raw '0' / '1' flags (mm-settings.js / sfx.js / motion.js /
+  // realm.js read them as strings), so like the panel flag they are checked as raw text, never JSON-cleaned. UI hints that only say
+  // "seen" are flags too. Left out on purpose (device-specific, see SAVE-KEYS.md): pixeltown-nav-v1 (this device's last page),
+  // pixeltown-backupnote-v1 (when THIS device last backed up), pixeltown-save-v1-prev / -backup-pregear-v1 (safety copies),
+  // probe keys, sessionStorage, the Deepdelve IndexedDB chunk cache, and the lowGfx field inside pixeltown-access-v1 (apply keeps the
+  // device's own value: a phone's low-graphics choice must not follow a backup onto a desktop).
+  const FLAG_KEYS = ['pixeltown-panel-collapsed', 'mm-sfx-muted', 'mm-music', 'mm-high-contrast', 'mm-reduce-motion', 'mm-aim-assist',
+    'mm-aim-toggle', 'mm-bullet-shapes', 'mm-auto-fire', 'pixeltown-hub-hint-v1', 'pixeltown-bugs-hint-v1'];
+  ['pixeltown-realm-audio-v1', 'pixeltown-realm-tutorial-v1', 'pixeltown-calm-v1', 'pixeltown-gearhint-v1', 'pixeltown-medals-jam-v1']
+    .forEach((k) => { CLEANERS[k] = (o, v) => cleanPlain(v); });
+  const DEVICE_FIELDS = { 'pixeltown-access-v1': ['lowGfx'] };
+  const KNOWN = Object.keys(CLEANERS).concat(FLAG_KEYS);
+  const isSetting = (k) => /^mm-/.test(k) || k === 'pixeltown-access-v1' || k === 'pixeltown-realm-audio-v1' || k === 'pixeltown-panel-collapsed';
   const NAMES = {
     'pixeltown-save-v1': 'town save', 'pixeltown-mm-v1': 'Mad Maze heroes and stash', 'pixeltown-hub-v1': 'hub map',
     'pixeltown-angler-v1': 'Angler journal', 'pixeltown-bugs-v1': 'Bug Safari journal', 'pixeltown-profile-v1': 'player profile',
@@ -126,7 +139,12 @@
     'pixeltown-dash-v1': 'Dash bests', 'pixeltown-pop-v1': 'Pop bests', 'pixeltown-stack-v1': 'Stack bests', 'pixeltown-isle-nodes-v1': 'Archipelago gathering spots and pouch', 'pixeltown-deep-v1': 'deepest dungeon floors', 'pixeltown-echo-v1': 'Echo Garden bests',
     'pixeltown-medals-angler-v1': 'Angler medals', 'pixeltown-medals-bugs-v1': 'Bug Safari medals', 'pixeltown-medals-dash-v1': 'Dash medals',
     'pixeltown-medals-deepdelve-v1': 'Deepdelve medals', 'pixeltown-medals-echo-v1': 'Echo Garden medals', 'pixeltown-medals-pop-v1': 'Pop medals',
-    'pixeltown-medals-stack-v1': 'Stack medals', 'pixeltown-medals-stalk-v1': 'Stalk Market medals'
+    'pixeltown-medals-stack-v1': 'Stack medals', 'pixeltown-medals-stalk-v1': 'Stalk Market medals',
+    'mm-sfx-muted': 'sound setting', 'mm-music': 'music setting', 'mm-high-contrast': 'high contrast setting', 'mm-reduce-motion': 'reduce motion setting',
+    'mm-aim-assist': 'aim assist setting', 'mm-aim-toggle': 'aim toggle setting', 'mm-bullet-shapes': 'bullet shapes setting', 'mm-auto-fire': 'auto fire setting',
+    'pixeltown-hub-hint-v1': 'hub hint seen', 'pixeltown-bugs-hint-v1': 'Bug Safari hint seen', 'pixeltown-realm-audio-v1': 'Realm ambience setting',
+    'pixeltown-realm-tutorial-v1': 'Realm tutorial progress', 'pixeltown-calm-v1': 'hidden hub ideas', 'pixeltown-gearhint-v1': 'gear hint seen',
+    'pixeltown-medals-jam-v1': 'Jam medals'
   };
   const label = (k) => NAMES[k] || k;
 
@@ -151,7 +169,8 @@
         if (why) warnings.push({ key: k, label: label(k), why: why }); else keys[k] = v;
       });
     } catch (e) { /* ignore */ }
-    const out = { format: FORMAT, v: VERSION, keys: keys };
+    // R4 O-04: additive stamp (an older build ignores it): which build made the file, when, and that it covers saves AND settings.
+    const out = { format: FORMAT, v: VERSION, build: BUILD, made: new Date().toISOString(), scope: 'all', keys: keys };
     try { Object.defineProperty(out, 'warnings', { value: warnings, enumerable: false }); } catch (e) { /* frozen: no warnings */ }
     return out;
   }
@@ -161,7 +180,7 @@
   // One stored / bundled value: {value} (the cleaned string to write) or {why} when it cannot be restored. Never throws.
   function cleanValue(k, rawStr, owners) {
     if (typeof rawStr !== 'string' || rawStr.length > MAX_VALUE) return { why: 'too big or unreadable' };
-    if (k === 'pixeltown-panel-collapsed') {
+    if (FLAG_KEYS.indexOf(k) >= 0) {
       if (rawStr !== '0' && rawStr !== '1' && rawStr !== '"0"' && rawStr !== '"1"') return { why: 'not valid' };
       return { value: rawStr.replace(/"/g, '') };
     }
@@ -197,9 +216,11 @@
       }
       if (!isObj(obj)) return fail('not-an-object', 'That file does not look like a Mad Maze backup.');
       const raw = {};
+      let newer = false;
       const unknown = []; // beta b14 P3: entries this version does not know are skipped (never written), not fatal
       if (obj.format === FORMAT) {
         if (!(Number(obj.v) >= 1) || !isObj(obj.keys)) return fail('bad-bundle', 'That backup file is damaged.');
+        if (Number(obj.v) > VERSION) newer = true; // compat: a newer format still restores every key this build knows (the rest are named)
         const names = Object.keys(obj.keys);
         if (!names.length) return fail('empty', 'That backup file is empty.');
         if (names.length > MAX_KEYS) return fail('too-many-keys', 'That backup file has too many entries.');
@@ -241,12 +262,18 @@
         const first = skipped[0];
         return fail('bad-value', 'The ' + (first ? first.label : 'save') + ' in that backup is not valid, so nothing was changed.');
       }
-      const out = { ok: true, keys: keys, entries: entries, labels: keys.map(label), skipped: skipped };
+      // R4 O-04 preview data: what kind of file, which build made it and when, and saves vs settings (for the confirm step).
+      const out = { ok: true, keys: keys, entries: entries, labels: keys.map(label), skipped: skipped,
+        kind: obj.format === FORMAT ? 'bundle' : 'town', newer: newer,
+        build: typeof obj.build === 'string' && /^[\w.-]{1,32}$/.test(obj.build) ? obj.build : null,
+        made: typeof obj.made === 'string' && obj.made.length <= 40 && isFinite(Date.parse(obj.made)) ? obj.made : null,
+        settings: keys.filter(isSetting), saves: keys.filter((k) => !isSetting(k)) };
       const dmg = skipped.filter((x) => x.why !== 'not known by this version'), unk = skipped.filter((x) => x.why === 'not known by this version');
       if (skipped.length) {
         out.message = 'Will restore: ' + keys.map(label).join(', ') + '.' + (dmg.length ? ' Cannot restore (damaged in the file): ' + dmg.map((x) => x.label).join(', ') + '. Those stay as they are on this device.' : '')
           + (unk.length ? ' Skipped (not known by this version of the game): ' + unk.map((x) => x.label).join(', ') + '.' : '');
       }
+      if (newer) out.message = (out.message ? out.message + ' ' : 'Will restore: ' + keys.map(label).join(', ') + '. ') + 'This file was made by a newer version of the game.';
       return out;
     } catch (e) {
       return fail('invalid', 'That file does not look like a Mad Maze backup.');
@@ -264,9 +291,24 @@
     } catch (e) {
       return { ok: false, restored: [], error: 'read-failed', message: 'Could not read your current saves, so nothing was changed.' };
     }
+    // R4 O-04: device-specific fields (lowGfx) keep THIS device's value; the rest of that setting comes from the file.
+    const out = {};
+    keys.forEach((k) => {
+      out[k] = p.entries[k];
+      const df = DEVICE_FIELDS[k];
+      if (!df) return;
+      try {
+        const now = typeof before[k] === 'string' ? JSON.parse(before[k]) : null;
+        const next = JSON.parse(p.entries[k]);
+        if (isObj(next)) {
+          df.forEach((f) => { if (isObj(now) && has(now, f)) next[f] = now[f]; else delete next[f]; });
+          out[k] = JSON.stringify(next);
+        }
+      } catch (e) { /* keep the file's cleaned value */ }
+    });
     const written = [];
     try {
-      keys.forEach((k) => { storage.setItem(k, p.entries[k]); written.push(k); });
+      keys.forEach((k) => { storage.setItem(k, out[k]); written.push(k); });
       return { ok: true, restored: written.slice() };
     } catch (e) {
       // roll back every key we may have touched (including the one that threw)
@@ -368,7 +410,7 @@
     try { return typeof storage.getItem(PREGEAR_KEY) === 'string'; } catch (e) { return false; }
   }
 
-  return { FORMAT: FORMAT, VERSION: VERSION, KNOWN: KNOWN.slice(), bundle: bundle, plan: plan, apply: apply, restore: restore, labelOf: label,
+  return { FORMAT: FORMAT, VERSION: VERSION, BUILD: BUILD, MAX_KEYS: MAX_KEYS, FLAG_KEYS: FLAG_KEYS.slice(), DEVICE_FIELDS: DEVICE_FIELDS, isSetting: isSetting, KNOWN: KNOWN.slice(), bundle: bundle, plan: plan, apply: apply, restore: restore, labelOf: label,
     PREGEAR_KEY: PREGEAR_KEY, PREGEAR_MAX: PREGEAR_MAX, MAX_TOTAL: MAX_TOTAL, snapshotPregear: snapshotPregear,
     planRestorePregear: planRestorePregear, dropPregear: dropPregear, hasPregear: hasPregear };
 }));

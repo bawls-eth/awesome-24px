@@ -301,3 +301,9 @@ unregistered until the art-integration test learns that key-less strips belong t
 
 Next, in order: B-03 / B-04 Isles tundra + mars species, B-05 Frost Dragon / Red Titan, T-STATUE Founder's Statue, B-01 Nexus floor, the
 R01 / R02 redos, the black-sand fix. Exact ids and sizes: CODEX-REMAKE-QUEUE.md, "UPDATE 2026-11-24".
+
+### 2026-11-24 (00:45 UTC) D3 -> all: shared-file touches on branch r4-d3 (not pushed)
+main.js: `exportSave` / `restoreBundle` only (O-04 one Backup, "Reading the backup…"). realm.js: `onResize`, `_resize(force, storm)`,
+`_loop` perf-guard line, `stop()` cleanup (rotate storm). test-tiers.json: 6 new `beta-r4-*` entries. Also shared/mm-backup.js,
+new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections), games/deepdelve/deepdelve.js. Notes:
+`design/beta/fixes/r4-d3.md`.

@@ -276,7 +276,7 @@ Object.keys(LOADERS).forEach((name) => {
   const pl = Backup.plan(JSON.stringify(Backup.bundle(src)));
   const dst = mem();
   const ap = pl.ok ? Backup.apply(dst, pl) : { ok: false };
-  const rtLost = Backup.KNOWN.filter((k) => FX.FIXTURES[k]).map((k) => [k, FX.lost(k, dst._m[k])]).filter((x) => x[1].length);
+  const rtLost = Backup.KNOWN.filter((k) => FX.FIXTURES[k]).map((k) => [k, FX.lost(k, dst._m[k])]).map((x) => [x[0], x[1].filter((l) => !((Backup.DEVICE_FIELDS[x[0]] || []).some((f) => l.indexOf(f + ':') === 0)))]).filter((x) => x[1].length); // R4 O-04: device-only fields (lowGfx) intentionally stay on the device
   check('backup: bundle -> plan -> apply round-trips every exported fixture without loss', pl.ok && ap.ok !== false && !rtLost.length, JSON.stringify({ plan: pl.ok, error: pl.error, lost: rtLost }).slice(0, 600));
   const qs = quota(Object.fromEntries(FX.KEYS.map((k) => [k, FX.rawOf(k)])));
   const before = JSON.stringify(qs._m);

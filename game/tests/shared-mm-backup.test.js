@@ -41,7 +41,7 @@ const big = {};
 NEW.forEach((k) => { big[k] = '{"a":"' + 'x'.repeat(1900000) + '"}'; });
 big['pixeltown-save-v1'] = '{"name":"' + 'y'.repeat(1900000) + '"}';
 check('oversized total rejected with a message', (() => { const p = B.plan({ format: 'pixeltown-backup', v: 2, keys: big }); return !p.ok && p.error === 'too-big' && /too big/.test(p.message); })());
-const many = {}; for (let i = 0; i < 60; i++) many['pixeltown-k' + i] = '{}';
+const many = {}; for (let i = 0; i < (B.MAX_KEYS || 50) + 10; i++) many['pixeltown-k' + i] = '{}';
 check('too many keys rejected', B.plan({ format: 'pixeltown-backup', v: 2, keys: many }).error === 'too-many-keys');
 const deep = '{"a":'.repeat(30) + '1' + '}'.repeat(30);
 check('over-deep value rejected', !B.plan(key('pixeltown-arms-v1', deep)).ok);

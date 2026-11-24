@@ -1836,5 +1836,30 @@
   "r4-d2-isles.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-o04-backup.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-r4-o04-town-hub-backup.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-realm-rotate.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-deepdelve-prewarm.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r4-soak.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 900
+  },
+  "beta-r4-deepdelve-touch-lock.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

@@ -47,7 +47,10 @@
     <a id="home-play" class="home-play" href="../index.html?from=hub"><span class="hp-arrow" aria-hidden="true">&#9654;</span><span class="hp-txt"><span id="home-play-txt">Play</span><span id="home-play-sub" class="hp-sub"></span></span></a>
     <a id="home-next" class="home-next" href="#" hidden><span id="home-next-ico" class="hn-ico" aria-hidden="true"></span><span id="home-next-txt" class="hn-txt"></span></a>
     <div id="home-groups" class="home-groups"></div>
+    <div class="home-row">
     <button id="home-coll" class="home-coll" type="button" aria-controls="coll-sheet"><span class="hc-ico" aria-hidden="true">&#128214;</span><span class="hc-name">Collections</span><span id="home-coll-sum" class="home-coll-sum"></span></button>
+    <details id="hub-backup" class="hub-backup"><summary aria-label="Backup and restore all saves and settings">&#128190; Backup</summary><div id="hub-backup-body" data-mm-backup data-base="../shared/"></div></details>
+    </div>
   </div>
 </section>
 <main id="stage">
@@ -120,5 +123,6 @@
 <script src="collections.js"></script>
 <script src="../shared/mm-8bit.js"></script>
 <script src="home.js"></script>
+<script src="../shared/mm-backup-ui.js"></script>
 </body>
 </html>

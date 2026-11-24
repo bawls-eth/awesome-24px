@@ -572,6 +572,25 @@
     t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
     return t;
   }
+  // R4 (b13-05 Deepdelve spikes): WebGL compiles a shader program the first time a material kind is DRAWN. The block outline
+  // (LineBasicMaterial), torches (plain MeshBasic) and textured sprites (slimes / benches: map, no vertex colours) were first drawn
+  // on the player's first tap / first torch / first mob, so that frame paid the compile. Compile them once at boot (behind the
+  // loading state) with stand-in objects; nothing is drawn and nothing changes on screen.
+  function prewarmPrograms() {
+    if (!renderer || !scene || !camera || typeof renderer.compile !== 'function') return;
+    const extra = [];
+    try {
+      const wasOutline = outline ? outline.visible : false;
+      if (outline) outline.visible = true;
+      if (torchGeo && torchMat) extra.push(new THREE.Mesh(torchGeo, torchMat));
+      if (atlasTex) extra.push(new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial({ map: atlasTex, transparent: true, opacity: 0.92 })));
+      extra.forEach((m) => scene.add(m));
+      renderer.compile(scene, camera);
+      if (outline) outline.visible = wasOutline;
+    } catch (e) { /* optional: the first draw compiles as before */ }
+    extra.forEach((m) => { scene.remove(m); if (m.geometry !== torchGeo) { m.geometry.dispose(); m.material.dispose(); } });
+    renderRev++;
+  }
   function initRenderer() {
     if (!window.THREE) { toast('3D engine failed to load'); return false; }
     try {
@@ -966,7 +985,14 @@
       sel = items[(i + (e.deltaY > 0 ? 1 : items.length - 1)) % items.length].item; renderHud(); e.preventDefault();
     }, { passive: false });
     const locked = () => document.pointerLockElement === cv;
+    // R4 (b13 "4x tap scripts hung"): a finger / pen tap also fires a compatibility mousedown. That used to request pointer lock,
+    // so a tap on a touch screen (touch laptop, emulated phone) captured and hid the mouse pointer and left the page in pointer-lock
+    // mode (in the headless emulator: long tasks of 0.3-17 s after the tap). Only a real mouse press locks the pointer now.
+    let lastTouchAt = -1e9;
+    cv.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') lastTouchAt = performance.now(); });
+    const fromTouch = (e) => (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents === true) || performance.now() - lastTouchAt < 1000;
     cv.addEventListener('mousedown', (e) => {
+      if (fromTouch(e)) return;
       if (!locked()) { try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* ignore */ } return; }
       aim();
       if (e.button === 0) input.mine = true;
@@ -1825,7 +1851,7 @@
       }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
       introText, prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
       run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
-      craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
+      craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), programs: () => (renderer && renderer.info && renderer.info.programs ? renderer.info.programs.length : -1), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
 
@@ -1893,6 +1919,7 @@
     wyrmInit();
     applyTime(true);
     initRenderer();
+    prewarmPrograms();
     applyLowGfx();
     window.addEventListener('mm-settings-change', (ev) => {
       const id = ev && ev.detail && ev.detail.id;

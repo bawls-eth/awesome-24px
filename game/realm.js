@@ -2142,7 +2142,15 @@ class RealmArena {
     window.addEventListener('pointerup', this.onPointerUp);
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    this.onResize = () => { if (this.active) this._resize(); }; // synchronous but cheap: _resize returns early when nothing changed
+    // R4 (b13-07 rotate storm): events are coalesced to one _resize per frame, and the canvas backing store (the costly part:
+    // a re-allocation + full redraw) follows 150 ms after the LAST event; meanwhile the old backing is CSS-scaled. Frames within
+    // 1 s of a resize do not feed the perf guard, so a storm cannot drop the render quality to 0.75.
+    this.onResize = () => {
+      if (!this.active) return;
+      this._rzAt = performance.now();
+      if (this._rzRaf) return;
+      this._rzRaf = requestAnimationFrame(() => { this._rzRaf = 0; if (this.active) this._resize(false, true); });
+    };
     window.addEventListener('resize', this.onResize);
     window.addEventListener('orientationchange', this.onResize);
     if (window.visualViewport) { window.visualViewport.addEventListener('resize', this.onResize); window.visualViewport.addEventListener('scroll', this.onResize); }
@@ -2295,7 +2303,7 @@ class RealmArena {
   // 1400, so the world aspect matches the viewport and nothing is stretched. Only beyond aspect 0.386..2.59 (or a fixed dungeon
   // room) is the canvas letterboxed: fitted inside the viewport and centred. The backing store is min(dpr, 2) capped at 1.5
   // per logical unit and never more than the CSS size needs, times the perf-guard quality (1 or 0.75).
-  _resize(force) {
+  _resize(force, storm) {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     const ov = this.container.parentElement;
     let w; let h;
@@ -2333,7 +2341,11 @@ class RealmArena {
       this._cvKey = ckey; const cs = this.canvas.style;
       cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`; this.canvas.classList.toggle('rm-dv', !!this._dv); // page CSS may seat the dungeon view (mad-maze.css: above the phone sticks)
     }
-    this._applyBacking(); this._stAnchorT = -1e9; // the HUD rects moved
+    if (storm) {
+      clearTimeout(this._bkT);
+      this._bkT = setTimeout(() => { this._bkT = 0; if (this.active) { this._applyBacking(); this._stAnchorT = -1e9; } }, 150);
+    } else { clearTimeout(this._bkT); this._bkT = 0; this._applyBacking(); }
+    this._stAnchorT = -1e9; // the HUD rects moved
     const p = this.player; const bw = this._bw(); const bh = this._bh();
     p.x = Math.max(RM_PLAYER.r, Math.min(bw - RM_PLAYER.r, p.x || bw / 2));
     p.y = Math.max(RM_PLAYER.r, Math.min(bh - RM_PLAYER.r, p.y || bh / 2));
@@ -2443,6 +2455,7 @@ class RealmArena {
     ['keydown', 'pointerdown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.removeEventListener(ev, this._onGesture, { capture: true }));
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('resize', this.onResize);
+    if (this._rzRaf) { cancelAnimationFrame(this._rzRaf); this._rzRaf = 0; } clearTimeout(this._bkT); this._bkT = 0;
     window.removeEventListener('orientationchange', this.onResize);
     if (window.visualViewport) { window.visualViewport.removeEventListener('resize', this.onResize); window.visualViewport.removeEventListener('scroll', this.onResize); }
     if (this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
@@ -2464,7 +2477,7 @@ class RealmArena {
     if (!this.active) return;
     const raw = now - this._lastT; const dt = Math.min(raw / 1000, 0.05);
     this._lastT = now;
-    this._perfFeed(raw);
+    if (!(this._rzAt && now - this._rzAt < 1000)) this._perfFeed(raw); // R4: frames within 1 s of a resize / rotation are not render cost
     this._update(dt);
     if (this.world || this._dv) this._camStep(dt);
     this._draw();
