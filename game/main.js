@@ -9867,7 +9867,7 @@ if (savedProfile.name) nameInput.value = savedProfile.name;
 try {
   if (new URLSearchParams(location.search).get('from') === 'hub') {
     const pill = document.getElementById('back-to-map-pill');
-    if (pill) pill.classList.remove('hidden');
+    if (pill) { pill.classList.remove('hidden'); document.body.classList.add('has-back-pill'); } // R4 D4 b15-06: card clears the pill
     if (!nameInput.value && typeof MMHubProfile !== 'undefined') {
       let raw = null;
       try { raw = JSON.parse(localStorage.getItem(MMHubProfile.KEY)); } catch (e) { raw = null; }
@@ -9949,7 +9949,7 @@ function enterTown(net, data) {
   joinDone = true;
   clearTimeout(joinTimer);
   joinOverlay.classList.add('hidden');
-  { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
+  { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); document.body.classList.remove('has-back-pill'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
   hud.classList.remove('hidden');
   // R4 D4 (b07-r2-14): remember (this tab only, sessionStorage, never the save) that the player was in town and how, so
   // browser Back from the Isles / a game returns to the town instead of the join card.

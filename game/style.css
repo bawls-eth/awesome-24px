@@ -2979,3 +2979,16 @@ body:has(#emote-popup:not(.hidden)) #quick-chat-row { visibility: hidden; }
 
 /* R4 D4 (b07-r2-04): the hero picker's single slot is a "Surprise me" chip, not a one-option tab */
 .species-tab.hero-random-tab { flex: 0 0 auto; min-height: 44px; padding: 6px 14px; text-transform: none; color: var(--ac-text); }
+
+/* R4 D4 (b15-06): with the "Home" pill shown the join card starts below it (it covered the island icon at 320 px), and the
+   pill itself is a 44 px target. The hero grid wraps instead of spilling past the card at 320 / 260 px (5 x 48 px + gaps
+   did not fit); buttons stay >= 44 px. */
+#back-to-map-pill { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; }
+body.has-back-pill #join-overlay { padding-top: calc(56px + env(safe-area-inset-top, 0px)); box-sizing: border-box; }
+body.has-back-pill #join-overlay > .join-card { max-height: calc(100vh - 64px - env(safe-area-inset-top, 0px)); max-height: calc(100dvh - 64px - env(safe-area-inset-top, 0px)); }
+#avatar-grid, #outfit-avatar-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 48px)); justify-content: center; }
+@media (max-width: 360px) {
+  #join-overlay .join-card, #outfit-overlay .join-card { padding-left: 14px; padding-right: 14px; }
+  #avatar-grid, #outfit-avatar-grid { gap: 4px; }
+  .avatar-choice { width: 100%; min-width: 44px; height: auto; aspect-ratio: 1 / 1; }
+}
