@@ -4,7 +4,7 @@
 //   - each is a role=radiogroup labelled by its visible label, which carries the value text ("Damage taken: 80%"); steps are
 //     role=radio buttons >= 44x44 px; ONE Tab stop per group (roving tabindex), arrows / Home / End move and select, touch / click
 //     selects; a polite live region says the new value; "Reset assist" shows only when a value is not default.
-//   - device key mm-assist = JSON {dmg, aim} (never the save); hostile values read as defaults.
+//   - device key mm-assist = JSON {dmg, aim} (never the save), cleaned per S's contract (cycle4-systems.md); MMAssist used when loaded.
 //   - MMSettings.assistTag() makes the "Assisted" tag (text, >= 12 px, outlined) for run summaries.
 // Fixture page, blockDb (no network at all). Desktop 1280x720 and phone 390x844 (touch) and 195x422 (200% zoom).
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/cyc4-ui-assist-settings.test.js
@@ -23,9 +23,11 @@ const mem = (init) => ({ d: Object.assign({}, init || {}), getItem(k) { return k
   const ok = S.set(m, 'assist-dmg', 70) && S.set(m, 'assist-aim', 2);
   check('model: set writes mm-assist JSON {dmg, aim} only', ok && JSON.parse(m.d['mm-assist']).dmg === 70 && JSON.parse(m.d['mm-assist']).aim === 2 && Object.keys(m.d).join() === 'mm-assist', JSON.stringify(m.d));
   check('model: off-step values are refused', !S.set(m, 'assist-dmg', 55) && !S.set(m, 'assist-aim', 9) && S.readAssist(m).dmg === 70, JSON.stringify(m.d));
-  check('model: assisted() true once a value is not default', S.assisted(m));
-  const h = mem({ 'mm-assist': '{"dmg":5,"aim":"x","__proto__":{"dmg":50}}' });
-  check('model: hostile JSON reads as defaults', S.readAssist(h).dmg === 100 && S.readAssist(h).aim === 0);
+  check('model: assisted() true when damage taken < 100 (S contract: aim help alone does not tag a run)', S.assisted(m) && !S.assisted(mem({ 'mm-assist': '{"dmg":100,"aim":3}' })));
+  // S contract (design/beta/cycle4-systems.md on cyc4-systems): dmg rounded to 10 and clamped 50..100, aim rounded and clamped 0..3
+  const h = mem({ 'mm-assist': '{"dmg":5,"aim":"x","evil":1}' });
+  check('model: hostile values clean like MMAssist.clean (dmg 5 -> 50, aim "x" -> 0)', S.readAssist(h).dmg === 50 && S.readAssist(h).aim === 0 && !('evil' in S.readAssist(h)), JSON.stringify(S.readAssist(h)));
+  check('model: dmg 74 -> 70, aim 7 -> 3', S.readAssist(mem({ 'mm-assist': '{"dmg":74,"aim":7}' })).dmg === 70 && S.readAssist(mem({ 'mm-assist': '{"dmg":74,"aim":7}' })).aim === 3);
   check('model: broken JSON reads as defaults', S.readAssist(mem({ 'mm-assist': '{' })).dmg === 100);
 }
 
@@ -118,9 +120,16 @@ const state = (page) => page.evaluate(() => {
         localStorage.setItem('mm-assist', JSON.stringify({ dmg: 70, aim: 1 }));
         const t = MMSettings.assistTag(document); document.body.appendChild(t);
         const cs = getComputedStyle(t);
-        return { text: t.textContent, title: t.title, fs: parseFloat(cs.fontSize), border: cs.borderTopStyle, bw: parseFloat(cs.borderTopWidth), assisted: MMSettings.assisted(localStorage) };
+        // when S's MMAssist is on the page, the rows go through it (contract: read / write)
+        const calls = [];
+        window.MMAssist = { read: (st) => { calls.push('r'); return JSON.parse(st.getItem('mm-assist') || '{}'); }, write: (st, v) => { calls.push('w'); st.setItem('mm-assist', JSON.stringify(v)); return v; } };
+        MMSettings.set(localStorage, 'assist-dmg', 80);
+        const via = calls.join('').indexOf('w') >= 0 && JSON.parse(localStorage.getItem('mm-assist')).dmg === 80;
+        delete window.MMAssist;
+        return { text: t.textContent, title: t.title, fs: parseFloat(cs.fontSize), border: cs.borderTopStyle, bw: parseFloat(cs.borderTopWidth), assisted: MMSettings.assisted(localStorage), via };
       });
       check(`${L} assistTag(): "Assisted" text, >= 12 px, outlined, title says what was used`, tag.text === 'Assisted' && tag.fs >= 12 && tag.border === 'solid' && tag.bw >= 2 && /damage taken 70 percent, aim help Light/.test(tag.title) && tag.assisted, JSON.stringify(tag));
+      check(`${L} with MMAssist loaded the rows read / write through it`, tag.via, JSON.stringify(tag));
     }
     if (vp.id === '390x844') {
       await page.evaluate(() => document.getElementById('mmset-assist-h').scrollIntoView({ block: 'start' }));

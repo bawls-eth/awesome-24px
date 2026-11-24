@@ -35,24 +35,37 @@
       return true;
     } catch (e) { return false; }
   }
-  // ID-06 assist (device pref, never the save). Absent / hostile values = defaults (100 % damage taken, aim help off).
+  // ID-06 assist (device pref, never the save). Contract: design/beta/cycle4-systems.md (S, cyc4-systems): key mm-assist =
+  // JSON {dmg, aim}; dmg rounded to 10 and clamped 50..100 (default 100), aim rounded and clamped 0..3 (default 0), unknown
+  // fields dropped; only dmg < 100 tags a run "Assisted" (aim help does not). S's shared/mm-assist.js (global MMAssist) is used
+  // when the page loaded it; this fallback follows the same rules so the rows work on pages without it.
   const ASSIST_KEY = 'mm-assist';
   const ASSIST_DMG = [100, 90, 80, 70, 60, 50];
   const ASSIST_AIM = [0, 1, 2, 3];
   const AIM_LABEL = ['Off', 'Light', 'Medium', 'Strong'];
+  const MA = () => { try { const m = win ? win.MMAssist : null; return m && typeof m.read === 'function' && typeof m.write === 'function' ? m : null; } catch (e) { return null; } };
   function cleanAssist(o) {
     const x = o && typeof o === 'object' && !Array.isArray(o) ? o : {};
-    return { dmg: ASSIST_DMG.indexOf(x.dmg) >= 0 ? x.dmg : 100, aim: ASSIST_AIM.indexOf(x.aim) >= 0 ? x.aim : 0 };
+    const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+    const d = num(x.dmg), a = num(x.aim);
+    return { dmg: d === null ? 100 : Math.max(50, Math.min(100, Math.round(d / 10) * 10)), aim: a === null ? 0 : Math.max(0, Math.min(3, Math.round(a))) };
   }
   function readAssist(s) {
+    const m = MA();
+    if (m) { try { return cleanAssist(m.read(s)); } catch (e) { /* fall back */ } }
     let raw = null;
     try { raw = JSON.parse(s.getItem(ASSIST_KEY)); } catch (e) { raw = null; }
     return cleanAssist(raw);
   }
   function writeAssist(s, field, val) {
-    try { const next = Object.assign(readAssist(s), { [field]: val }); s.setItem(ASSIST_KEY, JSON.stringify(cleanAssist(next))); return true; } catch (e) { return false; }
+    try {
+      const next = cleanAssist(Object.assign(readAssist(s), { [field]: val }));
+      const m = MA();
+      if (m) m.write(s, next); else s.setItem(ASSIST_KEY, JSON.stringify(next));
+      return true;
+    } catch (e) { return false; }
   }
-  const assisted = (s) => { const a = readAssist(s); return a.dmg !== 100 || a.aim !== 0; };
+  const assisted = (s) => readAssist(s).dmg < 100;
   function osReduced() {
     try { return !!(win && win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
   }
@@ -233,7 +246,7 @@
             const sh = el('h4', 'mmset-sub', 'Assist');
             sh.id = 'mmset-assist-h';
             sec.appendChild(sh);
-            sec.appendChild(el('p', 'mmset-hint mmset-gnote', 'Optional help. Runs with assist get an "Assisted" tag; nothing is hidden or locked.'));
+            sec.appendChild(el('p', 'mmset-hint mmset-gnote', 'Optional help. Runs with lower damage taken get an "Assisted" tag; nothing is hidden or locked.'));
           }
           const wrap = el('div', 'mmset-row mmset-steps');
           wrap.id = 'mmset-' + it.id;
