@@ -1,3 +1,3 @@
-# Claude handoff — Glacier Shellback
+# Claude handoff — v2
 
-WIP per owner push-early instructions. Inspect REVIEW.md and validation-report.json. Please run node game/tools/art-audit/run.js. Confirm assumed M64 anchor (128,231), profile readability and whether rear idle repeat/death withdrawal require redraw. Registered provisional in INDEX.json; no JS, tests or Firebase touched.
+2026-11-24 — Glacier Shellback revision 2 pushed for PR #61 review: 12 strips / 60 frames. True right-facing profile with visible neck and one eye; front attack anticipation and open-jaw strike; final two death frames flattened with tipped shell and spread limbs; rear idle now 4 distinct cells. Native buffer checks pass for frame counts, 4x cell construction, corners, hard alpha, palette and baseline y231. Full repository audit/tests not run: local Git DNS failed. Preview inspected; Claude must verify actual PNG decoding, audit and gameplay. No merge requested. Next: W-06 pebble_tortle, puffwool, frostfox exact height redraws.

@@ -1,3 +1,5 @@
-# B-03 Glacier Shellback (WIP)
+# Glacier Shellback v2
 
-Original procedurally rasterized pixel sprites, 64 native pixels, nearest-neighbour 4x RGBA strips, 12 strips / 60 animation cells. Frosted faceted shell, navy outline, slate/cyan ice ramps, clawed feet; no effects baked in. Frame anchor (128,231) follows existing M64 convention; B-03 queue does not explicitly give this species an anchor. Separate front/rear/right silhouettes. See manifest for file IDs and timing, REVIEW.md for visual comparison and known shortcomings, validation-report.json for native-buffer checks. Repository audit not run. Not approved or wired.
+2026-11-24 — Glacier Shellback revision 2 pushed for PR #61 review: 12 strips / 60 frames. True right-facing profile with visible neck and one eye; front attack anticipation and open-jaw strike; final two death frames flattened with tipped shell and spread limbs; rear idle now 4 distinct cells. Native buffer checks pass for frame counts, 4x cell construction, corners, hard alpha, palette and baseline y231. Full repository audit/tests not run: local Git DNS failed. Preview inspected; Claude must verify actual PNG decoding, audit and gameplay. No merge requested. Next: W-06 pebble_tortle, puffwool, frostfox exact height redraws.
+
+Original 64 native px, 4x RGBA, unchanged IDs/cells/anchors/timing. No baked effects.

@@ -1,7 +1,8 @@
 {
-  "status": "WIP",
+  "status": "WIP revision 2",
   "repository_audit": "not run",
-  "method": "Checked native pixel buffers and output dimensions/encoding during PNG construction; preview rendered successfully. Individual PNG decode and byte-for-byte verification after upload not yet run.",
+  "full_tests": "not run",
+  "reason": "git ls-remote failed: Could not resolve host github.com. No local checkout; live Firebase untouched.",
   "total_strips": 12,
   "total_frames": 60,
   "checks": [
@@ -14,8 +15,14 @@
       "distinct_frames": 4,
       "opaque_colors": 12,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        50,
+        51,
+        50
+      ]
     },
     {
       "id": "glacier_shellback_move_down",
@@ -26,8 +33,16 @@
       "distinct_frames": 6,
       "opaque_colors": 12,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        50,
+        51,
+        50,
+        49,
+        50
+      ]
     },
     {
       "id": "glacier_shellback_attack_down",
@@ -38,8 +53,15 @@
       "distinct_frames": 5,
       "opaque_colors": 12,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        52,
+        46,
+        46,
+        49
+      ]
     },
     {
       "id": "glacier_shellback_death_down",
@@ -50,8 +72,15 @@
       "distinct_frames": 5,
       "opaque_colors": 12,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        47,
+        44,
+        30,
+        29
+      ]
     },
     {
       "id": "glacier_shellback_idle_up",
@@ -59,11 +88,17 @@
         1024,
         256
       ],
-      "distinct_frames": 3,
+      "distinct_frames": 4,
       "opaque_colors": 11,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        50,
+        51,
+        50
+      ]
     },
     {
       "id": "glacier_shellback_move_up",
@@ -74,8 +109,16 @@
       "distinct_frames": 6,
       "opaque_colors": 11,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        50,
+        51,
+        50,
+        49,
+        50
+      ]
     },
     {
       "id": "glacier_shellback_attack_up",
@@ -86,8 +129,15 @@
       "distinct_frames": 5,
       "opaque_colors": 11,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        52,
+        47,
+        48,
+        50
+      ]
     },
     {
       "id": "glacier_shellback_death_up",
@@ -98,8 +148,15 @@
       "distinct_frames": 5,
       "opaque_colors": 11,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        49,
+        47,
+        44,
+        29,
+        28
+      ]
     },
     {
       "id": "glacier_shellback_idle_right",
@@ -108,10 +165,16 @@
         256
       ],
       "distinct_frames": 4,
-      "opaque_colors": 11,
+      "opaque_colors": 13,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        48,
+        49,
+        50,
+        49
+      ]
     },
     {
       "id": "glacier_shellback_move_right",
@@ -120,10 +183,18 @@
         256
       ],
       "distinct_frames": 6,
-      "opaque_colors": 11,
+      "opaque_colors": 13,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        48,
+        49,
+        50,
+        49,
+        48,
+        49
+      ]
     },
     {
       "id": "glacier_shellback_attack_right",
@@ -132,10 +203,17 @@
         256
       ],
       "distinct_frames": 5,
-      "opaque_colors": 12,
+      "opaque_colors": 13,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        48,
+        51,
+        46,
+        47,
+        49
+      ]
     },
     {
       "id": "glacier_shellback_death_right",
@@ -144,17 +222,19 @@
         256
       ],
       "distinct_frames": 5,
-      "opaque_colors": 11,
+      "opaque_colors": 13,
       "lowest_opaque_row": 231,
+      "transparent_corners": true,
       "hard_alpha": true,
-      "transparent_corners": true
+      "heights_native": [
+        48,
+        46,
+        43,
+        30,
+        29
+      ]
     }
   ],
-  "known_issues": [
-    "idle_up: 3 distinct poses in 4 cells, repeated recovery pose",
-    "right profile: neck and head mostly hidden behind carapace; attack silhouette is weak",
-    "death settles into shell; review whether final 2 frames read as defeated rather than resting",
-    "No in-game screenshot or repository audit"
-  ],
-  "visual_review": "Contact sheet inspected at 2x native; faceted ice plates and directional silhouettes visible. Provisional, not approved."
+  "visual_review": "Preview displayed and inspected. Right head projects from shell, one eye; front attack retracts and bites; all death strips end at 28–30 native px with tipped shell and legs spread. Some subtle idle/move motion; profile attack and front lunge still need game review.",
+  "method": "Native pixel buffers checked; PNG RGBA encoder constructs 4x cells; contact sheet decoded by image renderer. Individual strip decode and full repository audit not independently performed."
 }

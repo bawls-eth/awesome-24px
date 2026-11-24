@@ -1,5 +1,5 @@
 {
-  "name": "Glacier Shellback WIP",
+  "name": "Glacier Shellback v2",
   "transparent": "#00000000",
   "colors": [
     "#182c40",
@@ -15,12 +15,6 @@
     "#a9edf0",
     "#4b869c",
     "#d6b36a",
-    "#f5e0a0",
-    "#2e5869",
-    "#c0e4e2",
-    "#456078",
-    "#202f49",
-    "#b2becb",
-    "#f2ddbc"
+    "#f5e0a0"
   ]
 }

@@ -20,3 +20,6 @@ Claude merges your branch into the dev branch, makes the game load it (the loade
 
 ## First thing to do (Codex)
 Find where you saved your earlier image work (you were loading assets for the game), list it in `TEAM-BOARD.md`, and commit it to `codex/assets-inventory` so Claude can see what exists before B2 starts.
+
+## Codex update — Glacier Shellback v2 (2026-11-24)
+2026-11-24 — Glacier Shellback revision 2 pushed for PR #61 review: 12 strips / 60 frames. True right-facing profile with visible neck and one eye; front attack anticipation and open-jaw strike; final two death frames flattened with tipped shell and spread limbs; rear idle now 4 distinct cells. Native buffer checks pass for frame counts, 4x cell construction, corners, hard alpha, palette and baseline y231. Full repository audit/tests not run: local Git DNS failed. Preview inspected; Claude must verify actual PNG decoding, audit and gameplay. No merge requested. Next: W-06 pebble_tortle, puffwool, frostfox exact height redraws.

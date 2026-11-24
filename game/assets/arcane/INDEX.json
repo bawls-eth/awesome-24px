@@ -751,7 +751,7 @@
       "status": "provisional",
       "source": "codex",
       "branch": "codex/b03-glacier-shellback",
-      "note": "WIP, audit not run; M64 Tundra species, 12 strips, 60 cells; rear idle repeats one pose; profile head needs review."
+      "note": "Revision 2 submitted in PR #61; profile, attack and death reworked; WIP, audit not run; Claude visual review required."
     }
   ]
 }
