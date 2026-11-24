@@ -1,0 +1,15 @@
+{
+  "batch": "m02",
+  "label": "skimray",
+  "generated_utc": "2026-11-23T02:09:01.958868Z",
+  "files": 12,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "skimray/down": 84,
+    "skimray/up": 84,
+    "skimray/right": 88
+  },
+  "status": "provisional"
+}

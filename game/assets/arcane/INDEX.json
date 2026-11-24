@@ -703,6 +703,44 @@
       "display_scale": 0.5,
       "grade": "B-",
       "note": "codex/b12-props-quality-redraw redrew b12 in place at 2x cells; staged in its own folder so b12 stays live until realm-world draws b12r at display_scale 0.5 (hunk in game/design/bugbash/art.md)"
+    },
+    {
+      "id": "r03",
+      "label": "nature-props",
+      "path": "assets/arcane/r03-nature-props",
+      "manifest": "assets/arcane/r03-nature-props/manifest.json",
+      "files": 71,
+      "status": "provisional",
+      "ingested_utc": "2026-11-24T00:30:00Z",
+      "source": "codex",
+      "branch": "codex/r03-nature-props-master-review",
+      "remake_of": "b12",
+      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
+    },
+    {
+      "id": "r07",
+      "label": "enemies-wave-2",
+      "path": "assets/arcane/r07-enemies-wave-2",
+      "manifest": "assets/arcane/r07-enemies-wave-2/manifest.json",
+      "files": 150,
+      "status": "provisional",
+      "ingested_utc": "2026-11-24T00:30:00Z",
+      "source": "codex",
+      "branch": "codex/r07-enemies-master-review",
+      "remake_of": "b24",
+      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
+    },
+    {
+      "id": "m08",
+      "label": "minigame-ui",
+      "path": "assets/arcane/m08-minigame-ui",
+      "manifest": "assets/arcane/m08-minigame-ui/manifest.json",
+      "files": 25,
+      "status": "provisional",
+      "ingested_utc": "2026-11-24T00:30:00Z",
+      "source": "codex",
+      "branch": "codex/m08-medals-original",
+      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
     }
   ]
 }

@@ -719,6 +719,19 @@ const SEASON_DECOR_SPOTS = [
   { x: 1050, y: 1100 }, { x: 1900, y: 350 },
 ];
 const STATUE_POS = { x: 1450, y: 600 };
+// R4-D2 W-06 / b12-r2-05: ONE pixel scale for every hero-shaped sprite in the Town. Resident NPCs (Professor Byte, the dock resident,
+// the travelling merchant, the graveyard zombie) used to draw at 1.8-2x the 24 px hero, with doubled pixels next to 1x players.
+// Now 1x like the player and the Founder's Statue; each NPC keeps its FEET where they were (the sprite moves down by the
+// shrink) and its labels follow the head. ?npcscale=classic restores the old sizes.
+const TOWN_NPC_SCALE = (() => { try { return /[?&]npcscale=classic(&|$)/.test(location.search) ? 0 : 1; } catch (e) { return 1; } })();
+const npcScale = (classic) => (TOWN_NPC_SCALE ? TOWN_NPC_SCALE : classic);
+const npcFeetShift = (classic) => 12 * (classic - npcScale(classic)); // 24 px cell, origin centre: feet at y + 12 * scale
+// W-06 wildlife scale table: Town fauna drew at their SVG sizes (fox 56, deer 68, butterfly 32 px) next to the 24 px hero, i.e. 2-3x.
+// Display size is now 0.45x of that, clamped 14..32 px: insects / frogs ~14, birds / snakes 16-18, fox / otter ~25, deer / caribou /
+// shark ~31 (a deer is a little taller than the hero, a fox about hero height), baked 1:1 so the pixels match the hero's density.
+// Flora keeps its size. Catch reach, speed and wander range still use the old size, so gameplay is unchanged. ?npcscale=classic: old.
+const FF_FAUNA_K = 0.45;
+const ffDisplaySize = (a) => (TOWN_NPC_SCALE && a.kind === 'fauna' ? Math.max(14, Math.min(32, Math.round(Math.max(a.w, a.h) * FF_FAUNA_K))) : Math.max(14, a.w, a.h));
 const NPC_POS = { x: 1550, y: 540 };
 const NPC_RADIUS = 48;
 const NPC_NAME = '🧪 Professor Byte';
@@ -6427,7 +6440,7 @@ class TownScene extends Phaser.Scene {
       try {
         const img = this.textures.get(src).getSourceImage();
         if (!img || !(img.naturalWidth || img.width)) return;
-        const px = Math.max(8, Math.round(Math.max(14, a.w, a.h) / 2));
+        const px = TOWN_NPC_SCALE && a.kind === 'fauna' ? ffDisplaySize(a) : Math.max(8, Math.round(Math.max(14, a.w, a.h) / 2)); // W-06: fauna 1:1 with the hero's pixels
         const ent = MMPixelize.bake(img, { size: px, key: `ff_${a.id}@${px}` });
         if (ent && ent.canvas && ent.w > 0) { this.textures.addCanvas(`ffpx_${a.id}`, ent.canvas); this.ffPixelized++; }
       } catch (e) { /* this species keeps its SVG */ }
@@ -6443,9 +6456,10 @@ class TownScene extends Phaser.Scene {
     // The SVGs are square, so a non-square w/h used to squash the art
     // (pine 72x96, joshua tree 80x104...). Keep the bigger side, square;
     // never below 14px so the microscopic species stay findable specks.
-    const size = Math.max(14, a.w, a.h);
+    const size = Math.max(14, a.w, a.h); // gameplay size (reach / speed / range), unchanged
     const fly = move === 'fly';
-    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(size, size).setDepth(fly ? s.y + 40 : s.y);
+    const shown = ffDisplaySize(a); // W-06: what is drawn
+    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(shown, shown).setDepth(fly ? s.y + 40 : s.y);
     const inWater = !!s.pond && FF_IN_WATER.has(a.id);
     const spec = {
       id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean,
@@ -6948,8 +6962,10 @@ class TownScene extends Phaser.Scene {
       this.addObstacleRect({ x: s.x - 9, y: s.y - 10, width: 18, height: 10 });
     });
 
-    const zombie = this.add.sprite(x + 50, y + 18, 'zombies', 0).setScale(1.8).setDepth(y + 19);
-    this.tweens.add({ targets: zombie, y: y + 14, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const zdy = npcFeetShift(1.8);
+    const zombie = this.add.sprite(x + 50, y + 18 + zdy, 'zombies', 0).setScale(npcScale(1.8)).setDepth(y + 19);
+    this.graveZombie = zombie;
+    this.tweens.add({ targets: zombie, y: y + 14 + zdy, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.add.text(x, y - 68, '🪦 Old Graveyard', {
       fontSize: '11px',
       fontFamily: 'monospace',
@@ -8041,15 +8057,34 @@ class TownScene extends Phaser.Scene {
   }
 
   drawStatue() {
+    // Owner decision O-10 (Round 4): the Founder's Statue. A stone hero (the stone-tinted hero alias 'mooncats', frame 0 = a hero class)
+    // at the SAME pixel scale as every hero and NPC (1x, b12-r2-05: no 2.3x sprite, no mixed pixel density), raised on a sculpted
+    // three-step plinth with a top-left light, a carved plaque and a soft ground shadow. Code-drawn until the Codex hero-statue sprite
+    // (CODEX-REMAKE-QUEUE, T-STATUE) lands; no ape.
     const { x, y } = STATUE_POS;
     const g = this.bakedGfx();
-    g.fillStyle(0x9a9a9a, 1).fillRect(x - 24, y, 48, 14);
-    g.fillStyle(0x7d7d7d, 1).fillRect(x - 18, y - 10, 36, 10);
+    g.fillStyle(0x000000, 0.22).fillEllipse(x + 3, y + 15, 60, 10); // ground shadow, down-right
+    const step = (w, top, h, base, lit, dark) => {
+      g.fillStyle(base, 1).fillRect(x - w / 2, top, w, h);
+      g.fillStyle(lit, 1).fillRect(x - w / 2, top, w, 2).fillRect(x - w / 2, top, 2, h); // top / left light
+      g.fillStyle(dark, 1).fillRect(x - w / 2, top + h - 2, w, 2).fillRect(x + w / 2 - 2, top, 2, h); // bottom / right shade
+      g.lineStyle(1, 0x3c3a40, 1).strokeRect(x - w / 2 - 0.5, top - 0.5, w + 1, h + 1); // dark colour-matched rim
+    };
+    step(48, y + 2, 10, 0x8c8a90, 0xb4b2b8, 0x5e5c64); // base step
+    step(38, y - 8, 10, 0x9a98a0, 0xc2c0c6, 0x67656e); // middle step
+    step(28, y - 18, 10, 0xa6a4ac, 0xd0ced4, 0x706e78); // top block
+    g.fillStyle(0x6a5a3a, 1).fillRect(x - 9, y - 5, 18, 5); // bronze plaque on the middle step
+    g.fillStyle(0xc9a24a, 1).fillRect(x - 8, y - 4, 16, 3);
+    g.fillStyle(0x6a5a3a, 1).fillRect(x - 6, y - 3, 12, 1);
     g.setDepth(y - 1);
     g.bake();
 
-    const ape = this.add.sprite(x, y - 28, 'boredapes', 0).setScale(2.3).setDepth(y);
-    this.add.text(x, y - 68, '🐵 Mayor', {
+    const tex = this.textures.exists('mooncats') && !MMTownHeroes.legacyArt() ? { key: 'mooncats', frame: 0 } : this.safeTexture(MMTownHeroes.heroKey('warrior'), 0);
+    const hero = this.add.sprite(x, y - 30, tex.key, tex.frame).setDepth(y);
+    hero.htStill = true; hero.founderStatue = true;
+    if (tex.key !== 'mooncats') hero.setTint(0xb8b4bc); // legacy-art fallback: a grey hero, still no ape
+    this.founderStatue = hero;
+    this.add.text(x, y - 52, "🦸 Founder's Statue", {
       fontSize: '12px',
       fontFamily: 'monospace',
       color: '#ffffff',
@@ -8140,8 +8175,9 @@ class TownScene extends Phaser.Scene {
   drawMerchant() {
     const { x, y } = MERCHANT_POS;
     const species = this.merchantSpecies();
-    this.merchantSprite = this.add.sprite(x, y, species.key, 0).setScale(1.8).setDepth(y);
-    this.merchantSign = this.add.text(x, y - 34, '', {
+    const mdy = npcFeetShift(1.8);
+    this.merchantSprite = this.add.sprite(x, y + mdy, species.key, 0).setScale(npcScale(1.8)).setDepth(y);
+    this.merchantSign = this.add.text(x, y + 2 * mdy - 34, '', {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
@@ -8229,9 +8265,11 @@ class TownScene extends Phaser.Scene {
 
   drawNPC() {
     const { x, y } = NPC_POS;
-    const sprite = this.add.sprite(x, y, 'genius', 2).setScale(2).setDepth(y);
-    this.tweens.add({ targets: sprite, y: y - 4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.add.text(x, y - 36, NPC_NAME, {
+    const dy = npcFeetShift(2); const ly = y + 2 * dy; // sprite centre / label baseline after the W-06 shrink
+    const sprite = this.add.sprite(x, y + dy, 'genius', 2).setScale(npcScale(2)).setDepth(y);
+    this.npcSprite = sprite;
+    this.tweens.add({ targets: sprite, y: y + dy - 4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, ly - 36, NPC_NAME, {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
@@ -8239,7 +8277,7 @@ class TownScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
     // Bubble bottom above the quest sign (centred at y - 46, up to two lines), so the line never sits on "bring 4🪵".
-    this.npcBubble = this.add.text(x, y - 64, '', {
+    this.npcBubble = this.add.text(x, ly - 64, '', {
       fontSize: '11px',
       color: '#1c2430',
       backgroundColor: '#ffe066',
@@ -8247,7 +8285,7 @@ class TownScene extends Phaser.Scene {
       wordWrap: { width: 180 },
       align: 'center',
     }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
-    this.npcQuestSign = this.add.text(x, y - 46, '', {
+    this.npcQuestSign = this.add.text(x, ly - 46, '', {
       fontSize: '10px',
       fontFamily: 'monospace',
       color: '#6fbf73',
@@ -8435,16 +8473,18 @@ class TownScene extends Phaser.Scene {
 
   drawNPC2() {
     const { x, y } = NPC2_POS;
-    const sprite = this.add.sprite(x, y, 'doge', 4).setScale(2).setDepth(y);
-    this.tweens.add({ targets: sprite, y: y - 4, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.add.text(x, y - 36, NPC2_NAME, {
+    const dy = npcFeetShift(2); const ly = y + 2 * dy;
+    const sprite = this.add.sprite(x, y + dy, 'doge', 4).setScale(npcScale(2)).setDepth(y);
+    this.npc2Sprite = sprite;
+    this.tweens.add({ targets: sprite, y: y + dy - 4, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, ly - 36, NPC2_NAME, {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
-    this.npc2Bubble = this.add.text(x, y - 50, '', {
+    this.npc2Bubble = this.add.text(x, ly - 50, '', {
       fontSize: '11px',
       color: '#1c2430',
       backgroundColor: '#ffe066',

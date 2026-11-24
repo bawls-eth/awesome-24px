@@ -1824,5 +1824,17 @@
   "beta-r4-b11-12-creative-goals.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "r4-d2-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-statue.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "r4-d2-isles.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
