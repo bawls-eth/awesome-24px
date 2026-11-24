@@ -497,6 +497,9 @@
       b.appendChild(el('span', open ? stars(save.stars[a.id]) : 'Locked'));
       if (open && MODS_ON) { var nm0 = peekNext(a.id).mod, mt = el('small', 'Next run: ' + B.MODS[nm0].name, 'cardmod'); mt.dataset.mod = nm0; mt.title = B.MODS[nm0].line; b.appendChild(mt); }
       var ns = save.stars[a.id]; var sm = el('small', open ? 'Best ' + save.best[a.id] + '  |  ' + (ns < 3 ? 'next star at ' + a.stars[ns] : 'all 3 stars') : 'Needs ' + needStars(i) + ' stars'); sm.className = 'cardnext'; b.appendChild(sm); // FUN1: the next target, not a bare 60/120/200
+      // R4 D4 (a11y sweep festival-bugs keyboard-primary): the spoken name says what the card does ("Play Meadow, ...") and keeps
+      // every visible part (arena, stars, next modifier, best / next star), so the visible label is still inside the name
+      b.setAttribute('aria-label', (open ? 'Play ' : '') + [].map.call(b.children, function (c) { return c.textContent; }).join(', '));
       grid.appendChild(b);
     });
     overlay.appendChild(grid);

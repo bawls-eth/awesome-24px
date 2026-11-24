@@ -66,6 +66,21 @@ const AE = () => { const e = document.activeElement; return !e || e === document
     check('Isles: the focused island view has role=application, a name with the keys, and a visible focus ring', v.focused && v.role === 'application' && /WASD/.test(v.name) && v.ring, JSON.stringify(v));
     await ctx.close();
   }
+  {
+    // Bug Safari arena cards: the spoken name starts with "Play <arena>" and keeps the visible text; Enter on it starts the arena
+    const { ctx, page } = await mk();
+    await page.goto(ROOT + 'game/games/festival/bugs.html?test=1');
+    await page.waitForFunction(() => !!window.__bugs, null, { timeout: 10000 });
+    await page.evaluate(() => { const ok = document.getElementById('hint-ok'); if (ok && ok.offsetParent) ok.click(); window.__bugs.menu(); });
+    const c = await page.evaluate(() => { const b = document.querySelector('#overlay .card[data-arena="meadow"]'); return { name: b.getAttribute('aria-label') || '', vis: b.querySelector('strong').textContent }; });
+    check('Bug Safari: arena card name is "Play <arena>, ..." and contains the visible arena name', /^Play Meadow/.test(c.name) && c.name.includes(c.vis), JSON.stringify(c));
+    await page.focus('#overlay .card[data-arena="meadow"]');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    const mode = await page.evaluate(() => window.__bugs.mode);
+    check('Bug Safari: Enter on the focused arena card starts that arena', mode !== 'menu', mode);
+    await ctx.close();
+  }
   check('no page errors', errors.length === 0, errors.join('|'));
   await browser.close();
   done();
