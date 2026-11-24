@@ -306,6 +306,9 @@
     toggle.setAttribute('aria-label', homeOn ? 'Show the world map' : 'Back to the home screen');
     toggle.setAttribute('aria-pressed', homeOn ? 'false' : 'true');
     setUrl(!homeOn);
+    // b08-r2-10: on Home the footer keeps Daily gift + Map only. "<- Town" duplicated the Town card and PLAY, and "Open" acts on a map
+    // node that Home does not show; both stay on the map view (nothing removed).
+    ['hub-town', 'open-btn'].forEach((id) => { const b = $(id); if (b) b.style.display = homeOn ? 'none' : ''; });
     try { window.dispatchEvent(new Event('resize')); } catch (e) { /* map keeps its size */ }
     if (homeOn) startSky();
     if (focus) { const f = homeOn ? $('home-play') : $('map'); if (f) try { f.focus(); } catch (e) { /* ignore */ } }
