@@ -741,6 +741,17 @@
       "source": "codex",
       "branch": "codex/m08-medals-original",
       "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
+    },
+    {
+      "id": "b03-glacier-shellback",
+      "label": "glacier-shellback",
+      "path": "assets/arcane/b03-glacier-shellback",
+      "manifest": "assets/arcane/b03-glacier-shellback/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/b03-glacier-shellback",
+      "note": "WIP, audit not run; M64 Tundra species, 12 strips, 60 cells; rear idle repeats one pose; profile head needs review."
     }
   ]
 }

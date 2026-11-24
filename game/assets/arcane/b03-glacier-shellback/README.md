@@ -1,0 +1,3 @@
+# B-03 Glacier Shellback (WIP)
+
+Original procedurally rasterized pixel sprites, 64 native pixels, nearest-neighbour 4x RGBA strips, 12 strips / 60 animation cells. Frosted faceted shell, navy outline, slate/cyan ice ramps, clawed feet; no effects baked in. Frame anchor (128,231) follows existing M64 convention; B-03 queue does not explicitly give this species an anchor. Separate front/rear/right silhouettes. See manifest for file IDs and timing, REVIEW.md for visual comparison and known shortcomings, validation-report.json for native-buffer checks. Repository audit not run. Not approved or wired.

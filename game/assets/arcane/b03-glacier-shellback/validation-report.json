@@ -1,0 +1,160 @@
+{
+  "status": "WIP",
+  "repository_audit": "not run",
+  "method": "Checked native pixel buffers and output dimensions/encoding during PNG construction; preview rendered successfully. Individual PNG decode and byte-for-byte verification after upload not yet run.",
+  "total_strips": 12,
+  "total_frames": 60,
+  "checks": [
+    {
+      "id": "glacier_shellback_idle_down",
+      "dimensions": [
+        1024,
+        256
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_move_down",
+      "dimensions": [
+        1536,
+        256
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_attack_down",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_death_down",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_idle_up",
+      "dimensions": [
+        1024,
+        256
+      ],
+      "distinct_frames": 3,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_move_up",
+      "dimensions": [
+        1536,
+        256
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_attack_up",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_death_up",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_idle_right",
+      "dimensions": [
+        1024,
+        256
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_move_right",
+      "dimensions": [
+        1536,
+        256
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_attack_right",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "glacier_shellback_death_right",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "hard_alpha": true,
+      "transparent_corners": true
+    }
+  ],
+  "known_issues": [
+    "idle_up: 3 distinct poses in 4 cells, repeated recovery pose",
+    "right profile: neck and head mostly hidden behind carapace; attack silhouette is weak",
+    "death settles into shell; review whether final 2 frames read as defeated rather than resting",
+    "No in-game screenshot or repository audit"
+  ],
+  "visual_review": "Contact sheet inspected at 2x native; faceted ice plates and directional silhouettes visible. Provisional, not approved."
+}
