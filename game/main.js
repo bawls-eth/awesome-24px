@@ -7218,9 +7218,15 @@ class TownScene extends Phaser.Scene {
       let y = H - 1, a = -1, b = -1;
       for (; y >= 0 && a < 0; y--) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] >= 128) { if (a < 0) a = x; b = x; }
       if (a < 0 || b - a < 12) return null;
-      const g = this.add.graphics().setDepth(img.depth - 0.5);
-      g.fillStyle(0x10140c, 0.22).fillRect(img.x + a + 2, img.y + y + 2, b - a + 2, 4);
-      g.fillStyle(0x10140c, 0.18).fillRect(img.x + a + 4, img.y + y + 2, b - a - 2, 2);
+      // a baked_ canvas texture (one per building), placed as a plain Image: no live Graphics, nothing re-tessellated per frame (town-perf)
+      const sw = b - a + 2, skey = 'baked_shadow_' + key;
+      if (!this.textures.exists(skey)) {
+        const ct = this.textures.createCanvas(skey, sw, 4), sc = ct.getContext();
+        sc.fillStyle = 'rgba(16,20,12,0.22)'; sc.fillRect(0, 0, sw, 4);
+        sc.fillStyle = 'rgba(16,20,12,0.18)'; sc.fillRect(2, 0, Math.max(1, sw - 4), 2);
+        ct.refresh();
+      }
+      const g = this.add.image(img.x + a + 2, img.y + y + 2, skey).setOrigin(0, 0).setDepth(img.depth - 0.5);
       const st = this.bldFinish; if (st) { st.shadows = (st.shadows || 0) + 1; (st.shadowPairs || (st.shadowPairs = [])).push([img.depth, g.depth, b - a]); }
       return g;
     } catch (e) { return null; }
