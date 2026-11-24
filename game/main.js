@@ -155,6 +155,35 @@ function cleanCount(v) {
   return Number.isFinite(v) && v > 0 ? Math.min(v, 1e9) : 0;
 }
 
+// One step of a day streak (login, selling). Dates are UTC day keys 'YYYY-MM-DD'. Returns the streak to show, the date to keep,
+// counted (a new day was counted: pay its bonus) and write (store streak + date).
+//  same day: nothing. Yesterday: +1. Older, missing or unreadable: a new streak of 1 (as always).
+// cycle1 L-07: a stored date in the FUTURE means the device clock was ahead when it was written and has been put right since.
+// That used to reset the streak to 1. Now the streak is never lost for it, and never paid twice:
+//  1 or 2 days ahead: that day is already counted, so wait for it (nothing written, nothing paid; it continues from there);
+//  more than 2 days ahead: the stored date is ignored: the streak restarts its count from today (date = today, no bonus today),
+//  so a clock that was a month ahead cannot freeze the streak for a month.
+// And a device date before STREAK_CLOCK_FLOOR (earlier than this rule existed, e.g. a dead clock battery showing 1970 or 2000)
+// is a wrong clock for certain: an existing streak is left exactly as it is until the clock is right again.
+const STREAK_FUTURE_DAYS = 2;
+const STREAK_CLOCK_FLOOR = '2026-11-01';
+function streakDayNumber(key) {
+  if (typeof key !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return NaN;
+  const t = Date.parse(key + 'T00:00:00Z');
+  return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === key ? Math.round(t / 86400000) : NaN;
+}
+function streakStep(lastDate, streak, today) {
+  streak = cleanCount(streak);
+  if (lastDate === today) return { streak, date: today, counted: false, write: false };
+  const was = streakDayNumber(lastDate); const now = streakDayNumber(today);
+  if (streak > 0 && Number.isFinite(was) && !(now >= streakDayNumber(STREAK_CLOCK_FLOOR))) return { streak, date: lastDate, counted: false, write: false };
+  if (streak > 0 && Number.isFinite(was) && Number.isFinite(now) && was > now) {
+    if (was - now <= STREAK_FUTURE_DAYS) return { streak, date: lastDate, counted: false, write: false };
+    return { streak, date: today, counted: false, write: true };
+  }
+  return { streak: was === now - 1 ? streak + 1 : 1, date: today, counted: true, write: true };
+}
+
 // Beta S-01: true from the moment a Restore writes the save until the page reloads, so no other writer (a timer, the
 // cross-tab listener, a late gather) can put the old in-memory state back over the restored file.
 let SAVE_RESTORING = false;
@@ -3073,10 +3102,10 @@ class TownScene extends Phaser.Scene {
   updateSellStreak() {
     const saved = loadSave();
     const today = new Date().toISOString().slice(0, 10);
-    if (saved.lastSellDate === today) return; // already counted today
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const streak = saved.lastSellDate === yesterday ? cleanCount(saved.sellStreak) + 1 : 1;
-    writeSave({ sellStreak: streak, lastSellDate: today });
+    const st = streakStep(saved.lastSellDate, saved.sellStreak, today);
+    if (st.write) writeSave({ sellStreak: st.streak, lastSellDate: st.date });
+    if (!st.counted) return; // already counted today (or the stored day is ahead of the clock: cycle1 L-07, see streakStep)
+    const streak = st.streak;
     this.sellStreak = streak;
     this.lifetimeStats.bestSellStreak = Math.max(this.lifetimeStats.bestSellStreak || 0, streak);
     this.saveAchievements();
@@ -4815,11 +4844,10 @@ class TownScene extends Phaser.Scene {
   setupLoginStreak() {
     const saved = loadSave();
     const today = new Date().toISOString().slice(0, 10);
-    let streak = cleanCount(saved.loginStreak);
-    if (saved.lastLoginDate !== today) {
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      streak = saved.lastLoginDate === yesterday ? streak + 1 : 1;
-      writeSave({ loginStreak: streak, lastLoginDate: today });
+    const st = streakStep(saved.lastLoginDate, saved.loginStreak, today); // cycle1 L-07: a clock that was ahead never resets it
+    const streak = st.streak;
+    if (st.write) writeSave({ loginStreak: streak, lastLoginDate: st.date });
+    if (st.counted) {
       const bonus = Math.min(streak, 5);
       this.awardPoint(bonus, `🔥 Day ${streak} streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 44);
     }
