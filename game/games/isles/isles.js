@@ -853,7 +853,15 @@
     return every > 0 ? every - (c.tm.t + (c.tmAcc || 0) - c.tm.lastFeed) : 0;
   }
   let feedLbl = '', feedChew = false;
+  let chewToast = null; // b05-08: the creature an early-tap toast is about, so the toast's "ready in N s" stays the button's number
+  function chewToastText(c, nm) { const left = chewLeft(c); return left > 0.05 ? nm + ' is still chewing: ready in ' + Math.max(1, Math.ceil(left)) + ' s.' : nm + ' is ready to eat again.'; }
+  function chewToastSync() {
+    if (!chewToast) return;
+    const el = $('toast'); if (!el || !el.classList.contains('on') || el.textContent.indexOf(chewToast.nm + ' is ') !== 0) { chewToast = null; return; }
+    const t = chewToastText(chewToast.c, chewToast.nm); if (el.textContent !== t) el.textContent = t;
+  }
   function feedHud(ft) {
+    chewToastSync();
     if (btn.feed.hidden) { feedChew = false; return; }
     let lbl = 'Feed', p = 1;
     if (ft && ft.tm && ft.tm.need > 0) {
@@ -885,7 +893,7 @@
       else pouch[f.id] = Math.max(0, pouch[f.id] - 1);
       c.eatT = 0.8;
     }
-    if (ev.indexOf('toofast') >= 0) toast(nm + ' is still chewing: ready in ' + Math.max(1, Math.ceil(chewLeft(c))) + ' s.'); // BB: honest, no guessing
+    if (ev.indexOf('toofast') >= 0) { chewToast = { c, nm }; toast(chewToastText(c, nm)); } // BB: honest, no guessing; b05-08: the toast then counts down with the button
     if (ev.indexOf('refused') >= 0) toast(nm + ' turns its nose up.');
     if (c.tm.st === 'tamed') { finishTame(c); return { ok: true, tamed: true, events: ev }; }
     syncTame(c, ev);
