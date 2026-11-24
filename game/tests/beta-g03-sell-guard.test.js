@@ -119,6 +119,40 @@ const items = (page) => page.evaluate(() => window.__mm.arena.save.items.map((x)
     await A.ctx.close();
   }
 
+  // 3f (cycle 5, b02-r3-01): THREE real taps ~450 ms apart on "Confirm reforge" (the rhythm that destroyed the wand in round 3: tap 2 opened
+  // the Salvage ask, tap 3 confirmed it). Taps less than 600 ms apart after "Confirm reforge" form one
+  // chain and a Salvage tap inside it is ignored, and "Confirm salvage" sleeps 0.9 s after its ask opens.
+  { const A = await open(browser, realm([{ n: 1, id: 'sparkwand', r: 1, t: 8, a: 12345 }, { n: 7, id: 'heartcharm', r: 0 }], { weapon: 1 }, { dust: 200 }), { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const p = A.page;
+    for (const sel of ['button.fg[data-forge-open="1"]', 'button.fg[data-forge-pick="blast"]']) { await awake(p, sel); const b = await box(p, sel); await p.touchscreen.tap(b.x, b.y); }
+    const yes = 'button.fg[data-forge-yes="reforge"]';
+    await awake(p, yes);
+    const y = await box(p, yes);
+    const before = await p.evaluate(() => ({ dust: window.__mm.arena.save.dust, shards: window.__mm.arena.save.shards }));
+    const seen = [];
+    for (let k = 0; k < 3; k++) {
+      if (k) await p.waitForTimeout(450);
+      const under = await p.evaluate((pt) => { const e = document.elementFromPoint(pt.x, pt.y); const b = e && e.closest && e.closest('button'); return b ? (b.dataset.forgeYes ? 'yes:' + b.dataset.forgeYes : b.dataset.forgeSalvage ? 'salvage' : b.dataset.forgePick ? 'pick' : b.dataset.forgeOpen ? 'open' : b.dataset.forgeNo ? 'cancel' : 'other') + (b.disabled ? ':off' : ':on') : 'none'; }, y);
+      seen.push(under);
+      await p.touchscreen.tap(y.x, y.y);
+    }
+    await p.waitForTimeout(500);
+    const r = await p.evaluate(() => { const a = window.__mm.arena; const it = a.save.items.find((x) => x.id === 'sparkwand' && x.t === 8); return { it: !!it, f: it && it.f && it.f.id, dust: a.save.dust, shards: a.save.shards, salvageQ: !!document.querySelector('button.fg[data-forge-yes="salvage"]'), ask: a._forgeAsk }; });
+    check('3f. three taps ~450 ms apart on "Confirm reforge": the wand still exists (reforged once), no salvage ask open', r.it && r.f === 'blast' && !r.salvageQ && !r.ask, JSON.stringify({ r, under: seen }));
+    check('3g. charged exactly once over the three taps', before.dust - r.dust === 50 && before.shards - r.shards === 50, JSON.stringify([before, r]));
+    // not stuck: a deliberate Salvage after a pause (outside the 600 ms tap chain) opens the ask, Confirm salvage wakes after 0.9 s and salvages
+    const sal = 'button.fg[data-forge-salvage]';
+    await p.waitForTimeout(700); await awake(p, sal); const sb = await box(p, sal); await p.touchscreen.tap(sb.x, sb.y);
+    const cy = 'button.fg[data-forge-yes="salvage"]';
+    await p.waitForSelector(cy, { timeout: 2000 });
+    const t0 = Date.now(); await awake(p, cy); const wokeMs = Date.now() - t0;
+    const cb = await box(p, cy); await p.touchscreen.tap(cb.x, cb.y); await p.waitForTimeout(300);
+    const gone = await p.evaluate(() => !window.__mm.arena.save.items.some((x) => x.id === 'sparkwand' && x.t === 8));
+    check('3h. later, a deliberate Salvage + Confirm salvage still salvages (the confirm wakes after ~0.9 s, not never)', gone && wokeMs >= 600, JSON.stringify({ gone, wokeMs }));
+    check('no page errors (forge triple tap)', A.errors.length === 0, A.errors.join(' | '));
+    await A.ctx.close();
+  }
+
   // 4 + (c): the Nexus vendor stall (realm-world.js): a double-tap on Buy buys once; Sell back marks the equipped piece
   { const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345&qdate=2030-05-01';
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });

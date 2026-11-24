@@ -233,6 +233,10 @@ function rmCleanForged(t, f) {
 const RM_CACHE_KILLS = 3, RM_CACHE_ALIVE_S = 60; // G-09: a Survivor's cache needs this many kills or seconds alive since the last one
 const RM_PROVOKE_S = 4; // G-08: seconds a world shooter hit from off screen ignores hold-fire
 const RM_ARM_MS = 300, RM_SELL_ASK_MS = 3000, RM_FORGE_ARM_MS = 400; // b02-12: Forge confirm / Salvage buttons wake later (a phone double-tap can be ~350 ms)
+// cyc5 (b02-r3-01): a slow tap rhythm (~450 ms) on "Confirm reforge" reached Salvage on tap 2 and Confirm salvage on tap 3. Now taps that follow
+// "Confirm reforge" less than RM_FORGE_RHYTHM_MS apart form one tap chain, and a Salvage / Confirm salvage tap inside it is ignored; "Confirm
+// salvage" also sleeps RM_FORGE_SAL_YES_MS after its ask opens. A deliberate tap after a pause works as before.
+const RM_FORGE_RHYTHM_MS = 600, RM_FORGE_SAL_YES_MS = 900;
 // G-03: backpack buttons wake 300 ms after a re-render; a protected Sell's "Sure?" lasts 3 s
 function rmNowMs() { return typeof performance !== 'undefined' && performance.now ? performance.now() : 0; } // b02-12 arm clock (UI only)
 function rmSellValue(it) { return RM_GEAR_ON && it && it.t ? MMGear.sellValue(it.r, it.t) : RM_RARITIES[it.r].sell; }
@@ -4412,18 +4416,22 @@ class RealmArena {
     if (!root || typeof setTimeout === 'undefined') return;
     const list = Array.from(root.querySelectorAll('#realm-bp-list button[data-act], #realm-bp-list button[data-combine], #realm-bp-list button.fg')).filter((b) => !b.disabled);
     const keep = list.map((b) => { const cs = getComputedStyle(b); const css = b.style.cssText; b.style.background = cs.background; b.style.color = cs.color; b.style.opacity = cs.opacity; b.disabled = true; b.dataset.arm = '1'; return css; });
-    clearTimeout(this._armT); clearTimeout(this._armT2);
+    (this._armTs || []).forEach((t) => clearTimeout(t)); this._armTs = [];
     // b02-12: the destructive forge buttons (Salvage, Confirm salvage / reforge) wake after RM_FORGE_ARM_MS, and a click before then is ignored
     // even if it reaches the handler, so the second tap of a double-tap on "Confirm reforge" never lands on the Salvage under the finger.
-    const late = (b) => !!(b.dataset.forgeYes || b.dataset.forgeSalvage);
-    this._forgeArmUntil = rmNowMs() + RM_FORGE_ARM_MS;
-    const wake = (lateOnes) => {
+    // cyc5 (b02-r3-01): Confirm salvage sleeps RM_FORGE_SAL_YES_MS after this render (the tap-chain rule is in _bindForge).
+    const now = rmNowMs();
+    const yesMs = Math.max(RM_FORGE_ARM_MS, RM_FORGE_SAL_YES_MS);
+    const delay = (b) => (b.dataset.forgeYes === 'salvage' ? yesMs : b.dataset.forgeYes || b.dataset.forgeSalvage ? RM_FORGE_ARM_MS : RM_ARM_MS);
+    this._forgeArmUntil = now + RM_FORGE_ARM_MS;
+    this._forgeSalYesUntil = now + yesMs;
+    const ds = list.map(delay);
+    const wake = (ms) => {
       let focusEl = null;
-      list.forEach((b, i) => { if (late(b) !== lateOnes || !b.isConnected || !b.dataset.arm) return; b.disabled = false; b.style.cssText = keep[i]; delete b.dataset.arm; if (b.dataset.armFocus) { delete b.dataset.armFocus; focusEl = b; } });
+      list.forEach((b, i) => { if (ds[i] !== ms || !b.isConnected || !b.dataset.arm) return; b.disabled = false; b.style.cssText = keep[i]; delete b.dataset.arm; if (b.dataset.armFocus) { delete b.dataset.armFocus; focusEl = b; } });
       if (focusEl) { try { focusEl.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
     };
-    this._armT = setTimeout(() => wake(false), RM_ARM_MS);
-    this._armT2 = setTimeout(() => wake(true), RM_FORGE_ARM_MS);
+    Array.from(new Set(ds.concat([RM_ARM_MS, RM_FORGE_ARM_MS]))).forEach((ms) => this._armTs.push(setTimeout(() => wake(ms), ms)));
   }
   _focusArmed(el) { if (!el) return; if (el.disabled && el.dataset.arm) el.dataset.armFocus = '1'; else { try { el.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } }
   // First click on a protected Sell: the button turns into "Sure? Sell +N" for RM_SELL_ASK_MS (re-armed, so a double-click cannot confirm it);
@@ -4596,7 +4604,13 @@ class RealmArena {
       const b = e.target.closest && e.target.closest('button.fg');
       if (!b || b.disabled || !this.forgeOn()) return;
       const d = b.dataset;
+      { // cyc5 (b02-r3-01): a tap chain starts on "Confirm reforge" and runs while taps keep coming less than RM_FORGE_RHYTHM_MS apart;
+        // a Salvage / Confirm salvage tap inside it is ignored. Taps outside a chain (Forge, then Salvage) are not affected.
+        const now = rmNowMs(), inChain = Number.isFinite(this._forgeChainAt) && now - this._forgeChainAt < RM_FORGE_RHYTHM_MS;
+        if (inChain || d.forgeYes === 'reforge') this._forgeChainAt = now;
+        if (inChain && (d.forgeSalvage || d.forgeYes === 'salvage')) return; }
       if ((d.forgeYes || d.forgeSalvage) && rmNowMs() < (this._forgeArmUntil || 0)) return; // b02-12: too soon after a re-render
+      if (d.forgeYes === 'salvage' && rmNowMs() < (this._forgeSalYesUntil || 0)) return; // cyc5: too soon after the salvage ask opened
       if (d.forgeOpen) { const u = Number(d.forgeOpen); this._forgeUid = this._forgeUid === u ? 0 : u; this._forgeAsk = null; }
       else if (d.forgeSalvage) this._forgeAsk = { kind: 'salvage' };
       else if (d.forgePick) this._forgeAsk = { kind: 'reforge', id: d.forgePick };
