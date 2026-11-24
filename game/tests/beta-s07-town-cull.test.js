@@ -60,6 +60,21 @@ const inViewCulled = (page) => page.evaluate(() => {
     check(`[3] after moving to ${x},${y} nothing in view is culled`, bad.length === 0, bad.slice(0, 5).join(' '));
   }
 
+  // [5] R4: pooled objects (the sparkle star, firefly sparkles) jump to a new spot between two cull passes. They must not keep the
+  // cull bit of their old spot (they would be undrawn for up to 3 frames in view, and [3] could catch them), and hidden objects
+  // are never left culled.
+  const pooled = await page.evaluate(() => {
+    const t = window.__g.scene.getScene('Town'); const bit = t.cameras.main.id;
+    t.sparkleStar.cameraFilter |= bit; t.sparkleGlow.cameraFilter |= bit; // as if culled at its old spot
+    t.sparkleIndex = -1; t.updateSparkle(t.time.now); // the rotation moves it (index changes)
+    const moved = !(t.sparkleStar.cameraFilter & bit) && !(t.sparkleGlow.cameraFilter & bit);
+    t._cullAt = null; t._cullN = 3; t.cullOffscreen(); // force a pass
+    const hiddenCulled = t.sys.displayList.list.filter((o) => !o.visible && (o.cameraFilter & bit)).length;
+    return { moved, hiddenCulled };
+  });
+  check('[5] a pooled sparkle moved to a new spot is not left culled', pooled.moved, JSON.stringify(pooled));
+  check('[5] no hidden object is left culled after a pass', pooled.hiddenCulled === 0, JSON.stringify(pooled));
+
   // JS render work, culling on vs off (printed; frame rate is fill-bound in headless SwiftShader, see design/beta/perf-town.md)
   const work = async (off) => {
     await page.evaluate((o) => { window.__g.scene.getScene('Town').cullOff = o; }, off);

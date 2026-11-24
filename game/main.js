@@ -1205,6 +1205,20 @@ const MAIL_STAR_BASE = 2;
 // deal/bulk bonuses never apply to crafted goods). Local-only: nothing here touches the network.
 const WORKBENCH_POS = { x: 1330, y: 800 };
 const WORKBENCH_RADIUS = 70;
+// R4: objects that answer E before a weed in interact(), with the exact centre and radius their isNear*() uses. weedSpotsForDay
+// keeps r + 8 around each clear, so no weed is ever shadowed (shop, museum, scavenger spots and NPCs have their own rules there).
+const WEED_SHADOW_RINGS = [
+  { x: ABLE_SISTERS_POS.x + ABLE_SISTERS_POS.w / 2, y: ABLE_SISTERS_POS.y + ABLE_SISTERS_POS.h / 2, r: ABLE_SISTERS_RADIUS },
+  { x: CAMPFIRE_POS.x, y: CAMPFIRE_POS.y, r: CAMPFIRE_RADIUS }, // only at concert time, kept clear every day
+  { x: POLYROLL_POS.x, y: POLYROLL_POS.y, r: POLYROLL_RADIUS },
+  { x: TURNIP_STALL_POS.x, y: TURNIP_STALL_POS.y, r: TURNIP_STALL_RADIUS },
+  { x: WORKBENCH_POS.x, y: WORKBENCH_POS.y, r: WORKBENCH_RADIUS },
+  { x: MAILBOX_POS.x, y: MAILBOX_POS.y, r: MAILBOX_RADIUS },
+  { x: HOME_POS.x, y: HOME_POS.y, r: HOME_RADIUS },
+  { x: GUESTBOOK_POS.x, y: GUESTBOOK_POS.y, r: GUESTBOOK_RADIUS },
+  { x: ISLES_SIGN_POS.x, y: ISLES_SIGN_POS.y + 14, r: ISLES_SIGN_RADIUS },
+  { x: POSTCARD_POS.x, y: POSTCARD_POS.y + 14, r: POSTCARD_RADIUS },
+];
 const RECIPES = [
   { id: 'plank', icon: '🪵', label: 'Plank Stack', cost: { wood: 3 }, value: 4 },
   { id: 'brick', icon: '🧱', label: 'Stone Brick', cost: { stone: 3 }, value: 4 },
@@ -2029,8 +2043,8 @@ class TownScene extends Phaser.Scene {
       this.sparkleIndex = index;
       this.sparkleCaught = false;
       const [x, y] = SPARKLE_SPOTS[index];
-      this.sparkleStar.setPosition(x, y).setVisible(true);
-      this.sparkleGlow.setPosition(x, y).setVisible(true);
+      this.uncull(this.sparkleStar.setPosition(x, y).setVisible(true)); // moved: never keep the cull bit of its old spot
+      this.uncull(this.sparkleGlow.setPosition(x, y).setVisible(true));
     }
 
     if (this.sparkleCaught) return;
@@ -2071,6 +2085,14 @@ class TownScene extends Phaser.Scene {
   // other island quadrants) are off camera at any time. Every 4th frame (or when the camera moved 48+ px) each top-level, world-space
   // object whose box lies fully outside the camera view plus a 320 px margin is excluded from the main camera through `cameraFilter`
   // (its own `visible` flag, which game code uses, is never touched). The margin covers anything that moves between two passes.
+  // A pooled object that jumps to a new spot between two cull passes must not keep the cull bit of its old spot (it would be
+  // undrawn for up to 3 frames). The next pass re-checks it normally.
+  uncull(o) {
+    const cam = this.cameras && this.cameras.main;
+    if (o && cam && (o.cameraFilter & cam.id)) o.cameraFilter &= ~cam.id;
+    return o;
+  }
+
   cullOffscreen() {
     const cam = this.cameras && this.cameras.main;
     if (!cam || !this.sys.displayList) return;
@@ -2088,6 +2110,9 @@ class TownScene extends Phaser.Scene {
     for (let i = 0; i < list.length; i++) {
       const o = list[i];
       if (o.scrollFactorX !== 1 || o.scrollFactorY !== 1 || o.type === 'Container' || o.type === 'Graphics' || o.type === 'Particles' || o.type === 'ParticleEmitter') continue;
+      // Hidden objects draw nothing anyway; never leave them culled. A pooled object (sparkle star, firefly) is moved and shown
+      // between two cull passes: with a stale cull bit from its old spot it would stay undrawn for up to 3 frames in view.
+      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; continue; }
       const w = o.displayWidth, h = o.displayHeight;
       if (!(w > 0) || !(h > 0)) continue;
       const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
@@ -6735,7 +6760,7 @@ class TownScene extends Phaser.Scene {
       const s = spec.sprite;
       const d = Math.hypot(s.x - px, s.y - py);
       if (d < 260 && n < this.ffSparkles.length) {
-        this.ffSparkles[n++].setPosition(s.x + s.displayWidth * 0.3, s.y - s.displayHeight * 0.45).setVisible(true);
+        this.uncull(this.ffSparkles[n++].setPosition(s.x + s.displayWidth * 0.3, s.y - s.displayHeight * 0.45).setVisible(true)); // pooled: moved this frame
       }
       if (d < spec.reach && d < bestDist) { best = spec; bestDist = d; }
     }
@@ -7987,6 +8012,9 @@ class TownScene extends Phaser.Scene {
         if (Math.hypot(HOUSE_POS.x + HOUSE_POS.w / 2 - x, HOUSE_POS.y + HOUSE_POS.h / 2 - y) < SHOP_RADIUS + 12) continue;
         if (Math.hypot(MUSEUM_POS.x + MUSEUM_POS.w / 2 - x, MUSEUM_POS.y + MUSEUM_POS.h / 2 - y) < MUSEUM_RADIUS + 12) continue;
         if (SCAVENGER_SPOTS.some((k) => Math.hypot(k.x - x, k.y - y) < SCAVENGER_RADIUS + 12)) continue;
+        // R4: every other object that answers E BEFORE a weed in interact() keeps its real radius + 8 clear (the flat 60 px above
+        // was smaller than the mailbox / workbench / home rings, 70-75 px, so a weed 63 px from the mailbox could never be pulled).
+        if (WEED_SHADOW_RINGS.some((k) => Math.hypot(k.x - x, k.y - y) < k.r + 8)) continue;
         // The home plot is a 156x96 footprint: keep weeds off it (and its fence).
         if (Math.abs(x - HOME_POS.x) < 175 && Math.abs(y - HOME_POS.y) < 80) continue;
         // Talk-radius NPCs: stay outside their interaction radius so a weed can't steal a chat.

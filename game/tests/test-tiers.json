@@ -1909,5 +1909,9 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "beta-r4-weed-reach.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
