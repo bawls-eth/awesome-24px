@@ -93,3 +93,24 @@ html[data-reduce-motion="1"] .mmset *, html[data-reduce-motion="1"] .mm8-toast {
   background: var(--mmset-bg); color: var(--mmset-fg); border: 2px solid var(--mmset-line); box-shadow: 2px 2px 0 var(--mmset-shadow);
   font-family: var(--mmset-font); font-size: 12px; line-height: 1.3; pointer-events: none;
 }
+
+/* ID-06 assist (cycle 4 U): two step controls (radio groups of 44 px steps) in the Play group, value in the label text. */
+.mmset-sub { margin: 12px 0 2px; font-size: calc(13px * var(--ui-scale, 1)); color: var(--mmset-accent); text-transform: uppercase; letter-spacing: 1px; }
+.mmset-steps { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.mmset-steps .mmset-radios { gap: 4px; }
+.mmset-step { min-width: 44px; min-height: 44px; padding: 0 6px; box-sizing: border-box; }
+.mmset-step[aria-checked="true"] { background: var(--mmset-accent); color: #0b0f14; font-weight: 700; box-shadow: inset 0 -3px 0 #0b0f14; }
+.mmset-step[aria-checked="true"]::before { content: "\25B8"; margin-right: 2px; } /* a shape as well as the colour */
+.mmset-val { color: var(--mmset-accent); }
+.mmset-assist-reset { min-height: 44px; margin-top: 4px; }
+.mmset-assist-reset[hidden] { display: none; }
+.mmset-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+html[data-high-contrast="1"] .mmset-step[aria-checked="true"] { outline: 2px solid #fff; }
+/* The 'Assisted' tag on run summaries (S places it): words + an outline, readable on dark and light cards, never colour alone. */
+.mm-assisted-tag {
+  display: inline-block; margin: 0 4px; padding: 1px 6px; vertical-align: middle;
+  border: 2px solid currentColor; background: rgba(0, 0, 0, 0.55); color: #ffec27;
+  font-family: var(--mmset-font, monospace); font-size: max(12px, calc(12px * var(--ui-scale, 1))); font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; line-height: 1.4; white-space: nowrap;
+}
+html[data-high-contrast="1"] .mm-assisted-tag { background: #000; color: #fff; }
