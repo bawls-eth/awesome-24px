@@ -2,14 +2,14 @@
 //  b09-08 Lantern Dash: the result card (stats, best, medals, share code) is in view after a crash, not below the fold
 //  b09-13 Lantern Dash: back-to-back Perfect floats never overprint each other
 //  b09-05 Stack Tower: back-to-back near-miss floats never overprint each other
+//  b10-r2-10 Bug Safari: the summary leads with a large score line; the run facts are one labelled panel
+//  b10-r2-07 Campfire Jam: the song progress bar is not left over the song list
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-d4-arcade.test.js
 const { chromium } = require('playwright');
 const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ROOT = BASE.replace(/game\/index\.html.*$/, '');
 const SHOTS = process.env.SHOTS || null;
-// two float labels overprint when their text boxes (2x pixel font, ~12 px tall, centred) overlap
-const overprint = (bs, h, wOf) => { const out = []; for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i], b = bs[j]; if (Math.abs(a.y - b.y) < h && Math.abs(a.x - b.x) < (wOf(a) + wOf(b)) / 2) out.push([a, b]); } return out; };
 
 (async () => {
   const browser = await chromium.launch();
@@ -92,6 +92,21 @@ const overprint = (bs, h, wOf) => { const out = []; for (let i = 0; i < bs.lengt
     check('Bug Safari: the summary score line is the biggest text in the result card (ties the star row)', r.mode === 'summary' && r.score >= r.maxOther && r.score >= 24, JSON.stringify(r));
     check('Bug Safari: caught / stars gained / best combo sit together in one labelled panel', r.facts, JSON.stringify(r));
     if (SHOTS) await page.screenshot({ path: SHOTS + '/r4-d4-bugs-summary.jpg', type: 'jpeg', quality: 60 });
+    await ctx.close();
+  }
+  {
+    // b10-r2-07 nit: the Jam song progress bar is hidden (and emptied) on the song list, shown during a song
+    const { ctx, page } = await mk();
+    await page.goto(ROOT + 'game/games/jam/index.html?test=1');
+    await page.waitForFunction(() => !!window.__jam, null, { timeout: 10000 });
+    const r = await page.evaluate(() => {
+      const J = window.__jam; const vis = () => getComputedStyle(document.getElementById('progress')).visibility;
+      const w = () => document.getElementById('progress-bar').style.width;
+      const menu0 = vis(); J.start(window.MMJamSongs.SONGS[0].id, 'easy'); J.at(20000); J.step(0); const play = vis(); const wPlay = w();
+      J.menu(); const menu1 = vis(); const wMenu = w();
+      return { menu0, play, wPlay, menu1, wMenu };
+    });
+    check('Jam: the progress bar shows during a song and is hidden + emptied back on the song list', r.menu0 === 'hidden' && r.play === 'visible' && r.menu1 === 'hidden' && (r.wMenu === '0%' || r.wMenu === ''), JSON.stringify(r));
     await ctx.close();
   }
   check('no page errors', errors.length === 0, errors.join('|'));
