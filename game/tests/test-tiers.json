@@ -2159,5 +2159,29 @@
   "cyc3-ui-landscape-audit.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-first-kill-zk.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-errands-wired.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-bond-hearts.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-hit-pause.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-telegraph-audit.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc2-shore-fade.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

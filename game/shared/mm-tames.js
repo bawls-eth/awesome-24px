@@ -118,6 +118,23 @@
     t.bond = Math.max(t.bond, Math.min(MAX_BOND, 1 + Math.floor(t.aff / 100)));
     return t.aff;
   }
+  // ID-07 (cycle 3 S) bond hearts: a VIEW of the existing bond (1..MAX_BOND), never a new field. 5 hearts; heart n is full when
+  // bond >= 2n, and an odd bond shows one half heart after the full ones. No decay.
+  function hearts(bond) {
+    const b = int(bond, 1, MAX_BOND, 1); const full = Math.floor(b / 2), half = b % 2;
+    return { bond: b, full: full, half: half, empty: 5 - full - half, label: 'Bond ' + b + ' of ' + MAX_BOND };
+  }
+  // ID-07 perks: cosmetic only (an idle sway at bond 4, a ribbon at 6, a glow at 10). Never speed, damage or feed (isles-first-ten cadence).
+  function perks(bond) { const b = int(bond, 1, MAX_BOND, 1); return { sway: b >= 4, ribbon: b >= 6, glow: b >= 10 }; }
+  // ID-07 extra aff sources, capped per tame per SESSION (sess = a plain in-memory object the page keeps; never saved):
+  // ride: +10 per riding minute (cap 30); fight: +5 per fight won together (cap 25). Returns the aff to add (0 once capped).
+  const BOND_AFF = { ride: { per: 10, cap: 30 }, fight: { per: 5, cap: 25 } };
+  function bondGain(sess, id, kind) {
+    const r = Object.prototype.hasOwnProperty.call(BOND_AFF, kind) ? BOND_AFF[kind] : null;
+    if (!r || !isObj(sess) || typeof id !== 'string' || !id) return 0;
+    const k = id + ':' + kind; const used = int(sess[k], 0, r.cap, 0);
+    const n = Math.max(0, Math.min(r.per, r.cap - used)); sess[k] = used + n; return n;
+  }
   // gainXp: levels up while xp >= need; capped at MAX_LV (xp then stays 0). Returns levels gained.
   function gainXp(save, id, n) {
     const t = find(save, id); if (!t) return 0;
@@ -140,6 +157,6 @@
   return {
     KEY: KEY, MAX_TAMES: MAX_TAMES, MAX_PARTY: MAX_PARTY, MAX_LV: MAX_LV, MAX_BOND: MAX_BOND, NAME_MAX: NAME_MAX,
     defaults: defaults, clean: clean, cleanName: cleanName, find: find, add: add, release: release, setParty: setParty, setMount: setMount,
-    rename: rename, setCosmetic: setCosmetic, addAffinity: addAffinity, gainXp: gainXp, xpNeed: xpNeed, load: load, write: write
+    rename: rename, setCosmetic: setCosmetic, addAffinity: addAffinity, hearts: hearts, perks: perks, bondGain: bondGain, BOND_AFF: BOND_AFF, gainXp: gainXp, xpNeed: xpNeed, load: load, write: write
   };
 });

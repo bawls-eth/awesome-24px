@@ -270,7 +270,7 @@ const TOWN_SAVE_FIELDS = ['name', 'species', 'frame', 'realm', 'resources', 'cra
   'fishlog', 'home', 'mail', 'birthdays', 'dailies', 'bugoff', 'loginStreak', 'lastLoginDate', 'sellStreak', 'lastSellDate',
   'sfxMuted', 'musicEnabled', 'reduceMotion', 'lastSeenVersion', 'villagerAffinity', 'villagerTalkDay', 'bestieId', 'bestieName',
   'ffDiscovered', 'weedsPulled', 'turnipBuys', 'questClaimedBucket', 'triviaAnsweredBucket', 'tournamentBonusBucket',
-  'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen'];
+  'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen', 'errand'];
 function cleanTownSave(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
   if (obj.format === 'pixeltown-backup') return null; // a bundle is never a town save (S-01: it used to be written as one)
@@ -7448,6 +7448,62 @@ class TownScene extends Phaser.Scene {
     this.homeLabel = this.add.text(x, y - 66, '🏡 Home', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 60);
     this.home = this.loadHome();
     this.renderHomeSprites();
+    this.renderErrandDecor();
+  }
+
+  // ---------- ID-12 parcel errand (MMErrands; cycle 3 S) ----------
+  // Mocha packs a parcel from 3 of your wood (Town save `errand: {id, s: 1}`), the Realm Nexus Vendor takes it and asks for a Midlands
+  // trophy (Realm save, written by realm-world.js only), and Mocha takes the trophy back: `s: 2` and a Realm lantern stands by your home
+  // plot for good (derived from s: 2, so it can never be sold, gifted or lost; cosmetic only, no cozy score). This page writes ONLY the
+  // Town save's `errand` (forward-only merge) and reads the Realm save. ?errands=0 turns it off.
+  errandsOn() { try { return !!window.MMErrands && !/[?&]errands=0(&|$)/.test(location.search); } catch (e) { return false; } }
+  errandRealm() { try { const o = JSON.parse(localStorage.getItem('pixeltown-realm-v1') || 'null'); return o && typeof o === 'object' ? o.errand : null; } catch (e) { return null; } }
+  saveErrand(next) {
+    const E = window.MMErrands;
+    writeSaveMerged((stored) => { const a = E.cleanTown(stored.errand); const b = E.cleanTown(next); return { errand: a.s > b.s ? a : b }; }); // never steps back
+  }
+  // Mocha's errand line for this talk (and the step it makes), or null to chat as usual
+  errandTalk() {
+    if (!this.errandsOn()) return null;
+    const E = window.MMErrands; const town = loadSave().errand; const realm = this.errandRealm();
+    const st = E.stage(town, realm);
+    const say = (txt, col) => { if (this.localBody) this.showFloatingText(this.localBody.x, this.localBody.y - 46, txt, col); };
+    if (st === 'offer') {
+      if (!this.errandAsked) { this.errandAsked = true; return E.LINES.offer + ' Talk to me again when you are ready.'; }
+      const r = E.accept(town, this.resources);
+      if (!r.ok) return E.LINES.offerShort;
+      this.resources.wood = Math.max(0, (this.resources.wood || 0) - r.spend.wood);
+      this.updateInventoryHUD(); this.saveResources(); this.saveErrand(r.town);
+      say('-' + r.spend.wood + ' wood: parcel packed 📦');
+      return 'All packed! ' + E.LINES.carry;
+    }
+    if (st === 'return') {
+      const r = E.finish(town, realm); if (!r.ok) return null;
+      this.saveErrand(r.town); this.renderErrandDecor();
+      say('🏮 ' + r.reward.label + ' now stands by your home');
+      return 'A trophy from the Realm! As promised: a Realm lantern for your home plot.';
+    }
+    if (st === 'carry' || st === 'hunt') return E.LINES[st];
+    return null; // done: the usual chat
+  }
+  errandDone() { return !!window.MMErrands && window.MMErrands.cleanTown(loadSave().errand).s === 2; }
+  // The reward: an original code-drawn Realm lantern beside the home plot (a post, a dark iron frame, a teal Realm-crystal flame).
+  renderErrandDecor() {
+    if (this.errandDecor || !this.errandDone()) return;
+    if (!this.textures.exists('realmLantern')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.18).fillEllipse(12, 45, 18, 5);
+      g.fillStyle(0x4a3524, 1).fillRect(10, 18, 4, 27); g.fillStyle(0x6b4a30, 1).fillRect(10, 18, 2, 27);
+      g.fillStyle(0x2b2b38, 1).fillRect(4, 4, 16, 16); g.fillRect(6, 1, 12, 3);
+      g.fillStyle(0x7ff0e0, 1).fillRect(7, 7, 10, 10); g.fillStyle(0xd8fff8, 1).fillRect(10, 9, 4, 6);
+      g.fillStyle(0x2b2b38, 1).fillRect(11, 7, 2, 10);
+      g.generateTexture('realmLantern', 24, 48);
+      g.destroy();
+    }
+    const x = HOME_POS.x + 96, y = HOME_POS.y - 6;
+    const glow = this.add.circle(x, y - 12, 16, 0x7ff0e0, 0.18).setDepth(y + 69);
+    this.errandDecor = this.add.image(x, y, 'realmLantern').setOrigin(0.5, 0.75).setDepth(y + 70);
+    this.errandDecor.glow = glow;
   }
 
   // Sanitised: slot ids must be real recipe ids; everything else is dropped.
@@ -9101,6 +9157,7 @@ class TownScene extends Phaser.Scene {
     if (this.isBirthdayFor(v) && !this.birthdayClaimed(v)) {
       line = "🎂 It's my birthday today! A little gift would make it perfect.";
     }
+    if (v.id === 'mocha') { const el = this.errandTalk(); if (el) line = el; } // ID-12: the parcel errand (a step taken is always reported)
     this.showVillagerBubble(v, line);
     SFX.pop();
   }

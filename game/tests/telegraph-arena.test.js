@@ -1,5 +1,5 @@
 // TG3: enemy telegraphs + colour-blind bullets in the world arena. Tier 3+ world enemies (Highlands / Godlands) and world bosses show a
-// ring / line / cone wind-up (MMTelegraph.forVolley: 0.35 s, bosses 0.6 s) over the last part of their existing volley cooldown, so the
+// ring / line / cone wind-up (MMTelegraph.forVolley: 0.4 s since the ID-14 audit, bosses 0.6 s) over the last part of their existing volley cooldown, so the
 // bullet budget and timing are unchanged; tier 1-2 never telegraph; reduce motion makes them static; ?telegraph=0 turns them off.
 // A colour-blind MMAccess palette (`pixeltown-access-v1`) recolours enemy bullets with a 2 px outline (bulletOutline); flashes off drops
 // the red hit vignette. Offline: WebSockets closed, town/hub pages stubbed, no chat, no DB writes.
@@ -50,13 +50,13 @@ const step = `(a, n) => { for (let i = 0; i < n; i++) { a._update(1 / 60); a.ene
   { const A = await open(browser); const page = A.page;
     const t = await page.evaluate(`(() => { const a = window.__mm.arena; const setup = ${SETUP}; const st = ${step};
       const out = {};
-      window.__e = setup(a, 'aimed', 2, 0.5); st(a, 6); out.early = a.telegraphOf(window.__e);
+      window.__e = setup(a, 'aimed', 2, 0.55); st(a, 6); out.early = a.telegraphOf(window.__e);
       st(a, 9); out.line = a.telegraphOf(window.__e); out.started = a.tgStarted; a._draw(); out.drawn = a.tgDrawn;
       window.__e = setup(a, 'aimed', 0, 0.5); st(a, 15); out.shore = a.telegraphOf(window.__e);
       window.__e = setup(a, 'ring', 3, 0.3); st(a, 2); out.ring = a.telegraphOf(window.__e);
       window.__e = setup(a, 'boss', 3, 0.5, true); st(a, 2); out.boss = a.telegraphOf(window.__e);
       return out; })()`);
-    check('a tier-3 Sniper shows a line wind-up only inside the last 0.35 s of its cooldown (none at 0.4 s left)', t.early === null && t.line && t.line.shape === 'line' && t.line.windup === 0.35 && t.line.progress > 0 && t.line.progress < 1 && t.started >= 1 && t.drawn === 1, JSON.stringify(t));
+    check('a tier-3 Sniper shows a line wind-up only inside the last 0.4 s of its cooldown (none at 0.45 s left)', t.early === null && t.line && t.line.shape === 'line' && t.line.windup === 0.4 && t.line.progress > 0 && t.line.progress < 1 && t.started >= 1 && t.drawn === 1, JSON.stringify(t));
     check('a Shore (tier 1) Sniper never telegraphs; a Godlands Burster shows a ring; a world boss shows a 0.6 s cone before its fan', t.shore === null && t.ring && t.ring.shape === 'ring' && t.boss && t.boss.shape === 'cone' && t.boss.windup === 0.6, JSON.stringify(t));
     check('telegraphs pulse with motion on (the ring tightens as the wind-up ends)', t.line.pulse === true && t.line.scale > 1 && t.boss.pulse === true, JSON.stringify(t.line));
 

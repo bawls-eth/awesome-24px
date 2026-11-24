@@ -901,6 +901,7 @@
   function killCreature(c) {
     const s = specOf(c.sp, c.kind);
     xp += XP_BY_SIZE[s.size] || 4; kills++;
+    if (c.compHit && BONDX) party.forEach((p) => { if (!(p.cs.down > 0)) bondAff(p.ent.id, 'fight'); });
     cue('kill');
     addDeath(c);
     rollLoot(c);
@@ -918,7 +919,7 @@
     if (sooth) { sootheTgt = c; sootheAt = simT; }
     const real = sooth ? dmg * SOOTHE_DMG : dmg;
     c.flash = 0.12;
-    if (how !== 'comp') cue('hit');
+    if (how !== 'comp') cue('hit'); else c.compHit = 1; // ID-07: a fight won together (a companion landed a hit)
     if (TAME && c.tm) {
       const left = c.hp - real;
       const r = TM.step(c.kind, c.tm, { dmg: real, torporHit: sooth ? dmg : 0, hits: 1, lethal: left <= 0, hpFrac: clamp(left / c.maxHp, 0, 1),
@@ -1094,6 +1095,25 @@
     partyStates.length = 0;
     party.forEach((p, k) => { p.cs.slot = k; partyStates.push(p.cs); });
   }
+  // ---- ID-07 bond hearts (cycle 3 S): extra aff through the ONE TAMES.addAffinity path, capped per tame per session (TAMES.bondGain):
+  // +10 per riding minute (cap 30), +5 per fight won together (cap 25). The stable is written only when aff actually moves (at most
+  // 3 + 5 writes per tame per session). The hearts are a view of `bond`; the perks are cosmetic only. ?bondx=0 turns the new sources off.
+  const BONDX = Q.get('bondx') !== '0';
+  const bondSess = {}; let bondRideT = 0;
+  function bondAff(id, kind) {
+    const n = TAMES.bondGain(bondSess, id, kind); if (!n) return 0;
+    TAMES.addAffinity(tames, id, n); TAMES.write(S, tames); return n;
+  }
+  function bondRideTick(dt) { bondRideT += dt; if (bondRideT >= 60) { bondRideT -= 60; bondAff(ride.id, 'ride'); } }
+  function heartsEl(bond) {
+    const h = TAMES.hearts(bond); const sp = el('span', 'st-hearts'); sp.setAttribute('role', 'img'); sp.setAttribute('aria-label', h.label); sp.title = h.label;
+    for (let i = 0; i < 5; i++) { const k = i < h.full ? 'full' : i < h.full + h.half ? 'half' : 'empty'; const e = el('span', 'st-heart st-heart-' + k, k === 'empty' ? '\u2661' : '\u2665'); e.setAttribute('aria-hidden', 'true'); sp.appendChild(e); }
+    return sp;
+  }
+  // draw-only bond perks (no state is touched): a soft glow under the creature at bond 10, a ribbon above at 6+; the idle sway (4+) is an x offset
+  function bondSway(p, moving) { return !moving && TAMES.perks(p.ent.bond).sway ? Math.sin(hero.t * 2.2 + p.cs.slot) * 1.5 : 0; }
+  function bondPerkUnder(p, sx, sy) { if (!TAMES.perks(p.ent.bond).glow) return; g.save(); g.globalAlpha = 0.28; g.fillStyle = '#ffe58a'; g.beginPath(); g.ellipse(sx, sy - 4, 20, 8, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+  function bondPerkOver(p, sx, topY) { if (!TAMES.perks(p.ent.bond).ribbon) return; g.fillStyle = '#e8506e'; g.fillRect(sx - 5, topY - 3, 4, 3); g.fillRect(sx + 1, topY - 3, 4, 3); g.fillStyle = '#a8324e'; g.fillRect(sx - 1, topY - 3, 2, 3); }
   function loadParty() {
     tames.party.forEach((id, k) => { const ent = TAMES.find(tames, id); if (ent) spawnCompanion(ent, hero.x + (k ? 40 : -40), hero.y + 30); });
   }
@@ -1192,6 +1212,7 @@
       const what = riding ? 'riding' : inParty ? (p ? p.cs.mode : 'party') : 'resting';
       const li = el('li', 'stable-row'); li.dataset.tame = t.id;
       li.appendChild(el('span', 'st-name', (t.nm || specName(t.sp)) + (t.nm && d && t.nm !== d.name ? ' (' + d.name + ')' : '') + ' Lv ' + t.lv + ' - ' + what + (isMount && !riding ? ', mount' : '')));
+      li.appendChild(heartsEl(t.bond)); // ID-07: the bond as 5 hearts (a view of bond, no new field)
       const mk = (cls, text, why, fn) => { const b = el('button', 'st-btn ' + cls, text); b.type = 'button'; b.dataset.tame = t.id; b.style.minHeight = '44px'; b.style.minWidth = '44px'; if (why) { b.disabled = true; b.title = why; b.setAttribute('aria-label', text + ': ' + why); } else b.setAttribute('aria-label', text + ' ' + (t.nm || specName(t.sp))); b.addEventListener('click', () => { if (fn()) openPanel('party'); }); return b; };
       if (COMPANIONS && d && d.companion) {
         if (inParty) li.appendChild(mk('st-rest', 'Rest', busy, () => stableRest(t.id)));
@@ -1745,7 +1766,9 @@
       const pm = Math.abs(cs.x - p.lx) + Math.abs(cs.y - p.ly) > 0.4; p.lx = cs.x; p.ly = cs.y;
       const pst = STRIPS && p.sk && STRIPS.has(p.sk) ? STRIPS.get(p.sk, pm ? 'move' : 'idle', (p.dir = cs.face < 0 ? MS.LEFT : MS.RIGHT)) : null;
       if (pst) {
-        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), sx, sy, 1, p.dir === MS.LEFT, true); // 8B: party creatures wear the light rim
+        const bx = sx + bondSway(p, pm); bondPerkUnder(p, sx, sy); // ID-07: cosmetic bond perks (draw only)
+        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), bx, sy, 1, p.dir === MS.LEFT, true); // 8B: party creatures wear the light rim
+        bondPerkOver(p, bx, sy - (pst.ay - pst.top));
         drawHeart(sx, sy - (pst.ay - pst.top) - 8, '#ff7aa8');
         continue;
       }
@@ -3606,6 +3629,7 @@
     hero.t += dt; hero.iframes -= dt; hero.cd -= dt; hero.shotT -= dt;
     heroMoving = Math.hypot(mx, my) > 0.05;
     if (ride) CMP.rideStep(ride, dt);
+    if (ride && BONDX) bondRideTick(dt);
     if (ride && abil && !hero.dead) abilityStep(dt);
     if (!hero.dead) moveHero(mx, my, dt);
     if (ONE_THUMB && !hero.dead && hero.cd <= 0 && !firing && !build) autoAttack(); // PI2: one-thumb mode fires at the nearest foe by itself
@@ -3806,6 +3830,8 @@
       stun: (id) => { const c = creatures.find((x) => x.uid === id); return c ? c.stun || 0 : null; },
       tames: () => JSON.parse(S.getItem(TAMES.KEY) || 'null'),
       tamesLive: () => JSON.parse(JSON.stringify(tames)),
+      bondSess: () => Object.assign({}, bondSess), bondRideT: () => bondRideT, bondx: BONDX, // ID-07
+      compHit: (uid, dmg) => { const c = creatures.find((x) => x.uid === uid); if (!c) return false; hitCreature(c, Number(dmg) || 1e6, 'comp'); return true; }, // ID-07: a companion's hit through the real path
       hurtLog: () => HURT_LOG.slice(),
       simT: () => simT,
       setTime: (t) => { simT = Number(t) || 0; hero.t = simT; return simT; }, // PI2: one sim time on two pages (seeded frame comparisons)

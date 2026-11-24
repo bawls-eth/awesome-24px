@@ -35,6 +35,9 @@ const RM_ENEMIES = {
   boss: { name: 'Gloomheart', hp: 120, r: 34, shards: 40, color: '#ff5fa2', speed: 50 },
 };
 const RM_ENEMY_BULLET_DAMAGE = 8;
+// ID-14 (cycle 3 S): draw-only hit pause. A hit of at least RM_HIT_PAUSE_FRAC of max HP holds the last drawn frame for RM_HIT_PAUSE_MS;
+// the sim (_update: clock, bullets, timers) keeps running every frame. Off under reduce motion and with ?hitpause=0.
+const RM_HIT_PAUSE_MS = 50; const RM_HIT_PAUSE_FRAC = 0.15;
 // ---- biomes, wanderers and the boss (B3) ----
 const RM_BIOMES = [
   { id: 'hollow', name: 'Violet Hollow', border: 'rgba(179,107,255,0.55)', floor: [26, 18, 50], hazard: null, mix: ['aimed', 'ring', 'spiral'], drifter: 'wisp' },
@@ -702,6 +705,9 @@ class RealmArena {
     this._padBack = false; // pad Back / Select (button 8): restart edge (fall screen or open menu only)
     this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
+    let hpq = ''; try { hpq = location.search || ''; } catch (e) { hpq = ''; }
+    this._shoreFadeOn = !/[?&]shorefade=0(&|$)/.test(hpq); this._shoreFadeToast = false; // ID-01 (?shorefade=0: off)
+    this._hitPauseOn = !/[?&]hitpause=0(&|$)/.test(hpq); this._hitPauseAt = -1; this.hitPausedFrames = 0; // ID-14
     // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
     this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
     this._afT = null; this._afX = 0; this._afY = 0; this._afVx = 0; this._afVy = 0; // auto-fire target + its smoothed velocity (lead)
@@ -2548,7 +2554,9 @@ class RealmArena {
     if (!(this._rzAt && now - this._rzAt < 1000)) this._perfFeed(raw); // R4: frames within 1 s of a resize / rotation are not render cost
     this._update(dt);
     if (this.world || this._dv) this._camStep(dt);
-    this._draw();
+    // ID-14: the frame of a big hit is drawn, then the canvas keeps it for RM_HIT_PAUSE_MS (no redraw); the sim above ran as always
+    if (this._hitPauseAt >= 0 && now > this._hitPauseAt && now < this._hitPauseAt + RM_HIT_PAUSE_MS) this.hitPausedFrames++;
+    else this._draw();
     if (this.active) this._raf = requestAnimationFrame(this._loop); // a death exit inside _update must not leave a second loop
   };
 
@@ -2567,7 +2575,7 @@ class RealmArena {
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
-    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; // world-mode extras (multipliers 1 = unchanged)
+    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; e.zone = undefined; // world-mode extras (zone: ID-01, a reused pool entry never keeps an old zone) (multipliers 1 = unchanged)
     e.rad = 0; e.cre = null; e.tame = null; // B7: per-creature hit radius (0 = the type's), creature tag (enemyStep runs only for these), taming state
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
     if (type === 'boss') this._snd('boss_awaken'); // NEXT-SLICES SF1 cue: any boss spawn (classic wave, world altar / event, dungeon)
@@ -3236,7 +3244,11 @@ class RealmArena {
     this._burst(e.x, e.y, def.color, 16, 230);
     if (this._fxPool) { if (e.type === 'spiral') this.fxPlay('fx_explosion_small', e.x, e.y, { w: 72 }); else this.fxPlay('fx_poof_death', e.x, e.y, { w: 64 }); }
     this._floatText(e.x, e.y - 22, `+${gain} 💎`, '#8fe9ff');
-    this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp));
+    // ID-01 Shore XP fade: only for a world kill in zone 0 (MMZones.shoreFade by the level being gained); rounded after, never below 1 XP
+    const fade = this._shoreFadeOn && e.zone === 0 && typeof MMZones !== 'undefined' && MMZones.shoreFade ? MMZones.shoreFade(this.save.level, 0) : 1;
+    const xpRaw = RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp;
+    this._gainXp(fade < 1 ? Math.max(1, Math.round(xpRaw * fade)) : Math.round(xpRaw));
+    if (fade < 1 && !this._shoreFadeToast) { this._shoreFadeToast = true; this._floatText(this.player.x, this.player.y - 56, 'The Midlands has better prey', '#ffe27a'); } // once per session, no number
     if (this.mode !== 'world' && this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity()); // a world rolls its own zone drops (onEnemyKilled)
     this.shake = Math.max(this.shake, 3);
     this.saveSoon(); // review F16: a splash that kills 8 in one frame persists once (a bag pickup, wave or death that follows persists at once anyway)
@@ -3348,6 +3360,7 @@ class RealmArena {
     let hpFloor = 0; // b08-r2-04: the first-run coach may soften hits ({ mult, floor }) so a new player never falls before they have played
     if (typeof this.hurtGuard === 'function') { let g = null; try { g = this.hurtGuard(dmg); } catch (e) { g = null; } if (g) { if (g.mult > 0 && g.mult < 1) dmg = Math.max(1, Math.round(dmg * g.mult)); if (g.floor > 0) hpFloor = Math.min(p.hp, g.floor); } }
     p.hp = Math.max(hpFloor, p.hp - dmg);
+    if (this._hitPauseOn && !this._reduced && dmg >= RM_HIT_PAUSE_FRAC * (this.stats.maxHp || 1)) this._hitPauseAt = this._lastT || 0; // ID-14: draw-only hold (see _loop)
     this._heroHurtAt = performance.now() / 1000; this._gHurtT = this._stT; // _gHurtT: game time of the last hit (G8 regen waits 3 s)
     this._snd('hurt');
     p.iframes = this.stats.iframes;
