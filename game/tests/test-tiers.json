@@ -1792,5 +1792,9 @@
   "beta-r4-doors.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-d4-town.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

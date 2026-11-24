@@ -66,7 +66,8 @@ const townTex = (page) => page.evaluate(() => {
       check(`${label}: hero buttons are >= 44px targets`, grid.every((g) => g.w >= 44 && g.h >= 44), JSON.stringify(grid.map((g) => [g.w, g.h])));
       check(`${label}: default pick is the ranger`, grid.filter((g) => g.sel).map((g) => g.hero).join() === 'ranger');
       const tabs = await p.page.evaluate(() => [...document.querySelectorAll('#species-tabs .species-tab')].map((b) => b.textContent));
-      check(`${label}: no old species tabs`, tabs.length === 1 && tabs[0] === 'Heroes', JSON.stringify(tabs));
+      // R4 D4 (b07-r2-04, intentional): the lone 'Heroes' tab became the '🎲 Surprise me' random-hero chip
+      check(`${label}: no old species tabs (only the Surprise me chip)`, tabs.length === 1 && tabs[0] === '🎲 Surprise me', JSON.stringify(tabs));
       await p.page.fill('#name-input', 'ADMINhero');
       await tap('#avatar-grid .avatar-choice[data-hero="druid"]');
       const cap = await p.page.evaluate(() => (document.getElementById('avatar-grid-hero-caption') || {}).textContent || '');

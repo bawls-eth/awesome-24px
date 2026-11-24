@@ -2976,3 +2976,6 @@ body:has(#emote-popup:not(.hidden)) #quick-chat-row { visibility: hidden; }
 #door-soon-overlay .join-card { position: relative; max-height: 90vh; overflow-y: auto; }
 #door-soon-close-btn { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); cursor: pointer; }
 #door-soon-ok-btn { min-height: 44px; min-width: 120px; }
+
+/* R4 D4 (b07-r2-04): the hero picker's single slot is a "Surprise me" chip, not a one-option tab */
+.species-tab.hero-random-tab { flex: 0 0 auto; min-height: 44px; padding: 6px 14px; text-transform: none; color: var(--ac-text); }

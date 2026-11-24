@@ -397,6 +397,7 @@
     if (ui && ui.isOpen && typeof requestAnimationFrame === 'function') padRaf = requestAnimationFrame(padLoop);
   }
 
+  let popSkip = 0;
   function open() {
     if (!ui) return false;
     if (ui.isOpen) return true;
@@ -413,10 +414,26 @@
     padPrev = readPad();
     if (!padRaf && typeof requestAnimationFrame === 'function') padRaf = requestAnimationFrame(padLoop);
     hooks.open.forEach((fn) => { try { fn(); } catch (e) { /* page hook */ } });
+    // R4 D4 (b15-13): the open Menu is a history entry (same URL, state flag only), so the browser / phone Back gesture
+    // closes the Menu instead of leaving the page. Closing it any other way pops that entry again.
+    try {
+      if (window.history && typeof history.pushState === 'function' && !(history.state && history.state.mmNavSheet)) {
+        history.pushState(Object.assign({}, history.state && typeof history.state === 'object' ? history.state : {}, { mmNavSheet: true }), '');
+        ui.pushed = true;
+      }
+    } catch (e) { ui.pushed = false; }
     return true;
   }
-  function close() {
+  function onPop() {
+    if (popSkip > 0) { popSkip--; return; }
+    if (ui && ui.isOpen && ui.pushed) { ui.pushed = false; close(true); }
+  }
+  function close(fromPop) {
     if (!ui || !ui.isOpen) return false;
+    if (ui.pushed && fromPop !== true) {
+      ui.pushed = false;
+      try { if (history.state && history.state.mmNavSheet) { popSkip++; history.back(); } } catch (e) { /* history unavailable */ }
+    }
     ui.isOpen = false;
     ui.sheet.hidden = true;
     ui.backdrop.hidden = true;
@@ -498,6 +515,13 @@
     }
     document.body.classList.add('mm-nav-on');
     window.addEventListener('keydown', onKey, true);
+    window.addEventListener('popstate', onPop);
+    // Arriving on a history entry left over from an open Menu (Back after following a Menu link): clear the flag so the
+    // next open pushes a fresh entry.
+    try { if (history.state && history.state.mmNavSheet) { const st = Object.assign({}, history.state); delete st.mmNavSheet; history.replaceState(st, ''); } } catch (e) { /* ignore */ }
+    // Following a Menu link leaves the page with the Menu's history entry still on top; that is harmless (Back returns to
+    // this same URL), so nothing is popped then. A page restored from the back/forward cache never shows the Menu open.
+    window.addEventListener('pageshow', (e) => { if (e.persisted && ui && ui.isOpen) { ui.pushed = false; close(true); } });
     return true;
   }
   // Record a sub-place for the current page (e.g. the isle), additive storage only.

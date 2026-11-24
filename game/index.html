@@ -54,8 +54,8 @@
     <label for="name-input">Your name</label>
     <input id="name-input" maxlength="16" placeholder="e.g. Ben" autocomplete="off" />
 
-    <label>Pick your villager</label>
-    <div id="species-tabs"></div>
+    <label id="hero-pick-label">Pick your hero</label>
+    <div id="species-tabs" role="group" aria-labelledby="hero-pick-label"></div>
     <div id="avatar-grid"></div>
 
     <a id="join-continue" class="hidden" href="#">↩️ Continue</a>
@@ -243,7 +243,7 @@
     <div id="action-buttons">
       <button id="emote-toggle-btn" type="button" aria-label="Emotes">😀 Emotes</button>
       <button id="tilt-toggle-btn" type="button">🎮 Tilt</button>
-      <button id="hud-more-btn" type="button" aria-expanded="false" aria-label="More buttons: build, photo, tilt">☰ More</button>
+      <button id="hud-more-btn" type="button" aria-expanded="false" aria-label="Tools: build, photo, tilt">🧰 Tools</button>
       <button id="build-toggle-btn" class="ab-btn" type="button" aria-label="Build (B)"><span class="ab-letter">B</span><span class="ab-emoji">🧱</span></button>
       <button id="interact-btn" class="ab-btn" type="button" aria-label="Interact (A)"><span class="ab-letter">A</span><span class="ab-emoji">✋</span></button>
       <button id="mobile-photo-btn" class="ab-btn" type="button" aria-label="Photo (P)"><span class="ab-letter">P</span><span class="ab-emoji">📸</span></button>
@@ -258,8 +258,8 @@
     <h1>👗 Able Sisters</h1>
     <p class="tagline">Pick a new look — everyone in town sees it too.</p>
 
-    <label>Pick your villager</label>
-    <div id="outfit-species-tabs"></div>
+    <label id="outfit-pick-label">Pick your hero</label>
+    <div id="outfit-species-tabs" role="group" aria-labelledby="outfit-pick-label"></div>
     <div id="outfit-avatar-grid"></div>
 
     <button id="outfit-random-btn" type="button">🎲 Randomize</button>

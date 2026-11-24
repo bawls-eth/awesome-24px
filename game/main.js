@@ -2307,7 +2307,7 @@ class TownScene extends Phaser.Scene {
       const setMore = (open) => {
         strip.classList.toggle('more-open', open);
         moreBtn.setAttribute('aria-expanded', String(open));
-        moreBtn.textContent = open ? '✕ Less' : '☰ More';
+        moreBtn.textContent = open ? '✕ Close' : '🧰 Tools'; // R4 D4 (b07-r2-10): was a second '☰ More' (the panel tab keeps that name)
       };
       this.setHudMore = setMore;
       setMore(false);
@@ -3083,12 +3083,12 @@ class TownScene extends Phaser.Scene {
   buyTurnips() {
     const price = this.turnipBuyPrice();
     if ((this.localScore || 0) < price) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${price} ⭐ for ${TURNIP_BUNDLE} turnips`);
+      this.stallNote(`Not enough stars: ${TURNIP_BUNDLE} turnips cost ${price} ⭐, you have ${Math.max(0, this.localScore || 0)} ⭐`);
       return;
     }
     const boughtToday = this.turnipBundlesBoughtToday();
     if (boughtToday >= TURNIP_DAILY_BUNDLE_CAP) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'sold out for today — come back tomorrow');
+      this.stallNote('Sold out for today. Come back tomorrow.');
       return;
     }
     writeSave({ turnipBuys: { day: this.questDayBucket(), bundles: boughtToday + 1 } });
@@ -3096,6 +3096,21 @@ class TownScene extends Phaser.Scene {
     this.updateInventoryHUD();
     this.saveResources();
     this.awardPoint(-price, `bought ${TURNIP_BUNDLE} 🥬 for ${price} ⭐`, this.localBody.x, this.localBody.y - 30, 'pop');
+  }
+
+  // R4 D4 (b07-r2-13): a refused buy used to flash a 0.9 s float on top of the player's name (easy to miss). Now the float
+  // stays longer above the name and the same line goes to the polite live region (toast) for 3.5 s, so it is seen and read.
+  stallNote(text) {
+    this.lastStallNote = text;
+    const t = this.add.text(this.localBody.x, this.localBody.y - 52, text, { fontSize: '12px', fontFamily: 'monospace', color: '#ffb4a8', stroke: '#1c2430', strokeThickness: 3, align: 'center', wordWrap: { width: 220 } }).setOrigin(0.5, 1).setDepth(100002);
+    this.tweens.add({ targets: t, y: t.y - 16, alpha: { from: 1, to: 0 }, delay: 1600, duration: 900, onComplete: () => t.destroy() });
+    const toast = document.getElementById('achievement-toast');
+    if (toast) {
+      toast.textContent = text;
+      toast.classList.remove('hidden');
+      clearTimeout(this.achievementToastTimer);
+      this.achievementToastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
   }
 
   // ---------- underground (3D voxel cave, local-only) ----------
@@ -5791,7 +5806,50 @@ class TownScene extends Phaser.Scene {
     document.getElementById('build-material-btn').classList.toggle('hidden', !this.buildMode);
     document.getElementById('build-undo-btn').classList.toggle('hidden', !this.buildMode);
     if (!this.buildMode) this.lastPlacedBlockKey = null;
+    // R4 D4 (b07-r2-08): on a phone the expanded people panel and the build controls fought for the same strip. Entering
+    // build mode folds the panel (view only, the saved preference is untouched); leaving restores the saved state.
+    const panel = document.getElementById('player-list-panel');
+    if (panel && window.innerWidth <= 720) {
+      if (this.buildMode && !panel.classList.contains('collapsed') && this.applyPanelCollapse) { this.buildFoldedPanel = true; this.panelCollapsed = true; this.applyPanelCollapse(); }
+      else if (!this.buildMode && this.buildFoldedPanel && this.applyPanelCollapse) { this.buildFoldedPanel = false; this.panelCollapsed = false; this.applyPanelCollapse(); }
+    }
     this.updateBuildBanner();
+    this.layoutBuildHud();
+    if (!this.buildHudResize) { this.buildHudResize = () => this.layoutBuildHud(); window.addEventListener('resize', this.buildHudResize); }
+  }
+
+  // R4 D4 (b07-r2-08): stack the build banner, then Material + Undo side by side, BELOW whatever top HUD sits in the
+  // centre band (inventory, Where to?, the people chip, Hold to talk, the Realm Gate chip), so nothing overprints.
+  // Desktop (> 720 px) keeps the stylesheet layout. Buttons are >= 44 px tall on phones.
+  layoutBuildHud() {
+    const ids = ['build-mode-banner', 'build-material-btn', 'build-undo-btn'];
+    const [banner, mat, undo] = ids.map((id) => document.getElementById(id));
+    if (!banner || !mat || !undo) return;
+    const reset = () => [banner, mat, undo].forEach((el) => { el.style.top = ''; el.style.left = ''; el.style.transform = ''; el.style.minHeight = ''; el.style.width = ''; el.style.maxWidth = ''; el.style.boxSizing = ''; });
+    if (!this.buildMode || window.innerWidth > 720) { reset(); return; }
+    const vw = window.innerWidth;
+    const bw = Math.min(vw - 16, 360);
+    const bl = (vw - bw) / 2;
+    let top = 8;
+    ['inventory-panel', 'player-list-panel', 'where-to-btn', 'walkie-talk-btn', 'gate-pointer', 'whats-new-banner'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el || el.classList.contains('hidden')) return;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.top > window.innerHeight * 0.5 || r.bottom > window.innerHeight * 0.62) return;
+      if (r.right > bl && r.left < bl + bw) top = Math.max(top, r.bottom + 6);
+    });
+    banner.style.maxWidth = bw + 'px'; banner.style.width = bw + 'px'; banner.style.boxSizing = 'border-box';
+    banner.style.left = Math.round(bl) + 'px'; banner.style.transform = 'none';
+    banner.style.top = Math.round(top) + 'px';
+    const bh = banner.getBoundingClientRect().height || 40;
+    const rowTop = Math.round(top + bh + 6);
+    [mat, undo].forEach((el) => { el.style.minHeight = '44px'; el.style.top = rowTop + 'px'; el.style.transform = 'none'; });
+    const mw = mat.getBoundingClientRect().width; const uw = undo.getBoundingClientRect().width;
+    const start = Math.max(8, (vw - (mw + 8 + uw)) / 2);
+    mat.style.left = Math.round(start) + 'px';
+    undo.style.left = Math.round(start + mw + 8) + 'px';
   }
 
   cycleBuildType() {
@@ -7833,7 +7891,8 @@ class TownScene extends Phaser.Scene {
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 32, y - 4, x + 32, y - 4, x, y - 30);
     g.bake();
     this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
-    this.turnipBuyLabel = this.add.text(x, y + 20, '', { fontSize: '11px', color: '#ffe066' }).setOrigin(0.5).setDepth(y + 1);
+    // R4 D4 (b07-r2-13): the price sat at y+20, exactly where a shopper's name label is drawn. It now sits above the sign.
+    this.turnipBuyLabel = this.add.text(x, y - 62, '', { fontSize: '11px', color: '#ffe066', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
     this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 38, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + 1);
   }
 
@@ -8789,7 +8848,9 @@ class TownScene extends Phaser.Scene {
       label();
       fit();
     };
+    this.applyPanelCollapse = apply; // R4 D4: build mode folds the panel for view only (no saved-preference write)
     this.setPanelCollapsed = (collapsed) => {
+      this.buildFoldedPanel = false;
       this.panelCollapsed = !!collapsed;
       try { localStorage.setItem(PANEL_COLLAPSE_KEY, this.panelCollapsed ? '1' : '0'); } catch (e) { /* ignore */ }
       apply();
@@ -9872,6 +9933,7 @@ joinBtn.addEventListener('click', attemptJoin);
 
 const JOIN_TIMEOUT_MS = 6000;
 let joinDone = false; // true once the player is in town (online or offline)
+const TOWN_SESSION_KEY = 'pixeltown-town-session-v1'; // sessionStorage only (R4 D4 b07-r2-14)
 let joinTimer = null;
 
 function showOfflineOption(message) {
@@ -9889,6 +9951,9 @@ function enterTown(net, data) {
   joinOverlay.classList.add('hidden');
   { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
   hud.classList.remove('hidden');
+  // R4 D4 (b07-r2-14): remember (this tab only, sessionStorage, never the save) that the player was in town and how, so
+  // browser Back from the Isles / a game returns to the town instead of the join card.
+  try { sessionStorage.setItem(TOWN_SESSION_KEY, net instanceof OfflineNet ? 'offline' : 'online'); } catch (e) { /* storage blocked */ }
   startTown(net, data);
 }
 
@@ -10075,6 +10140,20 @@ function startTown(net, data) {
 renderSpeciesTabs();
 renderAvatarGrid();
 updateJoinButtonState();
+
+// R4 D4 (b07-r2-14): browser Back (or Forward) into the town after this tab had joined skips the join card: rejoin the same
+// way as before (offline stays offline; online joins presence exactly like pressing Join Town). A fresh visit, a reload or
+// a new tab still shows the card. Never writes the save beyond what Join already writes.
+(function autoRejoinOnBack() {
+  let mode = null;
+  try { mode = sessionStorage.getItem(TOWN_SESSION_KEY); } catch (e) { mode = null; }
+  if (mode !== 'offline' && mode !== 'online') return;
+  let back = false;
+  try { const nav = performance.getEntriesByType('navigation')[0]; back = !!nav && nav.type === 'back_forward'; } catch (e) { back = false; }
+  if (!back || !nameInput.value.trim()) return;
+  joinStatus.textContent = 'Welcome back! Returning to town…';
+  setTimeout(() => { if (joinDone) return; if (mode === 'offline') playOffline(); else attemptJoin(); }, 0);
+}());
 
 // Join screen "Continue: <last place>" (shared/mm-nav.js, key pixeltown-nav-v1, read-only here): only when a previous
 // place other than the Town is stored. A plain link, so it leaves the page without joining (no network).
