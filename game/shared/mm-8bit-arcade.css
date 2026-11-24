@@ -42,3 +42,17 @@ ul.medals li.on { background: var(--px-10); color: var(--px-ink); }
 html.reduce-motion .big:active, html.reduce-motion #btn-mute:active { transform: none; }
 
 /* R4 D4: sizes follow the shared Text size setting (--ui-scale); the stat value also caps at 4.6vw so a 6-digit score fits its box at 390 px (b09-12) */
+
+/* cyc0-ui: 200% browser zoom on a phone (<= 300 css px). The title + Sound button ran past the right edge (horizontal scroll):
+   the header wraps, the title shrinks with the width and may break, Sound keeps its 44 px target at the row end. */
+@media (max-width: 300px) {
+  #top { flex-wrap: wrap; gap: 4px; padding-left: 8px; padding-right: 8px; box-sizing: border-box; }
+  #top h1 { flex: 1 1 100%; min-width: 0; font-size: min(calc(20px * var(--ui-scale, 1)), 8vw); letter-spacing: .04em; overflow-wrap: break-word; } /* own row: words stay whole */
+  #btn-mute { margin: 4px 0 4px auto; padding-left: 6px; padding-right: 6px; font-size: min(calc(13px * var(--ui-scale, 1)), 6vw); letter-spacing: 0; }
+}
+/* cyc0-ui: same width: the 4-up stat row squeezed BEST / COMBO labels into 6-30 px cells that overflowed; two columns instead. */
+@media (max-width: 300px) {
+  html #hud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html #hud .stat { min-width: 0; }
+  html #hud .stat .lbl { letter-spacing: 0; overflow-wrap: break-word; font-size: min(calc(12px * var(--ui-scale, 1)), 5.5vw); } /* DISTANCE / COMBO whole at 200% zoom */
+}

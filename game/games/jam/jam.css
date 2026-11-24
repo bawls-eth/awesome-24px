@@ -154,3 +154,16 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
   #canvas-wrap { padding:4px 0; }
   #pads .pad, .pad { min-height:56px; }
 }
+/* cyc0-ui: <= 300 css px (200% zoom on a phone): header wraps, Sound shrinks, song cards may not outgrow the stage. */
+@media (max-width: 300px) {
+  #top { flex-wrap: wrap; padding-left: 6px; padding-right: 6px; box-sizing: border-box; }
+  #top h1 { flex: 1 1 0; min-width: 0; font-size: min(calc(15px * var(--ui-scale,1)), 8vw); overflow-wrap: anywhere; }
+  #btn-mute { padding-left: 6px; padding-right: 6px; font-size: min(calc(12px * var(--ui-scale,1)), 6vw); letter-spacing: 0; }
+  .songs { grid-template-columns: minmax(0, 1fr); }
+  .card { min-width: 0; box-sizing: border-box; overflow-wrap: anywhere; }
+}
+@media (max-width: 300px) {
+  #stage { padding-left: 4px; padding-right: 4px; box-sizing: border-box; }
+  #pads { gap: 3px; padding: 0; }
+  .pad { min-width: 0; padding: 0; } /* 4 pads of >= 44 px still fit 195 px */
+}

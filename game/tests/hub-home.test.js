@@ -79,7 +79,10 @@ async function homeChecks(browser, label, opts) {
   // G-14: on a fresh profile the one next-step line names the same first move as Play (calm goals take over once there is progress)
   check(L('ONE next-step line, a real link, naming the same first move as Play on a fresh profile'), nx.vis && nx.items === 1 && nx.n && nx.n.key === 'first-realm' && /^Next: /.test(nx.t) && nx.href === '../games/mad-maze/index.html?mode=world&from=hub', JSON.stringify(nx));
   const foot = await pg.evaluate(() => [...document.querySelectorAll('#bar a, #bar button')].filter((n) => n.offsetParent).map((n) => n.id));
-  check(L('footer keeps Town / Daily gift / Open (+ the Map toggle)'), ['hub-town', 'gift-btn', 'open-btn', 'view-toggle'].every((id) => foot.includes(id)), foot.join());
+  // b08-r2-10 (0731896, intended): on Home the footer is Daily gift + Map only; "<- Town" and "Open" stay on the map view. The Town
+  // must still be one visible link away on Home (no dead end).
+  const townOnHome = await pg.evaluate(() => [...document.querySelectorAll('#home a[href*="index.html?from=hub"]')].some((a) => a.offsetParent && /^\.\.\/index\.html\?from=hub/.test(a.getAttribute('href'))));
+  check(L('Home footer is Daily gift + Map (Town / Open live on the map view), and the Town is still a visible link on Home'), ['gift-btn', 'view-toggle'].every((id) => foot.includes(id)) && !foot.includes('hub-town') && !foot.includes('open-btn') && townOnHome, foot.join() + ' townOnHome=' + townOnHome);
 
   // Collections single card opens the book
   await pg.click('#home-coll');
