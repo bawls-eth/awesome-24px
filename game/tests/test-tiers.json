@@ -1881,5 +1881,23 @@
   "beta-r4-d4-arcade.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-arcane-soon.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-r4-replay-realm.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "beta-r4-replay-town.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "beta-r4-replay-saves.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

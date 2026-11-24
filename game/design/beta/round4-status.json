@@ -1,0 +1,713 @@
+{
+ "_updated": "2026-11-24 01:32 UTC (D5: poll 3, fixes/r4-d3.md read; refreshed trial merge 0c8e60d)",
+ "_log": [
+  "seed: owners from ROUND4.md file ownership; round-3 fixes entered as \"claimed\" until D5 replays them",
+  "2026-11-24 00:16 D5: replayed 9 round-3 fixes by real input on the tree before round 3 (d267d0b, port 9606) and on the tip (port 9605): b01-07, b04-13, b02-12, b14-06, b15-r2-15, b15-r2-16, b14-r2-N01, b13-r2-02 verified; b03-r2-05 found only half fixed (pad still on the room) and set back to open; b13-r2-03 culling works but the fps target was not re-measured (claimed)",
+  "2026-11-24 00:35 D5 poll: r4-d1 98571b4, r4-d3 08e50c2, r4-d4 4332af8 (trees archived and served on port 9607), r4-d2 not served yet. Each lane test was run by D5 against the round-3 tip code (before) and the lane tree (after). b07-r2-06 verified with D5's own walk-and-press-E replay; the other lane items stay claimed until D5 replays them or a tester does",
+  "2026-11-24 00:41 D5: b08-r2-04 replayed without input on 3 seeds: improved (falls at clock ~60 s instead of 16-29 s) but a passive player still falls, so it is back to open (partial) with a red replay in tests/r4-open/",
+  "2026-11-24 01:00 D5 poll 2: notes read from r4-d2 5f098f8 and r4-d4 cac6d37; r4-d1 (9e12b32) and r4-d3 (c49b994) have no notes file, statuses from their commit subjects. O-04 (b14-05, b14-13) verified by D5's own Hub + Lantern replay on the trial merge. Everything else new in this poll is claimed",
+  "2026-11-24 01:32 D5 poll 3: r4-d3 notes read (rotate storm, soak, Deepdelve taps): entered as claimed, D5 measured none of the perf numbers. Refreshed trial merge: smoke browser tier 106/107, the red one (mad-maze-dungeon 'Tab toggles the mini-map') is a regression from D4 6407843 (b15-r2-17), see fixes/r4-d5.md section 7"
+ ],
+ "b01-r2-05": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "leash / aggro; not retested in round 2"
+ },
+ "b01-r2-07": {
+  "owner": "D1",
+  "status": "verified",
+  "test": "beta-r4-replay-realm (B), beta-r3-boss-bar-fall",
+  "note": "round-3 fix 4ecc4b2. D5 replay: boss woken at its altar, hero dies to real damage, no boss bar on the fall card. Fails before (bar 'Shadow Hydra · phase 1' stays up on d267d0b), passes on the tip"
+ },
+ "b01-r2-08": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "stick vectors on blur; not retested in round 2"
+ },
+ "b01-r2-09": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "enemy overlap; not retested in round 2"
+ },
+ "b01-r2-10": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "hero on a solid tile; not retested in round 2"
+ },
+ "b01-r2-11": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "zone HUD line after teleport"
+ },
+ "b02-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "toast over the backpack header; not retested in round 2"
+ },
+ "b02-08": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-r4-b02-08-stats-delta (D1)",
+  "note": "D1 ea204c1. Lane test run by D5: 3 red on the round-3 tip, 7/7 on the D1 tree. It clicks the real rows and tabs through element.click(); not replayed by D5 with touch input"
+ },
+ "b02-11": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "T12 drop for a class that cannot equip it (balance)"
+ },
+ "b02-12": {
+  "owner": "D1",
+  "status": "verified",
+  "test": "beta-g03-sell-guard (3c-3e)",
+  "note": "round-3 fix 23d7bc1. Real touch taps 340 ms apart on Confirm reforge: one reforge, one charge, no Salvage confirm. Fails before (3 checks: salvage confirm opens), passes on the tip 17/17"
+ },
+ "b02-15": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Nexus labels clipped"
+ },
+ "b03-r2-05": {
+  "owner": "D4",
+  "status": "open",
+  "test": "tests/r4-open/b03-r2-05-pad.replay.js (RED)",
+  "note": "HALF FIXED in round 3 (ce67ff7): the floor-choice card no longer lands on the pad (beta-w05r3 (2): red before, green on the tip). But the pad still lies on the room: 250..370 x 562..682 inside the room canvas 0..389 x 215..721 = 12544 px2 (6.4% at 390x844, 9.1% at 360x640), identical on both trees (measured by D5)"
+ },
+ "b03-r2-09": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Trial plays in the open Shore (design)"
+ },
+ "b03-r2-10": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Trial fall shows the generic line"
+ },
+ "b03-r2-13": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-w05r3-hud-narrow (3)",
+  "note": "round-3 fix ce67ff7 (landscape info line wraps); D4 re-checked. The pad over the room corner in landscape is the same open issue as b03-r2-05"
+ },
+ "b04-01": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "-",
+  "note": "D2 83d7d5e (drawn-terrain smoothing, organic shade patches). Visual: needs D5 screenshots + a tester"
+ },
+ "b04-03": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "-",
+  "note": "D2 83d7d5e. Visual: needs D5 screenshots + a tester"
+ },
+ "b04-09": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "beta-r3-blacksmith-godgate",
+  "note": "round-3 fix 544b5d2. Test green on the tip (6/6); its run on d267d0b crashes on a missing hook, so there is no clean red-before; not replayed by play yet"
+ },
+ "b04-12": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "big props walkable"
+ },
+ "b04-13": {
+  "owner": "D1",
+  "status": "verified",
+  "test": "beta-r4-replay-realm (A)",
+  "note": "round-3 fix 544b5d2. D5 replay with the real boss tick: Lv 1 hero 6 tiles from the Godlands altar, boss asleep + warning line; walking onto the altar with W/A/S/D wakes it. Fails before (boss live at once), passes on the tip"
+ },
+ "b04-14": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-art (D2)",
+  "note": "D2: code-drawn pixel adventurer in the Nexus when no class art"
+ },
+ "b04-15": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Nexus plaza after rotating to landscape"
+ },
+ "b05-05": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-r4-b05-05-oakback-food (D1)",
+  "note": "D1 98571b4 (4 golden-apple glints, 300 s). The lane test is node-only and passes 4/4 from the D1 checkout whatever tree is served, so D5 has no red-before; not replayed in the Isles"
+ },
+ "b05-08": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "-",
+  "note": "D1 a2ce696 (feed toast counts down with the button). Not replayed by D5"
+ },
+ "b05-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "log text gap"
+ },
+ "b05-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "how-to card covers the phone HUD"
+ },
+ "b05-11": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "getImageData readback warnings"
+ },
+ "b05-12": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "stable row text clipped under the buttons"
+ },
+ "b06-r2-01": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "waits on Codex art (queue #1, #2); code templates stay (D2 notes)"
+ },
+ "b06-r2-02": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "waits on Codex art (D2 notes)"
+ },
+ "b06-r2-03": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "waits on Codex art, W-17 (D2 notes)"
+ },
+ "b06-r2-05": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-isles (D2)",
+  "note": "D2: arrival fill (3 creatures in view on meadow and jungle). Not replayed by D5"
+ },
+ "b06-r2-06": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "the Codex R02 ground was rejected (flat); waits on the redo (D2 notes)"
+ },
+ "b06-r2-08": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "r4-d2-isles (D2)",
+  "note": "D2: lift-off pad at 60% of the view, HUD hidden while it plays (no screenshot of the lift-off in the D2 notes)"
+ },
+ "b06-r2-09": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "r4-d2-isles (D2)",
+  "note": "D2: how-to card closes near a hostile / boss lair, 7 s timer"
+ },
+ "b07-r2-02": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "D4: not reproduced as a DOM element (only transparent layers under the point); a headless compositor artefact is suspected. Needs a real phone"
+ },
+ "b07-r2-04": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c. Lane test run by D5: 11 red on the round-3 tip, 19/19 on the D4 tree. Not replayed by D5's own input"
+ },
+ "b07-r2-05": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-statue (D2)",
+  "note": "O-10, D2: 'Founder's Statue', stone hero on a code-drawn plinth, no ape, no 'Mayor'. Not replayed by D5"
+ },
+ "b07-r2-06": {
+  "owner": "D4",
+  "status": "verified",
+  "test": "tests/r4-open/beta-r4-replay-doors (D5), beta-r4-doors (D4)",
+  "note": "O-01, D4 000f85c. D5 replay by play: walk to each of the 4 doors, press E: City Drive / Night Racer / Neon Coast show a Coming soon card (Esc closes, hero walks on); Kart Rally asks 'leaves the game ... new tab', Yes opens a new tab with no opener and the Town tab stays, No opens nothing. Red before (GTA 3 / NFS Underground 2 / Vice City, same-tab navigation), 21/21 on the D4 tree. Note: a flower 22 px from the Kart Rally door takes the first E press (collectFlower), the door answers on the second"
+ },
+ "b07-r2-08": {
+  "owner": "D4",
+  "status": "verified",
+  "test": "beta-r4-d4-town (D4) + D5 screenshots",
+  "note": "D4 ef67a0c. D5 manual replay at 390x844 with the people panel open: on the round-3 tip the build banner and Wall / Undo lie on the people panel; on the D4 tree the panel folds to a chip and banner, Wall, Undo are in a clear row under Hold to talk (screenshots compared by D5). Lane test 11 red before, 19/19 after"
+ },
+ "b07-r2-09": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (combat toggles under a 'Realm combat' group). Lane test red before / green after (run by D5); not replayed by D5"
+ },
+ "b07-r2-10": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (touch tray button reads Tools; seen by D5 on the D4 tree screenshot). Lane test red before / green after"
+ },
+ "b07-r2-12": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-art (D2)",
+  "note": "D2 W-06 fauna scale; the 'E: log' hint during a bite is not mentioned in the D2 notes"
+ },
+ "b07-r2-13": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (stall label above the sign, refused buy says why). Lane test red before / green after (run by D5); not replayed by D5"
+ },
+ "b07-r2-14": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (Back from the Isles lands in the town). Lane test uses a real page.goBack; red before / green after (run by D5)"
+ },
+ "b08-r2-04": {
+  "owner": "D1",
+  "status": "open",
+  "test": "tests/r4-open/beta-r4-replay-newplayer (D5, RED on r4-d1), beta-r4-b08-shore-survival (D1)",
+  "note": "PARTIAL on D1 bff4400. D5 replay: brand-new profile, Home's Realm link, coach on, NO input, 3 seeds, phone. Round-3 tip: the hero falls 4-17 s after appearing (game clock 16-29 s) on 2 of 3 seeds. D1 tree: HP 78 -> 46 -> 16 -> 1 (pinned at 1 from clock ~40 s) and the hero falls at clock 59-60 s, the moment the first-minute floor ends, on the same 2 seeds; seed 777 is never attacked. So 'cannot fall in the first minute' holds, but someone still reading the coach cards dies at the minute. The D1 lane test's own check 4 (heal after 3 quiet seconds) was also red at load/core ~4. Idea for D1: when the floor ends give a real exit (heal to half + a few seconds of mercy, or Shore mobs near the spawn do not aggro before the player's first input)"
+ },
+ "b08-r2-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Town phone HUD crowding"
+ },
+ "b08-r2-09": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-b08-touch-words (D1)",
+  "note": "D1 c32aa30 / f05558c (touch words on a touch device). Not replayed by D5"
+ },
+ "b08-r2-10": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "-",
+  "note": "D1 9c7533b covers the first idea on the map only; 13 places / footer / Lantern NEW HERO form not mentioned"
+ },
+ "b08-r2-11": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "-",
+  "note": "D1 f05558c (join card for a new phone player). Not replayed by D5"
+ },
+ "b08-r2-12": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Realm phone HUD buttons between the thumbs"
+ },
+ "b09-04": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Pop chain preview can over-promise"
+ },
+ "b09-05": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-arcade (D4)",
+  "note": "D4, same change as b09-13 (Stack near-miss floats). Not replayed by D5"
+ },
+ "b09-06": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Stack perfect window fixed 5 px (balance)"
+ },
+ "b09-08": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-arcade (D4)",
+  "note": "D4 (Dash result card scrolled into view). Not replayed by D5"
+ },
+ "b09-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Pop medals in round 1 (balance)"
+ },
+ "b09-11": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Dash test API getter shadowed"
+ },
+ "b09-12": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-arcade (D4), beta-r4-b09-12-pop-hud-fit (D1)",
+  "note": "FIXED TWICE: D4 27a0bc9 and D1 246e7ce both changed pop.css for this item and conflict on merge. Owner per ROUND4.md is D4 (arcade UI); the trial merge kept the D4 side. See fixes/r4-d5.md for the test result of both tests on the merge"
+ },
+ "b09-13": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-arcade (D4)",
+  "note": "D4 (a new float retires the floats it would overlap). Not replayed by D5"
+ },
+ "b10-r2-06": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Jam assist / relax / practice result is bare text"
+ },
+ "b10-r2-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "D4 fixed only a nit (progress bar on the menu); the two live Assist lanes are still unmarked"
+ },
+ "b10-r2-08": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Jam difficulty ladder not monotonic"
+ },
+ "b10-r2-09": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "jam tests (fd3ba88)",
+  "note": "round-3 fix fd3ba88 (startSong refuses a locked song)"
+ },
+ "b10-r2-10": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-arcade (D4)",
+  "note": "D4 (Bug Safari score line 28 px bold). Not replayed by D5"
+ },
+ "b10-r2-13": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Bug Safari stars trivially reached (balance)"
+ },
+ "b10-r2-14": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Angler fish art generic; shrimp drawn as a fish"
+ },
+ "b10-r2-15": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-r4-b10-15-tour-card (D1)",
+  "note": "D1 f319d6d. Not replayed by D5"
+ },
+ "b10-r2-16": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-mobile (D4)",
+  "note": "D4 4332af8 covers the 260 px title and Bells chip only; 'chrome crowds the scene / wastes the desktop screen' still needs a tester"
+ },
+ "b11-r2-04": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-r4-o07-stalk-neighbour-cap (D1)",
+  "note": "O-07, D1 e981012 (neighbour capped at stall +15%). Not replayed by D5"
+ },
+ "b11-r2-05": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "first practice week stores a loss as best"
+ },
+ "b11-r2-08": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "Deepdelve HUD says Depth 5 at the surface"
+ },
+ "b11-r2-09": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-b11-09-lantern-name (D1)",
+  "note": "D1 4225e20 (empty-name message); the greyed Start run without a reason is not mentioned"
+ },
+ "b11-r2-10": {
+  "owner": "D1",
+  "status": "open",
+  "test": "-",
+  "note": "Realm HUD Lv 1 for a higher Lantern hero"
+ },
+ "b11-r2-12": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-b11-12-creative-goals (D1)",
+  "note": "D1 9e12b32 (Goals panel in a creative world); hotbar clipping at the left edge not mentioned"
+ },
+ "b11-r2-13": {
+  "owner": "D1",
+  "status": "claimed",
+  "test": "beta-r4-o07-stalk-neighbour-cap (D1)",
+  "note": "O-07, D1 e981012"
+ },
+ "b12-r2-01": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-art (D2)",
+  "note": "D2 W-01: class sprite applied 114-622 ms after the click (was ~3 s). Not replayed by D5"
+ },
+ "b12-r2-04": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "beta-w03-terrain (existing), D2 screenshots",
+  "note": "D2 83d7d5e: drawn terrain with a majority filter and inner-corner fill. Visual: needs a tester"
+ },
+ "b12-r2-05": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-statue, r4-d2-art (D2)",
+  "note": "D2 W-06: resident NPCs at 1x, Town fauna 0.45x. Visual: needs a tester"
+ },
+ "b12-r2-07": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "not started: Town label collisions (D2 notes hand it to D4; D4 notes do not list it)"
+ },
+ "b12-r2-08": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-art (D2)",
+  "note": "D2: flagstone plaza, pixel labels, square frame. Visual: needs a tester"
+ },
+ "b12-r2-11": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "waits on the Codex R13 icon set (D2 notes)"
+ },
+ "b12-r2-14": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "Lich King / Shadow Hydra share a template (Codex R08)"
+ },
+ "b12-r2-15": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "not started (D2 and D4 notes both pass on it): phone dungeon letterbox. Needs an owner: D4 by ROUND4.md (phone layout)"
+ },
+ "b12-r2-16": {
+  "owner": "D2",
+  "status": "claimed",
+  "test": "r4-d2-art (D2)",
+  "note": "D2: Codex R03 props live by id"
+ },
+ "b12-r2-18": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "Top Scores board: fish icon on a row; half off-screen on phone"
+ },
+ "b12-r2-19": {
+  "owner": "D2",
+  "status": "open",
+  "test": "-",
+  "note": "drop float text overlaps"
+ },
+ "b13-r2-02": {
+  "owner": "D3",
+  "status": "verified",
+  "test": "beta-r4-replay-town (S-08), beta-s08-town-three-lazy",
+  "note": "round-3 fix 5a1bffb. D5 replay: Town session requests no three.js; walk onto the dig hole, E opens the cave (one three.module request), Esc returns, second visit requests nothing, no deprecation warning. Fails before (three.min.js at load + warning), passes on the tip"
+ },
+ "b13-r2-03": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-r4-replay-town (S-07), beta-s07-town-cull",
+  "note": "round-3 fix 458cc5f. FUNCTION verified by D5 (keyboard walk + 3 jumps, 65 samples: ~80% of 951 objects culled, nothing visible missing for more than 8 frames; red before: 0 culled). The item is an fps target (4x CPU, 55 remotes): NOT re-measured by D5, so it stays claimed. Note for D3: beta-s07-town-cull check [3] went red once on the tip under load (2 pooled sparkle Stars shown between two cull passes), see fixes/r4-d5.md"
+ },
+ "b13-r2-04": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "D3 soak test (c2aeb10)",
+  "note": "D3 notes: 6 min 4x Realm soak at load 15-21: 29-51 fps, heap flat. Not measured by D5, and not on a quiet box"
+ },
+ "b13-r2-05": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-r4-deepdelve-prewarm, beta-r4-deepdelve-touch-lock (D3)",
+  "note": "D3 9dffee4 + 71a1e55. D3 numbers: 8 taps at 1x -> 1 long task, max 52 ms (was 16 / 601 ms); 4x taps finish in 11 s (hung before). Both tests green on the trial merge; numbers not re-measured by D5"
+ },
+ "b13-r2-07": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-r4-realm-rotate (D3)",
+  "note": "D3 7663d78. D3 numbers: canvas re-allocations 61 -> 2 per 60 flips, long-task sum about 1630 -> 480 ms. Test green on the trial merge; Deepdelve canvas size after rotation not mentioned; not re-measured by D5"
+ },
+ "b13-r2-08": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "D3 probe realm-soak.js (not a tier test)",
+  "note": "D3 notes: listeners flat at 2018 over a 5.5 min 4x soak (one step 1999 -> 2018 at the first panel open). Not measured by D5"
+ },
+ "b13-r2-10": {
+  "owner": "D3",
+  "status": "backlog",
+  "test": "-",
+  "note": "unreferenced large images in the repo"
+ },
+ "b13-r2-11": {
+  "owner": "D3",
+  "status": "backlog",
+  "test": "-",
+  "note": "art pack URLs unversioned (S-14 note)"
+ },
+ "b13-r2-12": {
+  "owner": "D5",
+  "status": "verified",
+  "test": "beta-r4-arcane-soon",
+  "note": "O-08: Coming soon card (d37bd96). Replayed by D5: old page 15 x 404, new page 0 failed requests, 0 console errors"
+ },
+ "b14-05": {
+  "owner": "D3",
+  "status": "verified",
+  "test": "beta-r4-replay-backup-cross (D5, on r4-integ), beta-r4-o04-town-hub-backup (D3)",
+  "note": "O-04, D3 08e50c2 / aa47231 / c49b994. D5 replay on a phone by tapping, on the trial merge: Hub Backup found on Home, file holds town save + gift save + settings + build stamp; a new device restores it in the Lantern (asks first); the Lantern's own backup holds the same saves and settings; a third device restores that in the Hub (preview, nothing written before Confirm); an old town-only file restores in both. 13/13. Before: the Hub had no Backup and the Town wrote the town save only (round-2 report). The Town Backup / Restore buttons were NOT replayed by D5 (D3's test covers them)"
+ },
+ "b14-06": {
+  "owner": "D3",
+  "status": "verified",
+  "test": "beta-s04-coop-save ([4])",
+  "note": "round-3 fix 84ffa19. Two real pages (?party=local seats 0 and 1) on one storage: after B saves, seat 0 keeps A's tile. Fails before (2 checks: seat 0 back on the stale tile), passes on the tip 14/14. Saves are forced with world.savePos(true); the timed autosave path was not waited for"
+ },
+ "b14-07": {
+  "owner": "D3",
+  "status": "decided",
+  "test": "-",
+  "note": "net.js is off limits (O-02): document only"
+ },
+ "b14-08": {
+  "owner": "D3",
+  "status": "decided",
+  "test": "-",
+  "note": "net.js is off limits (O-02): document only"
+ },
+ "b14-09": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "player list: full-width / RTL names"
+ },
+ "b14-10": {
+  "owner": "D4",
+  "status": "open",
+  "test": "-",
+  "note": "player list lists every record over the 60 cap"
+ },
+ "b14-11": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "second Realm invite dropped (main.js)"
+ },
+ "b14-12": {
+  "owner": "D3",
+  "status": "open",
+  "test": "-",
+  "note": "non-bestie walkie memos ignored, not removed (main.js; deleting is a DB write: document only)"
+ },
+ "b14-13": {
+  "owner": "D3",
+  "status": "verified",
+  "test": "beta-r4-replay-backup-cross (D5, on r4-integ)",
+  "note": "O-04: mm-music and mm-high-contrast travel Hub -> Lantern -> Hub in D5's replay. Device-specific flags not checked by D5"
+ },
+ "b14-r2-N01": {
+  "owner": "D3",
+  "status": "verified",
+  "test": "beta-r4-replay-saves",
+  "note": "round-3 fix cced528. D5 replay on a phone through the Lantern UI: download a backup, add one unknown entry, Restore: sheet names the skipped entry, Cancel changes nothing, Confirm restores wood 5 -> 77, unknown entry never written. Fails before (file refused), passes on the tip. The Town Restore button was not replayed with this file"
+ },
+ "b14-r2-N02": {
+  "owner": "D3",
+  "status": "claimed",
+  "test": "beta-r4-o04-town-hub-backup (D3)",
+  "note": "D3 aa47231 ('Reading the backup…' before the confirm). Not replayed by D5"
+ },
+ "b15-04": {
+  "owner": "D4",
+  "status": "open",
+  "test": "beta-w05r3-hud-narrow",
+  "note": "Overlap part fixed in round 3; D4 notes the density (sticks + pad cover 35-60% of the view at 320 / 260) is a larger realm-ui change, not started"
+ },
+ "b15-05": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-mobile (D4)",
+  "note": "D4 (landscape Town strip). Not replayed by D5"
+ },
+ "b15-06": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-mobile (D4)",
+  "note": "D4 4332af8. Lane test: 6 red on the round-3 tip, 10/10 on the D4 tree (run by D5)"
+ },
+ "b15-07": {
+  "owner": "D5",
+  "status": "verified",
+  "test": "beta-r4-arcane-soon",
+  "note": "O-08: Coming soon card (d37bd96). Replayed by D5 at 1280x720 and 390x844: no 404, no horizontal scroll, Home lands on the Hub"
+ },
+ "b15-08": {
+  "owner": "D3",
+  "status": "backlog",
+  "test": "-",
+  "note": "no service worker (offline reload): improvement"
+ },
+ "b15-10": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-a11y (D4)",
+  "note": "D4 (Isles #view is a Tab stop; arcade Tab order). Not replayed by D5"
+ },
+ "b15-13": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (Back closes the shared Menu, Town and Hub). Lane test uses a real page.goBack but opens the Menu with MMNav.open(); red before / green after (run by D5)"
+ },
+ "b15-r2-15": {
+  "owner": "D4",
+  "status": "verified",
+  "test": "beta-r4-replay-realm (C), beta-w05r3-hud-narrow",
+  "note": "round-3 fix ce67ff7. 260x563 touch: XP bar 0 px over the Menu button (was 704 px2), a tap on the button's bottom edge opens the pause menu, Close resumes. Fails before, passes on the tip. Coach text 'one word per line' was not judged"
+ },
+ "b15-r2-16": {
+  "owner": "D3",
+  "status": "verified",
+  "test": "beta-r3-lantern-blocked",
+  "note": "round-3 fix 0ff914f. Real boot of Lantern Camp with a throwing localStorage getter + a click on the backup button: one pageerror before (d267d0b), zero on the tip"
+ },
+ "b15-r2-17": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-a11y (D4)",
+  "note": "D4 6407843 (Menu first in the DOM). REGRESSION found by D5 on the trial merge: in the dungeon the first Tab now lands on the Menu button, so the second Tab no longer reopens the mini-map (mad-maze-dungeon.test.js red). Must be fixed with this item"
+ },
+ "b15-r2-18": {
+  "owner": "D4",
+  "status": "claimed",
+  "test": "beta-r4-d4-mobile (D4)",
+  "note": "D4 4332af8 (moon off the logo at 195 px). Lane test red before / green after (run by D5)"
+ }
+}

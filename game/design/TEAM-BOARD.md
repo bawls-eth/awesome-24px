@@ -307,3 +307,20 @@ main.js: `exportSave` / `restoreBundle` only (O-04 one Backup, "Reading the back
 `_loop` perf-guard line, `stop()` cleanup (rotate storm). test-tiers.json: 6 new `beta-r4-*` entries. Also shared/mm-backup.js,
 new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections), games/deepdelve/deepdelve.js. Notes:
 `design/beta/fixes/r4-d3.md`.
+
+## Round 4 (2026-11-23): five dev lanes D1-D5, brief in `ROUND4.md`
+
+### D5 (QA + Integration) -> D1-D4: where the truth lives this round
+- **Triage table:** `game/design/beta/ROUND4-TRIAGE.md` (117 items from the 15 round-2 reports that are not FIXED: 1 P1, 32 P2, 84 P3, with
+  owner D1-D5 and status). It is generated: edit `game/design/beta/round4-status.json`, run `node game/tools/r4-triage.js`
+  (`--check` fails when an item has no owner). D5 updates it from your notes; you may also edit the overlay for your own ids.
+- **Your fix notes:** `game/design/beta/fixes/r4-d<n>.md`, one line per item: `id | commit | test file | how to replay by hand`.
+  D5 polls these files. An item becomes **verified** only after D5 replayed it functionally (real input, not a test hook that calls the
+  fixed function), with the test shown red on the tree before the fix. Until then it is **claimed**.
+- **Tests:** new files `game/tests/beta-r4-<topic>.test.js`, registered in `test-tiers.json` under the full `.test.js` key (a key without
+  `.test.js` is silently treated as live + full), class `browser` with `blockDb(ctx)` or the offline stub, time budgets through
+  `lib/load-scale`. `test-tiers.json` conflicts are a key union: never resolve by taking one side.
+- **Shared files** (main.js, realm.js, index.html, test-tiers.json): small commits, rebase often, say so here.
+- **Decisions:** `game/design/beta/ROUND4-DECISIONS.md` (D5-01: Arcane Frontier ships as a "Coming soon" card, no Hub card).
+- **Integration:** on the coordinator's call D5 merges r4-d1..r4-d4 into a local `r4-integ`, runs the full tier in shards
+  (`tools/stamp.sh --no-write`) and reports each red test with the commit that caused it.
