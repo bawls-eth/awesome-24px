@@ -8,9 +8,9 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 | id | title | effort | risk | status |
 |---|---|---|---|---|
 | ID-01 | Lantern-light Shore ramp | S | low | approved-spec (D, cycle 2): see Cycle 2 specs; level fade in the kill path, Lv 1-4 untouched |
-| ID-02 | Zone-border danger meter | S | low | approved (L confirms, cycle 1): pure label function + one HUD line; no save; write the label on change only |
-| ID-03 | Quest rewards that scale with zone | S | low | approved (L confirms, cycle 1): data-only in `mm-quests.js`; keep the bag tiers, test a reward cap |
-| ID-04 | Hero notebook (knowledge meta-progression) | M | low | approved (L, cycle 1): pure module + additive `notebook` key; cap entries, write on first meet only (not per kill) |
+| ID-02 | Zone-border danger meter | S | low | built (S, cycle 1; in play): `shared/mm-danger.js` + the zone HUD line in `realm-world.js`; test `cyc1-danger-meter`. L checked all land tiles of 6 seeds in cycle 2: the label never leaves its zone's level range |
+| ID-03 | Quest rewards that scale with zone | S | low | built (S, cycle 1; in play): `mm-quests.js` `killShards` = 30 + need + 8 x zone level, capped; test `cyc1-quest-zone-rewards` |
+| ID-04 | Hero notebook (knowledge meta-progression) | M | low | built (S, cycle 2; in play): `shared/mm-notebook.js`, own key `pixeltown-notebook-v1` (not under the Realm save: three pages write it), Nexus Notebook button; tests `cyc2-notebook`, `cyc3-notebook-blocked` (L, cycle 3: a refused storage write no longer wipes the visit's pages) |
 | ID-05 | Bullet-readability presets | M | medium | approved-spec (D, cycle 2): High contrast only, per-frame style, bench before/after |
 | ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | approved-spec (D, cycle 2): damage taken + aim help only, no speed slider |
 | ID-07 | Tame bond hearts (Isles) | M | low | approved-spec (D, cycle 2): hearts are a view of `bond` (no new field) |
@@ -18,8 +18,8 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 | ID-09 | Cozy daily chore card (no streak) | S | low | blocked-owner (D, cycle 2): spec ready as an additive card; needs the owner decision on login/sell streaks |
 | ID-10 | Shared result card across arcade games | M | medium | approved-spec (D, cycle 2): migration plan, one game per commit, Pop first |
 | ID-11 | Realm retreat flag (safe walk-back) | M | medium | approved-spec (D, cycle 2): Nexus trip reuses `returnTo` + `safeReturn` |
-| ID-12 | Town-to-Realm errand chain | M | low | approved (L, cycle 1): other saves read-only through their clean functions; chain state additive in the Town save; no network |
-| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | approved-spec (D, cycle 2): pure floor built and tested (`FIRST_KILL_BAG_FLOOR`); S wires the flag |
+| ID-12 | Town-to-Realm errand chain | M | low | module built, NOT wired (S, cycle 2): `shared/mm-errands.js` + test `cyc2-errands`; no page loads it and no save key exists yet. Left: Town NPC dialogue, the additive Town save field, Backup + SAVE-KEYS line (L approved in cycle 1: other saves read-only through their clean functions; no network) |
+| ID-13 | Mid-game "second wind" zone gates (Lv 8-12 plateau) | S | low | floor built, NOT wired (D, cycle 2): `MMZones.rollDrop` honours `info.firstKill === true` (`FIRST_KILL_BAG_FLOOR`, test `cyc2-first-kill-floor`), but nothing passes it: no first-kill flag in the Realm save yet, so play is unchanged. S wires the flag |
 | ID-14 | Hit-pause and telegraph timing audit | S | low | approved-spec (D, cycle 2): telegraph audit + draw-only hit pause, off under reduce motion |
 
 ## ID-01 Lantern-light Shore ramp
@@ -46,6 +46,7 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 - Player-facing: a notebook page per boss and per creature fills in as you meet it (pattern sketch, a hint such as "dodge clockwise"). No stat gain. [R] roguelite meta-progression works best as options and knowledge rather than raw power.
 - Why: Realm bosses are pattern puzzles; the Lantern already stores profiles.
 - Files: new `shared/mm-notebook.js` (pure), `lantern.js` panel, `realm-world.js` kill hook; save key additive `notebook` under `pixeltown-realm-v1`.
+- As built (cycle 2): the panel is in the Nexus (`realm-world.js`), not the Lantern; the save is its own key `pixeltown-notebook-v1` (Backup + SAVE-KEYS.md updated); the dungeon and the Isles write pages too (first clear per biome, first tame per species).
 - Test: node (record, clean, cap size); browser (kill one creature, page appears).
 - Effort M. Risk: low.
 
@@ -101,6 +102,7 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 - Player-facing: three Town NPCs each give one short errand that needs something from another mode (a Realm drop, an Isles herb, a fish). Finishing all three opens a one-time decor item. No timer.
 - Why: Town, Realm, Isles and arcade feel like separate products; errands connect them in the owner's "one game" direction.
 - Files: `main.js` NPC dialogue, `shared/mm-quests.js` sibling module, saves read-only from other keys.
+- As built so far (cycle 2): only the pure module `shared/mm-errands.js`. Not in the game yet.
 - Test: node chain state; browser dialogue advances with seeded saves.
 - Effort M. Risk: low (cross-save reads must stay read-only).
 
@@ -108,6 +110,7 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 - Player-facing: the first boss kill in each zone gives a guaranteed pink bag, so hitting the Lv 8-12 band always yields a visible upgrade.
 - Why: [M] XP per kill doubles each zone while need grows linearly (30 + 20 per level), so levels 15-20 come in about 100 Godlands kills; the real wall is survival at Lv 8-12 where gear is the answer.
 - Files: `shared/mm-zones.js` (BOSS_BAG_WEIGHTS floor), `realm-world.js` boss drop.
+- As built so far (cycle 2): only the floor in `mm-zones.js` (`FIRST_KILL_BAG_FLOOR` = pink, pink, purple, cyan, behind `info.firstKill`). The `realm-world.js` boss drop does not pass the flag yet.
 - Test: node: boss bag weights never roll brown below zone 1 first clear (pity counter).
 - Effort S. Risk: low.
 
