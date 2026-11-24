@@ -9262,9 +9262,11 @@ class TownScene extends Phaser.Scene {
     return hour >= KK_CONCERT_START_HOUR && hour < KK_CONCERT_END_HOUR;
   }
 
+  // One key per show = per local evening (cycle0 L-02). It used to end in the hour, and the show runs two hours, so the "once per
+  // show" bonus paid again at 20:00 while the message said "already enjoyed tonight's show".
   concertWindowKey() {
     const now = new Date();
-    return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+    return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
   }
 
   isNearCampfire() {
@@ -9284,7 +9286,8 @@ class TownScene extends Phaser.Scene {
 
   enjoyConcert() {
     const key = this.concertWindowKey();
-    if (this.kkEnjoyedWindow === key) {
+    const seen = typeof this.kkEnjoyedWindow === 'string' ? this.kkEnjoyedWindow : '';
+    if (seen === key || seen.startsWith(key + '-')) { // key + '-<hour>': a save written by the older per-hour key, same evening
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'already enjoyed tonight\'s show');
       return;
     }
