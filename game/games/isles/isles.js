@@ -571,7 +571,8 @@
   function startAttack(c, s, dx, dy) {
     c.ph = 'wind'; c.pt = s.atk.windup; c.ang = Math.atan2(dy, dx); c.ox = c.x; c.oy = c.y; c.vx = 0; c.vy = 0; c.hitDone = false; c.tgAt = simT;
   }
-  // Cycle 1 S: wall-slide steering for creatures that go TO a point (chase, leash return, curious, befriended follow). Movement is per
+  // Cycle 1 S: wall-slide steering for creatures that chase the hero or walk back home after the leash (curious / befriended walkers keep
+  // the straight aim: they move slowly and the taming pacing of isles-first-ten is tuned on it). Movement is per
   // axis, so a creature aimed straight at a wall used to bump it (vx flipped) and re-aim 0.1 s later: pinned on a cliff with the hero
   // just behind it. Now, when the straight heading is blocked a short probe ahead, it turns 45/90/135 degrees to one side (the side the
   // target lies on first, then the other) and keeps that side while the straight line stays blocked, so it slides along the wall and
@@ -597,7 +598,7 @@
     const dx = hero.x - c.x, dy = hero.y - c.y, d = Math.hypot(dx, dy) || 1;
     if (c.leaving > 0) { c.vx = -dx / d * s.speed * 1.4; c.vy = -dy / d * s.speed * 1.4; return; }
     // befriending: it stays and watches you; IF1: when you drift off a little it pads after you (so a short step back never loses it)
-    if (c.calm) { if (POUCH && d > 1.8 * TILE && d < 6 * TILE && !hero.dead) { steer(c, dx, dy, s.speed * 0.5); } else { c.vx = 0; c.vy = 0; } return; }
+    if (c.calm) { if (POUCH && d > 1.8 * TILE && d < 6 * TILE && !hero.dead) { c.vx = dx / d * s.speed * 0.5; c.vy = dy / d * s.speed * 0.5; } else { c.vx = 0; c.vy = 0; } return; }
     const home = Math.hypot(c.x - c.hx, c.y - c.hy);
     // cyc0-S leash: a creature that hits the leash walks all the way back (to LEASH_BACK of home) before it may chase again. It used
     // to turn round one think after crossing the ring, so a hostile one hovered on the ring forever, a few tiles from a hero standing
@@ -621,7 +622,7 @@
     if (c.mood === 'shy' && d < 4 * TILE && (!TAME || !c.tm || c.angry > 0 || hero.shotT > 0)) { c.vx = -dx / d * s.speed * 1.2; c.vy = -dy / d * s.speed * 1.2; return; }
     if (c.mood === 'shy' && c.angry > 0 && d < 8 * TILE) { c.vx = -dx / d * s.speed * 1.2; c.vy = -dy / d * s.speed * 1.2; return; }
     // IF1: a feed / calm tameable smells food it likes in your pouch or bag and wanders over (never while you shoot or after a scare)
-    if (curious(c, d)) { const k = d > 3 * TILE ? 0.55 : 0.3; steer(c, dx, dy, s.speed * k); return; }
+    if (curious(c, d)) { const k = d > 3 * TILE ? 0.55 : 0.3; c.vx = dx / d * s.speed * k; c.vy = dy / d * s.speed * k; return; }
     const R = c.rng || rng;
     if (R.next() < 0.12) {
       if (R.next() < 0.45) { c.vx = 0; c.vy = 0; }
