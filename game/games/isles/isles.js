@@ -390,6 +390,7 @@
   const groupState = world.spawnGroups.map(() => ({ alive: 0, until: 0 }));
   const CAP = LOW ? 12 : 24, BIG_CAP = 4;
   const SPAWN_R = 22, DESPAWN_R = 34, LEASH = 14 * TILE;
+  const LEASH_BACK = 4 * TILE, LEASH_GIVEUP = 8; // cyc0-S: a leashed creature walks back to within 4 tiles of home (or gives up after 8 s)
   let creatures = [];
   let uid = 0, simT = 0;
   const rng = RNG.create('isles|' + PACK_ID + '|' + SEED + '|ai');
@@ -563,7 +564,15 @@
     // befriending: it stays and watches you; IF1: when you drift off a little it pads after you (so a short step back never loses it)
     if (c.calm) { if (POUCH && d > 1.8 * TILE && d < 6 * TILE && !hero.dead) { c.vx = dx / d * s.speed * 0.5; c.vy = dy / d * s.speed * 0.5; } else { c.vx = 0; c.vy = 0; } return; }
     const home = Math.hypot(c.x - c.hx, c.y - c.hy);
-    if (home > LEASH) { c.angry = 0; const hd = home || 1; c.vx = (c.hx - c.x) / hd * s.speed; c.vy = (c.hy - c.y) / hd * s.speed; return; }
+    // cyc0-S leash: a creature that hits the leash walks all the way back (to LEASH_BACK of home) before it may chase again. It used
+    // to turn round one think after crossing the ring, so a hostile one hovered on the ring forever, a few tiles from a hero standing
+    // just outside it (free shots, never reaching). A return blocked by terrain gives up after LEASH_GIVEUP s and settles where it is.
+    if (c.ret || home > LEASH) {
+      c.angry = 0; c.ret = (c.ret || 0) + 0.1;
+      if (home > LEASH_BACK && c.ret < LEASH_GIVEUP) { const hd = home || 1; c.vx = (c.hx - c.x) / hd * s.speed; c.vy = (c.hy - c.y) / hd * s.speed; return; }
+      if (home > LEASH_BACK) { c.hx = c.x; c.hy = c.y; }
+      c.ret = 0; c.vx = 0; c.vy = 0; return;
+    }
     // IF1 mercy: a badly hurt hero (<= 1/3 HP) who has not shot for a second is left alone by wild creatures (they break off the chase;
     // an attack already winding up still lands). Never in a boss fight. Shooting again ends it.
     // A rest spot (dock, campfire, hot spring, dome, home) is a safe room: nothing starts a chase or an attack on you while you stand there.
@@ -3570,7 +3579,7 @@
       creatures: () => creatures.map((c) => ({ uid: c.uid, sp: c.sp, kind: c.kind, base: c.base, x: c.x, y: c.y, hp: c.hp, maxHp: c.maxHp, mood: c.mood, size: c.size, art: !!c.art,
         ph: c.ph, tg: c.ph === 'wind' ? { shape: specOf(c.sp, c.kind).atk.shape, left: c.pt, windup: specOf(c.sp, c.kind).atk.windup, big: specOf(c.sp, c.kind).atk.big } : null,
         ko: c.ko, calm: c.calm, hostile: c.hostile, lv: c.lv, st: c.tm ? c.tm.st : null, torpor: c.tm ? c.tm.torpor : 0, torporMax: c.tm ? c.tm.torporMax : 0,
-        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir, rare: !!c.rare, variant: c.variant || '' })),
+        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir, rare: !!c.rare, variant: c.variant || '', ret: c.ret > 0, home: Math.hypot(c.x - c.hx, c.y - c.hy) })),
       // PNG creature strips (b31a / b32) and b33 props: readiness, what was drawn, death strips shown, props baked from PNG vs code
       stripsReady: () => (STRIPS ? STRIPS.ready.then(() => ({ on: true, kinds: STRIPS.kinds.filter((k) => STRIPS.has(k)), count: STRIPS.count() })) : { on: false, kinds: [], count: 0 }),
       // a baked strip's drawn size in native px (AW3 size-class checks), or null when that creature has no PNG set

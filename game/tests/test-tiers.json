@@ -1943,5 +1943,9 @@
   "deepdelve-ghost.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc0-isles-leash.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
