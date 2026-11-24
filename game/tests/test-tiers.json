@@ -2047,5 +2047,9 @@
   "cyc2-art-isles-field.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc2-art-town-label-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
