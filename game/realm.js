@@ -516,7 +516,8 @@ class RealmArena {
     this._bakeSprites();
     this._bindInput();
     this._resize();
-    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', (e) => { if (!e.key || e.key === RM_SAVE_KEY) this.resyncSave(); });
+    this._onStorage = (e) => { if (!e.key || e.key === RM_SAVE_KEY) this.resyncSave(); }; // kept on the instance so destroy() can remove it (cycle0 L-11)
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', this._onStorage);
     // Review F16: hot paths (a kill, a partner's kill reward) mark the save dirty (saveSoon) and ONE coalesced persist runs RM_SAVE_SOON_MS later; every
     // explicit onSave (pickup, death, wave, shop, exit ...) persists at once and clears the pending one. Flushed on stop (exit / death screen leave),
     // menu open, `visibilitychange: hidden` and `pagehide`, so closing or hiding the tab never loses a kill's shards.
@@ -2447,7 +2448,7 @@ class RealmArena {
 
   destroy() {
     this.stop();
-    if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('pagehide', this._onHide);
+    if (typeof window !== 'undefined' && window.removeEventListener) { window.removeEventListener('pagehide', this._onHide); window.removeEventListener('storage', this._onStorage); }
     if (typeof document !== 'undefined' && document.removeEventListener) document.removeEventListener('visibilitychange', this._onVis);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);

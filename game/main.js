@@ -3625,7 +3625,7 @@ class TownScene extends Phaser.Scene {
     this.realmEmbed.remove();
     this.realmEmbed = null;
     try { this.game.loop.wake(); } catch (e) { /* ignore */ }
-    try { const f = JSON.parse(localStorage.getItem('pixeltown-save-v1') || 'null'); if (f && f.realm && this.save) this.save.realm = f.realm; } catch (e) { /* ignore */ }
+    // what Mad Maze saved needs no copy here: enterRealm reads the stored realm, and a live arena resyncs from storage before every write
   }
 
   openRealmGateMenu() {
