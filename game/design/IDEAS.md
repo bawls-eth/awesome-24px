@@ -142,3 +142,63 @@ Read against the code at 86eda4b. `approved` = S may start; `needs-change` = S m
 - Creature bonding: https://yukaichou.com/advanced-gamification/the-pet-companion-design-in-gamification/
 - Cozy daily loops: https://dev.to/tatomamo_games/designing-a-stress-free-game-loop-balancing-engagement-vs-pressure-2976 , https://medium.com/kitfox-games/designing-for-coziness-d33d2519a59e
 - Action accessibility: https://www.pcgamer.com/accessibility-means-more-than-just-an-easy-mode , https://www.naughtydog.com/blog/THE_LAST_OF_US_PART_II_ACCESSIBILITY_FEATURES_DETAILED
+
+## Cycle 1 proposals (D)
+Evidence tags as above; [M1] = measured in cycle 1 play (`beta/cycle1-design.md`). All `proposed`. ID-01 and ID-13 get concrete numbers below; neither is implemented this cycle because the evidence is one bot run (see the cycle 1 doc).
+
+| id | title | effort | risk | status |
+|---|---|---|---|---|
+| ID-15 | Isles Oakback orchard route (food sink fix) | S | low | proposed |
+| ID-16 | Isles creature "likes" journal hint | S | low | proposed |
+| ID-17 | Isles tame verbs per species | M | low | proposed |
+| ID-18 | Town daily nudge through mm-bounties | S | low | proposed |
+| ID-19 | Town neighbour gift errand (no streak) | M | low | proposed |
+| ID-20 | Arcade daily course with a shared modifier | M | low | proposed |
+| ID-21 | Stack soft first miss | S | low | proposed |
+| ID-22 | Echo leaves refill on a clean tune | S | low | proposed |
+| ID-23 | Pop rescue shuffle | S | low | proposed |
+| ID-24 | Dash pacer ghost and late ramp | M | medium | proposed |
+| ID-25 | Hedge Tide maze as a fifth arcade game (wires mm-labyrinth) | L | medium | proposed |
+
+### Numbers for ID-01 and ID-13 (not implemented)
+- ID-01: XP multiplier on a Shore kill = 1.0 for hero Lv 1-4, then 0.85 / 0.7 / 0.6 for Lv 5 / 6 / 7+ (floor 0.6; shards and drops untouched). Expected: Lv 5 to 7 on the Shore slows from 44 s (measured 64 s to 108 s) to about 75 s. Gate before implementing: `first-ten-minutes` and `isles-first-ten` unchanged (Lv 1-4 untouched), plus a node table test.
+- ID-13: BOSS_BAG_WEIGHTS row 0 (Shore boss) from [0.30,0.40,0.20,0.10,0,0] to [0.15,0.40,0.30,0.15,0,0]; row 1 from [0.10,0.30,0.35,0.20,0.05,0] to [0.05,0.25,0.35,0.25,0.10,0]. Needs boss-kill-per-level-band evidence first (not measured; the Trial bot never beat a boss).
+
+## ID-15 Isles Oakback orchard route
+- Player-facing: [M1, computed] Oakback needs 12 golden apples (`mm-creatures` T('feed',0,14,12)); the Home pouch holds 4 plain apples it does not eat; golden-apple glints are 4 nodes with a 300 s respawn. Add an orchard patch of 6 golden-apple glints near its seeded spot and a hint "Oakback loves golden apples" once sighted.
+- Files: `shared/mm-isle-craft.js:79`, `mm-isle-pouch.js` WHERE line. Test: node, at least 12 apples available per 600 s. Effort S, risk low.
+
+## ID-16 Isles likes journal hint
+- Player-facing: when a creature is sighted the journal row shows its favourite food as an icon plus the pouch count, so feeding is never a guess. [R] feeding-preference taming works when the preference is discoverable.
+- Files: `isles.js` journal, `isle-creatures.js` diet. Test: browser, the row shows the icon. S / low.
+
+## ID-17 Tame verbs per species
+- Player-facing: [M1] the first tame lands at 40-53 s on every island, always by the same feed loop (one feed per 6.2 s). Give three calm species a different gentle verb (stand still near it 8 s; leave a food glint and step back). [R] bonding framed as a relationship rather than capture.
+- Files: `mm-tame.js`, `mm-creatures.js` T(). Test: node per verb. M / low.
+
+## ID-18 Town daily nudge through mm-bounties
+- Player-facing: wire the 3 deterministic bounties (`mm-bounties`, no streak, no penalties) as a small Town card (shake a tree, catch a bug, wave at a neighbour). Rewards: Town coins only. Closes L-13 for mm-bounties.
+- Files: `main.js` card; `mm-bounties.js` forDate / progress / claim. Test: node and browser tick. S / low.
+
+## ID-19 Town neighbour gift errand
+- Player-facing: a villager asks for one thing the Town gives (fruit, fossil, fish); handing it over gives a postcard line. No timer. Uses existing cooldown nodes (tree 20 s, fossil 25 s, flower 30 s). M / low.
+
+## ID-20 Arcade daily course with a shared modifier
+- Player-facing: each arcade game's Daily uses `MMDaily.seedFor(date)` plus one visible modifier (Dash low gravity, Stack wider blocks, Pop 4 tile kinds, Echo tunes start at 4). Unlimited retries, best score kept. [R] daily runs with a shared seed and modifiers (Spelunky, Caveblazers, Dead Cells). No streak, no expiry. M / low.
+
+## ID-21 Stack soft first miss
+- Evidence [M1]: a casual bot (22 px error) ended on floor 6-9 about 10 s into a 90 s round; a 9 px bot reached 13-16 and also ended about 14 s in. Proposal: the first total miss per round trims the top block to a minimum width instead of ending. Test: node, casual bot reaches 12 floors on 3 of 3 seeds. S / low.
+
+## ID-22 Echo leaves refill on a clean tune
+- Evidence [M1]: 3 leaves last the whole 120 s round; an 8 percent per-tap error bot lost them all by tune length 3-5 (20-30 s in); a 2 percent bot reached 12 once and wilted out at 5 once. Proposal: finishing a tune with no wilt returns one leaf (max 3). S / low.
+
+## ID-23 Pop rescue shuffle
+- Evidence [M1]: pop never ran out of moves in 6 bot rounds. A random-move casual scored 23.8-28.7k vs 39.8-53.9k for a best-move bot, so the 25,000 medal is a coin flip for casuals. Proposal: one free shuffle if `hasMove()` is false (dead board not seen yet; add a counter first). S / low.
+
+## ID-24 Dash pacer ghost and late ramp
+- Evidence [M1]: the same auto bot with lead 34 px dies at 64-89 s, lead 48 px at 71 s to the 400 s cap, lead 60 px reaches the cap; a 14 px timing window separates a one-minute run from a 12 km run, and the course never ramps. Proposal: after 90 s gentle extra obstacle density, plus a "race a pacer" choice besides the personal ghost. M / medium.
+
+## ID-25 Hedge Tide maze as a fifth arcade game
+- `mm-labyrinth` (seeded 12x12 cells, Hedge Tide timer) and the `MMDaily` Daily Maze seed exist but no page loads them. A 2-minute maze run with a rising hedge tide, swipe on phone. Gives arcade variety and wires L-13's mm-labyrinth. L / medium (new page, hub card, medals key, test).
+
+Sources (generic queries, cycle 1): [feeding-based taming in cozy games](https://berkeleyhistoricalsociety.org/disney-dreamlight-valley/), [Of Peaks and Tides taming wiki](https://thegameswiki.com/of-peaks-and-tides/wiki/taming), [daily runs, shared seed and modifiers](https://gamedeveloper.com/design/the-24-hour-ticket-examining-daily-runs-), [runner progression](https://gamedeveloper.com/design/studying-gameplay-progression-on-runners).
