@@ -265,7 +265,7 @@ const fresh = async (page) => page.waitForFunction(() => !!(window.__isles && wi
     const P = prof.id; const w0 = Date.now();
     const Q = await newPage(browser, prof.clock || 0);
     const nav0 = Date.now();
-    await Q.page.goto(ORIGIN + '/game/games/isles/index.html?test=1&isle=' + prof.isle + '&seed=' + prof.seed);
+    await Q.page.goto(ORIGIN + '/game/games/isles/index.html?test=1&isle=' + prof.isle + '&seed=' + prof.seed + (process.env.QI_EXTRA || ''));
     await fresh(Q.page);
     // first frame: the real (unfrozen) page time from navigation start to the first frame that has the test handle (in-page, like FT1 world)
     const ff = Math.round(await Q.page.waitForFunction(() => window.__qiFF, null, { timeout: 10000 }).then((h) => h.jsonValue())); const navMs = Date.now() - nav0;

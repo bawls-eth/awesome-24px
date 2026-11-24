@@ -430,7 +430,7 @@
   const SLIDE = Q.get('slide') !== '0'; // cycle 1 S: wall-slide steering (steer); ?slide=0 = the old straight aim
   // cycle 2 S: wanderers turn along a wall instead of bouncing off it (wanderTurn). OPT-IN (?wslide=1) for now: on by default it moved
   // the isles-first-ten bot's reward cadence over its 45 s gap limit (mars-b 48.7 s, then tundra-b 45.8 s with a 90-degree-first variant).
-  const WSLIDE = SLIDE && Q.get('wslide') === '1';
+  const WSLIDE = SLIDE && Q.get('wslide') !== '0';
   let wallBumps = 0; // test handle: per-axis wall hits of wandering creatures (the old bounce)
   const LEASH_BACK = 4 * TILE, LEASH_GIVEUP = 8; // cyc0-S: a leashed creature walks back to within 4 tiles of home (or gives up after 8 s)
   let creatures = [];
@@ -2285,8 +2285,11 @@
     // never waits long whatever the spawns did; it is still a plain seeded find (own MMRng stream), it never expires or nags
     const pity = !!(POUCH && POUCH.PITY_AFTER) && simT < POUCH.PITY_WINDOW;
     const since = pity ? simT - lastFindT : simT - lastRewardT;
-    // never while you are low on air (mars): a find must not lure you away from the way back to a dome
-    if (!POUCH || !CRAFT || hero.dead || envS.warnO || envS.emptyO || since < (pity ? POUCH.PITY_AFTER : POUCH.SPARKLE_AFTER)) return;
+    // cycle 3 D: low on air (mars) a find must not lure you away from the way back to a dome, but it may sit ON that way: during the air warning
+    // (not once the air is out) the sparkle is placed only on tiles no farther from the nearest dome / pad than you are. Before this, the mars
+    // reward gap was set by the air trips (the sparkle was held back for the whole 20 s warning + empty + walk home), see beta/cycle3-design.md.
+    if (!POUCH || !CRAFT || hero.dead || envS.emptyO || since < (pity ? POUCH.PITY_AFTER : POUCH.SPARKLE_AFTER)) return;
+    if (envS.warnO && !SHELTER_PTS.length) return;
     // an unpicked sparkle you walked far away from moves back near you (it is the same sparkle: the day's count does not grow)
     const moving = !!sparkle && sparkle.until === 0;
     if (moving && Math.hypot((sparkle.x + 0.5) * TILE - hero.x, (sparkle.y + 0.5) * TILE - hero.y) <= (POUCH.SPARKLE_R + 4) * TILE) return;
@@ -2309,7 +2312,12 @@
         seen.set(ni, st + 1); q.push(ni);
       }
     }
-    const pool = near.length ? near : far;
+    let pool = near.length ? near : far;
+    if (envS.warnO) { // the way home: nearest shelter point from the hero's tile, keep only tiles that are not farther from it
+      const dShelter = (tx, ty) => { let bd = Infinity; for (let k = 0; k < SHELTER_PTS.length; k++) { const p = SHELTER_PTS[k], d = (p.x - tx) * (p.x - tx) + (p.y - ty) * (p.y - ty); if (d < bd) bd = d; } return bd; };
+      const dh = dShelter(hx, hy);
+      pool = pool.filter((t) => dShelter(t % W, Math.floor(t / W)) <= dh);
+    }
     if (!pool.length) return;
     const i = pool[Math.floor(rs.next() * pool.length)];
     sparkle = { i: -1000 - used, x: i % W, y: Math.floor(i / W), kind: POUCH.sparkle(ISLE, rs.next()), until: 0, picks: 0, respawn: 0, sparkle: true };

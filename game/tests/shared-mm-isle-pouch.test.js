@@ -75,8 +75,9 @@ check('place(): junk in -> []', U.place(null, 'meadow', '1', () => true).length 
 // sparkles
 check('sparkle(isle, u): an island food in range, deterministic', ISLES.every((id) => { for (let i = 0; i < 20; i++) { const a = U.sparkle(id, i / 20); if (!a || a !== U.sparkle(id, i / 20) || X.sourcesOf(a).length === 0) return false; } return true; }) && U.sparkle('home', NaN) === U.sparkle('home', 0));
 check('sparkles: 6 a day per island, after 40 s without a reward, within 10 tiles', U.SPARKLES_PER_DAY === 6 && U.SPARKLE_AFTER === 40 && U.SPARKLE_R === 10);
-check('sparkleDue: first-ten pity (40 s, no daily cap before 600 s sim), then 40 s and 6 a day', U.PITY_AFTER === 40 && U.PITY_WINDOW === 600
-  && !U.sparkleDue(39.9, 100, 0) && U.sparkleDue(40, 100, 0) && U.sparkleDue(40, 599, 40)
+// cycle 3 D: the pity wait went 40 -> 34 s (the old pin PITY_AFTER === 40 is the thing that changed): a 40 s trigger plus the walk to the sparkle left only 5 s of the 45 s reward-gap budget
+check('sparkleDue: first-ten pity (34 s, no daily cap before 600 s sim), then 40 s and 6 a day', U.PITY_AFTER === 34 && U.PITY_WINDOW === 600
+  && !U.sparkleDue(33.9, 100, 0) && U.sparkleDue(34, 100, 0) && U.sparkleDue(34, 599, 40)
   && !U.sparkleDue(39.9, 600, 0) && U.sparkleDue(40, 600, 5) && !U.sparkleDue(40, 700, 6) && !U.sparkleDue(NaN, NaN, 0));
 check('where(): plain words for the foods and the raft vine', U.where('clover').length > 10 && /dock/.test(U.where('vine_rope')) && U.where('nope') === '');
 // save: the additive spark key is cleaned and stays tiny

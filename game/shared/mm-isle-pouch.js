@@ -123,7 +123,7 @@
   // the first-ten-minutes pity: in the first PITY_WINDOW s of sim time on an island visit a sparkle shows after PITY_AFTER s without a find
   // (a hot-spring soak is a rest, not a find), 2-3 steps away, and the daily cap does not apply, so a fresh player never waits much more than ~40 s for something to pick up, whatever the
   // spawns did. Later in the visit the normal 6 a day rule holds. Free play: it is a plain find, it never expires or nags.
-  const PITY_AFTER = 40, PITY_WINDOW = 600; // 40: the IF1 contract (no sparkle before 40 s without a reward) holds in the pity window too
+  const PITY_AFTER = 34, PITY_WINDOW = 600; // 40: the IF1 contract (no sparkle before 40 s without a reward) holds in the pity window too
   // sparkleDue(sinceReward, simT, used) -> whether a forage sparkle may be placed now (pure; the caller still checks death / boss fights)
   function sparkleDue(since, t, used) {
     const s = Number(since) || 0, tt = Number(t) || 0, u = used | 0;

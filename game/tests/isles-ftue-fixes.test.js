@@ -170,13 +170,15 @@ const BEFRIEND = `(I, sp) => { I.pause(true); I.clearCreatures(); const h = I.he
     if (label === 'phone') {
       const sp = await ev(T.page, (I) => {
         I.pause(true); I.clearCreatures(); I.god(true); const s = I.world.spawnPoint; I.teleport(s.x, s.y);
-        const out = { before: I.sparkle() }; I.wait(30); out.at30 = I.sparkle(); I.wait(11); out.at41 = I.sparkle(); const h = I.hero(); out.d = out.at41 ? Math.hypot(out.at41.x - h.tx, out.at41.y - h.ty) : null;
+        let used0 = I.sparkles(); { const k0 = I.sparkle(); if (k0 && k0.ready) { I.teleport(k0.x, k0.y); I.step(0, 0, 0.05); I.teleport(s.x, s.y); used0 = I.sparkles(); } } // cycle 3 D: with the 34 s wait the tame earlier in this test may already have shown one: pick it up first so the clock restarts
+        const out = { before: I.sparkle(), used0 }; I.wait(20); out.at30 = I.sparkle(); I.wait(21); out.at41 = I.sparkle(); const h = I.hero(); out.d = out.at41 ? Math.hypot(out.at41.x - h.tx, out.at41.y - h.ty) : null;
         const inv0 = JSON.stringify(I.inv()); if (out.at41) { I.teleport(out.at41.x, out.at41.y); I.step(0, 0, 0.05); }
         out.after = I.sparkle(); out.inv = [inv0, JSON.stringify(I.inv())]; out.count = I.sparkles(); out.save = I.save(); out.bytes = JSON.stringify(out.save).length; out.raw = (localStorage.getItem('pixeltown-archipelago-v1') || '').length;
         return out;
       });
-      check('6: no forage sparkle before 40 s without a reward; one appears within 10 tiles after it', !sp.before && !sp.at30 && !!sp.at41 && sp.at41.ready && sp.d <= 10, JSON.stringify([sp.at30, sp.at41, sp.d]));
-      check('6: walking over the sparkle picks it up into the pack and counts it for today (save.spark)', sp.after && !sp.after.ready && sp.inv[0] !== sp.inv[1] && sp.count === 1 && sp.save.spark && sp.save.spark.n.ice === 1, JSON.stringify({ after: sp.after, inv: sp.inv, spark: sp.save.spark }));
+      // cycle 3 D: the first-ten pity wait is 34 s now (was 40): the "too early" probe moved from 30 s to 20 s (the hero already carries ~9 s of since-find from the earlier tame) (the old 30 s probe is inside the new window), the 'after' probe stays at 41 s
+      check('6: no forage sparkle before 34 s without a reward (probed at 20 s); one appears within 10 tiles by 41 s', !(sp.before && sp.before.ready) && !(sp.at30 && sp.at30.ready) && !!sp.at41 && sp.at41.ready && sp.d <= 10, JSON.stringify([sp.before, sp.at30, sp.at41, sp.d]));
+      check('6: walking over the sparkle picks it up into the pack and counts it for today (save.spark)', sp.after && !sp.after.ready && sp.inv[0] !== sp.inv[1] && sp.count === sp.used0 + 1 && sp.save.spark && sp.save.spark.n.ice === sp.used0 + 1, JSON.stringify({ after: sp.after, inv: sp.inv, spark: sp.save.spark }));
       check('6: the archipelago save stays well under the 20 KB cap', sp.raw > 0 && sp.raw < 20000 && sp.bytes < 20000, String(sp.raw));
     }
     await T.ctx.close();

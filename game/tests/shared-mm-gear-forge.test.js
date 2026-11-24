@@ -25,7 +25,7 @@ const opts = F.reforgeOptions(w9);
 const rolled = A.roll(w9.id, 'weapon', 9, 2, 12345, null).map((e) => e.id);
 check('options: only weapon affixes, none already rolled', opts.length > 0 && opts.every((o) => A.SLOTS.weapon.indexOf(o.id) >= 0 && rolled.indexOf(o.id) < 0));
 check('options: lists every legal affix', opts.length === A.SLOTS.weapon.filter((i) => A.rangeOf(i, 9) && rolled.indexOf(i) < 0).length);
-check('options: value inside range, fixed, exact cost and text', opts.every((o) => { const rg = A.rangeOf(o.id, 9); return o.v >= rg[0] && o.v <= rg[1] && o.cost.dust === 80 && o.cost.shards === 3 && typeof o.text === 'string' && o.text.length > 0; }) && eq(opts, F.reforgeOptions(w9)));
+check('options: value inside range, fixed, exact cost and text', opts.every((o) => { const rg = A.rangeOf(o.id, 9); return o.v >= rg[0] && o.v <= rg[1] && o.cost.dust === 80 && o.cost.shards === 75 /* cycle 3 D: 25 x (t - 6), was 3 */ && typeof o.text === 'string' && o.text.length > 0; }) && eq(opts, F.reforgeOptions(w9)));
 check('options: T7 has no leech/pierce', !F.reforgeOptions(w7(0, 7)).some((o) => o.id === 'leech' || o.id === 'pierce'));
 check('options: armor slot', F.reforgeOptions(a12).length > 0 && F.reforgeOptions(a12).every((o) => A.SLOTS.armor.indexOf(o.id) >= 0));
 check('single forged power affix stays under the cap', [7, 9, 11, 12].every((t) => [0, 1, 2, 3].every((r) => F.reforgeOptions(w7(r, t)).every((o) => A.value([{ id: o.id, v: o.v }]) <= A.cap(t) + 1e-9))));

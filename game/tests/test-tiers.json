@@ -2119,5 +2119,9 @@
   "cyc3-isles-day-roll.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-economy-tuning.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
