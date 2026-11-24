@@ -147,8 +147,11 @@ body.home-on #hud, body.home-on #hub-games, body.home-on #hub-continue, body.hom
 .home-card:hover, .home-card:focus-visible, .home-coll:hover, .home-coll:focus-visible { background: var(--h-card2); outline: 2px solid var(--h-gold); outline-offset: 0; }
 .home-card:active, .home-coll:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--h-line); }
 /* R4 O-04: one Backup / Restore on the Hub Home (shared/mm-backup-ui.js) */
+.home-row { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+.home-row > .home-coll { flex: 1 1 0; }
+.hub-backup[open] { flex: 1 0 100%; order: 2; }
 .hub-backup { flex: 0 0 auto; background: var(--h-line); color: var(--h-ink); border: 2px solid var(--h-card); padding: 0 8px; font-size: calc(13px * var(--ui-scale,1)); }
-.hub-backup > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+.hub-backup > summary { min-height: 52px; display: flex; align-items: center; cursor: pointer; }
 .hub-backup > summary:focus-visible { outline: 2px solid var(--h-gold); outline-offset: 2px; }
 .hub-backup .mmb-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .hub-backup .mmb-btn { position: relative; min-height: 44px; padding: 0 10px; display: inline-flex; align-items: center; background: var(--h-card); color: var(--h-ink); border: 2px solid var(--h-gold); font: inherit; cursor: pointer; }
