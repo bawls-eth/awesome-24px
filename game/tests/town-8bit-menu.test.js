@@ -4,13 +4,12 @@
 // "Play offline" as ADMIN8bit. Never chats, never writes to Firebase. Runs at 390x844 (touch) and 1280x720 (desktop).
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/town-8bit-menu.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 
 async function open(browser, viewport, touch) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-8bit-menu.test.js */' }));
+  const db = await offlineStub(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -135,7 +134,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r - 0.5 && a.r > b
     const saveAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('pixeltown-save-v1') || '{}'));
     const before = JSON.parse(saveBefore || '{}');
     check(`${tag}: the save stays additive (no key from before is lost)`, Object.keys(before).every((k) => k in saveAfter), JSON.stringify(Object.keys(before).filter((k) => !(k in saveAfter))));
-    check(`${tag}: 0 database requests / sockets`, db.count() === 0, JSON.stringify([db.http, db.ws]));
+    check(`${tag}: 0 database requests / sockets`, db.attempts() === 0, JSON.stringify([db.http, db.ws]));
     check(`${tag}: no console errors`, errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
