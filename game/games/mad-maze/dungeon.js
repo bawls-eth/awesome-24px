@@ -310,7 +310,7 @@
 
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
-    let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
+    let lockMsgAt = -9; let hudText = ''; let hudWaveEl = null; let hudBiomeEl = null; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
     // G12 boss ground-slam: from phase 2 the boss winds up a ring zone for MMSplash.SLAM.WIND (0.9 s, drawn in drawOver), then hits whoever is still inside.
     // ?bosses=classic, ?telegraph=0 (no warning, so no slam) and ?bossslam=0 turn it off. Damage: MMSplash.slamDmg of the boss dmgMul (MMDifficulty), capped.
     const SLAM_ON = typeof MMSplash !== 'undefined' && !!MMSplash.slamStep && opts.bosses !== 'classic' && !(() => { try { return /[?&](telegraph|bossslam)=0(&|$)/.test(location.search); } catch (er) { return false; } })();
@@ -917,8 +917,8 @@
         // HUD text (the arena rewrites it from time to time)
         const txt = `${B.name} · Room ${visitedMain()}/${MAIN_ROOMS} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
         if (txt !== hudText) { hudText = txt; }
-        const w = document.getElementById('realm-wave'); if (w && w.textContent !== hudText) w.textContent = hudText;
-        const b = document.getElementById('realm-biome'); const bn = window.innerWidth < 600 ? '' : palOf(byId[current].type).name; if (b && b.textContent !== bn) b.textContent = bn;
+        const w = hudWaveEl || (hudWaveEl = document.getElementById('realm-wave')); if (w && w.textContent !== hudText) w.textContent = hudText; // elements cached: this runs every frame (cycle1 L-18)
+        const b = hudBiomeEl || (hudBiomeEl = document.getElementById('realm-biome')); const bn = window.innerWidth < 600 ? '' : palOf(byId[current].type).name; if (b && b.textContent !== bn) b.textContent = bn;
         const be = bossEntity(); if (be) { const n = document.getElementById('realm-boss-name'); const nt = `${B.boss_name} · phase ${be.phase}`; if (n && n.textContent !== nt) n.textContent = nt; }
         const ms = current + '|' + state.visibleRooms().join(',') + '|' + state.keys + '|' + state.secretOpen + '|' + rs.cleared;
         if (ms !== mapSig) { mapSig = ms; drawMap(); }

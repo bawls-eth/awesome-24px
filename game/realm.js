@@ -735,9 +735,30 @@ class RealmArena {
     this._readReduced();
   }
 
-  // Reduce-motion is read live (cheap), so flipping the OS setting mid-run takes effect on the next frame.
+  // Reduce-motion, full read: the stored override ('1' / '0', MMMotion.KEY) wins, else the OS setting. Same rule as MMMotion.reduced,
+  // but the MediaQueryList is built once and kept (its .matches is live), so the frame loop allocates nothing (cycle1 L-18).
   _readReduced() {
-    try { this._reduced = typeof MMMotion !== 'undefined' && MMMotion.reduced(window, localStorage); } catch (e) { this._reduced = false; }
+    try {
+      if (typeof MMMotion === 'undefined') { this._reduced = false; return; }
+      let v = null; try { v = localStorage.getItem(MMMotion.KEY); } catch (e) { v = null; }
+      this._rmOv = v === '1' ? true : (v === '0' ? false : null);
+      this._rmAt = performance.now();
+      this._reduced = this._rmOv !== null ? this._rmOv : this._rmOs();
+    } catch (e) { this._reduced = false; }
+  }
+  _rmOs() {
+    try {
+      if (this._rmQ === undefined) this._rmQ = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+      return !!(this._rmQ && this._rmQ.matches);
+    } catch (e) { return false; }
+  }
+  // Per frame: the OS setting is still followed on the very next frame (one property read); the stored override is re-read at most
+  // every 50 ms (it used to be a localStorage read and a new matchMedia object on every frame). A clock that does not move
+  // (tests that freeze time) reads the store each frame, as before.
+  _readReducedFrame() {
+    const t = performance.now(); const still = t === this._rmT; this._rmT = t; // still: no time passed since the last frame
+    if (still || this._rmAt === undefined || t - this._rmAt >= 50 || t < this._rmAt) { this._readReduced(); return; }
+    this._reduced = this._rmOv !== null ? this._rmOv : this._rmOs();
   }
 
   setAimAssist(on) {
@@ -2708,7 +2729,7 @@ class RealmArena {
   // ---------- simulation ----------
 
   _update(dt) {
-    this._readReduced(); this._readLowGfx();
+    this._readReducedFrame(); this._readLowGfx();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
     if (this.state === 'play') this._cacheAliveT = (this._cacheAliveT || 0) + dt; // G-09: time alive since the last Survivor's cache
