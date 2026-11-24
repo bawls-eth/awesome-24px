@@ -237,7 +237,7 @@ try {
   const keys = ['pixeltown-mm-active-v1', 'pixeltown-jam-assist-v1', 'pixeltown-deepdelve-v1', 'pixeltown-deepdelve-runs-v1', 'pixeltown-deepdelve-creative-v1',
     'pixeltown-angler-fun-v1', 'pixeltown-stalk-practice-v1', 'pixeltown-bugs-goals-v1', 'pixeltown-bugs-pb-v1', 'pixeltown-dash-v1', 'pixeltown-pop-v1',
     'pixeltown-stack-v1', 'pixeltown-echo-v1'].concat(['angler', 'bugs', 'dash', 'deepdelve', 'echo', 'pop', 'stack', 'stalk'].map((g) => 'pixeltown-medals-' + g + '-v1'));
-  check('MMBackup exports all 21 progress keys it used to drop (and stays under MAX_KEYS)', keys.every((k) => B.KNOWN.indexOf(k) >= 0) && B.KNOWN.length <= 50);
+  check('MMBackup exports all 21 progress keys it used to drop (and stays under MAX_KEYS)', keys.every((k) => B.KNOWN.indexOf(k) >= 0) && B.KNOWN.length <= B.MAX_KEYS);
   const mem = (init) => { const m = Object.assign({}, init); return { _m: m, getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; } }; };
   const val = (k) => k === 'pixeltown-mm-active-v1' ? { v: 1, heroId: 'h1' } : k === 'pixeltown-bugs-goals-v1' ? { v: 1, done: {} } : { v: 1, best: 4321, medals: ['bronze'], m: ['bronze'], ghost: { in: [1, 2, 3] } };
   const src = mem(Object.fromEntries(keys.map((k) => [k, JSON.stringify(val(k))])));

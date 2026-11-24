@@ -1788,5 +1788,9 @@
   "beta-s08-town-three-lazy.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-o04-backup.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
