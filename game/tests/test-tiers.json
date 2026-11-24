@@ -2275,5 +2275,13 @@
   "cyc5-ui-195-jam-deepdelve.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc5-art-hero-pick-firstpaint.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc5-art-dungeon-ceiling.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -375,6 +375,48 @@
         lay.baked = res.canvas; lay.tileN = res.n; lay.torches = res.torches;
       } else { lay.baked = bakeRoom(id, lay.tpl, pal, seed); lay.tileN = 0; lay.torches = []; }
     }
+    // cyc5-G (b12-r3-02): phone dungeon view "ceiling". On a tall phone the 17x13 room is bounded by the screen WIDTH (it pans sideways) and
+    // must stay clear of the map row above and the ability pad below, so ~200 px above it was dead black. That band now shows the room's
+    // own north wall row (the baked room art, same palette, same camera pan) stacked upward and fading into the dark, so the dungeon reads as
+    // continuing under the HUD. Visual only: the canvas, room, bounds and HUD are untouched. ?dceil=0 turns it off.
+    const ceilOff = qsHas(/[?&]dceil=0(&|$)/);
+    let ceil = null, ceilKey = '', ceilRk = '', ceilBox = null;
+    const ceilStat = { paints: 0, on: false, h: 0 };
+    function paintCeiling() {
+      const dv = arena._dv; const cv = arena.canvas; const lay = current !== null ? L[current] : null;
+      if (!dv || ceilOff || !cv || !cv.parentElement || !lay || !lay.baked || typeof document === 'undefined') {
+        if (ceil && ceil.style.display !== 'none') ceil.style.display = 'none'; ceilStat.on = false; return;
+      }
+      const rk = arena._cvKey + '|' + window.innerWidth + '|' + window.innerHeight;
+      if (rk !== ceilRk) { // the canvas moved / resized: re-measure once (no layout read per frame)
+        ceilRk = rk; const pr = cv.parentElement.getBoundingClientRect(); const r = cv.getBoundingClientRect();
+        ceilBox = { left: Math.round(r.left - pr.left), top: 0, w: Math.round(r.width), h: Math.max(0, Math.round(r.top - pr.top)) };
+        ceilKey = '';
+      }
+      if (!ceilBox || ceilBox.h < 24) { if (ceil) ceil.style.display = 'none'; ceilStat.on = false; return; }
+      if (!ceil) {
+        ceil = document.createElement('canvas'); ceil.id = 'mm-dv-ceiling'; ceil.setAttribute('aria-hidden', 'true');
+        const s = ceil.style; s.position = 'absolute'; s.pointerEvents = 'none'; s.imageRendering = 'pixelated';
+      }
+      if (ceil.parentElement !== cv.parentElement || ceil.nextSibling !== cv) cv.parentElement.insertBefore(ceil, cv); // under the canvas and every HUD node
+      const s = ceil.style; const bx = ceilBox;
+      if (s.display !== 'block') s.display = 'block';
+      const css = `${bx.left}|${bx.w}|${bx.h}`;
+      if (ceil.dataset.box !== css) { ceil.dataset.box = css; s.left = bx.left + 'px'; s.top = '0px'; s.width = bx.w + 'px'; s.height = bx.h + 'px'; }
+      const cx = arena.camera ? arena.camera.x : 0; const key = current + '|' + cx + '|' + css + '|' + (lay.tileN || 0) + '|' + lay.baked.width;
+      if (key === ceilKey) return; ceilKey = key;
+      const k = bx.w / dv.vw; const hL = Math.ceil(bx.h / k); // logical units, same scale as the room below
+      if (ceil.width !== dv.vw || ceil.height !== hL) { ceil.width = dv.vw; ceil.height = hL; }
+      const g = ceil.getContext('2d'); g.imageSmoothingEnabled = false;
+      const src = lay.baked; const sk = src.width / arena.W; // the baked room may be stored at a different resolution
+      g.fillStyle = '#07060c'; g.fillRect(0, 0, dv.vw, hL);
+      for (let y = hL - T, n = 0; y > -T && n < 12; y -= T, n++) g.drawImage(src, cx * sk, 0, dv.vw * sk, T * sk, 0, y, dv.vw, T); // the north wall row, stacked
+      const gr = g.createLinearGradient(0, hL, 0, 0); // fades up into the dark: the HUD text above keeps its contrast
+      gr.addColorStop(0, 'rgba(7,6,12,0.30)'); gr.addColorStop(0.45, 'rgba(7,6,12,0.68)'); gr.addColorStop(1, 'rgba(7,6,12,0.96)');
+      g.fillStyle = gr; g.fillRect(0, 0, dv.vw, hL);
+      g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, hL - 3, dv.vw, 3); // a soft ledge line where the room starts
+      ceilStat.paints++; ceilStat.on = true; ceilStat.h = bx.h;
+    }
     function setTileArt(set) { tiles = set && set.variants ? set : null; dungeon.rooms.forEach((r) => { L[r.id].baked = null; L[r.id].tileN = 0; L[r.id].torches = []; }); if (current !== null) bakeIfNeeded(current); }
 
     // ---------- rooms ----------
@@ -931,6 +973,7 @@
         const useT = L[current].tileN > 0 && !!tiles;
         const sm = g.imageSmoothingEnabled; if (useT) g.imageSmoothingEnabled = false;
         g.drawImage(L[current].baked, 0, 0);
+        paintCeiling();
         const pal = palOf(byId[current].type); const tt = performance.now() / 1000;
         const dimg = (name) => (useT ? tiles.img(name) : null);
         const first = (name) => (useT ? tiles.variants(name)[0] || null : null);
@@ -1009,6 +1052,7 @@
     // ---------- test hook helpers ----------
     Object.assign(api, {
       setTileArt,
+      ceiling: () => Object.assign({}, ceilStat, { box: ceilBox ? Object.assign({}, ceilBox) : null }), // cyc5-G b12-r3-02 test hook
       tileArt: () => dungeon.rooms.reduce((n, r) => n + (L[r.id].baked ? L[r.id].tileN || 0 : 0), 0), // art tiles baked into the cached rooms so far (0 = code-drawn)
       doorArt: () => lastDoorArt.slice(),
       torchCount: () => (current !== null && L[current].torches ? L[current].torches.length : 0),
