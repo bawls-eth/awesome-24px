@@ -27,7 +27,8 @@ const realm = (q) => async (p) => {
 };
 const SCENES = {
   town: town(1450, 650, ''),
-  'town-shops': town(1450, 650, BEFORE ? '?townfinish=0' : ''),
+  'town-shops': town(1075, 860, ''),
+  'town-turnip': town(1700, 800, ''), // before: the base commit served on another port (old finish + old label)
   hub: async (p) => { await p.goto(origin + '/game/hub/index.html'); await p.waitForTimeout(2500); },
   realm: realm(''),
   dungeon: async (p) => {

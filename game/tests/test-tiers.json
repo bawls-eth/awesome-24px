@@ -2187,5 +2187,9 @@
   "cyc4-art-isles-biome-ground.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc4-art-town-finish2.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
