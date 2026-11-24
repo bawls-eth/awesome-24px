@@ -793,18 +793,6 @@
       "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
     },
     {
-      "id": "m02s",
-      "label": "skimray",
-      "path": "assets/arcane/m02-skimray",
-      "manifest": "assets/arcane/m02-skimray/manifest.json",
-      "files": 19,
-      "status": "provisional",
-      "ingested_utc": "2026-11-24T00:30:00Z",
-      "source": "codex",
-      "branch": "codex/m02-skimray-master-review",
-      "note": "Round 4 D2 intake, see game/design/beta/fixes/r4-d2.md"
-    },
-    {
       "id": "m03r",
       "label": "rimewolf",
       "path": "assets/arcane/m03-rimewolf",

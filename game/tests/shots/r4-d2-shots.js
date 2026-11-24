@@ -5,7 +5,7 @@
 // Firebase is blocked in every context (blockDb / offlineStub). Output: game/design/beta/img/r4-d2-<scene>-<tag>-<vp>.jpg
 const path = require('path');
 const { chromium } = require('playwright');
-const { blockDb, offlineStub } = require('../helpers');
+const { blockDb, offlineStub, exposeGame, joinOffline } = require('../helpers');
 const [origin, tag, ...scenes] = process.argv.slice(2);
 const OUT = path.join(__dirname, '..', '..', 'design', 'beta', 'img');
 const VPS = { d: { width: 1280, height: 720 }, p: { width: 390, height: 844, isMobile: true, hasTouch: true } };
@@ -27,11 +27,11 @@ const SCENES = {
   'realm-shore': async (p) => { await p.goto(WORLD()); await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active, null, { timeout: 30000 }); await p.waitForTimeout(3500); },
   nexus: (p) => realmAt(p, 64, 64, true),
   town: async (p) => {
-    await p.goto(origin + '/game/index.html?from=hub');
+    await exposeGame(p);
+    await p.goto(origin + '/game/index.html');
+    await joinOffline(p, 'ADMINr4d2');
+    await p.evaluate(() => { const s = window.__g.scene.getScene('Town'); s.localBody.setPosition(1450, 650); });
     await p.waitForTimeout(1500);
-    try { await p.fill('#name, input[type=text]', 'ADMINr4d2'); } catch (e) {}
-    await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /offline/i.test(x.textContent)); if (b) b.click(); });
-    await p.waitForTimeout(6000);
   },
   'isles-meadow': async (p) => { await p.goto(origin + '/game/games/isles/index.html?test=1&isle=meadow'); await p.waitForTimeout(4000); },
   'isles-jungle': async (p) => { await p.goto(origin + '/game/games/isles/index.html?test=1&isle=jungle'); await p.waitForTimeout(4000); },
