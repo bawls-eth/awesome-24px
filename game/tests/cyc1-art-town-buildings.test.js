@@ -37,7 +37,7 @@ async function sample(browser, q) {
     return { st: st ? { on: st.on, count: st.count, ms: st.ms, outline: st.outline, names: Object.keys(st.keys) } : null, shop: shopKey ? stat(shopKey) : null };
   });
   await ctx.close();
-  return Object.assign(r, { errors, db: db.attempts() });
+  return Object.assign(r, { errors, db: db.attempts(), clean: db.attempts() === 0 });
 }
 
 (async () => {
@@ -53,7 +53,7 @@ async function sample(browser, q) {
   check('?bldfinish=0: nothing finished', off.st === null || off.st.count === 0, JSON.stringify(off.st));
   check('?bldfinish=0: shop texture is the flat look (far fewer dark px than the finished one)', off.shop && on.shop && off.shop.dark * 3 < on.shop.dark, JSON.stringify(off.shop));
   check('no page errors', !on.errors.length && !off.errors.length, on.errors.concat(off.errors).join(' | '));
-  check('Firebase never reached', on.db === 0 && off.db === 0, `${on.db} ${off.db}`);
+  check('Firebase never reached (db.attempts() === 0 in both pages)', on.clean && off.clean, `${on.db} ${off.db}`);
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });
