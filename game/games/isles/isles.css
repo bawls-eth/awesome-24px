@@ -261,3 +261,9 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
 
 /* R4 D4 (b15-10): the island view is a Tab stop now; show where focus is */
 #view:focus-visible { outline: 3px solid #ffec27; outline-offset: -3px; }
+
+/* ID-07 (cycle 3 S): bond hearts in the stable rows (a view of bond: full / half / empty) */
+.st-hearts { display: inline-block; margin: 0 6px; font-size: 14px; letter-spacing: 1px; white-space: nowrap; }
+.st-heart-full { color: #ff7aa8; }
+.st-heart-half { background: linear-gradient(90deg, #ff7aa8 50%, #6b5560 50%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.st-heart-empty { color: #a9c2ad; }
