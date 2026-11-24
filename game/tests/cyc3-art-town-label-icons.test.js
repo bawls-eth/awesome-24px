@@ -22,6 +22,8 @@ async function sample(browser, q, vp) {
   await joinOffline(page, 'ADMINcyc3lbl');
   const r = await page.evaluate(() => {
     const s = window.__g.scene.getScene('Town'), st = s.worldIcons || { on: false, labels: [] };
+    // The merchant sign is one line outside the merchant window (hour-of-day dependent): force the open two-line text so this check does not depend on the time the test runs.
+    if (s.merchantSign && s.merchantSign.pxIcon) s.merchantSign.setText('🛒 Mystery Merchant\nselling: Test item');
     const emo = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
     const texts = s.children.list.filter((o) => o.type === 'Text' && o.scrollFactorX === 1).map((o) => o.text);
     const labels = st.labels.map((l) => {
