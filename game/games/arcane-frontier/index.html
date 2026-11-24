@@ -2,158 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#14161c">
-<title>Arcane Frontier</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12142a">
+<meta name="robots" content="noindex">
+<title>Arcane Frontier - Coming soon</title>
 <link rel="icon" type="image/png" sizes="32x32" href="../../icons/favicon-32.png">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
+<style>
+/* Round 4 / O-08: the action-RPG scaffold (js/config.js, data.js, util.js + the asset pack) is kept in the repo, but the page
+   itself is a "Coming soon" card until the game exists. No script from js/ is loaded here. See design/beta/ROUND4-DECISIONS.md. */
+html, body { margin: 0; min-height: 100%; background: var(--px-bg, #12142a); color: var(--px-text, #fff1e8); }
+body { font-family: var(--px-font, "Courier New", Courier, monospace); display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; min-height: 100dvh; box-sizing: border-box;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+#soon { width: 100%; max-width: 520px; margin: 0; padding: 20px 16px 24px; box-sizing: border-box; text-align: center;
+  box-shadow: 0 0 0 4px var(--px-ink, #0b0d1a), 0 0 0 8px var(--px-13, #83769c), 8px 14px 0 4px var(--px-ink, #0b0d1a); }
+#soon h1 { margin: 10px 0 4px; font-size: clamp(22px, 7vw, 34px); color: var(--px-10, #ffec27); overflow-wrap: anywhere; }
+#soon .tag { margin: 0 0 14px; font-size: 14px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--px-text, #fff1e8); }
+#soon p.body { margin: 12px auto; max-width: 40ch; font-size: 15px; line-height: 1.5; font-weight: 700; color: var(--px-text, #fff1e8); }
+#party { display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin: 14px 0 6px; padding: 10px 4px 0; list-style: none;
+  background: var(--px-ink, #0b0d1a); box-shadow: inset 0 -8px 0 0 var(--px-3, #008751); }
+#party li { margin: 0; padding: 0; line-height: 0; }
+#party img { width: 64px; height: 64px; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+#actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 18px; }
+#actions a { display: inline-flex; align-items: center; justify-content: center; min-width: 132px; min-height: 48px; box-sizing: border-box;
+  text-decoration: none; }
+@media (max-width: 420px) { #party img { width: 48px; height: 48px; } #actions a { flex: 1 1 100%; } }
+</style>
 </head>
 <body>
-<div id="game-root"></div>
-
-<!-- ===== DOM overlay UI (crisp text, drag/drop). Built/controlled by js/ui.js ===== -->
-<div id="ui" class="hidden">
-  <!-- top-left: minimap -->
-  <div id="minimap-wrap" class="panel">
-    <div id="zone-name">Hub</div>
-    <canvas id="minimap" width="160" height="160"></canvas>
-    <div id="minimap-hint">M</div>
-  </div>
-  <!-- top-centre: next goal -->
-  <div id="goal" class="panel"><span class="goal-label">Next</span> <span id="goal-text"></span></div>
-  <!-- top-right buttons -->
-  <div id="top-buttons">
-    <button id="btn-char" class="icon-btn" title="Character (C)">C</button>
-    <button id="btn-inv" class="icon-btn" title="Inventory (I)">I</button>
-    <button id="btn-map" class="icon-btn" title="Map (Tab)">Map</button>
-    <button id="btn-mute" class="icon-btn" title="Mute (N)">Snd</button>
-    <button id="btn-pause" class="icon-btn" title="Pause (Esc)">II</button>
-  </div>
-  <div id="fps" class="hidden"></div>
-
-  <!-- bottom-left: vitals -->
-  <div id="vitals" class="panel">
-    <div id="portrait-wrap"><img id="portrait" alt=""><div id="level-badge">1</div></div>
-    <div id="bars">
-      <div class="bar hp"><div class="fill" id="hp-fill"></div><span id="hp-text">100/100</span></div>
-      <div class="bar mp"><div class="fill" id="mp-fill"></div><span id="mp-text">50/50</span></div>
-      <div class="bar xp"><div class="fill" id="xp-fill"></div><span id="xp-text">XP</span></div>
-      <div id="gold">0 g</div>
-    </div>
-  </div>
-
-  <!-- bottom-centre: abilities + equipped -->
-  <div id="actionbar" class="panel">
-    <div id="abilities"></div>
-    <div id="equipped-row"></div>
-  </div>
-
-  <div id="prompt" class="hidden"></div>
-  <div id="hint" class="hidden"></div>
-  <div id="toasts"></div>
-  <div id="boss-bar" class="hidden"><div id="boss-name"></div><div class="bar boss"><div class="fill" id="boss-fill"></div></div></div>
-
-  <!-- right side: collapsible panels -->
-  <div id="side" class="collapsed">
-    <div id="side-tabs">
-      <button data-tab="inv" class="tab active">Pack</button>
-      <button data-tab="char" class="tab">Hero</button>
-      <button id="side-close" class="tab close" title="Close">&times;</button>
-    </div>
-    <div id="tab-inv" class="tabpage">
-      <div class="section-title">Equipped</div>
-      <div id="equip-slots"></div>
-      <div class="section-title">Pack <span id="inv-count"></span></div>
-      <div id="inv-grid"></div>
-      <div class="small-note" id="inv-help">Drag to move/equip. Double-click (or tap twice) to equip/use. Drag outside the panel to drop.</div>
-    </div>
-    <div id="tab-char" class="tabpage hidden">
-      <div id="char-sheet"></div>
-    </div>
-  </div>
-  <div id="tooltip" class="hidden"></div>
-  <div id="drag-ghost" class="hidden"></div>
-
-  <!-- overlays -->
-  <div id="map-overlay" class="overlay hidden"><div class="overlay-inner"><div class="overlay-title" id="map-title">Map</div><canvas id="bigmap" width="640" height="480"></canvas><div class="small-note">Tab / Esc to close</div></div></div>
-  <div id="pause-overlay" class="overlay hidden">
-    <div class="overlay-inner menu">
-      <div class="overlay-title">Paused</div>
-      <button id="btn-resume" class="big">Resume</button>
-      <label class="opt"><input type="checkbox" id="opt-motion"> Reduce motion (no shake, softer flashes)</label>
-      <label class="opt"><input type="checkbox" id="opt-outline"> Bullet outlines</label>
-      <label class="opt"><input type="checkbox" id="opt-mute"> Mute sound</label>
-      <label class="opt"><input type="checkbox" id="opt-fps"> Show FPS</label>
-      <label class="opt"><input type="checkbox" id="opt-hints" checked> Tutorial hints</label>
-      <div class="controls-table" id="controls-table"></div>
-      <button id="btn-quit" class="big secondary">Save &amp; change hero</button>
-    </div>
-  </div>
-  <div id="portal-overlay" class="overlay hidden">
-    <div class="overlay-inner menu">
-      <div class="overlay-title">Waystone Arch</div>
-      <div id="portal-list"></div>
-      <button id="btn-portal-cancel" class="big secondary">Cancel</button>
-    </div>
-  </div>
-  <div id="death-overlay" class="overlay hidden">
-    <div class="overlay-inner menu"><div class="overlay-title">You fell</div><div class="small-note">Your gear is safe. You wake at the hub shrine.</div><button id="btn-respawn" class="big">Return to the Hub</button></div>
-  </div>
-
-  <!-- touch twin-stick -->
-  <div id="touch" class="hidden">
-    <div id="stick-l" class="stick"><div class="knob"></div></div>
-    <div id="stick-r" class="stick"><div class="knob"></div></div>
-    <div id="touch-btns">
-      <button id="t-skill" class="tbtn">Skill</button>
-      <button id="t-dodge" class="tbtn">Roll</button>
-      <button id="t-use" class="tbtn">Use</button>
-      <button id="t-pot" class="tbtn">Pot</button>
-    </div>
-  </div>
-</div>
-
-<!-- class select -->
-<div id="select" class="hidden">
-  <div id="select-inner">
-    <h1 class="title">Arcane Frontier</h1>
-    <div class="subtitle">Choose a hero</div>
-    <div id="select-body">
-      <div id="class-grid"></div>
-      <div id="class-preview" class="panel">
-        <div id="preview-sprite-wrap"><img id="preview-sprite" alt=""></div>
-        <div id="preview-name"></div>
-        <div id="preview-role"></div>
-        <div id="preview-desc"></div>
-        <div id="preview-stats"></div>
-        <div id="preview-kit"></div>
-        <button id="btn-play" class="big">Play</button>
-        <button id="btn-reset" class="link-btn">Reset all progress</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="fatal" class="hidden"></div>
-<div id="loading">Loading Arcane Frontier&hellip;</div>
-
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
-<script src="js/config.js"></script>
-<script src="js/data.js"></script>
-<script src="js/util.js"></script>
-<script src="js/assets.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/save.js"></script>
-<script src="js/input.js"></script>
-<script src="js/map.js"></script>
-<script src="js/fx.js"></script>
-<script src="js/combat.js"></script>
-<script src="js/items.js"></script>
-<script src="js/player.js"></script>
-<script src="js/enemies.js"></script>
-<script src="js/bosses.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/world.js"></script>
-<script src="js/main.js"></script>
+<main id="soon" class="px-panel" aria-labelledby="soon-title">
+  <span class="px-badge" id="soon-badge">Coming soon</span>
+  <h1 id="soon-title">Arcane Frontier</h1>
+  <p class="tag">An action RPG is being built here</p>
+  <ul id="party" aria-label="Heroes in the making">
+    <li><img src="assets/hero/guardian.png" width="32" height="32" alt="Guardian hero sprite"></li>
+    <li><img src="assets/hero/ranger.png" width="32" height="32" alt="Ranger hero sprite"></li>
+    <li><img src="assets/hero/arcanist.png" width="32" height="32" alt="Arcanist hero sprite"></li>
+    <li><img src="assets/hero/cleric.png" width="32" height="32" alt="Cleric hero sprite"></li>
+  </ul>
+  <p class="body">Ten heroes, eight bosses and a frontier to explore are on the workbench. This page is not playable yet, and nothing here touches your saves.</p>
+  <p class="body" id="soon-status" role="status">Status: not playable yet. Meanwhile the Realm, the Isles and the arcade are open from the Hub.</p>
+  <nav id="actions" aria-label="Leave this page">
+    <a class="px-btn good" id="back-hub" href="../../hub/index.html">Home (Hub)</a>
+    <a class="px-btn ghost" id="back-town" href="../../index.html">Town</a>
+  </nav>
+</main>
+<script src="../../shared/mm-8bit.js"></script>
 </body>
 </html>
