@@ -1,9 +1,9 @@
 {
-  "sha": "6aa1f13ee1ae1b8a77046f24f5680acd1b05c6c1",
-  "generated_utc": "2026-11-24T11:53:20Z",
+  "sha": "fed7c35cf57145d73d6e1094178017cc901305f2",
+  "generated_utc": "2026-11-24T15:57:18Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 522,
-  "suites_total": 522,
-  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 516/522 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): archipelago-perf.test.js, beta-r4-b08-passive-2min.test.js, beta-s02-town-two-tabs.test.js, cave-frame-alloc.test.js, isles-access.test.js, smoke-journey.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
+  "suites_passed": 544,
+  "suites_total": 544,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 538/544 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): a11y-viewport-sweep.test.js, beta-r4-b08-passive-2min.test.js, deepdelve-fps.test.js, first-ten-minutes.test.js, gear-dungeon-drops.test.js, item-icons.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }
