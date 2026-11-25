@@ -13,6 +13,33 @@
     deer: { batch: 't17-deer', cell: 64, fps: { idle: 2, move: 8 } },
     fox: { batch: 't17-fox', cell: 48, fps: { idle: 2, move: 8 } },
     owl: { batch: 't17-owl', cell: 48, fps: { idle: 2, move: 8 } },
+    // code-drawn (no PNG): baked 1:1, cell = map size (robin 16 = its old W-06 size; squirrel 20, was 16 and read as a speck)
+    bird: { code: true, cell: 16, fps: { idle: 2, move: 8 } },
+    squirrel: { code: true, cell: 20, fps: { idle: 2, move: 6 } },
+  };
+  // Cycle 9 art (G, original code pixel art): in-village species redrawn at the hero's density (one char = one pixel, '.' clear;
+  // light top-left, dark colour-matched rim). Right view only: left = flipX, the down / caught poses reuse the profile frames.
+  const CODE = {
+    bird: { pal: {'o': '#3b2a22', 'b': '#6e5440', 'B': '#94744f', 'h': '#b89468', 'r': '#c9502e', 'R': '#ec7a4a', 'w': '#efe2c6', 'k': '#15131c', 'y': '#e8a83a', 'l': '#9a6a3a', 'W': '#56402f'},
+      idle_right: [
+        ['................', '................', '................', '........ooo.....', '.......oBhBo....', '......oBhBbkoyy.', '......obBbbbo...', '..o..orRRbbo....', '.obooorRRrbo....', 'obbBbbrrRrro....', '.obbbBbrrrwo....', '..oobbbwwwwo....', '....oobbwwo.....', '......oooo......', '.......l.l......', '......ll.ll.....'],
+        ['................', '................', '................', '................', '........ooo.....', '.......oBhBo....', '......oBhBbkoyy.', '..o...obBbbbo...', '.obo.orRRbbo....', 'obbBoorRRrbo....', '.obbBbrrRrro....', '..oobbBrrrwo....', '....oobbwwwo....', '......oooo......', '.......l.l......', '......ll.ll.....'],
+      ],
+      move_right: [
+        ['................', '....oooo........', '...oBhhBo.ooo...', '....obBBooBhBo..', '.....obBbBhBbkoy', '......obBbbbbo..', '..o..orRRbbbo...', '.oboorRRrbbo....', 'obbBbrrRrro.....', '.obbbbrrrwo.....', '..oobbwwwo......', '....ooooo.......', '................', '................', '................', '................'],
+        ['................', '................', '................', '..........ooo...', '.........oBhBo..', '........oBhBbkoy', '..o....obBbbbo..', '.obo..orRRbbo...', 'obbBoorRRrbo....', '.obbbWWWWbro....', '..oobWBBhWwo....', '....oWBhWwo.....', '.....oWWoo......', '......oo........', '................', '................'],
+      ],
+    },
+    squirrel: { pal: {'o': '#2e2a33', 'g': '#6f6c78', 'G': '#8d8a96', 'h': '#b4b1bc', 'c': '#e6dccb', 'k': '#141218', 'n': '#5a4a48', 't': '#7c7986', 'T': '#a6a3b0', 'p': '#c99a9a'},
+      idle_right: [
+        ['....................', '...ooooo............', '..oTThTTo...........', '.oThhTTTto..........', '.oThTTTTTo....oo....', '.oTTTttTTto..oGo....', '.otTTo.otTo.oGGGo...', '.otTTo..oo.oGhGGko..', '.otTTo....oGhGGGGno.', '.ottTTo...oGGcGGoo..', '..otTTo..ogGcccGo...', '..ottTTo.ogGcccGo...', '...ottTTooggGccgo...', '...otttTTgggGccgo...', '....otttTgggGccgo...', '.....ottttggcccgo...', '......oogggggggo....', '........ogo.oco.....', '........oo..ooo.....', '....................'],
+        ['....................', '....................', '...ooooo............', '..oTThTTo.....oo....', '.oThhTTTto...oGo....', '.oThTTTTTo..oGGGo...', '.oTTTttTTtooGhGGko..', '.otTTo.otToGhGGGGno.', '.otTTo..o.oGGcGGoo..', '.ottTTo..ogGcccGo...', '..otTTo..ogGcccGo...', '..ottTTo.ogGcccGo...', '...ottTTooggGccgo...', '...otttTTgggGccgo...', '....otttTgggGccgo...', '.....ottttggcccgo...', '......oogggggggo....', '........ogo.oco.....', '........oo..ooo.....', '....................'],
+      ],
+      move_right: [
+        ['....................', '....................', '....................', '....................', '..ooooo.............', '.oTThTTo............', 'oThhTTTTo.....oo....', 'oThTTTTTTo...oGo....', 'otTTooottTo.oGGGo...', '.ooo...otTToGhGGko..', '........otTTGGGGGno.', '.......ottTggGGcGoo.', '.......ottgggGccGo..', '........ooggggcGGo..', '.......ogo.oogggo...', '......ogo....ogo....', '......oo.....oco....', '.............oo.....', '....................', '....................'],
+        ['....................', '....................', '....................', '....................', '....................', '...ooooo............', '..oTThTTo...........', '.oThhTTTTo....oo....', '.oThTTTTTTo..oGo....', '.otTToootTToooGGGo..', '..ooo...otTTGhGGGko.', '.........ottGGGGGGno', '.........ogggggGcGoo', '........ogggggGcco..', '.......ogo.oooocGo..', '.......oco.....ogo..', '.......oo.......oo..', '....................', '....................', '....................'],
+      ],
+    },
   };
   const STRIPS = [
     { action: 'idle', dir: 'right', file: 'idle' }, { action: 'idle', dir: 'down', file: 'idle_down' },
@@ -64,7 +91,41 @@
     return { w: hw, h: hh, data: out };
   }
 
+  // Code species: frames straight from the CODE maps at 1:1; caught / down reuse the profile (frame aliases + anim copies).
+  function bakeCode(scene, st, id) {
+    const spec = SPECS[id], m = CODE[id], n = spec.cell;
+    const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const list = [['idle', m.idle_right], ['move', m.move_right]];
+    const total = list.reduce((a, l) => a + l[1].length, 0);
+    const cv = document.createElement('canvas'); cv.width = total * n; cv.height = n;
+    const cx = cv.getContext('2d');
+    const slots = []; let col = 0;
+    list.forEach(([action, frames]) => frames.forEach((rows, f) => {
+      const data = new Uint8ClampedArray(n * n * 4);
+      rows.forEach((row, y) => { for (let x = 0; x < n; x++) { const c = row[x]; if (c === '.' || !m.pal[c]) continue; const v = rgb(m.pal[c]), d = (y * n + x) * 4; data[d] = v[0]; data[d + 1] = v[1]; data[d + 2] = v[2]; data[d + 3] = 255; } });
+      cx.putImageData(new ImageData(data, n, n), col * n, 0);
+      slots.push({ action, f, col }); col++;
+    }));
+    const key = `fft_${id}`;
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+    const tex = scene.textures.addCanvas(key, cv);
+    slots.forEach((sl) => ['right', 'down'].forEach((dir) => tex.add(`${sl.action}_${dir}_${sl.f}`, 0, sl.col * n, 0, n, n)));
+    ['right', 'down'].forEach((dir) => tex.add(`caught_${dir}_0`, 0, 0, 0, n, n));
+    ['idle', 'move'].forEach((action) => ['right', 'down'].forEach((dir) => {
+      const ak = `${key}_${action}_${dir}`;
+      if (scene.anims.exists(ak)) return;
+      const frames = slots.filter((sl) => sl.action === action).map((sl) => ({ key, frame: `${action}_${dir}_${sl.f}` }));
+      scene.anims.create({ key: ak, frames, frameRate: spec.fps[action], repeat: -1 });
+    }));
+    // journal: idle f1 at 6x (crisp in the 160 px card)
+    const c2 = document.createElement('canvas'); c2.width = n * 6; c2.height = n * 6;
+    const g2 = c2.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(cv, 0, 0, n, n, 0, 0, n * 6, n * 6);
+    st.caughtUrl[id] = c2.toDataURL('image/png');
+    st.ids.push(id); st.cells[id] = n;
+  }
+
   const MMTownFauna = {
+    CODE,
     SPECS,
     enabled,
     ids: () => Object.keys(SPECS),
@@ -72,7 +133,7 @@
     // Phaser preload: queue every strip as a plain image (the bake slices it).
     preload(scene) {
       if (!enabled()) return;
-      Object.keys(SPECS).forEach((id) => STRIPS.forEach((s) => scene.load.image(srcKey(id, s.file), url(id, s.file))));
+      Object.keys(SPECS).filter((id) => !SPECS[id].code).forEach((id) => STRIPS.forEach((s) => scene.load.image(srcKey(id, s.file), url(id, s.file))));
     },
     // Phaser create: one canvas texture + anims per species whose 6 strips all loaded. Returns the wired ids.
     bake(scene) {
@@ -81,6 +142,7 @@
       const t0 = performance.now();
       Object.keys(SPECS).forEach((id) => {
         try {
+          if (SPECS[id].code) { bakeCode(scene, st, id); return; }
           if (!STRIPS.every((s) => scene.textures.exists(srcKey(id, s.file)))) return;
           const half = SPECS[id].cell >> 1;
           const parts = STRIPS.map((s) => {

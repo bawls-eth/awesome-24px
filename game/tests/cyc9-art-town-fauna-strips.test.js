@@ -1,3 +1,4 @@
+// Cycle 9 art (G): (2) the code-drawn robin + squirrel (original pixel maps in the same module, cells 16 / 20) also checked.
 // Cycle 9 art (G): the Codex T17 deer / fox / owl strips (merged provisional in cycle 8) are wired into the Town wildlife.
 // shared/mm-town-fauna.js bakes each 4x strip ONCE at create into one canvas texture per species at half native size (deer 32 px,
 // fox / owl 24 px cells: the hero's pixel density), with idle / move anims (right + down, left = flipX) and a caught pose shown when the
@@ -25,7 +26,7 @@ async function sample(browser, q, block) {
     const by = (id) => s.ffSpecimens.filter((p) => p.id === id);
     const desc = (id) => by(id).map((p) => ({ type: p.sprite.type, tex: p.sprite.texture.key, w: Math.round(p.sprite.displayWidth), strip: !!p.strip }));
     const out = { st: st ? { on: st.on, ids: st.ids.slice(), cells: Object.assign({}, st.cells), ms: st.ms } : null,
-      deer: desc('deer'), fox: desc('fox'), owl: desc('owl'), bird: desc('bird'), frog: desc('frog') };
+      deer: desc('deer'), fox: desc('fox'), owl: desc('owl'), bird: desc('bird'), squirrel: desc('squirrel'), frog: desc('frog'), butterfly: desc('butterfly') };
     // anims: idle 2 f, move 4 f, right + down, per species
     out.anims = {};
     ['deer', 'fox', 'owl'].forEach((id) => ['idle_right', 'idle_down', 'move_right', 'move_down'].forEach((a) => {
@@ -33,7 +34,7 @@ async function sample(browser, q, block) {
     }));
     // baked pixels: opaque height + colours of idle_right_0 per species (a real sprite, not a blank or a blur)
     out.px = {};
-    ['deer', 'fox', 'owl'].forEach((id) => {
+    ['deer', 'fox', 'owl', 'bird', 'squirrel'].forEach((id) => {
       if (!s.textures.exists(`fft_${id}`)) return;
       const tex = s.textures.get(`fft_${id}`); const fr = tex.get('idle_right_0'); const cv = tex.getSourceImage();
       const d = cv.getContext('2d').getImageData(fr.cutX, fr.cutY, fr.cutWidth, fr.cutHeight).data;
@@ -86,8 +87,14 @@ async function sample(browser, q, block) {
     && on.st.cells.deer === 32 && on.st.cells.fox === 24 && on.st.cells.owl === 24, JSON.stringify(on.st));
   check('every deer / fox / owl specimen is an animated Sprite on its fft_ texture at the cell size', allStrip(on.deer, 'deer') && allStrip(on.fox, 'fox') && allStrip(on.owl, 'owl')
     && on.deer.every((p) => p.w === 32) && on.fox.every((p) => p.w === 24), JSON.stringify([on.deer[0], on.fox[0], on.owl[0]]));
-  check('other species are untouched SVG Images (bird, frog)', on.bird.length > 0 && on.bird.every((p) => p.type === 'Image' && !p.strip && /^ff(px)?_bird$/.test(p.tex))
-    && on.frog.every((p) => p.type === 'Image' && !p.strip), JSON.stringify([on.bird[0], on.frog[0]]));
+  check('other species are untouched SVG Images (frog, butterfly)', on.frog.length > 0 && on.frog.every((p) => p.type === 'Image' && !p.strip && /^ff(px)?_frog$/.test(p.tex))
+    && on.butterfly.length > 0 && on.butterfly.every((p) => p.type === 'Image' && !p.strip), JSON.stringify([on.frog[0], on.butterfly[0]]));
+  check('code-drawn robin (16 px) and squirrel (20 px, was 16) are animated Sprites, incl. the in-village ones',
+    on.st && on.st.cells.bird === 16 && on.st.cells.squirrel === 20 && allStrip(on.bird, 'bird') && allStrip(on.squirrel, 'squirrel')
+    && on.bird.every((p) => p.w === 16) && on.squirrel.every((p) => p.w === 20) && on.bird.length >= 7 && on.squirrel.length >= 7, JSON.stringify([on.st && on.st.cells, on.bird.length, on.squirrel[0]]));
+  check('robin / squirrel pixels: filled cell (robin >= 12 px tall, squirrel >= 16), >= 7 colours, hard alpha, 4 frames + aliases',
+    on.px.bird && on.px.squirrel && on.px.bird.h >= 12 && on.px.squirrel.h >= 16 && on.px.bird.colours >= 7 && on.px.squirrel.colours >= 7
+    && on.px.bird.semi === 0 && on.px.squirrel.semi === 0 && on.px.bird.frames >= 4, JSON.stringify([on.px.bird, on.px.squirrel]));
   check('anims: idle 2 f and move 4 f in right + down for all three', Object.keys(on.anims).length === 12
     && Object.entries(on.anims).every(([k, n]) => n === (/_idle_/.test(k) ? 2 : 4)), JSON.stringify(on.anims));
   check('baked frames are real pixel art: deer >= 26 px tall, fox / owl >= 16, >= 8 colours, hard alpha, 14 frames each',
@@ -99,8 +106,9 @@ async function sample(browser, q, block) {
     on.caughtFrame + ' / ' + on.afterCaught);
   check('the Museum card shows the native caught art (PNG data URL, not the SVG)', on.museum && on.museum.cls === 'ff-strip-art' && on.museum.data === 'data:image/png;' && !on.museum.svg,
     JSON.stringify(on.museum));
-  check('?ffstrips=0: deer / fox / owl are the old SVG Images', off.st && off.st.on === false && off.st.ids.length === 0
-    && off.deer.every((p) => p.type === 'Image' && !p.strip && /^ff(px)?_deer$/.test(p.tex)) && off.fox.every((p) => p.type === 'Image'), JSON.stringify([off.st, off.deer[0]]));
+  check('?ffstrips=0: deer / fox / owl / robin / squirrel are the old SVG Images', off.st && off.st.on === false && off.st.ids.length === 0
+    && off.deer.every((p) => p.type === 'Image' && !p.strip && /^ff(px)?_deer$/.test(p.tex)) && off.fox.every((p) => p.type === 'Image')
+    && off.bird.every((p) => p.type === 'Image' && /^ff(px)?_bird$/.test(p.tex)) && off.squirrel.every((p) => p.type === 'Image' && p.w === 16), JSON.stringify([off.st, off.deer[0], off.squirrel[0]]));
   check('?ffstrips=0 Museum card keeps the SVG', off.museum && off.museum.svg, JSON.stringify(off.museum));
   check('a deer strip that fails to load: the deer falls back to its SVG, fox / owl still use strips', miss.st && !miss.st.ids.includes('deer')
     && miss.st.ids.includes('fox') && miss.deer.every((p) => p.type === 'Image' && !p.strip) && allStrip(miss.fox, 'fox'), JSON.stringify([miss.st, miss.deer[0]]));
