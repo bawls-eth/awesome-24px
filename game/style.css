@@ -3099,3 +3099,12 @@ body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: no
   body.touch-device #emote-popup { left: calc(8px + env(safe-area-inset-left, 0px)) !important; right: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important; grid-template-columns: repeat(2, 44px); gap: 4px; z-index: 20; }
   body.touch-device:has(#action-buttons.more-open) #joystick, body.touch-device:has(#emote-popup:not(.hidden)) #joystick { visibility: hidden; }
 }
+
+/* cycle 6 U (b08-r3-08, the smallest safe Town HUD step): A (interact) and C (chat) are the primary thumb buttons, so on touch
+   phones 280 px and wider they are 56 x 56 (were 50 x 50). Emotes / Tools stay 64 x 50 and centre on the taller rows. The
+   one-column strip under 280 px is unchanged. */
+@media (min-width: 280px) {
+  body.touch-device #action-buttons { grid-template-columns: 64px 56px; grid-template-rows: repeat(2, 56px); align-items: center; }
+  body.touch-device #action-buttons.more-open { grid-template-rows: repeat(4, 56px); }
+  body.touch-device #action-buttons #interact-btn, body.touch-device #action-buttons #mobile-chat-btn { width: 56px; height: 56px; }
+}

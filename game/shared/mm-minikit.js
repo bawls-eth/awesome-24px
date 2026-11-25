@@ -101,6 +101,31 @@
   function reducedMotion(win) {
     try { return !!(win && win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
   }
+  // cycle 6 U (b09-r3-05): on a narrow phone (195 px) the result headline sat under the fixed Menu (compass) button (Dash, Pop) and
+  // Stack's fixed card started over the header and its Sound button. keepClear(el), run when a card shows:
+  //   - a fixed card (Stack) moves down below the page header (#top) and its 8-bit ring, and shrinks to fit (it scrolls inside);
+  //   - a card in the page flow scrolls the page so the card (ring included) starts below the Menu button (or, when the card is not
+  //     in the button's column, below the top edge: a page scrolled down to the board left the headline above the screen).
+  // Returns the px moved (0 = already clear).
+  var RING = 14; // the 8-bit arcade card ring is drawn 12 px outside the box
+  function keepClear(el) {
+    if (!el || el.hidden || !el.getClientRects || !el.getClientRects().length) return 0;
+    var doc = el.ownerDocument || root.document, win = doc.defaultView || root, r = el.getBoundingClientRect();
+    if (win.getComputedStyle(el).position === 'fixed') {
+      var top = doc.getElementById('top'); if (!top || !top.getClientRects().length) return 0;
+      var hb = Math.round(top.getBoundingClientRect().bottom + 4 + RING); // header border-bottom shadow + the card ring
+      if (r.top >= hb || hb <= RING + 4) return 0;
+      el.style.top = hb + 'px'; el.style.maxHeight = Math.max(120, win.innerHeight - hb - 8) + 'px';
+      return Math.round(hb - r.top);
+    }
+    var b = doc.getElementById('mm-nav-btn'), br = b && b.getClientRects().length && win.getComputedStyle(b).position === 'fixed' ? b.getBoundingClientRect() : null;
+    var under = !!br && r.left < br.right + RING && r.right > br.left - RING; // the card is in the button's column
+    var want = under ? br.bottom + 8 + RING : RING + 4; // else: just not above the top edge (a page scrolled down to the board)
+    if (r.top >= want) return 0;
+    var y0 = win.scrollY, y = Math.max(0, Math.round(y0 + r.top - want));
+    try { win.scrollTo({ top: y, behavior: 'instant' }); } catch (e) { win.scrollTo(0, y); }
+    return Math.round(y0 - win.scrollY);
+  }
   // el: the card container (section). vm: result() output (or raw input).
   // on: { again, replay(seed), more: [fn per vm.more button], extra: [nodes kept in the card], keyReady() -> false holds R / Enter, holdMs }
   function panel(el, vm, on) {
@@ -187,10 +212,10 @@
         ev.preventDefault(); ev.stopImmediatePropagation();
       }, true);
     }
-    return { again: again, replay: replay, more: more, copy: copy, menu: menu, vm: vm, focus: function () { try { again.focus({ preventScroll: true }); } catch (e) { again.focus(); } } };
+    return { again: again, replay: replay, more: more, copy: copy, menu: menu, vm: vm, focus: function () { try { again.focus({ preventScroll: true }); } catch (e) { again.focus(); } keepClear(el); }, keepClear: function () { return keepClear(el); } };
   }
 
-  var api = { NEAR: NEAR, fmt: fmt, fmtTime: fmtTime, pbDelta: pbDelta, nearMiss: nearMiss, nextGoal: nextGoal, goalLine: goalLine, seedCode: seedCode, parseSeedCode: parseSeedCode, result: result, panel: panel };
+  var api = { NEAR: NEAR, fmt: fmt, fmtTime: fmtTime, pbDelta: pbDelta, nearMiss: nearMiss, nextGoal: nextGoal, goalLine: goalLine, seedCode: seedCode, parseSeedCode: parseSeedCode, result: result, panel: panel, keepClear: keepClear };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.MMMiniKit = api;
 }(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this)));

@@ -172,6 +172,7 @@
     } else { G = null; ghostEv = null; ghostC = null; }
     $('intro').hidden = true; $('result').hidden = true;
     $('jump').textContent = 'Jump (hold = higher)';
+    document.body.classList.remove('dash-over');
     musicOn('minigame');
     msg(G ? 'Race your ghost: best ' + save.ghost.dist + ' m on this course.' : 'Tap to jump. Jump late for a Perfect!');
     hud();
@@ -272,6 +273,7 @@
     run.state = 'over';
     endAt = performance.now(); rearm = !physDown;
     $('jump').textContent = 'Run again';
+    document.body.classList.add('dash-over'); // cycle 6 U (b09-r3-02): the card has the goal and Play again; the big button steps back
     save.runs++;
     const prevBest = save.best, prevScore = save.bestScore, prevCombo = save.bestCombo;
     const newBest = run.dist > save.best;
@@ -301,6 +303,7 @@
     // R4 D4 (b09-08): on a phone the result card sits under the board (top at y~600 on 390x844), so stats, best, medals and
     // the share code were below the fold. Bring the whole card into view (instant scroll, no animation).
     try { const rr = $('result').getBoundingClientRect(); if (rr.bottom > window.innerHeight || rr.top < 0) $('result').scrollIntoView({ block: rr.height > window.innerHeight ? 'start' : 'end', behavior: 'auto' }); } catch (e) { /* old browsers: the card is still there below */ }
+    if (resCard && resCard.keepClear) resCard.keepClear(); // cycle 6 U (b09-r3-05): the headline starts below the fixed Menu button (195 px)
     hud();
   }
   // MK1: the shared result card (MMMiniKit); ids r-dist / r-best / r-why / r-line / r-new / r-medals / again / fresh kept.

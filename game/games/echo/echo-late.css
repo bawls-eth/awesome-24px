@@ -14,11 +14,16 @@ ul.medals li { font-size: calc(12px * var(--ui-scale, 1)); }
 #echo-bloom { position: absolute; left: 0; right: 0; z-index: 2; text-align: center; pointer-events: none; font: 900 calc(16px * var(--ui-scale, 1)) / 20px var(--px-font, ui-monospace, monospace); color: #ffd166; text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 #0b0d1a; visibility: hidden; }
 #echo-bloom.on { visibility: visible; }
 #board { width: min(100%, calc((100vh - 210px) * 0.9)); margin: 0 auto; }
+/* cycle 6 U (b09-r3-04): a 20 px lane (+5 px) between the time bar (and its 4 px frame) and the board ring (12 px) for the bloom line, so it
+   never prints on the bar */
+#timebar { margin-bottom: 38px; }
+#board { width: min(100%, calc((100vh - 248px) * 0.9)); } /* the lane's 34 extra px come off the board height, so the 2x2 board still fits (desktop) */
 /* phone held sideways: the garden fills the height, the numbers and messages sit beside it */
 @media (orientation: landscape) and (max-height: 560px) {
   #top { padding: 4px 16px; }
   #stage { max-width: 940px; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; row-gap: 6px; align-content: start; padding-bottom: 8px; }
   #stage > * { grid-column: 2; }
+  #timebar { margin-bottom: 4px; }
   #board { grid-column: 1; grid-row: 1 / span 8; width: auto; max-width: none; height: calc(100vh - 112px); min-height: 200px; aspect-ratio: 360 / 400; align-self: start; }
   .overlay { top: 4px; left: 16px; right: 16px; max-height: calc(100vh - 12px); }
 }

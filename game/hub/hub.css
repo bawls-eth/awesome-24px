@@ -198,3 +198,12 @@ html[data-ui-big] .hc-name, html[data-ui-big] .hc-hint, html[data-ui-big] .hn-tx
 
 /* cyc2 U-06: at 200% zoom (<= 260 css px) the Collections chip was 43 px wide: keep the 44 px tap target */
 @media (max-width: 260px) { .home-row > .home-coll { min-width:44px; } }
+
+/* cycle 6 U (b08-r3 #4, 195x422): the fixed Menu (compass) button sat over the "Next:" line once Home scrolled. The logo row is a
+   sticky top band that reaches past the button (58 px on phones); scrolled content passes under the band, not under the button. The band is
+   see-through at rest (the sky shows) and opaque once Home scrolls (.scrolled from home.js). */
+body.mm-nav-on .home-title { position: sticky; top: 0; z-index: 2; margin: 0 -12px; padding: 0 12px; }
+@media (max-width: 700px) { body.mm-nav-on .home-title { min-height: 58px; } } /* phones: the band reaches past the 56 px button; wide screens keep 48 px (Home fits unscrolled, the button is off the column) */
+@media (max-width: 480px) { body.mm-nav-on .home-title { margin: 0 -10px; padding: 0 10px; } }
+@media (max-width: 300px) { body.mm-nav-on .home-title { padding-left: 62px; } }
+body.mm-nav-on .home-in.scrolled .home-title { background: var(--px-bg, #12142a); box-shadow: 0 2px 0 var(--h-line); }

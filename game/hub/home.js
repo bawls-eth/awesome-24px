@@ -320,6 +320,10 @@
   }
   toggle.addEventListener('click', () => show(!isHome(), true));
   window.addEventListener('resize', () => { if (isHome()) { sizeSky(); drawSky(); } });
+  // cycle 6 U (b08-r3 #4): once Home scrolls, the logo row is an opaque sticky band, so the "Next:" line and the cards pass under the
+  // band and never under the fixed Menu (compass) button
+  const homeIn = document.querySelector('#home .home-in');
+  if (homeIn) homeIn.addEventListener('scroll', () => { homeIn.classList.toggle('scrolled', homeIn.scrollTop > 2); }, { passive: true });
 
   drawLogo();
   buildPlay();
