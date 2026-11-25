@@ -5,70 +5,142 @@
   "checks": [
     {
       "id": "ff_deer_idle",
-      "distinct": 2,
-      "dimensions": [
-        512,
-        256
+      "bounds_native": [
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          4,
+          60,
+          61
+        ]
       ],
-      "baseline": 247,
-      "top_edge_contact": true,
-      "blob_sha": "40761d1a40707aff65fb45c6fc17fc41ad426c3c"
+      "distinct_frames": 2,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "e6db2b8622eca4205cc62d42da69fec57cb5daa3"
     },
     {
       "id": "ff_deer_move",
-      "distinct": 4,
-      "dimensions": [
-        1024,
-        256
+      "bounds_native": [
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          4,
+          60,
+          61
+        ]
       ],
-      "baseline": 247,
-      "top_edge_contact": true,
-      "blob_sha": "33607d801e7739cd64d5b17b5b6af8b6b908d2b6"
+      "distinct_frames": 4,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "86b676c36550a9697a376d1cc47d9ab7d22d2222"
     },
     {
       "id": "ff_deer_caught",
-      "distinct": 1,
-      "dimensions": [
-        256,
-        256
+      "bounds_native": [
+        [
+          4,
+          6,
+          60,
+          61
+        ]
       ],
-      "baseline": 247,
-      "top_edge_contact": false,
-      "blob_sha": "9fa9b3d7bce6de5dceba09835bec8359e0212bad"
+      "distinct_frames": 1,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "46a1ccd5bb71df51c3642dc15d63454fc85daf26"
     },
     {
       "id": "ff_deer_idle_down",
-      "distinct": 2,
-      "dimensions": [
-        512,
-        256
+      "bounds_native": [
+        [
+          12,
+          4,
+          52,
+          61
+        ],
+        [
+          12,
+          5,
+          52,
+          61
+        ]
       ],
-      "baseline": 247,
-      "top_edge_contact": false,
-      "blob_sha": "c49319413f7d6958f03edcfdc3d40ea350a06191"
+      "distinct_frames": 2,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "ad0797f23dbb20c05410b9f183de89d3d55e3363"
     },
     {
       "id": "ff_deer_move_down",
-      "distinct": 4,
-      "dimensions": [
-        1024,
-        256
+      "bounds_native": [
+        [
+          12,
+          4,
+          52,
+          61
+        ],
+        [
+          12,
+          3,
+          52,
+          61
+        ],
+        [
+          12,
+          4,
+          52,
+          61
+        ],
+        [
+          12,
+          5,
+          52,
+          61
+        ]
       ],
-      "baseline": 247,
-      "top_edge_contact": true,
-      "blob_sha": "41233fc2793fe6ad9017ffa59ca6be05f9fcf75b"
+      "distinct_frames": 4,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "497366756b572472d54f1da4fb0c4224445bb6f3"
     },
     {
       "id": "ff_deer_caught_down",
-      "distinct": 1,
-      "dimensions": [
-        256,
-        256
+      "bounds_native": [
+        [
+          12,
+          6,
+          52,
+          61
+        ]
       ],
-      "baseline": 247,
-      "top_edge_contact": false,
-      "blob_sha": "93697cc97751ad51118d6f85bb49472b8e4c7b4c"
+      "distinct_frames": 1,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "a199e7507c6ed263502af497d749a88d1ec0b246"
     }
   ],
-  "limitations": "T17 deer: six strips/14 frames, native 64/256 export, anchor (128,247), full body with branched antlers, tawny coat, pale throat, alternating hooves and true front and right views. Native feet baseline, palette, distinct frames checked. WIP: several antler tips touch top row and may be clipped; shorten or lower antlers before acceptance. Caught pose is lowered head. Contact sheet inspected; old SVG and grass/gray comparison pending. No independent encoded PNG decode/hash verification or full repository audit run. No code changes."
+  "limitations": "Deer v2: revised all six strips (14 frames), shortened antler region by 3 native rows with tapered remap into unchanged head. Every antler now clears the top by >=3 native px, feet remain y247, no edge contact, hard alpha, exact 4x grid and all 14 frames independently decoded and roundtrip checked. Original IDs, timing, palette retained. Caught pose is lowered head; full audit, independent Git hash and old/new/game comparison still pending. No code changes."
 }

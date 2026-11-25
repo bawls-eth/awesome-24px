@@ -1,5 +1,5 @@
-# Deer
+# Deer v2
 
-![Native contact sheet](preview.png)
+![Revised sheet](preview.png)
 
-T17 deer: six strips/14 frames, native 64/256 export, anchor (128,247), full body with branched antlers, tawny coat, pale throat, alternating hooves and true front and right views. Native feet baseline, palette, distinct frames checked. WIP: several antler tips touch top row and may be clipped; shorten or lower antlers before acceptance. Caught pose is lowered head. Contact sheet inspected; old SVG and grass/gray comparison pending. No independent encoded PNG decode/hash verification or full repository audit run. No code changes.
+Deer v2: revised all six strips (14 frames), shortened antler region by 3 native rows with tapered remap into unchanged head. Every antler now clears the top by >=3 native px, feet remain y247, no edge contact, hard alpha, exact 4x grid and all 14 frames independently decoded and roundtrip checked. Original IDs, timing, palette retained. Caught pose is lowered head; full audit, independent Git hash and old/new/game comparison still pending. No code changes.

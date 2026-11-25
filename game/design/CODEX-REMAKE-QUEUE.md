@@ -760,3 +760,7 @@ Deliver each fix on the same branch, re-run `node game/tools/art-audit/run.js` a
 
 ## Codex T17 deer submitted
 T17 deer on codex/t17-deer: six strips/14 frames, 64 native/256 export, full-body deer with branched antlers, front/right views. Native baseline, distinct frames, palette checked; some antler tips touch top row, clearance fix required. Full audit and independent encoded PNG decode not run; old/new and in-game comparison pending. Provisional INDEX because ingest unavailable. No code changes.
+
+
+## Codex deer v2
+Deer v2: revised all six strips (14 frames), shortened antler region by 3 native rows with tapered remap into unchanged head. Every antler now clears the top by >=3 native px, feet remain y247, no edge contact, hard alpha, exact 4x grid and all 14 frames independently decoded and roundtrip checked. Original IDs, timing, palette retained. Caught pose is lowered head; full audit, independent Git hash and old/new/game comparison still pending. No code changes.
