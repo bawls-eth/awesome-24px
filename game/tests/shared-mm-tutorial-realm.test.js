@@ -17,6 +17,7 @@ check('six realm steps in order', S.map((s) => s.id).join() === 'move,shoot,bag,
 check('every step has coarse and fine text', S.every((s) => s.coarse && s.fine && typeof s.coarse === 'string'));
 check('coarse text names no key', S.every((s) => !/\b(WASD|W A S D|Esc|arrow|key|keys|mouse|click|press)\b/i.test(s.coarse)), JSON.stringify(S.map((s) => s.coarse)));
 check('fine text names keys for move and ability', /W A S D/.test(S[0].fine) && /1, 2, 3/.test(S[3].fine));
+check('cycle 6 b08-r3: coach step 4 (touch) says WHICH ability button to tap (the first, near the right thumb)', /first ability button/i.test(S[3].coarse) && /right thumb/i.test(S[3].coarse), S[3].coarse);
 check('realmText picks variant, unknown id gives empty', T.realmText('move', true) === S[0].coarse && T.realmText('move', false) === S[0].fine && T.realmText('zzz', true) === '');
 S[0].id = 'x';
 check('realmSteps returns copies', T.realmSteps()[0].id === 'move');

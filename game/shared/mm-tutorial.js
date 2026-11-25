@@ -33,7 +33,7 @@
     { id: 'move', need: 'moved', coarse: 'Drag the left stick to walk around.', fine: 'Use W A S D or the arrow keys to walk around.' },
     { id: 'shoot', need: 'shot', coarse: 'Drag the right stick to aim and shoot.', fine: 'Move the mouse to aim, hold the left button to shoot.' },
     { id: 'bag', need: 'pickedUp', coarse: 'Walk over a loot bag to pick it up.', fine: 'Walk over a loot bag to pick it up.' },
-    { id: 'ability', need: 'abilityUsed', coarse: 'Tap an ability button to use it.', fine: 'Press 1, 2, 3 or 4 to use an ability.' },
+    { id: 'ability', need: 'abilityUsed', coarse: 'Tap the first ability button, next to your right thumb, to use it.', fine: 'Press 1, 2, 3 or 4 to use an ability.' },
     { id: 'portal', need: 'portalEntered', coarse: 'Walk into a glowing portal to enter a dungeon.', fine: 'Walk into a glowing portal to enter a dungeon.' },
     { id: 'nexus', need: 'nexusOpened', coarse: 'Tap the Menu button, then Nexus, to open the Nexus.', fine: 'Press Esc, then choose Nexus, to open the Nexus.' }
   ];
