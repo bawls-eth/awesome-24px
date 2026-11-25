@@ -309,3 +309,25 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
 #realm-shop .rm-shop-top { position: sticky; top: -1px; z-index: 1; margin: 0 0 6px; padding: 6px 4px; background: rgba(10, 6, 16, 0.94); border-radius: 6px; }
 #realm-shop-msg { margin-top: 4px; font-weight: 700; color: #ffe27a; overflow-wrap: anywhere; }
 #realm-shop-msg:empty { display: none; }
+
+/* cyc9-ui shop polish ("the Realm UI is off", re-checked at 1280x720 / 390x844 / 195x422):
+   1. The 32 px item icon sat inline in the name, so the name dropped to the icon's baseline and the rarity and stat lines started under
+      the icon: the text block had two left edges. The name now centres on its icon, and rarity / stat start under the name (32 + 8 px).
+   2. "Buy 24💎" (72 px) and "Buy 120💎" (77 px) gave the Buy column a ragged left edge; every Buy is now at least 80 px (prices are 24 / 56 / 120).
+   3. At 300 px or less the text column was 47 px, so words broke mid-word ("Commo|n", "Quickfi|re"): Buy moves to its own full-width
+      row under the text, the indent goes, and words only wrap at spaces. */
+#realm-shop #realm-bp-list .nm { display: flex; align-items: center; gap: 8px; }
+#realm-shop #realm-bp-list .nm .realm-ico { flex: none; }
+#realm-shop #realm-bp-list .rar, #realm-shop #realm-bp-list .st { padding-left: 40px; }
+#realm-shop #realm-bp-list button.eq { min-width: 80px; }
+@media (max-width: 300px) {
+  #realm-shop #realm-bp-list li { grid-template-columns: minmax(0, 1fr); }
+  #realm-shop #realm-bp-list .rar, #realm-shop #realm-bp-list .st { padding-left: 0; }
+  #realm-shop #realm-bp-list .nm, #realm-shop #realm-bp-list .rar, #realm-shop #realm-bp-list .st { overflow-wrap: break-word; }
+  #realm-shop #realm-bp-list button.eq { grid-column: 1; grid-row: 4; justify-self: stretch; }
+}
+/* cyc9-ui (S report, 195x422): the sticky wallet / message header also carries .realm-bp-count, whose opacity: 0.6 (style.css, mad-maze.css)
+   faded the whole header, background included, so scrolled rows showed through the text. The header is now fully opaque on a solid
+   background; the wallet line keeps its dim look through its colour instead. It also sticks at the card's border edge (-12 px card padding
+   -1 px), not 12 px below it, so no scrolled row shows in a band above the header. */
+#realm-shop .rm-shop-top { opacity: 1; background: #0a0610; color: rgba(230, 237, 243, 0.72); top: -13px; }
