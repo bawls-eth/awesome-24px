@@ -484,11 +484,12 @@ const SPARKLE_ROTATE_MS = 8000;
 const SPARKLE_CATCH_RADIUS = 26;
 
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-// cyc7-ui: one MMNav mount config for the Town (see setupWhereTo). The corner Menu shows on wide screens only: on a phone (<= 600 px,
-// or a short landscape phone) the HUD diet (<= 10 pieces: phone-panel / cyc3 first-visit guards) and the bag bar / In-town chip leave
-// no room for it until "Where to?" leaves the phone panel (proposal in design/beta/cycle7-ui.md); there "Where to?" stays the Menu.
+// cyc7-ui / cyc8-ui: one MMNav mount config for the Town (see setupWhereTo). The shared corner Menu (#mm-nav-btn) is top-left on
+// every screen. On a phone (<= 600 px, or a short landscape phone) it REPLACES "Where to?" in the phone panel (body.town-phone-nav
+// hides it; the HUD diet stays <= 10 pieces) and the bag bar sits right of the Menu (style.css). Wide screens keep both ways in.
 const townNarrow = () => window.innerWidth <= 600 || (window.innerWidth > window.innerHeight && window.innerHeight <= 500);
-const TOWN_NAV = { page: 'town', hideMenu: townNarrow() };
+const TOWN_NAV = { page: 'town', hideMenu: false };
+if (townNarrow()) document.body.classList.add('town-phone-nav');
 if (IS_TOUCH) document.body.classList.add('touch-device');
 // Cycle 1 U-02: on phones (<= 720 px) the bag bar is ONE row: the bag + the 3 most recently changed counts (style.css
 // #inventory-panel.bag-compact). Tapping the bag expands every count; tapping again folds it. Recency is watched on the

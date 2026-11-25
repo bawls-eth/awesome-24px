@@ -4,7 +4,8 @@
 //     - wide screens: after joining, the shared corner Menu (#mm-nav-btn) is top-left (<= 16 px), >= 44 px, on top at its centre, and
 //       no other visible control overlaps it; the corner Menu and "Where to?" open the SAME sheet (#mm-nav-sheet), aria-expanded follows
 //       on both, Esc closes it, and a sheet opened from "Where to?" hands focus back to it;
-//     - phones (<= 600 px or short landscape): no corner button yet (HUD diet), "Where to?" opens the sheet.
+//     - phones (<= 600 px or short landscape): cyc8-ui: the corner Menu replaces "Where to?" (same top-left / 44 px / on-top / no-overlap
+//       checks; it opens the sheet and gets focus back on Esc; "Where to?" is not shown).
 //   Realm world (touch, portrait) at 414x896, 390x844, 360x640, 320x568 and 195x422:
 //     - the settings gear and the Daily link are not in the bottom band between the two sticks and overlap no stick, ability pad,
 //       mini-map, goal / zone text or other control;
@@ -50,6 +51,8 @@ async function town(browser, w, h) {
   await page.waitForSelector('#join-offline-btn:not(.hidden)', { timeout: 9000 });
   await page.click('#join-offline-btn');
   await page.waitForFunction(() => { const h = document.getElementById('hud'); return h && !h.classList.contains('hidden'); }, null, { timeout: 25000 });
+  // cyc8-ui: wait for the Town scene to mount its Menu (setupWhereTo runs in create(), which can finish after the HUD shows on a loaded box)
+  await page.waitForFunction(() => window.MMNav && window.MMNav.mounted() && document.getElementById('mm-nav-btn'), null, { timeout: 25000 }).catch(() => {});
   await page.waitForTimeout(1800);
   const m = await page.evaluate(() => {
     const b = document.getElementById('mm-nav-btn'); if (!b) return null;
@@ -67,12 +70,20 @@ async function town(browser, w, h) {
     check(tag + 'corner Menu is top-left (<= 16 px), >= 44 px and on top', m && m.x <= 16 && m.y <= 16 && m.w >= 44 && m.h >= 44 && m.onTop, JSON.stringify(m));
     check(tag + 'no other visible control overlaps the corner Menu', m && m.over.length === 0, JSON.stringify(m && m.over));
   } else {
-    // phone: the HUD diet keeps "Where to?" as the only Menu (no corner button yet); it must still open the sheet and hand focus back
-    check(tag + 'phone: no corner Menu button', m === null, JSON.stringify(m));
-    await tap('#where-to-btn'); await page.waitForTimeout(250);
-    const o = await page.evaluate(() => ({ open: !document.getElementById('mm-nav-sheet').hidden, where: document.getElementById('where-to-btn').getAttribute('aria-expanded') }));
-    check(tag + '"Where to?" opens the sheet', o.open && o.where === 'true', JSON.stringify(o));
-    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    // cyc8-ui (cycle-7 proposal, standing owner decision): on a phone the corner Menu REPLACES "Where to?" in the phone panel. It must be
+    // top-left, >= 44 px, on top, overlapped by nothing, open the sheet, and get focus back on Esc; "Where to?" is no longer shown.
+    check(tag + 'phone: corner Menu is top-left (<= 16 px), >= 44 px and on top', m && m.x <= 16 && m.y <= 16 && m.w >= 44 && m.h >= 44 && m.onTop, JSON.stringify(m));
+    check(tag + 'phone: no other visible control overlaps the corner Menu', m && m.over.length === 0, JSON.stringify(m && m.over));
+    const wv = await page.evaluate(() => { const b = document.getElementById('where-to-btn'); return b.getBoundingClientRect().width > 0 && getComputedStyle(b).display !== 'none'; });
+    check(tag + 'phone: "Where to?" has left the phone panel (one Menu)', wv === false);
+    if (m) {
+      await tap('#mm-nav-btn'); await page.waitForTimeout(250);
+      const o = await page.evaluate(() => ({ open: !document.getElementById('mm-nav-sheet').hidden, corner: document.getElementById('mm-nav-btn').getAttribute('aria-expanded') }));
+      check(tag + 'phone: the corner Menu opens the sheet', o.open && o.corner === 'true', JSON.stringify(o));
+      await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+      const f = await page.evaluate(() => ({ open: !document.getElementById('mm-nav-sheet').hidden, focus: document.activeElement && document.activeElement.id }));
+      check(tag + 'phone: Esc closes it and focus returns to the corner Menu', !f.open && f.focus === 'mm-nav-btn', JSON.stringify(f));
+    }
     check(tag + 'no database request (offline stub)', db.attempts() === 0, String(db.attempts()));
     check(tag + 'no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();

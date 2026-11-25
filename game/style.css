@@ -3115,3 +3115,37 @@ body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: no
    of the HUD, and it is hidden while the join card is up. */
 :root { --mm-nav-z: 19; }
 body:has(#hud.hidden) #mm-nav-btn { display: none; }
+
+/* cyc8-ui (cycle-7 proposal): on phones (main.js townNarrow: <= 600 px, or a landscape phone 500 px tall or less) the shared corner Menu
+   is top-left in the Town as on every other page, and it REPLACES "Where to?" in the phone panel (same sheet, one HUD piece). The
+   folded bag bar moves right of the Menu and is capped so it clears the In-town chip (main.js setupBagBar drops the oldest recent
+   count until the row fits). --town-chip-reserve = the collapsed In-town chip (126 px) + its 8 px gap. */
+body.town-phone-nav #where-to-btn { display: none !important; }
+:root { --town-chip-reserve: 134px; }
+@media (max-width: 720px) {
+  body.town-phone-nav #inventory-panel, body.town-phone-nav.a11y-hud-scaled #inventory-panel {
+    left: calc(var(--mm-nav-left) + var(--mm-nav-btn-w) + 8px);
+    max-width: calc(100vw - var(--mm-nav-btn-w) - 32px - var(--town-chip-reserve));
+    box-sizing: border-box;
+  }
+  /* the expanded people panel (up to 46vw, right-aligned) needs the top-right too: the folded bag shows only its 44 px button then,
+     and an opened bag wraps inside the room left of the panel (54vw minus the Menu and the gaps) */
+  body.town-phone-nav:has(#player-list-panel:not(.collapsed)) #inventory-panel.bag-compact:not(.bag-open) > span:not(#bag-icon) { display: none; }
+}
+@media (min-width: 301px) and (max-width: 720px) {
+  body.town-phone-nav #inventory-panel.bag-compact.bag-open { max-width: calc(54vw - 32px - var(--mm-nav-btn-w)); }
+}
+/* <= 300 px (200% zoom phones): the people panel spans the top right of the Menu instead of the full width. */
+@media (max-width: 300px) {
+  body.town-phone-nav.touch-device #player-list-panel, body.town-phone-nav.a11y-hud-scaled.touch-device #player-list-panel { left: calc(var(--mm-nav-left) + var(--mm-nav-btn-w) + 8px); }
+  body.town-phone-nav #inventory-panel, body.town-phone-nav.a11y-hud-scaled #inventory-panel { left: calc(8px + env(safe-area-inset-left, 0px)); max-width: none; }
+  /* expanded, the panel fills the room right of the Menu (it was a fixed 180 px, wider than that room) and the bag bar under it
+     steps aside until the panel folds again (before, the expanded panel lay over the bag bar at 195 px) */
+  body.town-phone-nav.touch-device #player-list-panel:not(.collapsed) { width: auto; right: calc(8px + env(safe-area-inset-right, 0px)); }
+  body.town-phone-nav:has(#player-list-panel:not(.collapsed)) #inventory-panel { visibility: hidden; }
+}
+/* 160x284: the folded bag (one 44 px button) sits under the Menu, so the people chip keeps the width right of the Menu. */
+@media (max-width: 300px) and (max-height: 420px) {
+  body.town-phone-nav.touch-device #player-list-panel.collapsed, body.town-phone-nav.a11y-hud-scaled.touch-device #player-list-panel.collapsed { right: calc(8px + env(safe-area-inset-right, 0px)); }
+  body.town-phone-nav #inventory-panel.bag-compact:not(.bag-open), body.town-phone-nav.a11y-hud-scaled #inventory-panel.bag-compact:not(.bag-open) { top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: auto; }
+}

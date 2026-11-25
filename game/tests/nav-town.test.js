@@ -88,26 +88,39 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
     check(L('joined the town offline'), await page.evaluate(() => window.__g.scene.getScene('Town').net.offline === true));
     const saveAfterJoin = await page.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
 
-    // ---- Where to? button in the existing HUD panel ----
-    const wt = await rect(page, '#where-to-btn');
-    check(L('"Where to?" button is visible, at least 44 px tall and wide, and nothing covers it'), wt && wt.vis && wt.h >= 44 && wt.w >= 44 && wt.onTop, JSON.stringify(wt));
-    const place = await page.evaluate(() => { const b = document.getElementById('where-to-btn'); const p = document.getElementById('player-list-panel'); const kids = [...p.children]; return { inPanel: b.parentElement === p, afterToggle: kids.indexOf(b) === kids.indexOf(document.getElementById('panel-toggle')) + 1, collapsed: p.classList.contains('collapsed'), text: b.textContent }; });
-    check(L('"Where to?" sits in #player-list-panel right under the panel toggle'), place.inPanel && place.afterToggle && /Where to\?/.test(place.text), JSON.stringify(place));
-    if (touch) check(L('phone: the panel is collapsed and "Where to?" is still visible'), place.collapsed && wt.vis, JSON.stringify(place));
-    // cyc7-ui (U-01, owner standing decision in ROUND4.md): the Town now shows the same top-left corner Menu as every page; "Where to?" opens that same sheet
-    // (phones keep "Where to?" as the only Menu: the HUD diet leaves no room yet, see design/beta/cycle7-ui.md)
-    if (!touch) check(L('desktop: the Town has the shared corner Menu button top-left (same sheet as "Where to?")'), await page.evaluate(() => { const m = document.getElementById('mm-nav-btn'); if (!m || !window.MMNav.mounted()) return false; const r = m.getBoundingClientRect(); return r.width >= 44 && r.height >= 44 && r.left <= 16 && r.top <= 16 && m.getAttribute('aria-controls') === document.getElementById('where-to-btn').getAttribute('aria-controls'); }));
-    else check(L('phone: no corner Menu button ("Where to?" is the Menu)'), await page.evaluate(() => !document.getElementById('mm-nav-btn') && window.MMNav.mounted()));
+    // ---- the Town Menu: desktop "Where to?" in the HUD panel + the corner Menu; phones the corner Menu only ----
+    // cyc8-ui (cycle-7 proposal, standing owner decision in ROUND4.md): on phones the shared corner Menu replaces "Where to?" in the phone
+    // panel (one HUD piece, same sheet). Every sheet check below runs against the phone's Menu (#mm-nav-btn) instead of "Where to?".
+    const NAV = touch ? '#mm-nav-btn' : '#where-to-btn';
+    const navId = NAV.slice(1);
+    if (!touch) {
+      const wt = await rect(page, '#where-to-btn');
+      check(L('"Where to?" button is visible, at least 44 px tall and wide, and nothing covers it'), wt && wt.vis && wt.h >= 44 && wt.w >= 44 && wt.onTop, JSON.stringify(wt));
+      const place = await page.evaluate(() => { const b = document.getElementById('where-to-btn'); const p = document.getElementById('player-list-panel'); const kids = [...p.children]; return { inPanel: b.parentElement === p, afterToggle: kids.indexOf(b) === kids.indexOf(document.getElementById('panel-toggle')) + 1, collapsed: p.classList.contains('collapsed'), text: b.textContent }; });
+      check(L('"Where to?" sits in #player-list-panel right under the panel toggle'), place.inPanel && place.afterToggle && /Where to\?/.test(place.text), JSON.stringify(place));
+    } else {
+      const ph = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const b = document.getElementById('where-to-btn'); return { collapsed: p.classList.contains('collapsed'), whereShown: b.getBoundingClientRect().width > 0 && getComputedStyle(b).display !== 'none' }; });
+      check(L('phone: the panel is collapsed and "Where to?" has left it (the corner Menu replaces it)'), ph.collapsed && !ph.whereShown, JSON.stringify(ph));
+    }
+    // cyc7-ui (U-01) + cyc8-ui: every screen size has the shared corner Menu top-left, >= 44 px, uncovered, on the same sheet
+    const cm = await rect(page, '#mm-nav-btn');
+    check(L('the Town has the shared corner Menu button top-left, >= 44 px, and nothing covers it'), cm && cm.vis && cm.onTop && cm.w >= 44 && cm.h >= 44 && cm.x <= 16 && cm.y <= 16, JSON.stringify(cm));
+    check(L('the corner Menu and "Where to?" control the same sheet'), await page.evaluate(() => { const m = document.getElementById('mm-nav-btn'); return !!m && window.MMNav.mounted() && m.getAttribute('aria-controls') === 'mm-nav-sheet' && document.getElementById('where-to-btn').getAttribute('aria-controls') === 'mm-nav-sheet'; }));
+    if (touch) {
+      const mHits = [];
+      for (const sel of ['#inventory-panel', '#player-list-panel', '#gate-pointer', '#walkie-panel']) { if (overlap(cm, await rect(page, sel))) mHits.push(sel); }
+      check(L('phone: the corner Menu overlaps no bag bar, In-town chip, pointer chip or walkie'), mHits.length === 0, JSON.stringify(mHits));
+    }
 
-    await tap('#where-to-btn');
+    await tap(NAV);
     await page.waitForTimeout(250);
-    const sh = await page.evaluate(() => {
+    const sh = await page.evaluate((navId) => {
       const vis = (n) => { const r = n.getBoundingClientRect(); const cs = getComputedStyle(n); return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden'; };
       const sheet = document.getElementById('mm-nav-sheet');
       const dests = [...sheet.querySelectorAll('.mm-nav-dest')].map((a) => ({ id: a.dataset.place, href: a.getAttribute('href'), abs: a.href, target: a.getAttribute('target'), cur: a.getAttribute('aria-current') }));
-      return { open: vis(sheet), dialogs: [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter(vis).length, dests, expanded: document.getElementById('where-to-btn').getAttribute('aria-expanded'), focusIn: sheet.contains(document.activeElement), worldMap: document.getElementById('world-map-link').href, sheetMap: document.getElementById('mm-nav-map').href };
-    });
-    check(L('one tap on "Where to?" opens the sheet; exactly one modal dialog is visible'), sh.open && sh.dialogs === 1 && sh.expanded === 'true' && sh.focusIn, JSON.stringify({ open: sh.open, dialogs: sh.dialogs, expanded: sh.expanded }));
+      return { open: vis(sheet), dialogs: [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter(vis).length, dests, expanded: document.getElementById(navId).getAttribute('aria-expanded'), focusIn: sheet.contains(document.activeElement), worldMap: document.getElementById('world-map-link').href, sheetMap: document.getElementById('mm-nav-map').href };
+    }, navId);
+    check(L(`one tap on the Menu (${navId}) opens the sheet; exactly one modal dialog is visible`), sh.open && sh.dialogs === 1 && sh.expanded === 'true' && sh.focusIn, JSON.stringify({ open: sh.open, dialogs: sh.dialogs, expanded: sh.expanded }));
     check(L('all 14 places are listed in catalogue order'), sh.dests.map((d) => d.id).join(',') === IDS, sh.dests.map((d) => d.id).join(','));
     check(L('the Town entry is marked as the current page'), sh.dests[0].cur === 'page');
     check(L('destinations are plain same-tab links (they leave like the "World map" link does)'), sh.dests.every((d) => !d.target && d.abs.startsWith(new URL(BASE).origin + '/game/')) && sh.sheetMap.split('?')[0] === sh.worldMap.split('?')[0] && /[?&]map=1/.test(sh.sheetMap), JSON.stringify([sh.sheetMap, sh.worldMap])); // the sheet's World map opens the Hub map view (?map=1)
@@ -117,9 +130,9 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
     }
     await page.keyboard.press('Escape');
     await page.waitForTimeout(150);
-    const closed = await page.evaluate(() => ({ hidden: document.getElementById('mm-nav-sheet').hidden, focus: document.activeElement && document.activeElement.id, expanded: document.getElementById('where-to-btn').getAttribute('aria-expanded') }));
-    check(L('Esc closes the sheet and focus returns to "Where to?"'), closed.hidden && closed.focus === 'where-to-btn' && closed.expanded === 'false', JSON.stringify(closed));
-    await tap('#where-to-btn'); await page.waitForTimeout(150);
+    const closed = await page.evaluate((navId) => ({ hidden: document.getElementById('mm-nav-sheet').hidden, focus: document.activeElement && document.activeElement.id, expanded: document.getElementById(navId).getAttribute('aria-expanded') }), navId);
+    check(L(`Esc closes the sheet and focus returns to the Menu that opened it (${navId})`), closed.hidden && closed.focus === navId && closed.expanded === 'false', JSON.stringify(closed));
+    await tap(NAV); await page.waitForTimeout(150);
     await tap('#mm-nav-close'); await page.waitForTimeout(150);
     check(L('the sheet ✕ closes it too'), await page.evaluate(() => document.getElementById('mm-nav-sheet').hidden));
     const nav = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), NAV_KEY);

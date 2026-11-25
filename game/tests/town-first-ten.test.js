@@ -101,7 +101,8 @@ const LAYOUT = `(sticksSel) => {
 }`;
 
 // HUD pieces that must never overlap each other on the play screen
-const HUD = ['#player-list-panel', '#inventory-panel', '#walkie-panel', '#chat-panel', '#gate-pointer', '#joystick', '#action-buttons', '#realm-gate-hint', '#dig-hole-hint', '#fish-hint-btn', '#gift-hint-btn', '#whats-new-banner'];
+// cyc8-ui: the corner Menu (#mm-nav-btn, every screen size now) joins the overlap check
+const HUD = ['#mm-nav-btn', '#player-list-panel', '#inventory-panel', '#walkie-panel', '#chat-panel', '#gate-pointer', '#joystick', '#action-buttons', '#realm-gate-hint', '#dig-hole-hint', '#fish-hint-btn', '#gift-hint-btn', '#whats-new-banner'];
 const HUD_OVERLAP = `(sels) => {
   const vis = (e) => { if (!e) return false; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0 || e.classList.contains('hidden')) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const bs = sels.map((s) => ({ s, e: document.querySelector(s) })).filter((o) => vis(o.e)).map((o) => { const r = o.e.getBoundingClientRect(); return { s: o.s, x: r.left, y: r.top, r: r.right, b: r.bottom }; });
@@ -227,9 +228,11 @@ const WALKER = `(spawn) => {
     check(`${P}: no control overlaps the stick`, lay.over.length === 0, lay.over.join(', '));
     if (prof.touch) check(`${P}: coarse pointer emulated, the stick is visible`, lay.coarse && lay.sticks === 1, JSON.stringify({ coarse: lay.coarse, sticks: lay.sticks }));
 
-    // "Where to?": one tap opens the sheet, 14 places
+    // "Where to?": one tap opens the sheet, 14 places. cyc8-ui: on phones (<= 600 px wide, or a landscape phone <= 500 px tall) the
+    // corner Menu replaced "Where to?" in the phone panel, so the one tap goes to the Menu there (same sheet).
+    const phoneNav = prof.viewport.width <= 600 || (prof.viewport.width > prof.viewport.height && prof.viewport.height <= 500);
     const taps0 = taps;
-    await tap('#where-to-btn');
+    await tap(phoneNav ? '#mm-nav-btn' : '#where-to-btn');
     await page.waitForFunction(() => { const sh = document.getElementById('mm-nav-sheet'); return sh && !sh.hidden && sh.getBoundingClientRect().height > 0; }, null, { timeout: 3000 }).catch(() => {});
     const sh = await page.evaluate(() => { const sh = document.getElementById('mm-nav-sheet'); const ds = sh ? [...sh.querySelectorAll('.mm-nav-dest')].map((a) => a.dataset.place) : []; return { open: !!sh && !sh.hidden, ids: ds.join(',') }; });
     const shLay = await page.evaluate(`(${LAYOUT})('#joystick')`);

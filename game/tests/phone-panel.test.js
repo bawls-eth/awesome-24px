@@ -4,7 +4,7 @@ const { launch, scene, check, done, expandPanel } = require('./helpers');
 
 const rect = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, vis: cs.display !== 'none' && cs.visibility !== 'hidden' }; }, sel);
 const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
-const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-panel', interact: '#interact-btn', walkie: '#walkie-panel', inventory: '#inventory-panel' };
+const SEL = { menu: '#mm-nav-btn', joystick: '#joystick', actions: '#action-buttons', chat: '#chat-panel', interact: '#interact-btn', walkie: '#walkie-panel', inventory: '#inventory-panel' };
 
 (async () => {
   // Portrait and landscape phones.
@@ -12,22 +12,23 @@ const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-pa
     const tag = `${w}x${h}`;
     const { browser, page, errors } = await launch({ width: w, height: h }, null, true);
     // 1. Collapsed by default: only the chip shows; it carries the key stats.
-    const c = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const t = document.getElementById('panel-toggle'); const kids = [...p.children].filter((k) => k.id !== 'panel-toggle' && k.id !== 'where-to-btn' && getComputedStyle(k).display !== 'none').length; const r = p.getBoundingClientRect(); const wt = document.getElementById('where-to-btn').getBoundingClientRect(); const tr = t.getBoundingClientRect(); return { whereTo: { w: wt.width, h: wt.height }, chipH: tr.height, collapsed: p.classList.contains('collapsed'), visibleKids: kids, chip: t.textContent, expanded: t.getAttribute('aria-expanded'), w: r.width, h: r.height, stored: localStorage.getItem('pixeltown-panel-collapsed') }; });
-    // NAV-AUDIT 4.4: the "Where to?" button stays visible under the collapsed chip (outside the collapsible part).
-    check(`${tag}: "Where to?" is visible under the collapsed chip and at least 44 px tall`, c.whereTo.h >= 44 && c.whereTo.w >= 44, JSON.stringify(c.whereTo));
+    const c = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const t = document.getElementById('panel-toggle'); const kids = [...p.children].filter((k) => k.id !== 'panel-toggle' && k.id !== 'where-to-btn' && getComputedStyle(k).display !== 'none').length; const r = p.getBoundingClientRect(); const wt = document.getElementById('where-to-btn').getBoundingClientRect(); const m = document.getElementById('mm-nav-btn'); const mr = m ? m.getBoundingClientRect() : { width: 0, height: 0, left: -1, top: -1 }; const at = m ? document.elementFromPoint(mr.left + mr.width / 2, mr.top + mr.height / 2) : null; const tr = t.getBoundingClientRect(); return { whereTo: { w: wt.width, h: wt.height }, menu: { w: mr.width, h: mr.height, x: mr.left, y: mr.top, onTop: !!(at && at.closest('#mm-nav-btn')) }, chipH: tr.height, collapsed: p.classList.contains('collapsed'), visibleKids: kids, chip: t.textContent, expanded: t.getAttribute('aria-expanded'), w: r.width, h: r.height, stored: localStorage.getItem('pixeltown-panel-collapsed') }; });
+    // NAV-AUDIT 4.4 + cyc8-ui: the Town Menu stays one tap away on a phone. It used to be "Where to?" under the collapsed chip; now the
+    // shared corner Menu (top-left, same sheet) replaces it, so "Where to?" has left the phone panel.
+    check(`${tag}: the corner Menu is visible top-left, on top and at least 44 px; "Where to?" has left the phone panel`, c.menu.h >= 44 && c.menu.w >= 44 && c.menu.x <= 16 && c.menu.y <= 16 && c.menu.onTop && c.whereTo.h === 0, JSON.stringify([c.menu, c.whereTo]));
     check(`${tag}: panel starts collapsed to a chip with players + trophies`, c.collapsed && c.visibleKids === 0 && /👥 \d+ · 🏆 \d+\/\d+/.test(c.chip) && c.expanded === 'false', JSON.stringify(c));
     check(`${tag}: collapsed chip is small (< 40% of the screen width, chip < 64px tall, chip + Where to? < 120px)`, c.w < w * 0.4 && c.chipH < 64 && c.h < 120, `${c.w}x${c.h} chip ${c.chipH}`);
     check(`${tag}: collapsed state is not persisted until the player chooses`, c.stored === null);
 
     // The rest of the phone HUD must not overlap itself either (collapsed state).
     const hudHits = await page.evaluate(() => {
-      const ids = ['inventory-panel', 'walkie-panel', 'player-list-panel', 'chat-panel', 'joystick', 'action-buttons'];
+      const ids = ['mm-nav-btn', 'inventory-panel', 'walkie-panel', 'player-list-panel', 'chat-panel', 'joystick', 'action-buttons'];
       const r = {}; for (const id of ids) { const e = document.getElementById(id); if (!e || e.classList.contains('hidden') || getComputedStyle(e).display === 'none') continue; const b = e.getBoundingClientRect(); if (b.width) r[id] = b; }
       const hits = []; const n = Object.keys(r);
       for (let i = 0; i < n.length; i++) for (let j = i + 1; j < n.length; j++) { const a = r[n[i]]; const b = r[n[j]]; if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) hits.push([n[i], n[j]]); }
       return hits;
     });
-    check(`${tag}: no two HUD pieces overlap (inventory, walkie, panel chip, chat bar, joystick, action buttons)`, hudHits.length === 0, JSON.stringify(hudHits));
+    check(`${tag}: no two HUD pieces overlap (corner Menu, inventory, walkie, panel chip, chat bar, joystick, action buttons)`, hudHits.length === 0, JSON.stringify(hudHits));
 
     // 2. Expand on tap: every button reachable, scrolls inside itself, <= 60vh, clear of chat/controls.
     await page.click('#panel-toggle');

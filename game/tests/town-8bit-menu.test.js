@@ -98,7 +98,8 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r - 0.5 && a.r > b
     for (const s of ['#chat-panel', '#quick-chat-row', '#joystick', '#action-buttons', '#inventory-panel', '#walkie-panel']) if (overlap(panel, await box(page, s))) hits.push(s);
     check(`${tag}: the menu panel overlaps no chat / quick chat / controls / inventory / walkie`, hits.length === 0, JSON.stringify(hits));
     check(`${tag}: quick-chat buttons stay >= 40 px tall`, qc.length >= 4 && qc.every((h) => h >= 40), JSON.stringify(qc));
-    check(`${tag}: "Where to?" stays visible and >= 44 px`, (await box(page, '#where-to-btn')).h >= 44);
+    // cyc8-ui: on the phone (390x844) the corner Menu replaced "Where to?" in the panel; desktop keeps "Where to?" (and the corner Menu)
+    check(`${tag}: the Town Menu (${touch ? 'corner Menu' : '"Where to?"'}) stays visible and >= 44 px`, (await box(page, touch ? '#mm-nav-btn' : '#where-to-btn')).h >= 44);
 
     // ---- 8-bit look: hard pixel edges ----
     const look = await page.evaluate(() => {
