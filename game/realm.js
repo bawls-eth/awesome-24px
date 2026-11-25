@@ -61,7 +61,27 @@ const RM_ED_GHOSTS = 24; const RM_ED_REDUCED = 0.25; // enemy death-ghost pool s
 const RM_BOLT_R = { player: 5, enemy: 6 };
 const RM_AF_RANGE = 380; // AR auto-fire reach (logical px): about the player's bolt range, so it never fires at what it cannot hit
 const RM_EB_HUES = [['#ff4f6d', '#ffd0d8'], ['#b46bff', '#ecdcff'], ['#ffa62b', '#fff0c8']]; // aimed (red), spiral (violet), ring (orange)
+// cyc7 G: the fast aimed shot moves from pink-red (hue ~350) to orange-red (hue ~13) so the three enemy hues (orange-red / violet / amber)
+// separate from red ground decoration; the b17 `ebolt_orb_red` art gets the same shift at bake time (its saturated pixels rotate by
+// RM_EB_AIM_ROT degrees, the dark rim stays). `?hitfx=0` keeps the old pink-red (A/B); colour-blind palettes are unchanged.
+const RM_EB_AIM_WARM = ['#ff5a2e', '#ffd6c4']; const RM_EB_AIM_ROT = 24;
 const RM_EB_DRAW = 320;
+// Rotate the hue of the saturated pixels of a baked canvas (S x S) by deg degrees; dark / grey pixels (the rim) keep their colour.
+function rmHueRotate(c, S, deg) {
+  let im; try { im = c.getImageData(0, 0, S, S); } catch (e) { return false; }
+  const d = im.data, sh = deg / 360;
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, ch = mx - mn;
+    if (ch < 0.25 || l < 0.18) continue; // the dark rim and greys stay
+    const s = ch / (1 - Math.abs(2 * l - 1));
+    let h = mx === r ? ((g - b) / ch) % 6 : mx === g ? (b - r) / ch + 2 : (r - g) / ch + 4; h = (h / 6 + sh + 1) % 1;
+    const q = (1 - Math.abs(2 * l - 1)) * s, x = q * (1 - Math.abs((h * 6) % 2 - 1)), m = l - q / 2, k = Math.floor(h * 6);
+    const rgb = k === 0 ? [q, x, 0] : k === 1 ? [x, q, 0] : k === 2 ? [0, q, x] : k === 3 ? [0, x, q] : k === 4 ? [x, 0, q] : [q, 0, x];
+    d[i] = Math.round((rgb[0] + m) * 255); d[i + 1] = Math.round((rgb[1] + m) * 255); d[i + 2] = Math.round((rgb[2] + m) * 255);
+  }
+  c.putImageData(im, 0, 0); return true;
+}
 // cyc6 G hit feedback: the hit vignette is a warm palette red (#e8643c, about 0.4 alpha at the screen edge) in an ellipse that follows
 // the view's aspect, so it reads over blue water and never tints the ground under the hero (the old radial magenta covered ~70% of a
 // phone screen); slow enemy bullets (speed < RM_EB_SLOW) carry a 2-dot motion trail and every enemy bullet a larger white core, so a
@@ -1388,7 +1408,7 @@ class RealmArena {
       g.strokeStyle = '#f4feff'; g.lineWidth = 1.5; g.beginPath(); g.arc(10, 10, R - 0.75, 0, Math.PI * 2); g.stroke();
       g.fillStyle = '#ffffff'; g.beginPath(); g.arc(10, 10, 2.4, 0, Math.PI * 2); g.fill();
     });
-    this.sprites.eBullet = RM_EB_HUES.map(([hue, tint]) => mk(16, 16, (g) => { // enemy bullet: dark rim, saturated body, a small light centre
+    this.sprites.eBullet = this._ebHues().map(([hue, tint]) => mk(16, 16, (g) => { // enemy bullet: dark rim, saturated body, a small light centre
       const R = RM_BOLT_R.enemy;
       g.fillStyle = '#1a0812'; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
       g.fillStyle = hue; g.beginPath(); g.arc(8, 8, R - 1.6, 0, Math.PI * 2); g.fill();
@@ -1490,10 +1510,12 @@ class RealmArena {
       const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
       c.translate(S / 2, S / 2); c.rotate(rot * Math.PI / 8);
       c.drawImage(an.img, (f % an.frames) * an.fw, 0, an.fw, an.fh, -d / 2, -d / 2, d, d);
+      if (id === 'ebolt_orb_red' && !this._hitFxOff) rmHueRotate(c, S, RM_EB_AIM_ROT); // cyc7: the aimed orb toward orange-red (once per cached frame)
       arr[i] = cv; return cv;
     } catch (e) { arr[i] = 0; return null; }
   }
   _boltFrame() { return this._reduced ? 0 : Math.floor(this.clock * 12) & 3; }
+  _ebHues() { return this._hitFxOff ? RM_EB_HUES : [RM_EB_AIM_WARM].concat(RM_EB_HUES.slice(1)); } // cyc7: aimed (kind 0) orange-red
   _drawBoltArt(g, b) { // a class bolt (not weapon style) from art; returns true when drawn
     const id = this._boltPlayerId(); if (!id) return false;
     const rot = (Math.round(Math.atan2(b.vy, b.vx) / (Math.PI / 8)) + 16) & 15;
@@ -4057,7 +4079,7 @@ class RealmArena {
       return;
     }
     if (bare) {
-      this._ebCB = RM_EB_HUES.map(([hue, tint]) => {
+      this._ebCB = this._ebHues().map(([hue, tint]) => {
         const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
         g.fillStyle = hue; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
         g.fillStyle = tint; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill();
