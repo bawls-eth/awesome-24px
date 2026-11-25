@@ -2480,5 +2480,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "cyc10-lead-town-shop-reliability.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 240
   }
 }
