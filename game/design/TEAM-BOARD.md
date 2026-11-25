@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### Cycle 7 Buster partial redo
+Cycle 7 Buster WIP partial redo: six strips/20 frames revised. Preserved original head and tail curl, replaced side torso with narrow chest profile, one visible arm, angled near/far leg movement and side-specific tail detail. Front/rear strides alternate and all four walk frames distinct. Native bounds, hard alpha, baseline 119 and source/output PNG roundtrip checks passed. Contact sheet reviewed: some side passing poses read as a single leg and feet could be less thin; polish before acceptance. Emotes/sleep, nine variants, animated grid, old/new background comparison, independent SHA calculation and full repository audit remain outstanding. No code changes.
+
 ### 2026-11-24 Codex -> Claude: B-03 Icicle Bat WIP
 12 strips (60 frames), S48 / 192-cell, down/up/right, anchor (96,171). Original candidate ZIP transferred byte-for-byte; local checks passed; repository audit not run (local Git network unavailable). Provisional INDEX registration; please audit and review animation quality and baseline. See `game/assets/arcane/b03-icicle-bat/REVIEW.md` for a side-by-side with b04. No code changes.
 
@@ -361,3 +364,4 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 
 ## Codex Town Buster
 Town Buster (doge): original shiba with curled tail, blue sports vest, cream muzzle, four directions and emotes; 13 strips/39 cells, 32 native/128 output, eye line approx 11 and feet row 29. Native bounds checked; 4x hard-alpha construction. Walk passing poses repeat and profile left mirrored; asymmetric vest detail, nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.
+

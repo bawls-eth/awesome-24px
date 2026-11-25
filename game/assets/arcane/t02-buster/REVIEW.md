@@ -1,5 +1,5 @@
-# Buster WIP
+# Buster v2 partial
 
-![Native 2x contact sheet](preview.png)
+![Revised contact sheet](preview-v2.png)
 
-Town Buster (doge): original shiba with curled tail, blue sports vest, cream muzzle, four directions and emotes; 13 strips/39 cells, 32 native/128 output, eye line approx 11 and feet row 29. Native bounds checked; 4x hard-alpha construction. Walk passing poses repeat and profile left mirrored; asymmetric vest detail, nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.
+Cycle 7 Buster WIP partial redo: six strips/20 frames revised. Preserved original head and tail curl, replaced side torso with narrow chest profile, one visible arm, angled near/far leg movement and side-specific tail detail. Front/rear strides alternate and all four walk frames distinct. Native bounds, hard alpha, baseline 119 and source/output PNG roundtrip checks passed. Contact sheet reviewed: some side passing poses read as a single leg and feet could be less thin; polish before acceptance. Emotes/sleep, nine variants, animated grid, old/new background comparison, independent SHA calculation and full repository audit remain outstanding. No code changes.
