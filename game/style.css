@@ -1360,6 +1360,9 @@ body.touch-device .key-hint { display: none; }
 }
 
 #streak-badge { color: var(--ac-orange-text); }
+/* ID-09 (cycle 8 S): "Days in town N" stays on one line; on a very narrow screen the two status chips stack instead of wrapping inside */
+#streak-badge { white-space: nowrap; }
+@media (max-width: 260px) { #status-row { flex-wrap: wrap; } #status-row #streak-badge, #status-row #town-rating { flex-basis: 100%; } }
 #town-rating { color: var(--ac-leaf-text); }
 
 #settings-toggle-btn {
@@ -2211,6 +2214,16 @@ body.touch-device .key-hint { display: none; }
 #dailies-list li.daily-done span { text-decoration: line-through; opacity: 0.75; }
 #dailies-list li.daily-na, #dailies-list li.daily-missed { opacity: 0.45; }
 #dailies-btn { min-height: 30px; }
+/* ID-18 (cycle 8 S): Today's bounties, one line per row at 390 px; the Claim button is a 44 px touch target */
+#bounty-section.hidden { display: none; }
+#bounty-head { font-size: 14px; margin: 10px 0 4px; }
+#bounty-list li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; min-height: 44px; box-sizing: border-box; }
+#bounty-list .bounty-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+#bounty-list .bounty-count, #bounty-list .bounty-reward, #bounty-list .bounty-claimed { flex: 0 0 auto; white-space: nowrap; font-size: 12px; }
+#bounty-list .bounty-claimed { opacity: 0.75; }
+#bounty-list .bounty-claim { flex: 0 0 auto; min-height: 44px; min-width: 64px; padding: 0 10px; border-radius: 10px; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); font: inherit; font-weight: 700; cursor: pointer; }
+#bounty-list li[data-status="claimed"] .bounty-text { opacity: 0.75; }
+@media (max-width: 340px) { #bounty-list li { flex-wrap: wrap; gap: 4px 8px; } #bounty-list .bounty-text { flex-basis: 100%; } } /* 195-340 px: the text gets its own line */
 
 #journal-overlay { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: var(--ac-scrim); }
 #journal-overlay.hidden { display: none; }
