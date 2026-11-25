@@ -53,3 +53,10 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
   #hud { grid-template-columns:1.45fr 1fr 1fr 1.45fr; }
   #hud .stat strong { font-size:min(calc(20px * var(--ui-scale,1)), calc(3.9vw * var(--ui-scale,1))); letter-spacing:0; }
 }
+
+/* cyc7-ui (a11y sweep at 195x422): the 3.9vw value was 7.6 px at 195 px. Under 300 px the HUD is two columns (mm-8bit-arcade.css),
+   so the value gets a 12 px floor and the box a slimmer side padding: a six-figure score (123,456) still fits its border. */
+@media (max-width: 300px) {
+  #hud .stat { padding-left: 4px; padding-right: 4px; }
+  #hud .stat strong { font-size: max(12px, min(calc(20px * var(--ui-scale,1)), calc(3.9vw * var(--ui-scale,1)))); }
+}

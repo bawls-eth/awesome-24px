@@ -159,3 +159,12 @@ body.mm-nav-on #town { display:none !important; }
   #actions { grid-template-columns: minmax(0, 1fr); }
   #stage section, #stage .card, #stage h2 { min-width: 0; max-width: 100%; box-sizing: border-box; letter-spacing: 0; }
 }
+/* cyc7-ui (retest 3 b15-r3-05): at 195 px the three stat boxes were ~50 px wide and the overflow-wrap:anywhere rule above split
+   their labels inside words ("BEL LS", "STA LKS OWN", "WEE K PRO"). Under 300 px the stats stack as three slim rows, label left
+   and value right, and words stay whole. */
+@media (max-width: 300px) {
+  #stats { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  #stats .stat { flex-direction: row; justify-content: space-between; align-items: baseline; gap: 8px; padding: 6px 8px; }
+  #stage #stats .lbl, #stage #stats strong { overflow-wrap: normal; word-break: normal; }
+  #stats .lbl { min-width: 0; }
+}

@@ -484,6 +484,11 @@ const SPARKLE_ROTATE_MS = 8000;
 const SPARKLE_CATCH_RADIUS = 26;
 
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+// cyc7-ui: one MMNav mount config for the Town (see setupWhereTo). The corner Menu shows on wide screens only: on a phone (<= 600 px,
+// or a short landscape phone) the HUD diet (<= 10 pieces: phone-panel / cyc3 first-visit guards) and the bag bar / In-town chip leave
+// no room for it until "Where to?" leaves the phone panel (proposal in design/beta/cycle7-ui.md); there "Where to?" stays the Menu.
+const townNarrow = () => window.innerWidth <= 600 || (window.innerWidth > window.innerHeight && window.innerHeight <= 500);
+const TOWN_NAV = { page: 'town', hideMenu: townNarrow() };
 if (IS_TOUCH) document.body.classList.add('touch-device');
 // Cycle 1 U-02: on phones (<= 720 px) the bag bar is ONE row: the bag + the 3 most recently changed counts (style.css
 // #inventory-panel.bag-compact). Tapping the bag expands every count; tapping again folds it. Recency is watched on the
@@ -3615,16 +3620,20 @@ class TownScene extends Phaser.Scene {
   }
 
   // ---------- NAV slice E: "Where to?" sheet + Realm Gate pointer (UI only; no network, no save keys) ----------
-  // The Town keeps one HUD: no corner Menu button. The sheet (shared/mm-nav.js) opens from the "Where to?" button in the
-  // In-town panel, and its destinations are plain links, so leaving works exactly like the "World map" link.
+  // cyc7-ui (cycle-6 proposal, U-01): on wide screens the Town now has the same top-left corner Menu button (#mm-nav-btn) as every other page, and
+  // "Where to?" in the In-town panel opens that same sheet (shared/mm-nav.js); both buttons track aria-expanded. Destinations are
+  // plain links, so leaving works exactly like the "World map" link. TOWN_NAV is shared with the join card's compass (whichever
+  // mounts first builds the corner button; it hides while the join card is up: style.css body:has(#hud.hidden)).
   setupWhereTo() {
     const btn = document.getElementById('where-to-btn');
     if (!btn) return;
     let on = false;
-    try { on = typeof MMNav !== 'undefined' && MMNav.mount({ page: 'town', hideMenu: true }) === true; } catch (e) { on = false; }
+    try { on = typeof MMNav !== 'undefined' && MMNav.mount(TOWN_NAV) === true; } catch (e) { on = false; }
     if (!on) { btn.classList.add('hidden'); return; }
+    let fromWhere = false; // cyc7-ui: MMNav returns focus to its corner button; a sheet opened from "Where to?" hands focus back here
     btn.addEventListener('click', () => {
       if (MMNav.isOpen()) { MMNav.close(); return; }
+      fromWhere = true;
       for (let i = 0; i < 4 && this.closeTopOverlay(); i++); // never stack the sheet on a town overlay
       MMNav.open();
     });
@@ -3634,7 +3643,9 @@ class TownScene extends Phaser.Scene {
       try { this.input.keyboard.resetKeys(); } catch (e) { /* no keyboard plugin */ }
       if (this.padInput) { this.padInput.x = 0; this.padInput.y = 0; }
     });
-    MMNav.onClose(() => btn.setAttribute('aria-expanded', 'false'));
+    MMNav.onClose(() => { btn.setAttribute('aria-expanded', 'false'); if (fromWhere && document.contains(btn) && btn.offsetParent) btn.focus(); fromWhere = false; });
+    const corner = document.getElementById('mm-nav-btn'); // cyc7-ui: never stack the sheet on a town overlay from the corner button either
+    if (corner) corner.addEventListener('click', () => { fromWhere = false; if (!MMNav.isOpen()) for (let i = 0; i < 4 && this.closeTopOverlay(); i++); }, true);
     MMNav.onSettings(() => {
       const panel = document.getElementById('player-list-panel');
       const toggle = document.getElementById('panel-toggle');
@@ -6064,7 +6075,7 @@ class TownScene extends Phaser.Scene {
     const bw = Math.min(vw - 16, 360);
     const bl = (vw - bw) / 2;
     let top = 8;
-    ['inventory-panel', 'player-list-panel', 'where-to-btn', 'walkie-talk-btn', 'gate-pointer', 'whats-new-banner'].forEach((id) => {
+    ['mm-nav-btn', 'inventory-panel', 'player-list-panel', 'where-to-btn', 'walkie-talk-btn', 'gate-pointer', 'whats-new-banner'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el || el.classList.contains('hidden')) return;
       const cs = getComputedStyle(el);
@@ -10436,7 +10447,7 @@ updateJoinButtonState();
   let on = false;
   b.addEventListener('click', () => {
     try {
-      if (!on) on = typeof MMNav !== 'undefined' && MMNav.mount({ page: 'town', hideMenu: true }) === true;
+      if (!on) on = typeof MMNav !== 'undefined' && MMNav.mount(TOWN_NAV) === true;
       if (!on) { location.href = './hub/index.html'; return; }
       if (MMNav.isOpen()) MMNav.close(); else MMNav.open();
     } catch (e) { location.href = './hub/index.html'; }

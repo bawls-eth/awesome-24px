@@ -1,4 +1,4 @@
-// Accessibility + viewport sweep (bug bash lane "a11y"). Visits every page of the game at 7 viewports and checks the list in
+// Accessibility + viewport sweep (bug bash lane "a11y"). Visits every page of the game at 8 viewports (195x422 added in cycle 7) and checks the list in
 // game/design/bugbash/a11y-viewports.md. DB-safe: blockDb(ctx) on every context; the Town is entered ONLY through the offline stub
 // ('Play offline' with the Firebase SDK answered empty). No chat, nothing written to Firebase.
 //
@@ -20,7 +20,9 @@ const REPORT_FILE = path.join(__dirname, '..', 'design', 'bugbash', 'a11y-viewpo
 const VIEWPORTS = [
   { id: '320x568', w: 320, h: 568, touch: true }, { id: '360x640', w: 360, h: 640, touch: true }, { id: '390x844', w: 390, h: 844, touch: true },
   { id: '414x896', w: 414, h: 896, touch: true }, { id: '667x375', w: 667, h: 375, touch: true }, { id: '768x1024', w: 768, h: 1024, touch: true },
-  { id: '1920x1080', w: 1920, h: 1080, touch: false }
+  { id: '1920x1080', w: 1920, h: 1080, touch: false },
+  // cyc7-ui: the narrowest phone width we support (also 200% zoom on a 390 phone). Cycle 6 found 36 text-size offenders here.
+  { id: '195x422', w: 195, h: 422, touch: true }
 ];
 const PROFILE = { v: 1, heroes: [{ id: 'h1', name: 'Fern', cls: 'druid', level: 7, xp: 10, items: [] }], stash: [], fame: 0, mode: 'classic', hall: [] };
 const SEED = {

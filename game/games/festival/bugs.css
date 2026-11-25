@@ -154,7 +154,7 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
 @media (max-width: 300px) {
   #top { flex-wrap: wrap; padding-left: 6px; padding-right: 6px; box-sizing: border-box; }
   #top h1 { flex: 1 1 0; min-width: 0; font-size: min(calc(15px * var(--ui-scale,1)), 8vw); letter-spacing: 0; overflow-wrap: anywhere; }
-  #btn-mute { padding-left: 6px; padding-right: 6px; font-size: min(calc(12px * var(--ui-scale,1)), 6vw); letter-spacing: 0; }
+  #btn-mute { padding-left: 6px; padding-right: 6px; font-size: max(12px, min(calc(12px * var(--ui-scale,1)), 6vw)); letter-spacing: 0; } /* cyc7-ui: 12 px floor */
   #touch { gap: 4px; }
   #joy { width: 72px; height: 72px; } #knob { left: 16px; top: 16px; }
   #btn-swing { width: 64px; height: 64px; font-size: min(calc(18px * var(--ui-scale,1)), 6vw); padding: 2px; }

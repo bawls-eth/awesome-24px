@@ -207,3 +207,13 @@ body.mm-nav-on .home-title { position: sticky; top: 0; z-index: 2; margin: 0 -12
 @media (max-width: 480px) { body.mm-nav-on .home-title { margin: 0 -10px; padding: 0 10px; } }
 @media (max-width: 300px) { body.mm-nav-on .home-title { padding-left: 62px; } }
 body.mm-nav-on .home-in.scrolled .home-title { background: var(--px-bg, #12142a); box-shadow: 0 2px 0 var(--h-line); }
+
+/* cyc7-ui (a11y sweep at 195x422): the map header squeezed the place name into a 39 px column between the Menu button and the stats,
+   so the name broke letter by letter and the h1 rose above the screen top (no visible h1). At <= 300 px the stats take their own row
+   and the name / world lines get the whole width right of the Menu button, wrapping between words. */
+@media (max-width: 300px) {
+  #hud { flex-wrap: wrap; row-gap: 2px; flex-shrink: 0; height: auto; }
+  .hud-main { flex: 1 1 0; min-width: 0; }
+  .hud-stats { flex: 1 1 100%; justify-content: flex-end; }
+  .hud-name, .hud-world { overflow-wrap: break-word; }
+}
