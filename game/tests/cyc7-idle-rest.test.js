@@ -1,12 +1,12 @@
 // Cycle 7 S, ID-51 idle-hero rest (owner-approved, ROUND4.md STANDING OWNER DECISION): a solo world hero on a Shore tile with no play input
-// for 8 game seconds rests: non-boss enemies do not pursue, fire or get provoked, the one-thumb auto-fire pauses. ANY play input (a key,
+// for RM_IDLE_REST_S game seconds (8, 5 since cycle 9) rests on a Shore or (cycle 9) Midlands tile: non-boss enemies do not pursue, fire or get provoked, the one-thumb auto-fire pauses. ANY play input (a key,
 // a canvas tap, a stick, an ability) restores the normal rules on the same frame. Deeper zones and the Trial keep today's rules.
 // The survival side (an idle hero lives 120 s) is cyc6-lead-passive-landscape.test.js; this test proves the other half:
 //   A. an ACTIVE hero on the seed-12345 Shore spawn with two plain aimed shooters on screen (real key taps every second, no rest ever) is
 //      still shot at and loses HP: not trivial;
-//   B. an idle hero rests after 8 s: enemies within 420 px fire 0 bolts and do not move for 4 s; one real key press ends the rest at once
+//   B. an idle hero rests after RM_IDLE_REST_S (5 s since cycle 9): enemies within 420 px fire 0 bolts and do not move for 4 s; one real key press ends the rest at once
 //      and the enemies fire again; a real touch tap on the phone (390x844) ends it too;
-//   C. the same idle hero on a Midlands tile never rests.
+//   C. the same idle hero on a Midlands tile (zone 1) rests too (cycle 9, ID-51 inland follow-up); on a Highlands tile (zone 2) it never rests.
 // B and C give the hero endless i-frames (so it survives to be measured; aggro, not survival, is what they check). A uses none.
 // OFFLINE: blockDb + every WebSocket closed + the town page stubbed; literal 0 database attempts.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc7-idle-rest.test.js
@@ -46,10 +46,13 @@ const nearSnap = (page) => E(page, (a) => a.enemies.filter((e) => e.active && e.
 (async () => {
   const browser = await chromium.launch();
 
-  // A: an ACTIVE hero (keyboard, 1280x720): taps a / d every second for 14 game seconds, never idle for 8 s
+  // A: an ACTIVE hero (keyboard, 1280x720): taps a / d every second for 14 game seconds, never idle for 5 s
   {
     const { ctx, page, db, errors } = await open(browser, [1280, 720], false);
     await shooters(page);
+    // cycle 9: the page can sit idle for several game seconds while it loads under a busy machine (RM_IDLE_REST_S is 5 now), so the
+    // active hero starts with one real key tap and the measurement starts after it (restN compared as a delta)
+    await page.keyboard.down('d'); await page.waitForTimeout(120); await page.keyboard.up('d');
     const s0 = await now(page); let maxIdle = 0; let rested = false; const end = s0.clock + 14; let k = 0;
     while (true) {
       const s = await now(page); maxIdle = Math.max(maxIdle, s.idleT); rested = rested || s.resting;
@@ -58,7 +61,7 @@ const nearSnap = (page) => E(page, (a) => a.enemies.filter((e) => e.active && e.
       await page.waitForTimeout(800);
     }
     const s = await now(page);
-    check('A: an active hero (real key taps every second) never rests (restN 0, idle timer stays under 8 s)', !rested && s.restN === 0 && maxIdle < 8, JSON.stringify({ maxIdle, rested, restN: s.restN }));
+    check('A: an active hero (real key taps every second) never rests (no new rest, idle timer stays under RM_IDLE_REST_S = 5 s)', !rested && s.restN === s0.restN && maxIdle < 5, JSON.stringify({ maxIdle, rested, restN: s.restN, restN0: s0.restN }));
     check('A: the active hero\'s Shore is not trivial: Shore enemies fire at it and it loses HP (or falls)', s.zone === 0 && s.fired > 0 && (s.hpLost > 0 || s.state === 'dead'), JSON.stringify(s));
     console.log('INFO A (active, seed 12345, 14 s):', JSON.stringify({ fired: s.fired, hpLost: Math.round(s.hpLost), state: s.state, taps: k }));
     check('A: no page errors, no database traffic (literal 0)', errors.length === 0 && db.attempts() === 0, errors.join(' | ') + ' db=' + db.attempts());
@@ -70,13 +73,16 @@ const nearSnap = (page) => E(page, (a) => a.enemies.filter((e) => e.active && e.
     const { ctx, page, db, errors } = await open(browser, v.view, v.touch);
     await E(page, (a) => { a.player.iframes = 1e9; return true; }); // survive to be measured (aggro is what B checks)
     await shooters(page);
-    const c0 = (await now(page)).clock;
+    // cycle 9: wake the hero with one real input first (the load can idle it past RM_IDLE_REST_S = 5 s), then start the count
+    if (v.touch) await page.touchscreen.tap(Math.round(v.view[0] / 2), Math.round(v.view[1] * 0.35));
+    else { await page.keyboard.down('d'); await page.waitForTimeout(60); await page.keyboard.up('d'); }
+    const w0 = await now(page); const c0 = w0.clock;
     await page.waitForTimeout(500);
     const early = await now(page);
-    check(v.name + ' B: right after the start the hero is NOT resting yet (8 s rule)', !early.resting && early.clock - c0 < 8, JSON.stringify(early));
+    check(v.name + ' B: right after the start the hero is NOT resting yet (5 s rule)', !early.resting && early.clock - c0 < 5, JSON.stringify(early));
     await clockAt(page, c0 + 9);
     const r1 = await now(page);
-    check(v.name + ' B: after 9 s with no input the hero on the Shore rests (restN 1)', r1.resting && r1.restN === 1 && r1.zone === 0, JSON.stringify(r1));
+    check(v.name + ' B: after 9 s with no input the hero on the Shore rests (exactly one new rest)', r1.resting && r1.restN === w0.restN + 1 && r1.zone === 0, JSON.stringify(r1));
     const pos0 = await nearSnap(page); const f0 = r1.fired;
     await clockAt(page, r1.clock + 4);
     const r2 = await now(page); const pos1 = await nearSnap(page);
@@ -95,24 +101,27 @@ const nearSnap = (page) => E(page, (a) => a.enemies.filter((e) => e.active && e.
     await ctx.close();
   }
 
-  // C: idle hero on a Midlands tile never rests
-  {
+  // C (cycle 9 S, ID-51 inland follow-up, D spec in IDEAS.md): an idle hero on a Midlands tile (zone 1) now rests too; on a Highlands
+  // tile (zone 2) it never rests (deeper zones keep today's rules on purpose: a hero there chose deadly ground).
+  for (const zc of [{ zone: 1, name: 'Midlands', rests: true }, { zone: 2, name: 'Highlands', rests: false }]) {
     const { ctx, page, db, errors } = await open(browser, [1280, 720], false);
-    const spot = await E(page, (a, w) => {
+    const spot = await E(page, (a, w, zone) => {
       a.player.iframes = 1e9; const Z = window.MMZones; const T = 32; const px = Math.floor(a.player.x / T), py = Math.floor(a.player.y / T);
-      for (let r = 4; r < 160; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      for (let r = 4; r < 400; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const tx = px + dx, ty = py + dy;
-        if (Z.zoneInfoAt(w.world, tx + 0.5, ty + 0.5).zone !== 1) continue;
+        if (tx < 2 || ty < 2 || tx >= w.world.w - 2 || ty >= w.world.h - 2) continue;
+        if (Z.zoneInfoAt(w.world, tx + 0.5, ty + 0.5).zone !== zone) continue;
         if (w.solidAt && w.solidAt((tx + 0.5) * T, (ty + 0.5) * T)) continue;
-        a.player.x = (tx + 0.5) * T; a.player.y = (ty + 0.5) * T; a._camStep(-1); return { tx, ty };
+        a.player.x = (tx + 0.5) * T; a.player.y = (ty + 0.5) * T; a._idleT = 0; a._camStep(-1); return { tx, ty };
       }
       return null;
-    });
+    }, zc.zone);
     const c0 = (await now(page)).clock;
     await clockAt(page, c0 + 10);
     const s = await now(page);
-    check('C: an idle hero (10 s, no input) on a Midlands tile does not rest (deeper zones keep today\'s rules)', !!spot && !s.resting && s.restN === 0 && s.idleT >= 8 && s.state === 'play', JSON.stringify({ spot, s }));
-    check('C: no page errors, no database traffic (literal 0)', errors.length === 0 && db.attempts() === 0, errors.join(' | ') + ' db=' + db.attempts());
+    if (zc.rests) check('C: an idle hero (10 s, no input) on a Midlands tile rests (ID-51 extended to zone <= 1)', !!spot && s.zone === 1 && s.resting && s.restN >= 1 && s.state === 'play', JSON.stringify({ spot, s }));
+    else check('C: an idle hero (10 s, no input) on a Highlands tile does not rest (zone 2+ keeps today\'s rules)', !!spot && s.zone === 2 && !s.resting && s.restN === 0 && s.idleT >= 8 && s.state === 'play', JSON.stringify({ spot, s }));
+    check('C ' + zc.name + ': no page errors, no database traffic (literal 0)', errors.length === 0 && db.attempts() === 0, errors.join(' | ') + ' db=' + db.attempts());
     await ctx.close();
   }
 

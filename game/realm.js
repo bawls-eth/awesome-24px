@@ -265,7 +265,7 @@ function rmCleanForged(t, f) {
 // Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
 const RM_CACHE_KILLS = 3, RM_CACHE_ALIVE_S = 60; // G-09: a Survivor's cache needs this many kills or seconds alive since the last one
 const RM_PROVOKE_S = 4; // G-08: seconds a world shooter hit from off screen ignores hold-fire
-const RM_IDLE_REST_S = 8; // ID-51 idle-hero rest: game seconds with no play input before a world hero rests (where the world's restOk hook allows it)
+const RM_IDLE_REST_S = 5; // (8 until cycle 9: 5 lets the hero who is hit in its first seconds live, D cyc8 data) ID-51 idle-hero rest: game seconds with no play input before a world hero rests (where the world's restOk hook allows it)
 const RM_ARM_MS = 300, RM_SELL_ASK_MS = 3000, RM_FORGE_ARM_MS = 400; // b02-12: Forge confirm / Salvage buttons wake later (a phone double-tap can be ~350 ms)
 // cyc5 (b02-r3-01): a slow tap rhythm (~450 ms) on "Confirm reforge" reached Salvage on tap 2 and Confirm salvage on tap 3. Now taps that follow
 // "Confirm reforge" less than RM_FORGE_RHYTHM_MS apart form one tap chain, and a Salvage / Confirm salvage tap inside it is ignored; "Confirm
@@ -3628,10 +3628,14 @@ class RealmArena {
   // cyc6: a tap on a Buy always answers in the panel (a refused Buy used to be a silent `disabled` button that looked live).
   _shopTap(id, r) {
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[r];
-    if (!def || !rar) return false;
+    // cyc9 S: an id / rarity that does not resolve (a stale or edited button) used to return here with no answer at all
+    if (!def || !rar) { this._shopMsg = 'That is not for sale right now.'; this.renderShop(); return false; }
     const price = rar.sell * RM_SHOP_MULT; const n0 = sv.items.length;
     const ok = this.buy(id, r);
-    this._shopMsg = ok ? `Bought ${rar.name} ${def.name}: it is in your backpack (${sv.items.length} / ${RM_BACKPACK}).`
+    // cyc9 S: buy() persists through _persist; when that write fails (storage full or blocked) the only warning was a canvas notice drawn
+    // BEHIND this 85% overlay, so the panel said "Bought" while the buy would be gone after a reload. Say it here; the next good save writes it.
+    const unsaved = ok && this.saveOk === false ? ' Not saved yet: browser storage is full or blocked, so it is kept for this visit until a save works.' : '';
+    this._shopMsg = ok ? `Bought ${rar.name} ${def.name}: it is in your backpack (${sv.items.length} / ${RM_BACKPACK}).${unsaved}`
       : n0 >= RM_BACKPACK ? 'Your backpack is full: sell or combine something first.'
         : sv.shards < price ? `You need ${price - sv.shards} more 💎 for the ${rar.name} ${def.name}.` : 'That is not for sale right now.';
     this.renderShop();

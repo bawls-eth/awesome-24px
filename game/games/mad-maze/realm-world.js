@@ -3054,10 +3054,11 @@
     };
     arena.onEnemyKilled = onEnemyKilled; arena.onEnemyHit = onEnemyHit;
     arena.setMode('world');
-    // ID-51 idle-hero rest (owner-approved): a solo hero on a Shore tile, outside the Trial of Six, may rest after 8 s with no input
-    // (arena RM_IDLE_REST_S). Deeper zones keep today's rules. ?idlerest=0 turns it off.
+    // ID-51 idle-hero rest (owner-approved): a solo hero on a Shore or Midlands tile (zone <= 1; Midlands added in cycle 9 from the
+    // cyc8-design-inland-passive data: 6/6 idle Lv 1 heroes fell there within 30 s), outside the Trial of Six, may rest after
+    // RM_IDLE_REST_S (5 s) with no input. Highlands and Godlands keep today's rules on purpose. ?idlerest=0 turns it off.
     const REST_ON = !/[?&]idlerest=0(&|$)/.test(qs0);
-    const restOk = (p) => REST_ON && !rush.on && Z.zoneInfoAt(world, p.x / TILE, p.y / TILE).zone === 0;
+    const restOk = (p) => REST_ON && !rush.on && Z.zoneInfoAt(world, p.x / TILE, p.y / TILE).zone <= 1;
     arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, moveScaleAt, restOk, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
     if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { savePos(true); settle('leave'); });
     if (opts.assetRoot && opts.tileArt !== false) loadTileArt(opts.assetRoot);
