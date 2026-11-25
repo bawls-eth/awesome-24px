@@ -16,18 +16,29 @@ const fallTo = (page, spec) => page.evaluate(async (o) => {
   const a = window.__mm.arena; const p = a.player;
   const frames = (n) => new Promise((res) => { let i = 0; const f = () => (++i >= n ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); });
   a.hurtGuard = null; a.shield.hits = 0; a.buffTaken = 0;
+  // cycle 10 L (watch-list flake, root cause): on a slow machine the world has already run for seconds when this starts, and the
+  // seed's own enemies have bolts in the air around the hero: one of those felled the 1-HP hero before the test's bolt did (seen
+  // as 'Water Elemental' / 'Sprout' instead of 'Sniper'). The fall must be to the ONE bolt this test fires: the world's own
+  // enemies are silenced and their bolts are taken out of the air, here and on every frame until the hero falls.
+  // o.crowd (the slow-start case): another enemy that fires on its own, with six of its bolts 8 px from the hero and flying at it
+  // (closer than the test's bolt, 24 px): without the two lines below one of them fells the hero first.
+  let crowd = 0;
+  if (o.crowd) { const z = a.spawnEnemy('ring', p.x - 300, p.y); z.cd = 0.05; z.provT = 99; for (let k = 0; k < 6; k++) a.fireEnemyBullet(p.x - 8 - k * 2, p.y, 0, 240, 0, z); crowd = a.eBullets.filter((x) => x.active && x.ok === 'ring').length; }
+  const others = a.enemies.filter((x) => x.active);
+  const hush = () => { others.forEach((x) => { x.cd = 1e9; x.cd2 = 1e9; }); };
+  hush(); a.eBullets.forEach((x) => { x.active = false; });
   const e = a.spawnEnemy(o.type, p.x + 400, p.y); e.cd = 1e9; e.cd2 = 1e9; e.provT = 0;
   if (o.art) e.art = o.art; if (o.boss) e.bossName = o.boss;
   let b = null;
   if (o.viaCur) { a._curE = e; b = a.fireEnemyBullet(p.x - 24, p.y, 0, 240, 0); a._curE = null; } else b = a.fireEnemyBullet(p.x - 24, p.y, 0, 240, 0, e);
   const rec = b ? { ok: b.ok, oa: b.oa, on: b.on } : null;
   p.hp = 1; p.iframes = 0;
-  for (let i = 0; i < 240 && a.state !== 'dead'; i++) { p.iframes = 0; await frames(1); }
+  for (let i = 0; i < 240 && a.state !== 'dead'; i++) { p.iframes = 0; hush(); a.eBullets.forEach((x) => { if (x !== b) x.active = false; }); await frames(1); }
   const banner = (document.getElementById('realm-banner') || {}).textContent || '';
   for (let i = 0; i < 400 && !a._deathShown; i++) await frames(1);
   const card = document.getElementById('realm-death'); const row = card && card.querySelector('.rm-felled-row');
   const r = row && row.getBoundingClientRect(); const cr = card && card.querySelector('.rm-card').getBoundingClientRect();
-  return { rec, state: a.state, felledBy: a._felledBy, banner, shown: !!a._deathShown, row: row ? row.textContent : null, value: row ? row.querySelector('b').textContent : null,
+  return { rec, crowd, state: a.state, felledBy: a._felledBy, banner, shown: !!a._deathShown, row: row ? row.textContent : null, value: row ? row.querySelector('b').textContent : null,
     first: !!row && row === card.querySelector('.rm-recap').firstElementChild,
     fits: !!r && !!cr && r.width > 0 && r.left >= cr.left - 0.5 && r.right <= cr.right + 0.5 && cr.left >= 0 && cr.right <= innerWidth + 0.5 && r.bottom <= innerHeight + 0.5 };
 }, spec);
@@ -89,6 +100,26 @@ const fallTo = (page, spec) => page.evaluate(async (o) => {
 
     check(`${tag} no page errors`, errors.length === 0, errors.join(' | '));
     check(`${tag} offline: no database traffic`, db.attempts() === 0, String(db.attempts()));
+    await ctx.close();
+  }
+
+  // 4b. cycle 10 L: a slow start. Another enemy's bolts are in the air right at the hero when the test acts (what a busy machine
+  // does to this test: there the seed's own enemies had seconds to do it; a probe saw 11 bolts near and 'Sprout' on the card).
+  // The hero must still fall to the test's one bolt, and the card must name the Sniper.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    const db = await blockDb(ctx); await ctx.routeWebSocket(/.*/, (ws) => ws.close());
+    await ctx.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html>town' }));
+    const page = await ctx.newPage(); const errors = [];
+    page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    await page.goto(ORIGIN + '/game/games/mad-maze/lantern.css');
+    await page.evaluate(() => { localStorage.clear(); localStorage.setItem('mm-aim-assist', '0'); });
+    await page.goto(WORLD);
+    await page.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 30000 });
+    const s2 = await fallTo(page, { type: 'aimed', viaCur: true, crowd: true });
+    check('slow start. another enemy had 6 bolts of its own 8 to 18 px from the hero when the test acted', s2.crowd >= 6, JSON.stringify({ crowd: s2.crowd }));
+    check('slow start. the hero still falls to the test\'s one bolt: banner and card name the Sniper', s2.state === 'dead' && s2.felledBy === 'Sniper' && s2.value === 'Sniper' && /felled by Sniper$/.test(s2.banner), JSON.stringify({ state: s2.state, felledBy: s2.felledBy, value: s2.value, banner: s2.banner }));
+    check('slow start. no page errors, no database traffic', errors.length === 0 && db.attempts() === 0, errors.join(' | ') + ' db=' + db.attempts());
     await ctx.close();
   }
 

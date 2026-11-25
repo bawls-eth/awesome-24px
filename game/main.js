@@ -236,24 +236,41 @@ function loadBackupModules() {
   return backupModulesPromise;
 }
 
+// Cycle 10 L (Town shop reliability): a write that storage refuses (quota full, blocked) used to vanish without a word, and the
+// counter writers then moved their delta base as if it had landed, so a buy or a sale made in that window was lost for good even
+// after storage worked again. Now a refused partial is kept (SAVE_PENDING) and written under the next write that lands, the merged
+// writers report the failure (null) so their base stays put, and SAVE_OK lets the shops tell the player it is not saved yet.
+let SAVE_OK = true;
+let SAVE_PENDING = null;
+// What storage holds plus what this tab could not write yet: for "already bought today" checks while storage refuses writes.
+function loadSaveLive() { return SAVE_PENDING ? { ...loadSave(), ...SAVE_PENDING } : loadSave(); }
+
 function writeSave(partial) {
-  if (SAVE_RESTORING) return;
+  if (SAVE_RESTORING) return false;
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...partial }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...(SAVE_PENDING || {}), ...partial }));
+    SAVE_PENDING = null; SAVE_OK = true;
+    return true;
   } catch (e) {
-    // ignore — nothing to persist to
+    SAVE_PENDING = { ...(SAVE_PENDING || {}), ...partial }; SAVE_OK = false; // kept for this visit; the next write that lands carries it
+    return false;
   }
 }
 
 // Beta S-02 (two Town tabs, or a Town tab + a Lantern Restore): merge-on-write for the counters and sets a whole
 // sub-object used to overwrite. fn(stored) returns the partial to write on top of what storage holds RIGHT NOW.
+// Returns null when nothing was written (restore in progress, or storage refused): the caller keeps its base, so its change is
+// still a pending delta for the next call.
 function writeSaveMerged(fn) {
   if (SAVE_RESTORING) return null;
   const stored = loadSave();
   let partial = null;
   try { partial = fn(stored); } catch (e) { partial = null; }
   if (!partial || typeof partial !== 'object') return null;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...partial })); } catch (e) { /* nothing to persist to */ }
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...(SAVE_PENDING || {}), ...partial }));
+    SAVE_PENDING = null; SAVE_OK = true;
+  } catch (e) { SAVE_OK = false; return null; }
   return partial;
 }
 
@@ -2253,6 +2270,14 @@ class TownScene extends Phaser.Scene {
         if (o._cr < x0 || o._cl > x1 || o._cb < y0 || o._ct > y1) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; continue; }
       }
       if (!full && o._cs === 3 && o.type !== 'Sprite' && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
+      else if (o.type === 'Sprite') {
+        // cycle 10 (L): sprites (players, villagers, animals) are measured on every pass. Reading their fields at the load sites all
+        // ~980 objects of every type go through returned a fresh boxed number per read. They are measured in a helper only sprites
+        // reach, and one that has not moved since its last measure keeps its box (see _cullSpriteBox). Same box, same bits as before.
+        measured++;
+        if (!this._cullSpriteBox(o, pass)) continue; // no size: nothing to cull (bit left as it is, as before)
+        l = o._cl; t = o._ct; r2 = o._cr; b = o._cb;
+      }
       else {
         const w = o.displayWidth, h = o.displayHeight;
         measured++;
@@ -2273,6 +2298,20 @@ class TownScene extends Phaser.Scene {
     }
     this._cullMeasured = measured; // test hook: objects measured (not taken from the remembered box) on the last pass
     this._culled = culled;
+  }
+
+  // cycle 10 (L): the box of one Sprite for cullOffscreen, written to o._cl/_ct/_cr/_cb (whole numbers, the same floor / ceil as the
+  // shared path). Only sprites come through here, so the field reads below see a handful of object shapes instead of every type in
+  // the display list. Returns false for a sprite with no size.
+  _cullSpriteBox(o, pass) {
+    const w = o.displayWidth, h = o.displayHeight;
+    if (!(w > 0) || !(h > 0)) { o._cv = pass; return false; }
+    const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
+    const left = o.x - w * o.originX - r, top = o.y - h * o.originY - r;
+    const l = Math.floor(left), t = Math.floor(top), r2 = Math.ceil(left + w + 2 * r), b = Math.ceil(top + h + 2 * r);
+    if (l !== o._cl || t !== o._ct || r2 !== o._cr || b !== o._cb) { o._cl = l; o._ct = t; o._cr = r2; o._cb = b; }
+    o._cs = 0; o._cv = pass;
+    return true;
   }
 
   // ---------- day/night ambience ----------
@@ -3216,6 +3255,7 @@ class TownScene extends Phaser.Scene {
     this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30, 'sell');
     if (soldTurnips > 0) this.incrementStat('turnipsSold', soldTurnips);
     this.updateSellStreak();
+    this.unsavedNote('Sold');
   }
 
   // A loyalty bonus for selling on consecutive days — same date-comparison
@@ -3272,7 +3312,7 @@ class TownScene extends Phaser.Scene {
   }
 
   turnipBundlesBoughtToday() {
-    const rec = loadSave().turnipBuys;
+    const rec = loadSaveLive().turnipBuys; // Live: the cap also counts buys storage has not taken yet
     return rec && rec.day === this.questDayBucket() ? (Number(rec.bundles) || 0) : 0;
   }
 
@@ -3296,6 +3336,15 @@ class TownScene extends Phaser.Scene {
     this.updateInventoryHUD();
     this.saveResources();
     this.awardPoint(-price, `bought ${TURNIP_BUNDLE} 🥬 for ${price} ⭐`, this.localBody.x, this.localBody.y - 30, 'pop');
+    this.unsavedNote(`Bought ${TURNIP_BUNDLE} turnips`);
+  }
+
+  // Cycle 10 L: after a buy, a sale or an outfit change, say so when browser storage refused the write (it used to be silent and
+  // the purchase was simply gone after a reload). Same wording as the Realm shop. Returns true when the warning was shown.
+  unsavedNote(what) {
+    if (SAVE_OK) return false;
+    this.stallNote(`${what}, but not saved yet: browser storage is full or blocked, so it is kept for this visit until a save works.`);
+    return true;
   }
 
   // R4 D4 (b07-r2-13): a refused buy used to flash a 0.9 s float on top of the player's name (easy to miss). Now the float
@@ -8335,7 +8384,7 @@ class TownScene extends Phaser.Scene {
     this.saveResources();
     this.incrementStat('crafted');
     this.incrementStat('craft_' + r.id);
-    if (note) note.textContent = `Crafted ${r.icon} ${r.label}! Sell it at the shop.`;
+    if (note) note.textContent = `Crafted ${r.icon} ${r.label}! Sell it at the shop.` + (SAVE_OK ? '' : ' Not saved yet: browser storage is full or blocked, so it is kept for this visit until a save works.');
     this.showFloatingText(this.localBody.x, this.localBody.y - 30, `${r.icon} crafted!`);
     this.renderWorkbench();
     return true;
@@ -8418,6 +8467,7 @@ class TownScene extends Phaser.Scene {
     this.net.updateAppearance(this.outfitSpecies, this.outfitFrame);
     this.closeOutfitShop();
     this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'new look!');
+    this.unsavedNote('New look');
   }
 
   setupOutfitShop() {
@@ -8939,13 +8989,14 @@ class TownScene extends Phaser.Scene {
     this.net.updateAppearance(species.key, frame);
     this.awardPoint(-MERCHANT_COST, `🛒 bought the ${this.merchantLookName(species)}!`, this.localBody.x, this.localBody.y - 30, 'sell');
     this.incrementStat('merchantBuys');
+    this.unsavedNote('New look bought');
   }
 
   // Once-a-day star sink: the merchant delivers a gift to every villager
   // (affinity only, no tier-up star bonus, so it can't pay for itself).
   buyMerchantGiftBox() {
     const today = this.questDayBucket();
-    if (Number(loadSave().merchantGiftBoxDay) === today) {
+    if (Number(loadSaveLive().merchantGiftBoxDay) === today) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, "already sent today's gift boxes");
       return;
     }
@@ -8957,6 +9008,7 @@ class TownScene extends Phaser.Scene {
     VILLAGERS.forEach((v) => this.bumpVillagerAffinity(v.id, MERCHANT_GIFT_BOX_AFFINITY));
     this.awardPoint(-MERCHANT_GIFT_BOX_COST, `🎁 gift boxes sent to all ${VILLAGERS.length} villagers!`, this.localBody.x, this.localBody.y - 30, 'sell');
     this.incrementStat('merchantGiftBoxes');
+    this.unsavedNote('Gift boxes sent');
   }
 
   drawNPC() {
