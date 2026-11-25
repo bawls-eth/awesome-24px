@@ -757,3 +757,6 @@ remeasure on the redrawn mounts). Hard alpha, 4x grid, separate from the body: g
 4. Seats: per-frame seat points must be remeasured on the redrawn mounts; include a composite preview (mount + saddle + a hero sitting).
 
 Deliver each fix on the same branch, re-run `node game/tools/art-audit/run.js` and add a composite saddle preview.
+
+## Codex T17 deer submitted
+T17 deer on codex/t17-deer: six strips/14 frames, 64 native/256 export, full-body deer with branched antlers, front/right views. Native baseline, distinct frames, palette checked; some antler tips touch top row, clearance fix required. Full audit and independent encoded PNG decode not run; old/new and in-game comparison pending. Provisional INDEX because ingest unavailable. No code changes.
