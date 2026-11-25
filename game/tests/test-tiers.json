@@ -2485,5 +2485,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 240
+  },
+  "cyc10-lead-town-cull-sprites.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 240
   }
 }

@@ -112,15 +112,18 @@ const nearSnap = (page) => E(page, (a) => a.enemies.filter((e) => e.active && e.
         if (tx < 2 || ty < 2 || tx >= w.world.w - 2 || ty >= w.world.h - 2) continue;
         if (Z.zoneInfoAt(w.world, tx + 0.5, ty + 0.5).zone !== zone) continue;
         if (w.solidAt && w.solidAt((tx + 0.5) * T, (ty + 0.5) * T)) continue;
-        a.player.x = (tx + 0.5) * T; a.player.y = (ty + 0.5) * T; a._idleT = 0; a._camStep(-1); return { tx, ty };
+        a.player.x = (tx + 0.5) * T; a.player.y = (ty + 0.5) * T; a._idleT = 0; a._camStep(-1); return { tx, ty, r0: a.restN };
       }
       return null;
     }, zc.zone);
+    // cycle 10 L (watch-list flake, root cause): under load the page idles on its Shore spawn for 5+ game seconds while it loads, so
+    // the hero has already rested once BEFORE it is put on the tile (restN 1; seen as a false "rested on the Highlands"). The count
+    // is now compared with its value at arrival (spot.r0): exactly one NEW rest on the Midlands, none on the Highlands.
     const c0 = (await now(page)).clock;
     await clockAt(page, c0 + 10);
     const s = await now(page);
-    if (zc.rests) check('C: an idle hero (10 s, no input) on a Midlands tile rests (ID-51 extended to zone <= 1)', !!spot && s.zone === 1 && s.resting && s.restN >= 1 && s.state === 'play', JSON.stringify({ spot, s }));
-    else check('C: an idle hero (10 s, no input) on a Highlands tile does not rest (zone 2+ keeps today\'s rules)', !!spot && s.zone === 2 && !s.resting && s.restN === 0 && s.idleT >= 8 && s.state === 'play', JSON.stringify({ spot, s }));
+    if (zc.rests) check('C: an idle hero (10 s, no input) on a Midlands tile rests (ID-51 extended to zone <= 1)', !!spot && s.zone === 1 && s.resting && s.restN === spot.r0 + 1 && s.state === 'play', JSON.stringify({ spot, s }));
+    else check('C: an idle hero (10 s, no input) on a Highlands tile does not rest (zone 2+ keeps today\'s rules)', !!spot && s.zone === 2 && !s.resting && s.restN === spot.r0 && s.idleT >= 8 && s.state === 'play', JSON.stringify({ spot, s }));
     check('C ' + zc.name + ': no page errors, no database traffic (literal 0)', errors.length === 0 && db.attempts() === 0, errors.join(' | ') + ' db=' + db.attempts());
     await ctx.close();
   }

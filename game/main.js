@@ -2270,6 +2270,14 @@ class TownScene extends Phaser.Scene {
         if (o._cr < x0 || o._cl > x1 || o._cb < y0 || o._ct > y1) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; continue; }
       }
       if (!full && o._cs === 3 && o.type !== 'Sprite' && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
+      else if (o.type === 'Sprite') {
+        // cycle 10 (L): sprites (players, villagers, animals) are measured on every pass. Reading their fields at the load sites all
+        // ~980 objects of every type go through returned a fresh boxed number per read. They are measured in a helper only sprites
+        // reach, and one that has not moved since its last measure keeps its box (see _cullSpriteBox). Same box, same bits as before.
+        measured++;
+        if (!this._cullSpriteBox(o, pass)) continue; // no size: nothing to cull (bit left as it is, as before)
+        l = o._cl; t = o._ct; r2 = o._cr; b = o._cb;
+      }
       else {
         const w = o.displayWidth, h = o.displayHeight;
         measured++;
@@ -2290,6 +2298,20 @@ class TownScene extends Phaser.Scene {
     }
     this._cullMeasured = measured; // test hook: objects measured (not taken from the remembered box) on the last pass
     this._culled = culled;
+  }
+
+  // cycle 10 (L): the box of one Sprite for cullOffscreen, written to o._cl/_ct/_cr/_cb (whole numbers, the same floor / ceil as the
+  // shared path). Only sprites come through here, so the field reads below see a handful of object shapes instead of every type in
+  // the display list. Returns false for a sprite with no size.
+  _cullSpriteBox(o, pass) {
+    const w = o.displayWidth, h = o.displayHeight;
+    if (!(w > 0) || !(h > 0)) { o._cv = pass; return false; }
+    const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
+    const left = o.x - w * o.originX - r, top = o.y - h * o.originY - r;
+    const l = Math.floor(left), t = Math.floor(top), r2 = Math.ceil(left + w + 2 * r), b = Math.ceil(top + h + 2 * r);
+    if (l !== o._cl || t !== o._ct || r2 !== o._cr || b !== o._cb) { o._cl = l; o._ct = t; o._cr = r2; o._cb = b; }
+    o._cs = 0; o._cv = pass;
+    return true;
   }
 
   // ---------- day/night ambience ----------
