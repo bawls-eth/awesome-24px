@@ -408,6 +408,7 @@ function rmCleanSave(s) {
   if (s.gv === 1 || out.items.some((x) => x.t)) out.gv = 1;
   if (s.dust !== undefined) out.dust = rmCleanCount(s.dust); // GW forge dust: only when present (old saves stay byte-identical); corrupt -> 0
   if (s.gp !== undefined) { const gp = s.gp && typeof s.gp === 'object' && !Array.isArray(s.gp) ? s.gp : {}; out.gp = { b: Math.min(rmCleanCount(gp.b), 9999), d: Math.min(rmCleanCount(gp.d), 9999) }; }
+  if (s.firstEndSeen === 1) out.firstEndSeen = 1; // cycle 10 S (ID-55): the first-session ending card was shown (additive, only when set; anything else = absent)
   return out;
 }
 
@@ -503,6 +504,7 @@ function rmMergeSave(mine, stored, opts) {
   }
   out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
   if (a.gv || b.gv) out.gv = 1;
+  if (a.firstEndSeen || b.firstEndSeen) out.firstEndSeen = 1; // ID-55: once seen in any tab, seen for good (union)
   if (a.dust !== undefined || b.dust !== undefined) { const ad = a.dust || 0; const bs = Number.isFinite(opts.baseDust) ? opts.baseDust : ad; const bd = b.dust !== undefined ? b.dust : (a.dust !== undefined ? bs : 0); out.dust = Math.max(0, bd + (ad - bs)); } // three-way like shards. SV1: a stored save WITHOUT the key was rewritten by a pre-535faf6 tab (a modern cleaner keeps `dust: 0`), so it says nothing about dust: read it as unchanged (the base), never as 0
   if (a.gp || b.gp) { const ga = a.gp || { b: 0, d: 0 }, gb = b.gp || { b: 0, d: 0 }; const bs = opts.baseGp; // storage's gp at this tab's last sync: three-way like shards, so an in-tab reset / increment survives while another tab's change is added
     out.gp = bs ? { b: Math.max(0, gb.b + (ga.b - bs.b)), d: Math.max(0, gb.d + (ga.d - bs.d)) } : { b: Math.max(ga.b, gb.b), d: Math.max(ga.d, gb.d) }; }

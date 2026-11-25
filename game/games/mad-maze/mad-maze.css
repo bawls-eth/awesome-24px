@@ -616,3 +616,18 @@ body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale,
   html body #rw-zone .rw-danger-bar { display: none; }
   html body #rw-zone .rw-danger { gap: 0; }
 }
+
+/* Cycle 10 S (ID-53): the just-in-time hint: one centred line above the sticks / ability grid (bottom set by realm-world.js jhPlace), 12 px floor,
+   a 44 px close button, no motion at all (nothing to switch off for reduced motion / flashes off) */
+#rw-jhint { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(228px + env(safe-area-inset-bottom, 0px)); z-index: 4; display: flex; align-items: center; gap: 4px; max-width: min(92vw, 440px); box-sizing: border-box; padding: 0 0 0 10px; border-radius: 10px; background: rgba(14, 30, 58, 0.9); border: 2px solid #9cc8ff; color: #fff; font: 700 max(12px, 13px) system-ui, sans-serif; line-height: 1.25; }
+#rw-jhint.hidden { display: none; }
+#rw-jhint .rw-jhint-txt { flex: 1 1 auto; min-width: 0; padding: 4px 0; overflow-wrap: normal; word-break: normal; }
+#rw-jhint .rw-jhint-x { flex: none; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: #fff; font: 700 16px system-ui, sans-serif; cursor: pointer; }
+#rw-jhint .rw-jhint-x:focus-visible { outline: 3px solid #ffec27; outline-offset: -4px; }
+body.mm-hud-big #rw-jhint { font-size: calc(12px * var(--mm-hud-scale, 1)); }
+/* Cycle 10 S (ID-55): the first-session ending card (MMMiniKit result card), centred near the top, scrolls inside on a tiny screen (never sideways) */
+#rw-firstend { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 30; width: min(calc(100% - 24px), 360px); box-sizing: border-box; max-height: calc(100% - 24px); overflow-x: hidden; overflow-y: auto; padding: 12px 14px; background: #1d2b53; color: #fff1e8; box-shadow: 0 0 0 3px #0b0d1a, 0 0 0 6px #5f574f; --accent: #ffa300; }
+#rw-firstend .mk-head { font-size: 18px; overflow-wrap: normal; word-break: normal; }
+#rw-firstend .mk-actions { flex-wrap: wrap; }
+#rw-firstend .mk-btn { min-height: 44px; flex: 1 1 120px; max-width: 100%; white-space: normal; overflow-wrap: normal; word-break: normal; }
+@media (max-width: 300px) { #rw-firstend { padding: 8px; top: 6px; width: calc(100% - 12px); max-height: calc(100% - 12px); } #rw-firstend .mk-head { font-size: 15px; letter-spacing: .04em; } #rw-firstend .mk-row dt { min-width: 5em; } }
