@@ -8,6 +8,8 @@
 # 3. merges the shard results, reruns every failure ALONE once (nothing else running, same sha, one process);
 # 4. writes game/design/ci-status.json in the documented format; notes name every test that passed only on the solo rerun.
 #    --commit then commits that one file (docs-only). Exit 0 only when everything is green.
+# A test that crashed (exception, timeout) prints no "FAIL <check>" line: run-all.js adds "FAIL-STDERR <file>: <first stderr line>" /
+# "FAIL-TIMEOUT" / "FAIL-EXIT" lines (game/tests/lib/fail-lines.js), which the greps below show for each shard and for the solo rerun.
 # --no-write writes the stamp to the temp dir instead (dry run). Never writes to Firebase: the tests use ADMIN* bots / blockDb.
 set -u
 cd "$(dirname "$0")/.."

@@ -540,6 +540,12 @@ class RealmArena {
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this._boltArt = null; this._boltCls = null; this._baCache = null; this._sparks = null; this._curE = null; this._baDraws = 0; this._baeDraws = 0; this._sparkSpawned = 0; this._sparkDraws = 0; // optional bolt art (setBoltArt)
     this._abIconRoot = null; // setAbilityIcons
+    // cycle 9 (L): fields that used to be added to the arena later, one by one, during play (each addition gives the arena a new hidden
+    // shape and throws away optimised code that read it: the pool-shape rule of cycle 8, applied to the arena itself). Each keeps the
+    // value the old code saw before its first write (undefined where the code tests for "not set yet").
+    this._enemyVis = 130; this._enemyDbg = null; this.lastDmgColor = undefined; this._dmgTxtT = undefined; this._numC = null; this._spS = null;
+    this._noticeQ = null; this._noticeT = 0; this._dslOn = undefined; this.dissolveStats = undefined; this._dslKit = null;
+    this._chaseBestT = undefined; this.lastChaseToast = undefined; this._chaseToastT = undefined; this._lootIco = null;
     this._fx = null; this._fxPool = null; this._fxDraws = 0; // optional one-shot effect art (setFxArt)
     this.heroProfile = null; // setHeroProfile
     this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)

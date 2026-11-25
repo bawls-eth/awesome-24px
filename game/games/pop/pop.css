@@ -72,3 +72,10 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
    out, half clipped, under its bottom edge. While the result card is up they are hidden (the card has its own lines); they return with
    the next round. */
 #stage:has(#result:not([hidden])) #keys, #stage:has(#result:not([hidden])) #goal { visibility: hidden; }
+
+/* cycle 9 (L): at 160 px (a 320 px phone at 200% zoom) a 9-character value (1,234,567) at the 12 px floor still ran 4 px past its
+   box. Under 180 px the stage and the value boxes give back 4 px a side each. */
+@media (max-width: 180px) {
+  #stage { padding-left: 4px; padding-right: 4px; }
+  #hud .stat { padding-left: 2px; padding-right: 2px; }
+}

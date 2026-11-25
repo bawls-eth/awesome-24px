@@ -259,12 +259,12 @@
     ];
     if (!window.MMMiniKit) {
       // fallback without the kit: the old static card
-      $('r-score').textContent = String(run.score); lines.forEach((l) => { $(l.id).textContent = l.text; $(l.id).className = l.cls; });
+      $('r-score').textContent = fmtN(run.score); lines.forEach((l) => { $(l.id).textContent = l.text; $(l.id).className = l.cls; });
       return;
     }
     const K = window.MMMiniKit;
     const vm = K.result({
-      headline: ['Time! ', { text: String(run.score), id: 'r-score' }, ' points'],
+      headline: ['Time! ', { text: fmtN(run.score), id: 'r-score' }, ' points'],
       stats: [
         { label: 'Score', value: K.fmt(run.score), best: newBest && prevBest > 0 },
         { label: 'Best tile', value: String(run.maxTile), best: run.maxTile > prevTile && prevTile > 0 },
@@ -283,11 +283,22 @@
     MEDALS.forEach((m) => { const li = document.createElement('li'); const on = save.medals.indexOf(m[0]) >= 0; li.className = on ? 'on' : ''; li.textContent = (on ? '★ ' : '☆ ') + m[1]; li.title = m[2]; ul.appendChild(li); });
   }
   function nextGoal() { const m = MEDALS.find((x) => save.medals.indexOf(x[0]) < 0); return m ? 'Goal: ' + m[2] : 'All medals won. Chase your best!'; }
+  const fmtN = (n) => (window.MMMiniKit ? window.MMMiniKit.fmt(n) : String(n)); // the shared number format (the kit is a plain script tag; without it, the old plain digits)
+  // With separators a six-figure score is 7 characters and a seven-figure one 9: the value steps its own font down (never under
+  // 12 px) until it fits its box. Only long values are measured, once per HUD write (once a second).
+  function fitStat(el) {
+    if (el.style.fontSize) el.style.fontSize = '';
+    if (el.textContent.length < 7 || !el.parentElement || !el.getBoundingClientRect) return;
+    const cs = getComputedStyle(el.parentElement); const room = el.parentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const rg = document.createRange(); rg.selectNodeContents(el); const w = rg.getBoundingClientRect().width; const fs = parseFloat(getComputedStyle(el).fontSize);
+    if (room > 0 && w > room && fs > 12) el.style.fontSize = Math.max(12, Math.floor(fs * (room - 1) / w * 10) / 10) + 'px';
+  }
   function hud() {
-    $('h-score').textContent = String(run.score);
+    $('h-score').textContent = fmtN(run.score); // cycle 9 (L): one formatter for the HUD and the result card (thousands separators)
     $('h-time').textContent = String(Math.max(0, Math.ceil(run.time)));
-    $('h-best').textContent = String(Math.max(save.best, run.state === 'play' ? 0 : run.score));
+    $('h-best').textContent = fmtN(Math.max(save.best, run.state === 'play' ? 0 : run.score));
     $('h-tile').textContent = String(run.maxTile || '-');
+    fitStat($('h-score')); fitStat($('h-best'));
     $('timefill').style.transform = 'scaleX(' + Math.max(0, Math.min(1, run.time / ROUND)) + ')';
     $('goal').textContent = nextGoal();
   }

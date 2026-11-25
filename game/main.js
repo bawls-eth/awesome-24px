@@ -2240,16 +2240,29 @@ class TownScene extends Phaser.Scene {
       // between two cull passes: with a stale cull bit from its old spot it would stay undrawn for up to 3 frames in view.
       if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; if (o._cs) o._cs = 0; continue; }
       let l, t, r2, b;
-      if (!full && o._cs >= 3 && o.type !== 'Sprite' && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
+      // cycle 9 (L): an object that only sways around its home spot (shore foam, wave crests: 235 images on shared yoyo tweens) never
+      // "settled", so 120 of them were measured on every pass, in view or far out at sea. It declares its reach (o._cpad, px) and its
+      // box grown by that reach is pinned (_cs 4) on its first measure. While the pinned box is outside the cull line the true box
+      // is too, so it is culled unmeasured; when the pinned box crosses the line it is measured exactly as before (same bits as the
+      // old rule in every case). uncull(), hiding it or a forced pass drop the pin, and every 8th pass it is measured anyway, so one that
+      // was moved out of its reach is seen as soon as any settled object (within 8 passes).
+      if (!full && o._cs === 4 && pass - o._cv < 8) {
+        if (o._cr < x0 || o._cl > x1 || o._cb < y0 || o._ct > y1) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; continue; }
+      }
+      if (!full && o._cs === 3 && o.type !== 'Sprite' && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
       else {
         const w = o.displayWidth, h = o.displayHeight;
         measured++;
-        if (!(w > 0) || !(h > 0)) { if (!o._cz) { o._cz = 1; o._cl = NaN; o._cv = pass - (i & 7); } else o._cv = pass; o._cs = 3; continue; } // no size: nothing to cull (bit left as it is, as before); looked at again every 8th pass
+        if (!(w > 0) || !(h > 0)) { if (!o._cz) { o._cz = 1; o._cv = pass - (i & 7); } else o._cv = pass; o._cs = 3; continue; } // no size: nothing to cull (bit left as it is, as before); looked at again every 8th pass
         if (o._cz) o._cz = 0;
         const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
         const left = o.x - w * (o.originX === undefined ? 0.5 : o.originX) - r, top = o.y - h * (o.originY === undefined ? 0.5 : o.originY) - r;
         l = Math.floor(left); t = Math.floor(top); r2 = Math.ceil(left + w + 2 * r); b = Math.ceil(top + h + 2 * r);
-        if (l === o._cl && t === o._ct && r2 === o._cr && b === o._cb) { if (o._cs < 3) { o._cs = (o._cs | 0) + 1; o._cv = o._cs === 3 ? pass - (i & 7) : pass; } else o._cv = pass; }
+        if (o._cpad > 0) {
+          if (full || o._cs !== 4 || l < o._cl || t < o._ct || r2 > o._cr || b > o._cb) { const pd = o._cpad; o._cl = l - pd; o._ct = t - pd; o._cr = r2 + pd; o._cb = b + pd; o._cs = 4; o._cv = pass - (i & 7); }
+          else if (pass - o._cv >= 8) o._cv = pass;
+        }
+        else if (l === o._cl && t === o._ct && r2 === o._cr && b === o._cb) { if (o._cs < 3) { o._cs = (o._cs | 0) + 1; o._cv = o._cs === 3 ? pass - (i & 7) : pass; } else o._cv = pass; }
         else { o._cl = l; o._ct = t; o._cr = r2; o._cb = b; o._cs = 0; o._cv = pass; }
       }
       const out = r2 < x0 || l > x1 || b < y0 || t > y1;
@@ -4218,7 +4231,7 @@ class TownScene extends Phaser.Scene {
     this.bugs = [];
     for (let i = 0; i < BUG_COUNT; i++) {
       const sprite = this.add.text(0, 0, '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000);
-      const bug = { sprite, alive: true };
+      const bug = { sprite, alive: true, extra: false, tween: null };
       this.bugs.push(bug);
       this.placeBug(bug);
     }
@@ -4313,7 +4326,7 @@ class TownScene extends Phaser.Scene {
     // Hidden extras, created once; activated only during the window.
     for (let i = 0; i < BUGOFF_EXTRA_BUGS; i++) {
       const sprite = this.add.text(0, 0, this.isNightBugs ? '✨' : '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000).setVisible(false);
-      this.bugs.push({ sprite, alive: false, extra: true });
+      this.bugs.push({ sprite, alive: false, extra: true, tween: null }); // one field list for every bug record (cycle 9 pool-shape rule)
     }
     this.bugOffActive = false;
     const { x, y } = BUGOFF_SIGN_POS;
@@ -6590,7 +6603,9 @@ class TownScene extends Phaser.Scene {
       const y = Math.round(this.world.originY + worldHash(i, 1, 52) * this.world.height);
       const nearLand = x > land.x - pad && x < land.x + land.width + pad && y > land.y - pad && y < land.y + land.height + pad;
       if (nearLand) continue;
-      crests[i % 3].push(this.add.image(x, y, 'wave_crest').setDepth(depth).setAlpha(0.15));
+      const crest = this.add.image(x, y, 'wave_crest').setDepth(depth).setAlpha(0.15);
+      crest._cpad = 12; // cull: sways 10 px around this spot (see cullOffscreen)
+      crests[i % 3].push(crest);
     }
     crests.forEach((group, i) => this.tweens.add({
       targets: group, x: '+=10', alpha: 0.7, duration: 2000 + i * 600, delay: i * 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
@@ -6602,6 +6617,7 @@ class TownScene extends Phaser.Scene {
         .setDepth(depth).setAlpha(0.1).setRotation(Math.atan2(p.ny, p.nx) + Math.PI / 2);
       dash.nx = p.nx;
       dash.ny = p.ny;
+      dash._cpad = 12; // cull: sways 10 px around this spot (see cullOffscreen)
       foam[(i / 6) % 2].push(dash);
     });
     foam.forEach((group, i) => this.tweens.add({
