@@ -1,0 +1,74 @@
+{
+  "status": "WIP audit not run",
+  "strips": 6,
+  "frames": 14,
+  "checks": [
+    {
+      "id": "ff_owl_idle",
+      "distinct_frames": 2,
+      "dimensions": [
+        384,
+        192
+      ],
+      "lowest_opaque_row": 183,
+      "edge_contact": false,
+      "blob_sha": "4fa8dd1fca62cf162ce98088dae570cddd39d787"
+    },
+    {
+      "id": "ff_owl_move",
+      "distinct_frames": 3,
+      "dimensions": [
+        768,
+        192
+      ],
+      "lowest_opaque_row": 183,
+      "edge_contact": true,
+      "blob_sha": "01d9ab5edbb8ef5a2927f882245d159adfed8910"
+    },
+    {
+      "id": "ff_owl_caught",
+      "distinct_frames": 1,
+      "dimensions": [
+        192,
+        192
+      ],
+      "lowest_opaque_row": 187,
+      "edge_contact": false,
+      "blob_sha": "441da5a5d52e5d7a07c3aea0f92f65edee217abc"
+    },
+    {
+      "id": "ff_owl_idle_down",
+      "distinct_frames": 2,
+      "dimensions": [
+        384,
+        192
+      ],
+      "lowest_opaque_row": 183,
+      "edge_contact": false,
+      "blob_sha": "01f6493cc01244e19e714e40f97cbbc55ec9c154"
+    },
+    {
+      "id": "ff_owl_move_down",
+      "distinct_frames": 3,
+      "dimensions": [
+        768,
+        192
+      ],
+      "lowest_opaque_row": 183,
+      "edge_contact": true,
+      "blob_sha": "fd937987699fc2f37c6fe2855cdb988fde9e80c8"
+    },
+    {
+      "id": "ff_owl_caught_down",
+      "distinct_frames": 1,
+      "dimensions": [
+        192,
+        192
+      ],
+      "lowest_opaque_row": 187,
+      "edge_contact": false,
+      "blob_sha": "ca88669a560783f5e1e5b350bb7f8dd7b5ffcc64"
+    }
+  ],
+  "limitations": "T17 owl: six strips/14 frames, 48 native/192 export, feathered full-body owl with ear tufts, amber eyes, barred breast, profile and front, folded/upstroke/downstroke wings and closed-eye caught pose. Native palette and frame counts checked; preview visually reviewed. WIP: flight wing tips contact cell edges, flight f2/f4 repeat, caught poses reach native row 46 rather than 45 (4 exported px below anchor). Shorten wings and correct caught baseline before acceptance. No independent PNG decode/hash verification or repository audit run. Old SVG and in-game comparison pending. No code changes."
+}
