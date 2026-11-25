@@ -46,3 +46,7 @@ Icicle Bat detail pass: in-place revision of accepted PR #60 art, all 12 strips 
 
 ## Codex Town Spike
 Town Spike (mohawks): original hedgehog with spiny mantle, purple quill crest, pointed snout, green work apron and rear cross straps; 13 strips/39 cells, 32 native/128 output, four directions and all required actions. All 16 walk cells distinct within strips; exact native baseline row 29, bounds, palette and hard alpha checked; all 14 PNG Git blob SHA-1 values independently computed and matched. Happy repeats one pose; left profile mirrored. Nine recolors, old/new multi-background comparison, GIF/APNG, independent PNG decoding, full repository audit and gameplay review remain pending. git ls-remote failed: Could not resolve host github.com; no local checkout. INDEX provisional entry because ingest unavailable. No code/tests/Firebase changes.
+
+
+## Codex Spike v2
+Cycle 7 Spike v2 partial redo: seven strips/22 cells revised. Narrow profile torso with one visible arm, offset connected legs, shaded far foot, quilled rear silhouette; left/right symmetrical mirror. Happy and wave have four distinct poses, raised paw visible in f2/f4; sleep is low and lying but the two sleep frames are identical, so add visible breathing. All native bounds and baseline 119 passed, 4x hard alpha construction. Profile eye small; check readability at native size. Nine variants, animated grid, comparison panel, independent PNG decoding/hash verification and full audit pending. Other six original strips retained. No code changes.
