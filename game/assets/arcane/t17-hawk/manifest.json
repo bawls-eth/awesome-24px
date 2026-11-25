@@ -1,0 +1,101 @@
+{
+  "batch": "t17-hawk",
+  "assets": [
+    {
+      "id": "ff_hawk_idle",
+      "path": "fauna/ff_hawk_idle.png",
+      "category": "fauna",
+      "action": "idle",
+      "dir": "right",
+      "frames": 2,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 183
+      }
+    },
+    {
+      "id": "ff_hawk_move",
+      "path": "fauna/ff_hawk_move.png",
+      "category": "fauna",
+      "action": "move",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 183
+      }
+    },
+    {
+      "id": "ff_hawk_caught",
+      "path": "fauna/ff_hawk_caught.png",
+      "category": "fauna",
+      "action": "caught",
+      "dir": "right",
+      "frames": 1,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 183
+      }
+    },
+    {
+      "id": "ff_hawk_idle_down",
+      "path": "fauna/ff_hawk_idle_down.png",
+      "category": "fauna",
+      "action": "idle",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 183
+      }
+    },
+    {
+      "id": "ff_hawk_move_down",
+      "path": "fauna/ff_hawk_move_down.png",
+      "category": "fauna",
+      "action": "move",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 183
+      }
+    },
+    {
+      "id": "ff_hawk_caught_down",
+      "path": "fauna/ff_hawk_caught_down.png",
+      "category": "fauna",
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 183
+      }
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "status": "WIP audit not run",
+  "strips": 6,
+  "frames": 14,
+  "checks": [
+    {
+      "id": "ff_hawk_idle",
+      "distinct_frames": 2,
+      "dimensions": [
+        384,
+        192
+      ],
+      "bounds_native": [
+        [
+          5,
+          6,
+          45,
+          45
+        ],
+        [
+          5,
+          7,
+          45,
+          45
+        ]
+      ],
+      "lowest_opaque_row": 183,
+      "git_blob_sha": "c9ee1ad49436d4b5dee586734af1277cb21b656a",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "ff_hawk_move",
+      "distinct_frames": 4,
+      "dimensions": [
+        768,
+        192
+      ],
+      "bounds_native": [
+        [
+          5,
+          6,
+          45,
+          45
+        ],
+        [
+          1,
+          5,
+          45,
+          45
+        ],
+        [
+          1,
+          4,
+          45,
+          45
+        ],
+        [
+          1,
+          5,
+          45,
+          45
+        ]
+      ],
+      "lowest_opaque_row": 183,
+      "git_blob_sha": "68bdf6727d0c8b7da0a937d88347de7c36c84cd7",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "ff_hawk_caught",
+      "distinct_frames": 1,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bounds_native": [
+        [
+          5,
+          7,
+          45,
+          45
+        ]
+      ],
+      "lowest_opaque_row": 183,
+      "git_blob_sha": "8df4f1c174bcbf5a185c2deccdddeaa955d12ec0",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "ff_hawk_idle_down",
+      "distinct_frames": 2,
+      "dimensions": [
+        384,
+        192
+      ],
+      "bounds_native": [
+        [
+          5,
+          6,
+          43,
+          45
+        ],
+        [
+          5,
+          7,
+          43,
+          45
+        ]
+      ],
+      "lowest_opaque_row": 183,
+      "git_blob_sha": "c071b0007ccf2e9064c986c48afb8a2bca5e4e95",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "ff_hawk_move_down",
+      "distinct_frames": 4,
+      "dimensions": [
+        768,
+        192
+      ],
+      "bounds_native": [
+        [
+          5,
+          6,
+          43,
+          45
+        ],
+        [
+          2,
+          5,
+          46,
+          45
+        ],
+        [
+          2,
+          4,
+          46,
+          45
+        ],
+        [
+          2,
+          5,
+          46,
+          45
+        ]
+      ],
+      "lowest_opaque_row": 183,
+      "git_blob_sha": "c6e096da10b24d6ec0c3fc4ee04932ae8055db52",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "ff_hawk_caught_down",
+      "distinct_frames": 1,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bounds_native": [
+        [
+          5,
+          7,
+          43,
+          45
+        ]
+      ],
+      "lowest_opaque_row": 183,
+      "git_blob_sha": "670479c4618fb7823d55c51d2526f036bbe28717",
+      "git_blob_sha_verified": true
+    }
+  ],
+  "limitations": "T17 hawk: six strips/14 frames, 48 native/192 export, full body with hooked bill, banded feathers, fan tail and talons, front/right views, four distinct flight poses each. Bounds, feet baseline y183, native distinctness, hard-alpha construction and exact Git blob hashes checked. Reviewed native contact sheet and new sprite on three backgrounds. Caught pose closed eyes; side near wing can read as a tail extension and flight anatomy needs review. No independent PNG decode, old SVG comparison or full audit run. Manual provisional INDEX because ingest not available. No code changes."
+}

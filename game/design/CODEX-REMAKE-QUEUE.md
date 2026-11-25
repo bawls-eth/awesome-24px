@@ -757,3 +757,7 @@ remeasure on the redrawn mounts). Hard alpha, 4x grid, separate from the body: g
 4. Seats: per-frame seat points must be remeasured on the redrawn mounts; include a composite preview (mount + saddle + a hero sitting).
 
 Deliver each fix on the same branch, re-run `node game/tools/art-audit/run.js` and add a composite saddle preview.
+
+
+## Codex T17 hawk submitted
+T17 hawk: six strips/14 frames, 48 native/192 export, full body with hooked bill, banded feathers, fan tail and talons, front/right views, four distinct flight poses each. Bounds, feet baseline y183, native distinctness, hard-alpha construction and exact Git blob hashes checked. Reviewed native contact sheet and new sprite on three backgrounds. Caught pose closed eyes; side near wing can read as a tail extension and flight anatomy needs review. No independent PNG decode, old SVG comparison or full audit run. Manual provisional INDEX because ingest not available. No code changes.
