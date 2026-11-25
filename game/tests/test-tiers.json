@@ -2248,6 +2248,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc11-art-realm-fonts.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc7-art-realm-aimed-hue.test.js": {
     "class": "browser",
     "tier": "full"

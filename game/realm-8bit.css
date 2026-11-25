@@ -99,3 +99,12 @@ html body.touch-device .realm-stick .knob { border-radius: 0; box-shadow: none; 
   html body.touch-device .realm-stick { width: 100px; height: 100px; }
   html body.touch-device .realm-stick .knob { width: 39px; height: 39px; margin: -19.5px 0 0 -19.5px; }
 }
+
+/* ---- Cycle 11 art (G): pixel font on the remaining Realm world / dungeon overlays ----
+   A computed-style audit of the live Realm (HUD, backpack, shop open) found the HUD, abilities, backpack and shop on --px-font, but the
+   zone strip (#rw-zone: zone name, danger, coords, raid timer), the Daily button and the world prompts / toasts (portal, site, event,
+   rush, deep-run, jump hint, coach, unlock toast, ability sheet) still in system-ui from mad-maze.css. Family only: sizes, weights and
+   positions stay as mad-maze.css sets them. Scoped to world / dungeon mode, so classic Mad Maze is unchanged. */
+html body:is(.world-mode, .dungeon-mode) :is(#rw-zone, #rw-portal, #rw-portal-mut, #rw-event-hint, #rw-site, #rw-site-note, #rw-rush, #rw-rush-go,
+  #rw-jhint, #mm-daily-btn, #mm-mut, #mm-deep, #mm-coach, #mm-coach-toast, .mm-toast, .mm-sheet),
+html body:is(.world-mode, .dungeon-mode) :is(#rw-zone, #rw-rush, #rw-jhint, #mm-deep, #mm-coach, .mm-toast, .mm-sheet) :is(button, span, div) { font-family: var(--px-font, monospace); }
