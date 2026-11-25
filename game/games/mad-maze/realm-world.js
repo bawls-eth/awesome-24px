@@ -2961,6 +2961,175 @@
       arena._slamWrapped = true; const tgBoss0 = arena._tgBoss.bind(arena);
       arena._tgBoss = (e, hold, p) => { tgBoss0(e, hold, p); if (e._sl && e._sl.w > 0 && e.active) arena.tgFor(e, 'ring', e._sl.w); };
     }
+    // ---------- cycle 10 S, ID-53: just-in-time hint (L + U review conditions, design/IDEAS.md "L review, cycle 9" / "U review of ID-53..55") ----------
+    // ONE dismissible DOM line (role=status, aria-live polite, 12 px floor, a 44 px close button) after JH_SEC game seconds with no rewarding thing
+    // (a kill, a pickup, XP, shards, a level, a new item). It names one verb that is NOT "move" (walk over the drops / ability 1 / the Menu) and only
+    // after the hero has moved once this visit. Never while resting (the count restarts when the rest ends), in a dungeon, in the Trial of Six,
+    // with a boss or a world event live, with a panel / the Nexus / the coach / a toast / a banner up. Max 3 per visit (memory only, no save key).
+    // The check runs once a second (one subtraction per frame); it never moves: it sits above the sticks / ability grid / prompts, centred.
+    const JH_ON = !/[?&]jithint=0(&|$)/.test(qs0); const JH_SEC = 20; const JH_MAX = 3; const JH_LIFE = 12;
+    const jhEl = document.createElement('div'); jhEl.id = 'rw-jhint'; jhEl.className = 'hidden'; jhEl.setAttribute('role', 'status'); jhEl.setAttribute('aria-live', 'polite');
+    const jhTxt = document.createElement('span'); jhTxt.className = 'rw-jhint-txt'; jhEl.appendChild(jhTxt);
+    const jhX = document.createElement('button'); jhX.type = 'button'; jhX.className = 'rw-jhint-x'; jhX.setAttribute('aria-label', 'Dismiss hint'); jhX.textContent = '✕'; jhEl.appendChild(jhX);
+    if (JH_ON) ov.appendChild(jhEl);
+    const jh = { t: 0, sec: 0, sig: -1, shown: 0, on: false, life: 0, verb: '', used: {}, moved: false, abUsed: false, panelSeen: false, why: '', log: [] };
+    function jhSig() { const sv = arena.save || {}; return (sv.kills | 0) + (sv.level | 0) * 1e6 + (sv.xp | 0) * 3 + (sv.shards | 0) * 7 + ((sv.items && sv.items.length) | 0) * 11 + pickTotal * 13; }
+    function jhVisible(el) { return !!el && !el.classList.contains('hidden') && !el.hidden && el.getClientRects().length > 0 && getComputedStyle(el).display !== 'none'; }
+    function jhBlock() { // why the hint may not show right now ('' = it may)
+      if (arena.state !== 'play' || arena.down || !arena.active) return 'state';
+      if (arena.resting) return 'resting';
+      if (arena.dungeon || arena.team) return 'dungeon';
+      if (rush.on) return 'trial';
+      if (bossRect()) return 'boss';
+      let ev = false; evState.forEach((st) => { if (st.phase === 'active') ev = true; }); if (ev) return 'event';
+      if (arena.panel || arena.paused || nxOpen || panelHid) return 'panel';
+      if (feOpen) return 'card';
+      if (arena._noticeT > 0) return 'toast';
+      if (jhVisible(hintEl) || jhVisible(document.getElementById('realm-banner')) || jhVisible(document.getElementById('mm-coach')) || jhVisible(document.getElementById('mm-coach-toast'))) return 'toast';
+      return '';
+    }
+    function jhPick() { // the one next verb, never "move", never one already shown this visit
+      const coarse = isCoarse();
+      if (!jh.used.bag && picks.length > 0) return { verb: 'bag', text: 'Walk over the drops on the ground to pick them up' };
+      if (!jh.used.ab && !jh.abUsed) return { verb: 'ab', text: coarse ? 'Tap ability 1 to use your class skill' : 'Press Q (ability 1) to use your class skill' };
+      if (!jh.used.menu && !jh.panelSeen) return { verb: 'menu', text: coarse ? 'Open the Menu (☰) for your quests and bag' : 'Press Esc to open the Menu: quests and bag' };
+      // every verb shown once: repeat one the player has still not done (never the one just shown); the 3-per-visit cap is the limit
+      const again = [!jh.abUsed && jh.verb !== 'ab' && 'ab', !jh.panelSeen && jh.verb !== 'menu' && 'menu'].filter(Boolean)[0];
+      if (again) { jh.used[again] = 0; return jhPick(); }
+      return null;
+    }
+    function jhPlace() { // above every bottom control (sticks + 40 px, ability grid, prompts), centred; layout read only when it shows
+      try {
+        const o = ov.getBoundingClientRect(); let top = o.bottom - 8;
+        const bot = [['realm-abilities', 8], ['realm-stick-move', 40], ['realm-stick-aim', 40], ['realm-help', 6]];
+        bot.forEach(([id, gap]) => { const e = document.getElementById(id); if (jhVisible(e)) { const r = e.getBoundingClientRect(); if (r.height > 0) top = Math.min(top, r.top - gap); } });
+        [portalBtn, siteBtn, lairBtn, siteNote].forEach((e) => { if (jhVisible(e)) top = Math.min(top, e.getBoundingClientRect().top - 6); });
+        jhEl.style.bottom = Math.max(4, Math.round(o.bottom - top)) + 'px';
+      } catch (e) { /* the CSS position stays */ }
+    }
+    function jhHide(why) { if (!jh.on) return; jh.on = false; jh.why = why; jhEl.classList.add('hidden'); jh.log.push({ verb: jh.verb, why }); jh.t = 0; }
+    function jhShow(p) {
+      jh.on = true; jh.verb = p.verb; jh.used[p.verb] = 1; jh.shown++; jh.life = JH_LIFE; jh.why = '';
+      jhTxt.textContent = '💡 ' + p.text; jhEl.classList.remove('hidden'); jhPlace();
+      // never over the goal / zone strip: if it would touch them it does not stay
+      const hr = jhEl.getBoundingClientRect();
+      for (const e of [zoneEl, goalEl, mini]) { if (!jhVisible(e)) continue; const r = e.getBoundingClientRect(); if (r.left < hr.right && r.right > hr.left && r.top < hr.bottom && r.bottom > hr.top) { jh.shown--; jh.used[p.verb] = 0; jhHide('overlap'); jh.log.pop(); return; } }
+    }
+    jhX.addEventListener('click', () => jhHide('close'));
+    function jhTick(dt) {
+      if (!JH_ON) return;
+      const p = arena.player; if (p && p.moving) jh.moved = true;
+      jh.sec -= dt; if (jh.sec > 0) return; jh.sec = 1;
+      const d = 1; // one game second (the world tick only runs while the arena plays: a hidden tab adds nothing)
+      if (arena.panel) jh.panelSeen = true;
+      if (arena.abilityCd && arena.abilityCd.some((c) => c > 0)) jh.abUsed = true;
+      const sig = jhSig(); const reward = sig !== jh.sig; jh.sig = sig;
+      const block = jhBlock();
+      if (jh.on) {
+        jh.life -= d;
+        if (reward) jhHide('reward'); else if (block) jhHide(block); else if (jh.life <= 0) jhHide('timeout');
+        else if ((jh.verb === 'ab' && jh.abUsed) || (jh.verb === 'menu' && jh.panelSeen) || (jh.verb === 'bag' && !picks.length)) jhHide('done');
+        return;
+      }
+      if (reward || block) { jh.t = 0; return; } // a resting hero, a fight, a panel...: the 20 s start again afterwards
+      jh.t += d;
+      if (jh.t < JH_SEC || jh.shown >= JH_MAX || !jh.moved) return;
+      const pk = jhPick(); if (!pk) { jh.t = 0; return; }
+      jhShow(pk);
+    }
+    function onHintKey(ev) { if (ev.key === 'Escape' && jh.on) { ev.preventDefault(); ev.stopImmediatePropagation(); jhHide('esc'); } }
+    if (JH_ON && typeof window !== 'undefined') window.addEventListener('keydown', onHintKey, true);
+
+    // ---------- cycle 10 S, ID-55: first-session ending card (L + U review conditions) ----------
+    // The first-ever Realm session (this tab: the hero was Lv <= 3 at the first world load and realm.firstEndSeen is absent) that reaches FE_SEC
+    // GAME seconds in the world (counted per tab in sessionStorage, so a dungeon trip keeps it; a hidden tab adds nothing), or that comes back
+    // from its first dungeon clear, gets ONE card: Level / Tames / Shards (the save's own numbers, MMMiniKit.fmt) and one next goal (the Isles
+    // while there is no tame, else the next zone inland), "Go: <goal>" and "Not now". MMMiniKit.panel builds it; focus on Not now; Esc and
+    // Back close it; focus returns to the game. Shown only at a quiet moment (no enemy within 420 px, no boss / event / Trial / dungeon / panel /
+    // Nexus); an enemy coming within 300 px closes it (the world does not pause). Shown once: realm.firstEndSeen = 1 (additive, Backup carries the
+    // whole pixeltown-save-v1); a failed save never shows it again this visit (in-memory flag first).
+    const FE_ON = !/[?&]firstend=0(&|$)/.test(qs0) && !!window.MMMiniKit && typeof MMMiniKit.panel === 'function';
+    const FE_TEST = /[?&]test=1(&|$)/.test(qs0); const feQ = /[?&]fesec=(\d{1,4})(&|$)/.exec(qs0);
+    const FE_SEC = FE_TEST && feQ ? Math.max(1, +feQ[1]) : 480; const FE_KEY = 'pixeltown-firstend-s'; const FE_QUIET = 420; const FE_NEAR = 300;
+    let feOpen = false; let feDone = false; let feSec = 1; let feCard = null; let feBack = null; let feWhy = ''; let feGoal = null;
+    function feDeep() { try { const o = JSON.parse(localStorage.getItem('pixeltown-deep-v1') || 'null'); const f = o && o.f && typeof o.f === 'object' ? o.f : {}; return Object.keys(f).filter((k) => Number.isInteger(f[k]) && f[k] > 0).length; } catch (e) { return 0; } }
+    function feTames() { try { const o = JSON.parse(localStorage.getItem('pixeltown-tames-v1') || 'null'); return o && Array.isArray(o.roster) ? o.roster.length : 0; } catch (e) { return 0; } }
+    const fe = (() => { // per-tab session: {ok, t (game seconds), d (dungeon clears at the start)}
+      let s = null; try { s = JSON.parse(sessionStorage.getItem(FE_KEY) || 'null'); } catch (e) { s = null; }
+      if (!s || typeof s !== 'object' || !(s.ok === 0 || s.ok === 1)) s = { ok: (arena.save && arena.save.firstEndSeen !== 1 && (arena.save.level | 0) <= 3) ? 1 : 0, t: 0, d: feDeep() };
+      s.t = Math.max(0, Math.min(1e6, Number(s.t) || 0)); s.d = Math.max(0, Number(s.d) | 0);
+      return s;
+    })();
+    function feStore() { try { sessionStorage.setItem(FE_KEY, JSON.stringify(fe)); } catch (e) { /* session storage blocked: the clock restarts on a reload */ } }
+    if (FE_ON) feStore();
+    const feEl = document.createElement('section'); feEl.id = 'rw-firstend'; feEl.hidden = true; feEl.setAttribute('role', 'dialog'); feEl.setAttribute('aria-labelledby', 'rw-fe-head');
+    if (FE_ON) ov.appendChild(feEl);
+    function feQuietWhy() {
+      if (arena.state !== 'play' || arena.down || !arena.active) return 'state';
+      if (arena.dungeon || arena.team) return 'dungeon';
+      if (rush.on) return 'trial';
+      if (bossRect()) return 'boss';
+      let ev = false; evState.forEach((st) => { if (st.phase === 'active') ev = true; }); if (ev) return 'event';
+      if (arena.panel || arena.paused || nxOpen) return 'panel';
+      const p = arena.player; const es = arena.enemies || [];
+      for (let i = 0; i < es.length; i++) { const e = es[i]; if (e && e.active && Math.hypot(e.x - p.x, e.y - p.y) < FE_QUIET) return 'enemy'; }
+      return '';
+    }
+    function feGoalNow() {
+      if (feTames() === 0) return { kind: 'isles', label: 'the Isles', text: 'Next goal: tame your first creature on the Isles', url: '../isles/index.html' };
+      const zs = (Z.TABLES && Z.TABLES.ZONES) || []; const zi = Z.zoneInfoAt(world, arena.player.x / TILE, arena.player.y / TILE); const z = zi && zi.zone >= 0 && zi.zone <= 3 ? zi.zone : 0;
+      const nx = zs[z + 1]; const lv = arena.save.level | 0;
+      if (!nx || !nx.name) return { kind: 'boss', label: 'a boss altar', text: 'Next goal: find a boss altar and defeat its guardian', url: '' };
+      return { kind: 'zone', label: nx.name, text: lv >= (nx.recLv | 0) ? `Next goal: head inland to the ${nx.name}` : `Next goal: reach Lv ${nx.recLv}, then head inland to the ${nx.name}`, url: '' };
+    }
+    function feClose(why) {
+      if (!feOpen) return; feOpen = false; feWhy = why; feEl.hidden = true;
+      if (feBack) { try { feBack.stop(); } catch (e) { /* nav hook */ } feBack = null; }
+      const cw = document.getElementById('realm-canvas-wrap'); if (cw) { try { cw.focus({ preventScroll: true }); } catch (e) { cw.focus(); } }
+    }
+    function feGo(opts) {
+      const g = feGoal; feClose('go');
+      if (!g) return null;
+      if (g.url) { try { arena.onSave(arena.save); savePos(true); } catch (e) { /* best effort */ } api.lastFirstEndUrl = g.url; if (!(opts && opts.navigate === false)) location.href = g.url; return g.url; }
+      try { arena._showBanner(g.text.replace(/^Next goal: /, ''), 2.5); } catch (e) { /* cosmetic */ }
+      return null;
+    }
+    function feShow() {
+      feDone = true; // in memory first: a failed save never shows it twice in this visit
+      const sv = arena.save; const K = MMMiniKit; feGoal = feGoalNow();
+      try { sv.firstEndSeen = 1; arena.onSave(sv); } catch (e) { /* storage blocked: shown once this visit anyway */ }
+      fe.ok = 0; feStore();
+      const vm = K.result({ headline: 'Nice first run!', stats: [{ label: 'Level', value: K.fmt(sv.level), id: 'rw-fe-lv' }, { label: 'Tames', value: K.fmt(feTames()), id: 'rw-fe-tames' }, { label: 'Shards', value: K.fmt(sv.shards), id: 'rw-fe-shards' }],
+        goalText: feGoal.text, more: [{ id: 'rw-fe-later', label: 'Not now' }], ids: { again: 'rw-fe-go', goal: 'rw-fe-goal', head: 'rw-fe-head' } });
+      feCard = K.panel(feEl, vm, { again: () => feGo(), more: [() => feClose('later')], keyReady: () => false, holdMs: 600 });
+      if (!feCard) return;
+      feCard.again.textContent = 'Go: ' + feGoal.label;
+      feEl.hidden = false; feOpen = true; feWhy = '';
+      if (jh.on) jhHide('card');
+      if (!feBack && window.MMNav && MMNav.backWatch) { try { feBack = MMNav.backWatch(feEl, () => feClose('back'), 'rw-firstend'); } catch (e) { feBack = null; } }
+      const later = feCard.more[0]; try { later.focus({ preventScroll: true }); } catch (e) { later.focus(); }
+    }
+    function feTick(dt) {
+      if (!FE_ON) return;
+      if (feOpen) { // close it when the world gets dangerous again (the world never pauses for it)
+        feSec -= dt; if (feSec > 0) return; feSec = 1;
+        const p = arena.player; const es = arena.enemies || []; let near = false;
+        for (let i = 0; i < es.length && !near; i++) { const e = es[i]; if (e && e.active && Math.hypot(e.x - p.x, e.y - p.y) < FE_NEAR) near = true; }
+        if (near || bossRect() || rush.on || arena.state !== 'play') feClose('danger');
+        return;
+      }
+      if (feDone || fe.ok !== 1) return;
+      fe.t += Math.min(dt, 0.1); // game time only
+      feSec -= dt; if (feSec > 0) return; feSec = 1;
+      feStore();
+      const due = fe.t >= FE_SEC || feDeep() > fe.d;
+      if (!due) return;
+      feWhy = feQuietWhy(); if (feWhy) return; // wait for the next quiet moment
+      feShow();
+    }
+    function onFeKey(ev) { if (feOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); feClose('esc'); } }
+    if (FE_ON && typeof window !== 'undefined') window.addEventListener('keydown', onFeKey, true);
+
     const hooks = {
       onStart() {
         exploreLive = false; exploreCells = 0; exploreT = 0;
@@ -2993,7 +3162,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        restTick(); portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick(dt);
+        restTick(); jhTick(dt); feTick(dt); portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick(dt);
         if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
@@ -3119,6 +3288,9 @@
       // RB3: quest bags, focus orbs and buff potions
       rewards: { questBags: () => (save.questBags || []).map((b) => ({ q: b.q, d: b.d })), bagFor: questBagFor, deliver: deliverQuestBags, lastBag: () => lastQuestBag, drink: (art) => (PK && POTION_COL[art] ? drinkPotion(art) : null), potions: () => potionLog.slice(), focusApi: () => typeof arena.restoreFocus === 'function', statusApi: () => typeof arena.applyStatus === 'function' },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
+      // cycle 10 S: ID-53 just-in-time hint and ID-55 first-session ending card (test hooks, read-only state)
+      jitHint: { on: JH_ON, sec: JH_SEC, max: JH_MAX, state: () => ({ on: jh.on, t: jh.t, shown: jh.shown, verb: jh.verb, why: jh.why, moved: jh.moved, block: jhBlock(), text: jhTxt.textContent, log: jh.log.slice() }), showNow: () => { if (jh.on) return true; const pk = jhPick(); if (pk) jhShow(pk); return jh.on; } },
+      firstEnd: { on: FE_ON, sec: FE_SEC, state: () => ({ open: feOpen, done: feDone, ok: fe.ok, t: fe.t, d: fe.d, why: feWhy, goal: feGoal ? Object.assign({}, feGoal) : null }), go: feGo, close: feClose }, lastFirstEndUrl: null,
     };
     return { api, hooks };
   }
