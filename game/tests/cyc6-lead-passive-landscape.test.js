@@ -5,10 +5,10 @@
 // bolt that hit: fireEnemyBullet tags the bolt with the nearest live enemy at its muzzle, _hitPlayer logs the HP lost.
 // Expected: the hero is alive after 120 s on every seed. The INFO lines carry the numbers for D (who tunes spawns).
 // OFFLINE: blockDb + every WebSocket closed + the town page stubbed; literal 0 database attempts.
-// Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc6-open/cyc6-lead-passive-landscape.test.js   (SEEDS=1,2,3 / VIEW=390x844 to override)
+// Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc6-lead-passive-landscape.test.js   (SEEDS=1,2,3 / VIEW=390x844 to override)
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('../helpers');
-const LS = require('../lib/load-scale');
+const { check, done, blockDb } = require('./helpers');
+const LS = require('./lib/load-scale');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const SEEDS = (process.env.SEEDS || '12345,777,4242,9001,31337,2026').split(',').map((s) => s.trim()).filter(Boolean);
 const VIEW = (process.env.VIEW || '844x390').split('x').map(Number);

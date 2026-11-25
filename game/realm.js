@@ -237,6 +237,7 @@ function rmCleanForged(t, f) {
 // Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
 const RM_CACHE_KILLS = 3, RM_CACHE_ALIVE_S = 60; // G-09: a Survivor's cache needs this many kills or seconds alive since the last one
 const RM_PROVOKE_S = 4; // G-08: seconds a world shooter hit from off screen ignores hold-fire
+const RM_IDLE_REST_S = 8; // ID-51 idle-hero rest: game seconds with no play input before a world hero rests (where the world's restOk hook allows it)
 const RM_ARM_MS = 300, RM_SELL_ASK_MS = 3000, RM_FORGE_ARM_MS = 400; // b02-12: Forge confirm / Salvage buttons wake later (a phone double-tap can be ~350 ms)
 // cyc5 (b02-r3-01): a slow tap rhythm (~450 ms) on "Confirm reforge" reached Salvage on tap 2 and Confirm salvage on tap 3. Now taps that follow
 // "Confirm reforge" less than RM_FORGE_RHYTHM_MS apart form one tap chain, and a Salvage / Confirm salvage tap inside it is ignored; "Confirm
@@ -522,6 +523,7 @@ class RealmArena {
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
+    this._idleT = 0; this.resting = false; this.restN = 0; // ID-51: game seconds since the last play input; resting = enemies stand down (no aggro, no fire); restN = rests entered
     this._menuMode = false; this._deathShown = false; this._lastCache = ''; this._menuDom = null; this._deathDom = null; this._menuBtn = null; // in-game menu + death screen: opt-in via setMenuMode(true)
     this._pf = { ema: 16, slow: 0, fast: 0, q: 1, on: false }; this._cssK = 1; this._vpKey = ''; this._cvKey = ''; this._rzKey = ''; // perf guard (render-resolution scale) + resize caches
     try { this._pf.on = (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) || (typeof window !== 'undefined' && 'ontouchstart' in window); } catch (e) { this._pf.on = false; }
@@ -2204,6 +2206,7 @@ class RealmArena {
   _bindInput() {
     this.onKeyDown = (e) => {
       if (!this.active) return;
+      this._wake(); // ID-51: any key is play input (ends an idle rest at once)
       const k = e.key.toLowerCase();
       if (k === 'escape') {
         e.preventDefault();
@@ -2252,9 +2255,9 @@ class RealmArena {
       this.mouse.y = ((e.clientY - r.top) / r.height) * this.H;
       this.mouse.seen = true;
     };
-    this.onPointerMove = (e) => { if (e.pointerType === 'mouse') toArena(e); };
+    this.onPointerMove = (e) => { if (e.pointerType === 'mouse') { toArena(e); this._wake(); } }; // ID-51: aiming with the mouse is play input
     // AR aim toggle: a click latches firing on, the next click lets go (instead of holding the button down)
-    this.onPointerDown = (e) => { if (e.pointerType === 'mouse') { toArena(e); this.mouse.down = this._aimToggle && this._ax2On() ? !this.mouse.down : true; } };
+    this.onPointerDown = (e) => { this._wake(); if (e.pointerType === 'mouse') { toArena(e); this.mouse.down = this._aimToggle && this._ax2On() ? !this.mouse.down : true; } };
     this.onPointerUp = (e) => { if (e.pointerType === 'mouse' && !(this._aimToggle && this._ax2On())) this.mouse.down = false; };
     this.canvas.addEventListener('pointermove', this.onPointerMove);
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
@@ -2275,11 +2278,14 @@ class RealmArena {
     if (window.visualViewport) { window.visualViewport.addEventListener('resize', this.onResize); window.visualViewport.addEventListener('scroll', this.onResize); }
   }
 
+  // ID-51: play input ends an idle rest on the spot (the next frame's _updatePlayer would also see it; enemies read `resting` first)
+  _wake() { this._idleT = 0; this.resting = false; }
   // Touch sticks are DOM elements (set up by main.js); they only feed these two vectors.
-  setMoveStick(x, y) { this.moveVec.x = x; this.moveVec.y = y; }
+  setMoveStick(x, y) { this.moveVec.x = x; this.moveVec.y = y; this._wake(); } // ID-51: a touch on a stick is play input (even a tap)
   // AR "hold to aim" -> toggle: with the aim toggle on, letting go of a dragged aim stick keeps aiming and firing that way (latched); a short tap
   // (never dragged past 0.25) lets go. Without it (and on every page that never enabled access2) the stick is hold-to-fire as before.
   setAimStick(x, y, on) {
+    this._wake(); // ID-51: play input
     if (this._aimToggle && this._ax2On()) {
       if (on) { const m = Math.sqrt(x * x + y * y); if (m > this._aimPressMax) this._aimPressMax = m; // (Math.hypot boxes its arguments)
         this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = true; return; }
@@ -2363,13 +2369,14 @@ class RealmArena {
   //   onLethal(e, dmg) -> true: a lethal hit knocks out instead of killing (e keeps 1 hp: no kill, shards, XP, kb or bag)
   //   drawEnemy(g, e) -> true: the hook drew this enemy (the built-in sprite, flash, hp bar and pips are skipped)
   //   drawMid(g, cam): drawn after the enemies / bolts, under the hero (a mount); heroLift() -> px the hero is drawn raised; dashMul() -> dash scale
+  //   restOk(p) -> true: an idle hero (RM_IDLE_REST_S with no play input) may rest here (ID-51: enemies stand down); null = never rests
   setWorld(opts) {
     if (!opts || typeof opts !== 'object') { this.world = null; this._solidAt = null; this._shotSolidAt = null; this._camF.x = 0; this._camF.y = 0; this.camera.x = 0; this.camera.y = 0; if (this.stats) this._calcStats(); return null; }
     const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1 << 20, Math.floor(Number(v))) : d);
     const fn = (f) => (typeof f === 'function' ? f : null);
     this.world = Object.freeze({ w: n(opts.w, this.W), h: n(opts.h, this.H), tile: n(opts.tile, 32), camera: opts.camera !== false, wake: n(opts.wake, 0),
       drawUnder: fn(opts.drawUnder), drawOver: fn(opts.drawOver), tick: fn(opts.tick), moveScaleAt: fn(opts.moveScaleAt), onStart: fn(opts.onStart),
-      enemyStep: fn(opts.enemyStep), onLethal: fn(opts.onLethal), drawEnemy: fn(opts.drawEnemy), drawMid: fn(opts.drawMid), heroLift: fn(opts.heroLift), dashMul: fn(opts.dashMul) }); // B7 arena hooks (null = today's behaviour)
+      enemyStep: fn(opts.enemyStep), restOk: fn(opts.restOk), onLethal: fn(opts.onLethal), drawEnemy: fn(opts.drawEnemy), drawMid: fn(opts.drawMid), heroLift: fn(opts.heroLift), dashMul: fn(opts.dashMul) }); // B7 arena hooks (null = today's behaviour)
     this._solidAt = fn(opts.solidAt); this._shotSolidAt = fn(opts.shotSolidAt) || this._solidAt;
     const pl = opts.pools && typeof opts.pools === 'object' ? opts.pools : {};
     const grow = (pool, want, max, f) => { const k = Math.min(max, n(want, 0)); while (pool.length < k) pool.push(f()); };
@@ -2524,6 +2531,7 @@ class RealmArena {
     this.bags.forEach((b) => { b.gear = null; }); // review F9
     this._wireRefresh(); this._padPrev.fill(false); this._wq.length = 0;
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
+    this._idleT = 0; this.resting = false; // ID-51: a new run starts awake
     const p = this.player;
     p.status = null; p._stm = null; p._stNext = Infinity; p._stAcc = 0; this._stList = null; // statuses never carry over into a new run
     this._calcStats();
@@ -2998,7 +3006,16 @@ class RealmArena {
       firing = this.mouse.down || !!this.keys[' '];
     } else if (this.keys[' ']) firing = true;
     if (pad && pad.fire) firing = true;
-    if (!firing && this._autoFire && this._ax2On() && !this.down && !(pad && pad.aim.on)) { // AR one-thumb: aim at the nearest enemy in range and fire
+    // ID-51 idle-hero rest: no play input (stick, keys, mouse, pad, ability, canvas tap) for RM_IDLE_REST_S game seconds -> the hero rests where
+    // world.restOk(p) allows it (solo world only): nearby enemies stand down (no pursuit, no fire, no provoke) and the one-thumb auto-fire pauses
+    // too (no idle farming). Any input sets _idleT to 0 and the normal rules return on this same frame.
+    let inp = p.moving || this.aimVec.on || this.mouse.down || !!this.keys[' '];
+    if (!inp && pad) { inp = pad.aim.on || pad.fire || Math.hypot(pad.move.x, pad.move.y) > 0.2; for (let i = 0; !inp && i < 4; i++) inp = !!pad.ability[i]; }
+    this._idleT = inp ? 0 : this._idleT + dt;
+    const rw = this.world; const rest = this._idleT >= RM_IDLE_REST_S && !!rw && !!rw.restOk && this.mode === 'world' && !this.dungeon && !this.team && !this.down && this.state === 'play' && rw.restOk(p) === true;
+    if (rest && !this.resting) this.restN++;
+    this.resting = rest;
+    if (!firing && this._autoFire && this._ax2On() && !this.down && !this.resting && !(pad && pad.aim.on)) { // AR one-thumb: aim at the nearest enemy in range and fire
       const t = this._autoFireTarget();
       if (t) { // lead the target by its measured velocity over the bolt's flight time (strafing enemies are hit too); plain numbers only
         if (t !== this._afT || !(dt > 0)) { this._afT = t; this._afVx = 0; this._afVy = 0; }
@@ -3140,6 +3157,7 @@ class RealmArena {
       if (e.slowT > 0) { e.slowT -= dt0; dt = dt0 * e.slowF; } // a signature slow (Blizzard Ring / Thorn Bloom); never set otherwise
       const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
+      if (this.resting && e.type !== 'boss' && p === this.player) { e.provT = 0; e._tg = 0; continue; } // ID-51: an idle hero rests: no pursuit, no fire, no provoke (bosses keep their rules)
       if (wd && !(e.provT > 0) && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) { e._tg = 0; continue; } // world: an enemy far from every player sleeps (no moving, no firing); a provoked one (G-08) wakes
       this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
@@ -3767,6 +3785,7 @@ class RealmArena {
 
   cast(i) {
     if (!this.active || this.state === 'dead' || this.paused) return false;
+    this._wake(); // ID-51: an ability press is play input
     const ab = this._ab(i);
     if (!ab || !this.abilityUnlocked(i) || this.abilityCd[i] > 0) return false;
     if (this.team && this.team.isPvp && ab.id !== 'dash') return false; // duels allow only the Dash

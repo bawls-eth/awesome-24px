@@ -104,23 +104,29 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
 
   // ---- the quiet-world rule still works on the six numbers: progress restarts its 15 s timer, no progress nudges ----
   // Every live enemy is kept outside the quiet radius (14 tiles) for the whole run, so only the timer decides.
+  // Cycle 7 (ID-51 idle-hero rest, owner-approved): the nudge is for a hero who PLAYS but earns nothing; a hero with no input for 8 s rests and
+  // is never nudged. So phases A and B stand in for a playing hero (a._wake() each frame = play input), and a new phase C stops the input:
+  // once the hero rests, 10 s of no progress give no nudge.
   const quiet = await page.evaluate(() => new Promise((res) => {
     const a = window.__mm.arena, w = window.__mm.world, R = 14 * 32 * 3;
-    const out = { on: w.quiet().on, a0: w.quiet().nudges, a1: -1, b1: -1, secA: 0, secB: 0 };
+    const out = { on: w.quiet().on, a0: w.quiet().nudges, a1: -1, b1: -1, secA: 0, secB: 0, c0: -1, c1: -1, rested: false, secC: 0 };
     const t0 = a.clock; let bumpAt = t0; let phase = 'A'; let tB = 0; // the first bump at once: the hero has been idle since the page opened
     const f = () => {
-      const p = a.player;
+      const p = a.player; if (phase !== 'C') a._wake(); // a playing hero (input every frame) until phase C
       for (let k = 0; k < a.enemies.length; k++) { const e = a.enemies[k]; if (e.active && Math.abs(e.x - p.x) < R && Math.abs(e.y - p.y) < R) { e.x = p.x + R; e.ax = e.x; } }
       if (phase === 'A') {
         if (a.clock >= bumpAt) { a.save.xp = (a.save.xp | 0) + 1; bumpAt += 4; } // progress every 4 s: the timer never reaches 15 s
         if (a.clock - t0 >= 20) { out.a1 = w.quiet().nudges; out.secA = a.clock - t0; phase = 'B'; tB = a.clock; }
-      } else if (a.clock - tB >= 17.5) { out.b1 = w.quiet().nudges; out.secB = a.clock - tB; res(out); return; }
+      } else if (phase === 'B') { if (a.clock - tB >= 17.5) { out.b1 = w.quiet().nudges; out.secB = a.clock - tB; phase = 'C'; tB = a.clock; } }
+      else if (!out.rested) { if (a.resting) { out.rested = true; out.c0 = w.quiet().nudges; tB = a.clock; } else if (a.clock - tB > 15) { res(out); return; } }
+      else if (a.clock - tB >= 10) { out.c1 = w.quiet().nudges; out.secC = a.clock - tB; out.stillResting = a.resting; res(out); return; }
       requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
   }));
   check('quiet rule: 20 s with progress every 4 s gives no nudge', quiet.on === true && quiet.a1 === quiet.a0, JSON.stringify(quiet));
   check('quiet rule: then 17.5 s with no progress nudges (the timer runs on the same six numbers)', quiet.b1 > quiet.a1, JSON.stringify(quiet));
+  check('ID-51: with the input stopped the hero rests within 15 s, and 10 s of resting with no progress give NO nudge', quiet.rested && quiet.stillResting === true && quiet.c1 === quiet.c0 && quiet.secC >= 10, JSON.stringify(quiet));
   check('no page errors, 0 DB requests', !errors.length && db.attempts() === 0, JSON.stringify(errors.slice(0, 3)));
   await browser.close();
   done();

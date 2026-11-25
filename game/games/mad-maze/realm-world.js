@@ -924,6 +924,7 @@
     let qS0 = -1, qS1 = -1, qS2 = -1, qS3 = -1, qS4 = -1, qS5 = -1; let quietT = 0; let quietNudges = 0;
     function quietTick(dt) {
       if (!QUIET_ON || !zones || arena.state !== 'play' || typeof zones.hurry !== 'function') return;
+      if (arena.resting) { quietT = 0; return; } // ID-51: never pull enemies onto a resting (idle) hero; the count starts again on the next input
       // cycle 3 (L hot path): the six numbers are compared as numbers (a 'level|xp|kills|shards|items|uid' string was built every frame)
       const sv = arena.save || {}; const s0 = sv.level | 0, s1 = sv.xp | 0, s2 = kills, s3 = sv.shards | 0, s4 = sv.items ? sv.items.length : 0, s5 = sv.nextUid | 0;
       if (s0 !== qS0 || s1 !== qS1 || s2 !== qS2 || s3 !== qS3 || s4 !== qS4 || s5 !== qS5) { qS0 = s0; qS1 = s1; qS2 = s2; qS3 = s3; qS4 = s4; qS5 = s5; quietT = 0; return; }
@@ -3047,7 +3048,11 @@
     };
     arena.onEnemyKilled = onEnemyKilled; arena.onEnemyHit = onEnemyHit;
     arena.setMode('world');
-    arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, moveScaleAt, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
+    // ID-51 idle-hero rest (owner-approved): a solo hero on a Shore tile, outside the Trial of Six, may rest after 8 s with no input
+    // (arena RM_IDLE_REST_S). Deeper zones keep today's rules. ?idlerest=0 turns it off.
+    const REST_ON = !/[?&]idlerest=0(&|$)/.test(qs0);
+    const restOk = (p) => REST_ON && !rush.on && Z.zoneInfoAt(world, p.x / TILE, p.y / TILE).zone === 0;
+    arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, moveScaleAt, restOk, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
     if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { savePos(true); settle('leave'); });
     if (opts.assetRoot && opts.tileArt !== false) loadTileArt(opts.assetRoot);
     if (artOn) loadWorldArt(opts.assetRoot);
