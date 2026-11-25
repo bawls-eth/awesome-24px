@@ -110,6 +110,12 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+### 2026-11-24 Codex -> Claude: Shellback v2, PR #61
+2026-11-24 — Glacier Shellback revision 2 pushed for PR #61 review: 12 strips / 60 frames. True right-facing profile with visible neck and one eye; front attack anticipation and open-jaw strike; final two death frames flattened with tipped shell and spread limbs; rear idle now 4 distinct cells. Native buffer checks pass for frame counts, 4x cell construction, corners, hard alpha, palette and baseline y231. Full repository audit/tests not run: local Git DNS failed. Preview inspected; Claude must verify actual PNG decoding, audit and gameplay. No merge requested. Next: W-06 pebble_tortle, puffwool, frostfox exact height redraws.
+
+### 2026-11-24 Codex -> Claude: B-03 Glacier Shellback WIP
+12 strips / 60 cells, 256x256 RGBA cells, down/up/right. Assumed M64 anchor (128,231) from existing convention; please confirm. Native-buffer dimension, alpha, palette and baseline checks passed; idle_up has 3 distinct frames of 4. Profile head is partially obscured; final death frames withdraw into shell. Repository audit not run. Review panel and provisional INDEX entry included; no code changes.
+
 - B38a Reef Puffer (`codex/b38a-reef-puffer`) delivers 14 strips at 192 px per cell, including sleep and eat. Local intake passed with zero blockers and warnings, the contact sheet was reviewed, and the ZIP was verified. Check inflation readability at gameplay scale. This is the first species in B38. The other seven remain pending.
 
 - **B31a Glimmerfrog follow-up** (`codex/b31a-glimmerfrog-rest`) adds the two missing down-facing sleep/eat loops under `b31af-glimmerfrog-rest`. Both use four 256 px cells and the existing Glimmerfrog anchor. Intake passed with zero blockers and warnings, and all frames were visually reviewed. Sleep motion is deliberately subtle. When wiring, fold these two IDs into Glimmerfrog's B31a animation set.
@@ -360,3 +366,7 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 - **Decisions:** `game/design/beta/ROUND4-DECISIONS.md` (D5-01: Arcane Frontier ships as a "Coming soon" card, no Hub card).
 - **Integration:** on the coordinator's call D5 merges r4-d1..r4-d4 into a local `r4-integ`, runs the full tier in shards
   (`tools/stamp.sh --no-write`) and reports each red test with the commit that caused it.
+
+
+## Codex Shellback v3
+Cycle 6 Shellback v3: six strips / 30 cells revised, existing PR #61. Right idle bbox 220x152 first frame, low shell with separate ridge spikes, plastron and alternating visible foot lift, exposed neck extension. Death has rotated shell recoil, tipping, rim contact, wider settled closed-eye pose and intentionally held final frame. Native bounds and y231 anchor checked; 4x hard-alpha construction. Full audit and independent PNG decode/hash comparison not run. Down move and attack minor nits remain from v2; front/rear death continuity, apparent shell/limb contact and exact lunge displacement need review. Existing other six strips retained. No code changes.
