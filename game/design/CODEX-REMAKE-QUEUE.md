@@ -698,3 +698,62 @@ wildlife, then ground, buildings, icons) are RAISED TO PRIORITY 1, ahead of the 
 T01 villagers (all five: Mocha, Frosty, Buster, Lily, Spike; true front/back/side views, original designs, not avatar-collection look-alikes),
 then the common wildlife. Keep the Glacier Shellback redo (see the cycle 6 UPDATE) as the only B-03 item still in front of them.
 Rules unchanged: original art only, ART-HANDOFF.md formats, push to `codex/<topic>` branches only, audit before asking for a merge.
+
+## Codex status — Icicle Bat frost detail
+Icicle Bat detail pass: in-place revision of accepted PR #60 art, all 12 strips / 60 cells; 54 active or falling frames receive 2–3 tapered attached ice spikes on wing edges, final six flat death cells unchanged in visible pixels. Existing palette, IDs, 192 cells, timing and anchor (96,171) unchanged. Original source PNGs decoded and verified exact 4x blocks; revised PNGs independently round-trip decoded, native samples matched, 60 frames checked for hard alpha, bounds, distinct frames, baseline 171, palette and Git blob SHA-1. Two 3x native contact sheets visually reviewed. Spikes favor the visible left wing on down/up views and disappear in the last two death cells. Full repository audit/tests not run; pending Claude review. No code/tests/Firebase changes. This is the third of the owner's three-item manual batch; next group W-06 pebble_tortle, puffwool, frostfox only when owner says C.
+
+## UPDATE 2026-11-25 (cycle 6 codex review, Claude): Shagtusk, Sabrefang, saddles REDO; Icicle Bat frost detail MERGED
+Reviewed `codex/b03-shagtusk` 8194913, `codex/b03-sabrefang` 753fc9d, `codex/b03-saddle-overlays` a943caf, `codex/b03-icicle-bat-frost-detail`
+5985c6c. `game/tools/art-audit/run.js` was run on a scratch copy of each branch (its own INDEX entry, nothing staged here): **0 rows**
+(0 blocker / 0 needs-redo / 0 nit) for all four batches. Own decode: frame counts 4/6/5/5 match, cells 384 (L96) / 192 (S48), 0 soft-alpha
+pixels, every 4x4 block uniform, 7-13 colours per strip, feet on anchor y 347 / 171 in every frame. The technical side is clean; the
+fails below are drawing / animation (ART-HANDOFF section 3 rules 1 and 3). Contact sheets (anchor line red, seat dot green):
+`beta/img/cyc6-codex-shagtusk.jpg`, `cyc6-codex-sabrefang.jpg`, `cyc6-codex-saddle-overlays.jpg` (saddle composited on its mount),
+`cyc6-codex-icicle-bat-frost.jpg`.
+
+**Icicle Bat frost detail (5985c6c): ACCEPTED, merged provisional.** Same ids, frames, anchor and per-frame bbox as the accepted base;
+only wing-edge spikes added, all colours already in `palette.json`. Still not wired (tundra list pinned in shared-mm-creature-strips).
+
+**Shagtusk (8194913): REDO, not merged.** Views are right (up = true rear, no face; right = true profile with trunk and tusks), keep them.
+1. Death (all three dirs): f1-f3 are the standing idle pose (down f1/f2/f3 bbox 276x284, 276x288, 276x284; up f1-f3 only lose 12-28 px of
+   height), then f4 jumps to lying (324x220 down, 324x156 up). f4 = f5 pose in every dir (same bbox). Needed: f1 recoil (head up, trunk
+   thrown back), f2 front legs buckle (front of body drops 30-40 px, rear still up, body tilted), f3 rear legs give, body hits the ground
+   on its side (right view: belly line on the ground, legs sticking out sideways), f4 settle (head and tusks on the ground, trunk limp,
+   eye closed as a line), f5 hold. In down view the head must also drop and shrink in height (now the full head + tusks sit on a flat
+   body like a mask, `death_down` f4/f5).
+2. Walk: `move_down` / `move_up` legs barely move (bbox width changes only from the tusk line; the four feet stay in the same columns
+   in f1, f4, f6). Draw alternating diagonal pairs with a visible 8-12 px lift of the raised foot and the body bobbing 4 px.
+   `move_right` is better but the near and far legs are the same colour: make the far pair one ramp step darker.
+3. Attack: f1 == f5 byte-identical in all three dirs (fine as recovery, but then f2-f4 must carry the motion). `attack_down` reads as
+   idle at phone size: the head must dip (f2, anticipation: head down 12-16 px, tusks forward) and then swing up (f3: tusks raised
+   above the head line, trunk up, 20+ px taller). `attack_right` f3 must lunge the head forward 16-24 px past the idle nose x (now +8).
+4. Fur: the body reads as smooth faceted rock (big flat polygons, straight edges). Add shag: ragged 2-3 px fur tufts along the belly
+   line, the back of the head and the legs (a broken silhouette edge, not straight), a 4-tone warm ramp with darker fur strands.
+   The trunk in the right view is a straight vertical grey block in front of the tusks: give it a curve (down and slightly back).
+
+**Sabrefang (753fc9d): REDO, not merged.** Front (amber eyes, sabres) and back (no face, tail) are good; keep them.
+1. **Right view is not a cat profile.** `idle_right` bbox 312 x 308: a round ball body with the head stuck on the front edge, the
+   back as tall as the shoulder. A sabre-tooth side view is LONG and LOW: target bbox about 330-350 wide x 220-250 tall, straight
+   back line sloping down from shoulder to hips, deep chest, tucked belly, long tail held low behind, head lower than the shoulder
+   hump, near legs full, far legs one step darker and offset. Redraw all 4 right strips.
+2. Pale stripes (queue spec "sabre-tooth cat, pale stripes") are missing: add 4-6 pale/dark stripe pairs across back and flanks in all
+   views (they also break up the flat grey).
+3. Death: f3 (still standing, 276x244) -> f4 lying (288x152) in one step in down/up; f4 and f5 have the same pose. Same 5 beats as
+   the Shagtusk spec above (recoil, buckle, side-fall, settle, hold), lying silhouette on its side.
+4. Walk: `move_down` legs alternate only in f2 and f5. Every frame a different leg position, alternating diagonal pairs.
+5. Body shading is faceted flat polygons (same issue as Shagtusk); want the b04 bar: 4-tone ramp, top-left light, fur texture.
+
+**Saddle overlays (a943caf): REDO, not merged** (and they cannot be accepted before both mounts, since they align to those frames;
+remeasure on the redrawn mounts). Hard alpha, 4x grid, separate from the body: good. Problems seen with the saddle composited:
+1. **Down view covers the face.** `shagtusk_saddle_idle_down` spans y 36-203 and `sabrefang_saddle_idle_down` y 40-207, while the mount
+   head/eyes sit at about y 120-200: the saddle is painted over the forehead and both eyes and sticks 24-28 px above the mount's top.
+   From the front the saddle is BEHIND the head: draw only what shows above/beside the head (pommel tip, the blanket corners at the
+   shoulders), nothing over the face; bottom of the overlay above the eye line.
+2. Right view: the Shagtusk blanket (x 48-243, y 64-279) covers the whole flank down to the legs and the shoulder in front of the
+   ear; the Sabrefang one sits on the shoulders/neck. Seat it mid-back (behind the shoulder hump), blanket ending well above the
+   belly line, girth strap around the chest behind the front legs.
+3. Every frame is the same picture moved up/down (bbox identical in all frames; `shagtusk_saddle_move_down` f1==f5 and f2==f6): fine
+   for idle, but in move it must tilt with the body (1 px rows offset front/back) or the saddle floats.
+4. Seats: per-frame seat points must be remeasured on the redrawn mounts; include a composite preview (mount + saddle + a hero sitting).
+
+Deliver each fix on the same branch, re-run `node game/tools/art-audit/run.js` and add a composite saddle preview.

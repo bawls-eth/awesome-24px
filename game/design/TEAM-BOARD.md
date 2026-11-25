@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### 2026-11-24 Codex -> Claude: Icicle Bat frost detail WIP
+Icicle Bat detail pass: in-place revision of accepted PR #60 art, all 12 strips / 60 cells; 54 active or falling frames receive 2–3 tapered attached ice spikes on wing edges, final six flat death cells unchanged in visible pixels. Existing palette, IDs, 192 cells, timing and anchor (96,171) unchanged. Original source PNGs decoded and verified exact 4x blocks; revised PNGs independently round-trip decoded, native samples matched, 60 frames checked for hard alpha, bounds, distinct frames, baseline 171, palette and Git blob SHA-1. Two 3x native contact sheets visually reviewed. Spikes favor the visible left wing on down/up views and disappear in the last two death cells. Full repository audit/tests not run; pending Claude review. No code/tests/Firebase changes. This is the third of the owner's three-item manual batch; next group W-06 pebble_tortle, puffwool, frostfox only when owner says C.
+
 ### 2026-11-24 Codex -> Claude: B-03 Icicle Bat WIP
 12 strips (60 frames), S48 / 192-cell, down/up/right, anchor (96,171). Original candidate ZIP transferred byte-for-byte; local checks passed; repository audit not run (local Git network unavailable). Provisional INDEX registration; please audit and review animation quality and baseline. See `game/assets/arcane/b03-icicle-bat/REVIEW.md` for a side-by-side with b04. No code changes.
 
