@@ -917,3 +917,35 @@ there are no new redo notes. The cycle 8 hawk REDO notes (above) and the cycle 9
 
 **Priority (unchanged order):** 1. `codex/t17-hawk` redo, then `howler_monkey`. 2. T13 pond / wetland set. 3. T10 garden bugs
 (lower now: bee and ladybug have code art).
+
+## UPDATE 2026-11-25 (cycle 11, Claude G): T17 hawk v2 ACCEPTED, merged and wired; hummingbird / snail / dragonfly now code art
+`git fetch origin`: the only new `codex/*` commit since cycle 10 is **`codex/t17-hawk` 1c9f2b6 (v2, 09:55 -0800)**. `codex/t10-garden-bugs`
+(088aa6c) and `codex/t13-wetland-fauna` (6da71ca) are unchanged since 2026-11-23 (already staged, see the cycle 0 notes); nothing to review there.
+Method: own decode of all 6 strips (4x grid round-trip, alpha values, native bbox, duplicates, edge contact, alpha-mask IoU vs the owl per frame),
+contact sheet hawk | owl on `#181820` / `#808080` / `#a8d878` at 3x plus a 1x hawk | owl pair on grass (`beta/img/cyc11-art-codex-t17-hawk-v2.jpg`,
+`-1x.jpg`), repo `game/tools/art-audit/run.js` (unmodified) on the merged tree, and the in-game half-size bake (`beta/img/cyc11-art-town-fauna-*.jpg`).
+
+**T17 hawk v2 (1c9f2b6): ACCEPTED, merged provisional (INDEX `t17-hawk`) and WIRED** (`shared/mm-town-fauna.js`, 24 px Town cell like the owl).
+Audit: 0 blocker, 0 needs-redo (the 6 "unref" nits are gone now that it is wired). Decode: 14 frames, exact 4x grid, alpha 0/255 only, every
+frame distinct, no edge contact, 11-13 colours. All four cycle 8 redo points are fixed:
+1. Silhouette: IoU vs owl `idle` f1-f2 0.48 / 0.50 (was 0.76), `idle_down` f1-f2 0.40 (was 0.86), `move` f1-f4 0.49 / 0.39 / 0.53 / 0.48 (f3 was 0.83),
+   `caught` 0.49, `caught_down` 0.40. Slim 19 px front, flat head with brow, hooked yellow bill, yellow legs, rufous tail, cream streaked chest.
+2. `move` f3 down-stroke wing now hangs below the belly (no more tail extension).
+3. `move` f2-f3 are airborne (bbox bottom native 42, feet tucked); `move_down` f2-f4 lifted too.
+4. `caught_down` eyes are eyelid lines, no dark band.
+Nits for a later pass (no redo needed):
+- `move_down` f2-f4 still overlap the owl's front flap at IoU 0.65 / 0.63 / 0.69 (both spread two broad wings). For a hawk give the front
+  flight wings long, straight leading edges with 3-4 separated primary "fingers" at each tip and show the rufous tail fanned under the
+  body in f2-f3, so the front flight reads as a raptor, not an owl.
+- At the 24 px Town size the `idle_down` front is 10 px wide. That reads well as a perched raptor, but the head band (brow + eyes) merges to
+  one dark row. A 1-native-px cream gap between brow and eye on `idle_down` f1-f2 and `caught_down` would keep two eyes after the 2x2 bake.
+
+**Code art on our side (cycle 11):** the Town's in-village **hummingbird (14 px), garden snail (14 px) and green darner dragonfly (16 px)** were the
+last pixelized-SVG specks; they are now original code pixel art in `shared/mm-town-fauna.js` (`?ffstrips=0` keeps the SVG). The **robin** now has
+a true front view (`idle_down` / `move_down` maps). A T10 / T13 / T14 strip delivery still replaces any of them by id: same idle / move / caught
+format, `class` key, true `down` view, 4-frame moves; 16 native for bugs, 32 native for the T13 set (dragonfly, frog, poison dart frog,
+butterfly, trout, catfish, snake).
+
+**Priority (updated):** 1. `howler_monkey` to finish T17. 2. T13 pond / wetland set (frog, snake, trout and catfish are still SVGs; dragonfly and
+butterfly have code fallbacks). 3. T14 `bird` / `squirrel` (true down views, 4-frame moves). 4. T10 garden bugs (bee, ladybug, snail and
+hummingbird now have code art, so lowest).
