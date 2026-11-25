@@ -670,7 +670,14 @@
       "files": 14,
       "status": "provisional",
       "ingested_utc": "2026-11-22T20:15:00Z",
-      "source": "codex"
+      "source": "codex",
+      "revisions": [
+        {
+          "branch": "codex/w06-frostfox",
+          "status": "provisional",
+          "note": "Frostfox W-06 40 native px, WIP audit not run"
+        }
+      ]
     },
     {
       "id": "b40c",

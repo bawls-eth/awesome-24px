@@ -1,0 +1,272 @@
+{
+  "status": "WIP, audit not run",
+  "total_strips": 14,
+  "total_frames": 68,
+  "checks": [
+    {
+      "id": "frostfox_idle_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        40,
+        39,
+        40,
+        41
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 4,
+      "hard_alpha": true,
+      "git_blob_sha": "7176da8463ea66998bd489730fa4c894e9907e9b",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_move_down",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        40,
+        39,
+        40,
+        41,
+        40,
+        39
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "e8f418ef1f22164a9e7ab9316603eeb98c1d8452",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_attack_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        40,
+        41,
+        39,
+        40,
+        41
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "2a31dec81ba958284d5c78120e31e1fc2ed200a4",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_death_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        40,
+        41,
+        42,
+        20,
+        21
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "e4ae5180893b1da208c82d42ff9a1bbb2fb23b2a",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_idle_up",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        40,
+        39,
+        40,
+        41
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 4,
+      "hard_alpha": true,
+      "git_blob_sha": "4e7edd04a6a23abf8c8af1a606d39aac545596a8",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_move_up",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        40,
+        39,
+        40,
+        41,
+        40,
+        39
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "10d63a7b4ef90e3fe645b0b58182b88d1f450ae6",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_attack_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        40,
+        41,
+        39,
+        40,
+        41
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "0200d3261c92e77b38f7eed0102b05539474554f",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_death_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        40,
+        41,
+        42,
+        20,
+        21
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "bdebba63aa3e33d4d53655148cf30837a9bd9033",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_idle_right",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        40,
+        39,
+        40,
+        41
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 4,
+      "hard_alpha": true,
+      "git_blob_sha": "6af2b334fa8fd88dd60cea49b3fb44c2e4dd896d",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_move_right",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        40,
+        39,
+        40,
+        41,
+        40,
+        39
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "7de016896b3e17a27190e9b4bdb7d4fab9c37cca",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_attack_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        40,
+        41,
+        39,
+        39,
+        41
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "815879e5220c247227dd735fdf8170d04b13d723",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_death_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        40,
+        41,
+        42,
+        20,
+        21
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "e1370a71c840dfe41fc0251d697890edd92b6de4",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_sleep_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        27,
+        26,
+        27,
+        28
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "b725ca7fcf08b7b43398f0a0de86e7e8f0530167",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "frostfox_eat_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        40,
+        41,
+        40,
+        39
+      ],
+      "lowest_opaque_row": 171,
+      "distinct_frames": 4,
+      "hard_alpha": true,
+      "git_blob_sha": "5084b3bae14025db76ed0abb51f326eebca46d28",
+      "git_blob_sha_verified": true
+    }
+  ],
+  "limitations": "W-06 Frostfox in-place b40b redraw: 14 existing strips / 68 cells, 192x192, original IDs, timing and anchor (96,171). First idle silhouette 40 native px (160 inclusive exported pixels, top row 12 vs nominal 11); standing bob 39–41, lowered sleep and death. New icy blue fur, pointed ears, white tail tip, true front/rear/profile. Original polygon geometry fitted to native pixel grid then integer 4x export; measured height includes tail. Review tail continuity, silhouette and fit at game scale; rear pose may read as multiple tail shapes and should be checked. Sleep repeats one pose; final death frames differ. All native bounds, hard alpha and exact Git blob hashes checked; individual encoded PNG decoding and full repo audit not run. Preview is a 2x native contact sheet; b04 comparison is Markdown not composite, hero comparison missing. Same INDEX batch, no duplicate registered IDs. No code or tests changed."
+}
