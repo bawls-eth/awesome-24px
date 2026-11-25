@@ -147,7 +147,7 @@
   const LAYERS = Object.freeze({
     lead: Object.freeze({ id: 'lead', name: 'Lead shot', from: 4, every: 1.2 /* cycle 6 tuning: was 1.6 */, ahead: 0.5 /* was 0.35 */, velWin: 0.2, speed: 207 /* 0.9 x the 230 aimed bolt */, life: 1.45 /* 310 px > the 240 px orbit; life > every, so at most 2 alive */, budget: 2, windup: 0.6 }),
     arm: Object.freeze({ id: 'arm', name: 'Slow arm', from: 5, every: 0.7 /* cycle 6 tuning: was 0.5 */, turnDeg: 40, bolts: 2, speed: 95 /* was 110 */, life: 2.4 /* at most 4 pairs alive */, budget: 9, windup: 0.6 }),
-    sweep: Object.freeze({ id: 'sweep', name: 'Edge sweep', from: 6, every: 7, bolts: 9, gap: 3, speed: 140, warn: 0.8, spacing: 28, dist: 300, budget: 9, windup: 0.8 }),
+    sweep: Object.freeze({ id: 'sweep', name: 'Edge sweep', from: 6, every: 9 /* cycle 7 tuning (ID-36): was 7 */, bolts: 9, gap: 3, speed: 140, warn: 0.8, spacing: 28, dist: 300, budget: 9, windup: 0.8 }),
   });
   const LAYER_IDS = Object.freeze(['lead', 'arm', 'sweep']);
   const RUSH_CAP_BASE = 40;

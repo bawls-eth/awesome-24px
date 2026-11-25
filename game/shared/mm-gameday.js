@@ -60,5 +60,23 @@
   }
   // Would a streak holder have to wait today (stored day 1-2 days ahead, or a certainly wrong clock)? Same rule, no change.
   function blocked(last, streak, today, opts) { const r = streakStep(last, streak, today, opts); return r.wait ? 'ahead' : r.clock ? 'clock' : ''; }
-  return { MS, FLOOR, FUTURE_DAYS, utcKey, utcNumber, localKey, localNumber, keyNumber, key, number, streakStep, blocked };
+  // ID-09 (cycle 7, spec IDEAS.md "ID-09 / ID-18 implementation specs"): the forgiving day COUNT. Days visited, never reset, never lowered.
+  // lastKey / todayKey: 'YYYY-MM-DD' UTC keys (L-08), days: the stored count. -> { days, date, counted, write }
+  //   same day: no change; today after the stored day (any gap: 1, 3 or 40 days): days + 1, counted;
+  //   stored day 1-2 days ahead of today (the clock was ahead): nothing counted, nothing written (waits); more than 2 ahead: date reset to today, not counted;
+  //   today before FLOOR (a dead clock) or not a real date: untouched; unreadable stored date or count: max(days, 0) + 1, counted.
+  // The returned days is never smaller than a valid days given (capped at 1e6). streakStep above is untouched.
+  function visitStep(lastKey, days, todayKey) {
+    const CAP = 1e6; const okDays = Number.isInteger(days) && days >= 0; const d = okDays ? Math.min(days, CAP) : 0;
+    const last = keyNumber(lastKey); const today = keyNumber(todayKey);
+    if (!Number.isInteger(today) || today < FLOOR) return { days: d, date: Number.isInteger(last) ? lastKey : '', counted: false, write: false };
+    if (!okDays || !Number.isInteger(last)) return { days: Math.min(CAP, d + 1), date: todayKey, counted: true, write: true };
+    if (last === today) return { days: d, date: lastKey, counted: false, write: false };
+    if (last > today) {
+      if (last - today <= FUTURE_DAYS) return { days: d, date: lastKey, counted: false, write: false };
+      return { days: d, date: todayKey, counted: false, write: true };
+    }
+    return { days: Math.min(CAP, d + 1), date: todayKey, counted: true, write: true };
+  }
+  return { MS, FLOOR, FUTURE_DAYS, utcKey, utcNumber, localKey, localNumber, keyNumber, key, number, streakStep, blocked, visitStep };
 }));

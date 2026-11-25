@@ -74,7 +74,7 @@ const watch = (page, ms) => E(page, (a, w, ms) => new Promise((res) => {
   const res = []; const hpLines = [];
   for (let step = 1; step <= 6; step++) {
     if (step > 1) { await p.waitForSelector('#rw-rush-next', { state: 'visible', timeout: 5000 }); hpLines.push(await p.evaluate(() => { const el = document.getElementById('rw-rush-hp'); return { t: el ? el.textContent : null, hp: Math.ceil(window.__mm.arena.player.hp), max: Math.round(window.__mm.arena.stats.maxHp) }; })); await nextFight(p); }
-    const r = await watch(p, step <= 3 ? 2500 : step === 6 ? 10500 : 5500);
+    const r = await watch(p, step <= 3 ? 2500 : step === 6 ? 13500 : 5500); // fight 6: cycle 7 sweep every 9 s (was 7) after the boss shield, so the window grew 10.5 -> 13.5 s
     res.push(r);
     if (step < 6) await kill(p);
   }

@@ -2386,5 +2386,19 @@
   "cyc7-d-town-economy.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "cyc6-lead-passive-landscape.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 900
+  },
+  "cyc7-idle-rest.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "cyc7-s-visit-days.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
