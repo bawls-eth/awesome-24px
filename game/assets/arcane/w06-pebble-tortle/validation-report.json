@@ -1,0 +1,272 @@
+{
+  "status": "WIP, audit not run",
+  "total_strips": 14,
+  "total_frames": 68,
+  "checks": [
+    {
+      "id": "pebble_tortle_idle_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        34,
+        33,
+        34,
+        35
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "a917b6fa8802b0ba5cd50478ac7b39420fd2b47d",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_move_down",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        34,
+        33,
+        34,
+        35,
+        34,
+        33
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "65d860061ad16df51bcbad500761c0fbcdd8dbc8",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_attack_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        34,
+        35,
+        33,
+        34,
+        35
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "6de893a3695f74b51abb8f73da76bd049f5a91fc",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_death_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        34,
+        35,
+        36,
+        19,
+        20
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "dd7e707e7b7d9b13744dbea138be837cef0add70",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_idle_up",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        34,
+        33,
+        34,
+        35
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "743468c7707fd2621d470fb0d4d0f5a42036ed56",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_move_up",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        34,
+        33,
+        34,
+        35,
+        34,
+        33
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "a62c816d00ce16d6ccd2ae53b027dc4d0c5f4569",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_attack_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        34,
+        35,
+        33,
+        34,
+        35
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "e23e54e8f12786a9d7c8dedff5523dc8e027a218",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_death_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        34,
+        35,
+        36,
+        19,
+        20
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "26d12b04cc0ea79c9e2a5e526da8da697a8d4660",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_idle_right",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        34,
+        33,
+        34,
+        35
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "6df34c1bcafa750bb7859dc5c242d2c86dd63c61",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_move_right",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        34,
+        33,
+        34,
+        35,
+        34,
+        33
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "71f51dae3f415e50476330254fc09b449103f56e",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_attack_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        34,
+        35,
+        33,
+        34,
+        35
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "cf811d177c384c715d4be14c0f33ed05f73f0cac",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_death_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        34,
+        35,
+        36,
+        19,
+        20
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "87ad87e91b2568881fa51b3b61854bb2c3633ed7",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_sleep_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        26,
+        25,
+        26,
+        27
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "233b67e9c56f26aa839094d1f4475da2b13acd63",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "pebble_tortle_eat_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        34,
+        35,
+        34,
+        33
+      ],
+      "lowest_opaque_row": 173,
+      "distinct_frames": 4,
+      "hard_alpha": true,
+      "git_blob_sha": "c8f56de6954ebf328c41321c160216cda4674bf4",
+      "git_blob_sha_verified": true
+    }
+  ],
+  "limitations": "W-06 Pebble Tortle redraw in-place in b36: 14 existing IDs / 68 frames, 192x192, original timing and anchor (96,173). Original dome shell with shaded stone plates, true back/profile, lowered death and sleep, native standing heights 33–35 px (first idle 34), 4x blocks vertically offset +2 pixels to keep exact anchor; nominal top row 38 rather than 37 because height is inclusive. Native geometry rasterized then fitted vertically before integer 4x export. All PNG blob hashes verified; independent PNG decoding and full audit not run. Idle/sleep contain repeat poses; compare to puffcap via REVIEW.md; b04 composite not supplied. In-place replacement keeps same INDEX batch, no duplicate IDs. No code changes."
+}
