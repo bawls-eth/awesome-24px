@@ -40,7 +40,7 @@ const SETUP = `(a, type, tier, cd, boss) => {
   if (boss) { e.bossTier = 3; e.phase = 1; e.invuln = 0; e.cd = 99; e.cd2 = cd; e.ax = e.x; e.ay = e.y; }
   a._camStep(-1); return e;
 }`;
-const step = `(a, n) => { for (let i = 0; i < n; i++) { a._update(1 / 60); a.enemies.forEach((q) => { if (q !== window.__e && q.active) q.active = false; }); } }`;
+const step = `(a, n) => { for (let i = 0; i < n; i++) { if (a._wake) a._wake(); /* ID-51: a playing hero (an idle hero rests and enemies stand down) */ a._update(1 / 60); a.enemies.forEach((q) => { if (q !== window.__e && q.active) q.active = false; }); } }`;
 
 (async () => {
   const browser = await chromium.launch();

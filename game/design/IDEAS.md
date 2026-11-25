@@ -152,7 +152,7 @@ Evidence tags as above; [M1] = measured in cycle 1 play (`beta/cycle1-design.md`
 
 | id | title | effort | risk | status |
 |---|---|---|---|---|
-| ID-15 | Isles Oakback orchard route (food sink fix) | S | low | proposed |
+| ID-15 | Isles Oakback orchard route (food sink fix) | S | low | built (S, cycle 7, approved by coordinator): Shore only (`restOk`), `?idlerest=0` off; see `beta/cycle7-systems.md` |
 | ID-16 | Isles creature "likes" journal hint | S | low | proposed |
 | ID-17 | Isles tame verbs per species | M | low | proposed |
 | ID-18 | Town daily bounties through mm-bounties (Town pool, stars only) | M | low | approved (coordinator, standing owner decision 2026-11-25; spec below; replaces the needs-change note, builds on `beta/cycle2-lead.md` section 1) |
@@ -213,7 +213,7 @@ Sources (generic queries, cycle 1): [feeding-based taming in cozy games](https:/
 |---|---|---|---|---|
 | ID-34 | Show-hitbox option for the hero (small core dot, device pref) | S | low | proposed |
 | ID-35 | Bolt colour roles: one colour per threat class (aimed / ring / spiral / minion), never two colours that behave the same | S | low | proposed |
-| ID-36 | Trial of Six ramp: fights 1-3 stay, fights 4-6 add one pattern layer each, and a carried-HP readout | M | medium | built, tuning NOT signed off (S, cycles 5-6): layers A/B/C in `mm-endgame.js` + `realm-world.js`; cycle 6 values lead 1.2 s / 0.5 s ahead, arm 0.7 s / 95 px/s; bot targets only partly met (see `beta/cycle6-systems.md`); the carried-HP readout is NOT built |
+| ID-36 | Trial of Six ramp: fights 1-3 stay, fights 4-6 add one pattern layer each, and a carried-HP readout | M | medium | built, tuning signed off on bot runs (S, cycles 5-7): layers A/B/C in `mm-endgame.js` + `realm-world.js`; values lead 1.2 s / 0.5 s ahead, arm 0.7 s / 95 px/s, edge sweep every 9 s; cycle 7 full runs: 60 Hz bot wins 6/6 (252 and 244 HP), 30 Hz bot wins 6/6 with 29 HP (see `beta/cycle7-systems.md`); carried-HP readout built (cycle 6); no human has played it |
 | ID-37 | Gear sink ladder: reforge shards 25 x (t-6) (shipped as data in cycle 3) plus a Godlands-only shard sink that never touches outcomes | M | low | proposed |
 | ID-38 | Cozy 20-minute day: a Town "that's the day" card once the chores are done (names tomorrow's board, no streak, no timer) | S | low | proposed |
 | ID-39 | Species temperaments on the Isles: each tameable has a liked verb (feed / sing / ride) shown in the journal after first sighting; bond grows faster with it | M | low | proposed |
