@@ -368,8 +368,57 @@
       out.chips++;
     }
   }
+  // cyc7 art (G): the frozen road was flat grey with specks and the tundra moss a flat olive field. With opts.biomes.road === true (the
+  // Isles page passes it with tundra detail; ?tundraroad=0 = off): a frozen_road tile gets two wheel ruts along the road's direction (a
+  // dark packed groove with a lit snow lip, broken by seeded gaps) and a few frost-heaved cobbles (2x1 stone, lit top, dark under row);
+  // (a plaza tile, road on all four sides, gets flagstone joints instead of ruts); a tundra_moss tile that drew no frost gets lichen: 2-3 clusters of rust-orange and pale sage crust pixels and a dark crowberry dot.
+  function roadDetail(ctx, at, names, t, wx, wy, gx, gy, u, A, r, q, seed, out) {
+    const R = (x, y, ww, hh) => ctx.fillRect(x, y, ww, hh);
+    const road = (dx, dy) => { const n2 = at(wx + dx, wy + dy); return n2 >= 0 && names[n2] === 'frozen_road'; };
+    const horiz = (road(-1, 0) || road(1, 0)) || !(road(0, -1) || road(0, 1)); // ruts follow the road; a lone tile runs east-west
+    // a plaza tile (road on all four sides: portal pads, shrine yards) gets packed paving instead of ruts, so a wide patch never stripes
+    const plaza = road(-1, 0) && road(1, 0) && road(0, -1) && road(0, 1);
+    if (plaza) {
+      ctx.fillStyle = 'rgba(38,48,66,0.22)'; const jx = 4 + ((q * 8) | 0), jy = 4 + ((r * 8) | 0);
+      R(gx(jx), gy(1), u, u * 5); R(gx(1), gy(jy), u * 6, u); R(gx(jx + 3), gy(jy + 1), u, u * 6); // flagstone joints
+      ctx.fillStyle = 'rgba(235,243,255,0.30)'; R(gx(jx + 1), gy(1), u, u * 5); R(gx(1), gy(jy + 1), u * 6, u);
+      out.paving++;
+    }
+    for (const lane of (plaza ? [] : [5, 10])) { // two ruts, 1 art px groove + a lit lip on the far side, seeded gaps so they never read as rails
+      for (let i = 0; i < A; i++) {
+        if (dhash(wx * 29 + i + lane, wy * 31 - lane, seed + 41) < 0.14) continue;
+        const wob = dhash(wx + lane, wy + (i >> 2), seed + 42) < 0.2 ? 1 : 0;
+        ctx.fillStyle = 'rgba(38,48,66,0.42)'; if (horiz) R(gx(i), gy(lane + wob), u, u); else R(gx(lane + wob), gy(i), u, u);
+        ctx.fillStyle = 'rgba(235,243,255,0.45)'; if (horiz) R(gx(i), gy(lane + wob + 1), u, u); else R(gx(lane + wob + 1), gy(i), u, u);
+      }
+    }
+    if (!plaza) out.ruts++;
+    const n = r < 0.35 ? 2 : r < 0.75 ? 1 : 0; // frost-heaved cobbles between the ruts / at the road edge
+    for (let s2 = 0; s2 < n; s2++) {
+      const along = 2 + ((dhash(wx + s2 * 7, wy, seed + 43) * 11) | 0), across = [2, 7, 12][(dhash(wy + s2, wx, seed + 44) * 3) | 0];
+      const x = horiz ? along : across, y = horiz ? across : along;
+      ctx.fillStyle = 'rgba(118,128,146,0.9)'; R(gx(x), gy(y), u * 2, u);
+      ctx.fillStyle = 'rgba(214,224,238,0.8)'; R(gx(x), gy(y), u, u);
+      ctx.fillStyle = 'rgba(30,38,56,0.45)'; R(gx(x), gy(y + 1), u * 2, u);
+      out.cobbles++;
+    }
+    if (q < 0.25) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; R(gx(3 + ((q * 40) | 0)), gy(horiz ? 8 : 3), u, u); out.sparkles++; } // a frost glint on the crown
+  }
+  const LICHEN = ['rgba(201,124,52,0.85)', 'rgba(224,168,72,0.8)', 'rgba(176,196,140,0.8)', 'rgba(150,178,120,0.8)'];
+  function lichenDetail(ctx, gx, gy, u, A, wx, wy, r, seed, out) {
+    if (r >= 0.8) return; // some moss stays plain
+    const R = (x, y, ww, hh) => ctx.fillRect(x, y, ww, hh);
+    const n = 2 + (dhash(wx, wy, seed + 51) < 0.4 ? 1 : 0);
+    for (let s2 = 0; s2 < n; s2++) {
+      const x = 2 + ((dhash(wx + s2 * 5, wy - s2, seed + 52) * (A - 6)) | 0), y = 2 + ((dhash(wy + s2 * 3, wx + s2, seed + 53) * (A - 6)) | 0);
+      const c = LICHEN[(dhash(wx - s2, wy + s2 * 9, seed + 54) * 4) | 0];
+      ctx.fillStyle = c; R(gx(x), gy(y), u * 2, u); R(gx(x + 1), gy(y + 1), u, u); if (s2 & 1) R(gx(x - 1), gy(y + 1), u, u);
+    }
+    if (dhash(wy, wx, seed + 55) < 0.35) { ctx.fillStyle = 'rgba(40,30,60,0.9)'; R(gx(4 + ((r * 20) | 0) % 9), gy(9), u, u); ctx.fillStyle = 'rgba(150,140,200,0.7)'; R(gx(4 + ((r * 20) | 0) % 9), gy(9), Math.max(1, u >> 1), Math.max(1, u >> 1)); } // a crowberry with a glint
+    out.lichen++;
+  }
   function biomeDetail(ctx, terrain, w, h, cx, cy, opts) {
-    const out = { drifts: 0, sparkles: 0, cracks: 0, frost: 0, roots: 0, litter: 0, moss: 0, seams: 0, tiles: 0, iceHoles: 0, lips: 0, ripples: 0, chips: 0 };
+    const out = { drifts: 0, sparkles: 0, cracks: 0, frost: 0, roots: 0, litter: 0, moss: 0, seams: 0, tiles: 0, iceHoles: 0, lips: 0, ripples: 0, chips: 0, ruts: 0, paving: 0, cobbles: 0, lichen: 0 };
     try {
       const o = opts && typeof opts === 'object' ? opts : {};
       const names = o.names || NAMES, pal = o.palette || PALETTE, T = o.tile | 0 || 32, CH = o.ch | 0 || 16, seed = (o.seed | 0) + 7717;
@@ -413,7 +462,9 @@
             }
             out.cracks++;
           } else if (r < 0.45) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; R(gx(ax), gy(ay), u * 2, u); out.sparkles++; }
+        } else if (bi.road === true && nm === 'frozen_road') { roadDetail(ctx, at, names, t, wx, wy, gx, gy, u, A, r, q, seed, out);
         } else if (k === 'f' || k === 'm') {
+          if (bi.road === true && k === 'm' && r >= 0.3) lichenDetail(ctx, gx, gy, u, A, wx, wy, r, seed, out);
           if (r < (k === 'm' ? 0.3 : 0.4)) { // frost: a small cluster of pale pixels (moss also gets a 3x2 snow patch)
             ctx.fillStyle = 'rgba(232,242,255,0.80)'; R(gx(ax), gy(ay), u, u); R(gx(ax + 1), gy(ay + 1), u, u); R(gx(ax + 3), gy(ay), u, u); R(gx(ax + 2), gy(ay + 3), u, u);
             if (k === 'm') { ctx.fillStyle = 'rgba(240,246,255,0.9)'; R(gx(ax + 5), gy(ay + 2), u * 3, u); R(gx(ax + 6), gy(ay + 1), u, u); ctx.fillStyle = 'rgba(70,100,150,0.2)'; R(gx(ax + 5), gy(ay + 3), u * 3, u); }

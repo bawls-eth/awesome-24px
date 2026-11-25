@@ -305,7 +305,7 @@
     }
     // cycle 4 art (G): tundra / jungle ground detail + seam softening (overlay on the baked chunk). ?tundradetail=0 / ?jungledetail=0
     if ((TUNDRA_DETAIL || JUNGLE_DETAIL) && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.biomeDetail) {
-      const b0 = performance.now(), br = window.MMIsleArt.biomeDetail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, biomes: { tundra: TUNDRA_DETAIL, jungle: JUNGLE_DETAIL, holes: TUNDRA_DETAIL && ICE_HOLE } });
+      const b0 = performance.now(), br = window.MMIsleArt.biomeDetail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, biomes: { tundra: TUNDRA_DETAIL, jungle: JUNGLE_DETAIL, holes: TUNDRA_DETAIL && ICE_HOLE, road: TUNDRA_DETAIL && TUNDRA_ROAD } });
       Object.keys(br).forEach((k2) => { biomeStat[k2] = (biomeStat[k2] || 0) + br[k2]; });
       biomeStat.chunks++; biomeStat.ms += performance.now() - b0;
     }
@@ -329,6 +329,7 @@
   const fieldStat = { flowers: 0, pebbles: 0, tufts: 0, chunks: 0, ms: 0 }; // cycle 2 art: field overlay counters (bake time only)
   const TUNDRA_DETAIL = Q.get('tundradetail') !== '0', JUNGLE_DETAIL = Q.get('jungledetail') !== '0'; // cycle 4 art: biome ground overlay
   const ICE_HOLE = Q.get('icehole') !== '0'; // cyc6 art: ice ledge rim / ripples / floating chips on water that meets tundra ground
+  const TUNDRA_ROAD = Q.get('tundraroad') !== '0'; // cyc7 art: frozen road ruts / cobbles and tundra moss lichen
   const biomeStat = { chunks: 0, ms: 0, tiles: 0 }; // cycle 4 art: biome ground overlay counters (bake time only)
   let detailBaked = 0, artFree = null; // cycle 0 art: tiles detailed on art bakes; the palette without the PNG terrains (built once)
   function artFreePal() {
@@ -3853,7 +3854,7 @@
       sandWarmed: () => ({ on: WARM_SAND, tiles: sandWarmed }), // cycle 0 art
       detailBaked: () => ({ on: T_DETAIL, tiles: detailBaked }), // cycle 0 art
       fieldDetail: () => Object.assign({ on: ISLE_FIELD && !GFX_LOW }, fieldStat), // cycle 2 art
-      biomeDetail: () => Object.assign({ tundra: TUNDRA_DETAIL && !GFX_LOW, jungle: JUNGLE_DETAIL && !GFX_LOW, holes: TUNDRA_DETAIL && ICE_HOLE && !GFX_LOW }, biomeStat), // cycle 4 art
+      biomeDetail: () => Object.assign({ tundra: TUNDRA_DETAIL && !GFX_LOW, jungle: JUNGLE_DETAIL && !GFX_LOW, holes: TUNDRA_DETAIL && ICE_HOLE && !GFX_LOW, road: TUNDRA_DETAIL && TUNDRA_ROAD && !GFX_LOW }, biomeStat), // cycle 4 art
       // cycle 0 art: distinct colours and an FNV hash of the baked pixels of terrain `name` in the chunk under the hero
       tileStats: (name) => {
         const id = NAMES.indexOf(name), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
