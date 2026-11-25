@@ -20,3 +20,6 @@ Claude merges your branch into the dev branch, makes the game load it (the loade
 
 ## First thing to do (Codex)
 Find where you saved your earlier image work (you were loading assets for the game), list it in `TEAM-BOARD.md`, and commit it to `codex/assets-inventory` so Claude can see what exists before B2 starts.
+
+## W-06 Puffwool
+W-06 Puffwool in-place b36 redraw: 14 existing strips / 68 cells, 192x192, unchanged timing/IDs and anchor (96,169). First standing idle 38 native px, standing bob 37–39. Individually shaded cream wool clumps, warm face, hooves, true rear/profile, lowered sleep and death. Original geometry fitted to native grid before integer 4x export; vertical offset -2 physical pixels to honor baseline, top row 18 (inclusive 152px), not nominal 17. Attack profile width capped at 44 native px; all bounds and exact Git blob hashes checked. Idle and sleep repeat one pose; individual encoded PNG decode and full repository audit not run. Preview inspected; composite comparison via Markdown only. Same INDEX batch, no duplicate registered IDs. No code changes.
