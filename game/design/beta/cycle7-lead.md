@@ -53,7 +53,7 @@ Dead code (static scan of realm.js: names referenced once in all non-test source
 - `RM_DEATH_PENALTY` (constant 0, never read) and `refreshAssist()` (no caller in the game or the tests) are dead.
 - Test-only hooks, used by tests and nowhere in the game (keep): `boltArtDraws`, `boltArtStats`, `enemyPips`, `fxDraws`, `screenToWorld`, `statusIcons`, `telegraphOf`, `worldToScreen`.
 - I removed nothing: no test would have failed before a removal, and the rule is one test per change.
-- **The same scan for main.js did not finish inside the time box**, so main.js has no dead-code list this cycle.
+- main.js, same scan (finished after the report was first written): no method, top-level function or upper-case constant is referenced only once; the one test-only hook is `setUgHotbar`. The scan only sees names (2-space-indented methods, top-level functions, `const UPPER_CASE`); unreachable branches, unused locals and unused object keys are not covered.
 
 Other unresolved:
 - "Felled by" covers enemy bolts only. Lava, boss slams (dungeon.js / realm-world.js call `_hitPlayer` directly), duel shots and dungeon queued bolts (fired with no current enemy) show no row. Co-op wipes after being downed are not named either.
@@ -64,4 +64,4 @@ Other unresolved:
 - Bisect the `_updateBullets` 13.5 KB/frame item first next cycle; it is larger than everything fixed this cycle.
 - Pass an owner to the dungeon queue bolts and give slams / lava a source label, so every fall is named.
 - Remove `RM_DEATH_PENALTY` and `refreshAssist()` with a small guard test, or wire `refreshAssist()` into the Settings sheet if that was its purpose.
-- Finish the main.js dead-name scan offline (the script is slow, not blocked).
+- A deeper dead-code pass (unreachable branches, unused locals) needs a real linter run; the name scan is all that was done.
