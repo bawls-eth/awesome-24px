@@ -50,13 +50,19 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
       if (s._cullPass !== last) { last = s._cullPass; passes++; }
       if (passes >= 6 || ++i > 400) {
         s._cullSpriteBox = orig;
-        const L = s.sys.displayList.list.filter((o) => o.type === 'Sprite' && o.visible && o.scrollFactorX === 1 && o.scrollFactorY === 1);
-        res({ helper: true, passes, calls, sprites: L.length, missed: L.filter((o) => !seen.has(o)).length, notSprite: [...seen].filter((o) => o.type !== 'Sprite').length });
+        // stamp fix: decor sprites that never move (flower beds, rocks) declare o._cstill and settle like images; every other sprite
+        // (anything that can walk) is still measured on every pass
+        const all = s.sys.displayList.list.filter((o) => o.type === 'Sprite' && o.visible && o.scrollFactorX === 1 && o.scrollFactorY === 1);
+        const L = all.filter((o) => !o._cstill); const still = all.filter((o) => o._cstill);
+        res({ helper: true, passes, calls, sprites: L.length, missed: L.filter((o) => !seen.has(o)).length, notSprite: [...seen].filter((o) => o.type !== 'Sprite').length,
+          still: still.length, stillSettled: still.filter((o) => o._cs === 3).length, stillKinds: [...new Set(still.map((o) => o.texture.key))].sort().join(','), stillInHelper: still.filter((o) => seen.has(o)).length });
       } else requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
   }));
   check('[1] sprites are measured in their own helper: once per visible world sprite per pass, and nothing else goes through it', one.helper && one.passes >= 6 && one.sprites >= 60 && one.missed === 0 && one.notSprite === 0 && Math.abs(one.calls - one.passes * one.sprites) <= one.sprites, JSON.stringify(one));
+
+  check('[1] only flower-bed and rock decor sprites are declared still; all of them are settled and none goes through the walkers\' helper', one.helper && one.still >= 30 && one.stillKinds === 'rocks,tulips' && one.stillSettled === one.still && one.stillInHelper === 0, JSON.stringify(one));
 
   // [2] the stored box equals the old rule's box for every sprite, also after a move / scale / rotation / origin change
   const box = await page.evaluate(() => new Promise((res) => {

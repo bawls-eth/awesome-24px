@@ -2269,8 +2269,11 @@ class TownScene extends Phaser.Scene {
       if (!full && o._cs === 4 && pass - o._cv < 8) {
         if (o._cr < x0 || o._cl > x1 || o._cb < y0 || o._ct > y1) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; continue; }
       }
-      if (!full && o._cs === 3 && o.type !== 'Sprite' && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
-      else if (o.type === 'Sprite') {
+      // cycle 10 (L, stamp fix): a Sprite that is plain decor and never moves (flower beds, rocks: 38 of 116 sprites) declares it
+      // (o._cstill) and settles like an image: it was measured on every pass for nothing, and with the cycle 10 insects and strip
+      // animals the pass went over its budget. Sprites that can walk are measured on every pass exactly as before.
+      if (!full && o._cs === 3 && (o.type !== 'Sprite' || o._cstill) && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
+      else if (o.type === 'Sprite' && !o._cstill) {
         // cycle 10 (L): sprites (players, villagers, animals) are measured on every pass. Reading their fields at the load sites all
         // ~980 objects of every type go through returned a fresh boxed number per read. They are measured in a helper only sprites
         // reach, and one that has not moved since its last measure keeps its box (see _cullSpriteBox). Same box, same bits as before.
@@ -10102,14 +10105,14 @@ class TownScene extends Phaser.Scene {
     TULIP_BEDS.forEach((bed) => {
       bed.frames.forEach((frame, i) => {
         const px = bed.x + i * 20 - ((bed.frames.length - 1) * 10);
-        this.add.sprite(px, bed.y, 'tulips', frame).setDepth(-1);
+        this.add.sprite(px, bed.y, 'tulips', frame).setDepth(-1)._cstill = 1; // cull: decor that never moves (see cullOffscreen)
       });
     });
   }
 
   drawRocks() {
     ROCKS.forEach(([x, y, frame]) => {
-      this.add.sprite(x, y, 'rocks', frame).setDepth(-1);
+      this.add.sprite(x, y, 'rocks', frame).setDepth(-1)._cstill = 1; // cull: decor that never moves (see cullOffscreen)
     });
   }
 
