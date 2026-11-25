@@ -1,0 +1,263 @@
+{
+  "status": "WIP, audit not run",
+  "repository_audit": "not run",
+  "tests": "not run",
+  "reason": "No local repository checkout in this run; direct GitHub blob upload used.",
+  "total_strips": 12,
+  "total_frames": 60,
+  "checks": [
+    {
+      "id": "sabrefang_idle_down",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        71,
+        72,
+        73,
+        72
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "d747d1aa9e95b7f5ce674ad8e597e45e0e0968ec",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_move_down",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        71,
+        73,
+        74,
+        72,
+        72,
+        72
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "a96eaad8ac26dc74c151b8d72144d123036c26de",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_attack_down",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        71,
+        70,
+        69,
+        69,
+        69
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "e163f5744ba7ad6a3b166cd29df765bb9b243ba6",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_death_down",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        71,
+        68,
+        61,
+        38,
+        37
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "355c55b600303823b9b53c621cafafa25565b5cc",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_idle_up",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 7,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        73,
+        74,
+        75,
+        74
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "448d9f193a65fdb9537c9dd67fe39c0bbd48c3ae",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_move_up",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 7,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        73,
+        75,
+        76,
+        74,
+        73,
+        74
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "18794700eacaa18054d285b11da6c4d593c0c9b7",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_attack_up",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 7,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        73,
+        68,
+        76,
+        74,
+        71
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "ca53bfeaec9098ef3b1732c9917d40730e1c0d1e",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_death_up",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 7,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        73,
+        69,
+        65,
+        38,
+        37
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "d27669c82376493bb534531047d79d7a7483934d",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_idle_right",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        77,
+        78,
+        79,
+        78
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "9c242904b0bf65c7e64aae9f1037872d873ff245",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_move_right",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        77,
+        79,
+        80,
+        78,
+        77,
+        78
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "21c46698725049447b4d38202fc32424945f63fa",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_attack_right",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        77,
+        72,
+        80,
+        78,
+        75
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "86ddfb95c3380b7718dba94c98a64868a3b2bf86",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_death_right",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 347,
+      "native_heights": [
+        77,
+        73,
+        65,
+        40,
+        39
+      ],
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "git_blob_sha": "6470d36912353e36f00c20908669f4ba25712ab8",
+      "git_blob_sha_verified": true
+    }
+  ],
+  "visual_review": "B-03 Sabrefang WIP: original 12 strips / 60 cells, L96 native, 384-cell, anchor (192,347), idle/move per-frame provisional seats. Three directions, icy pale-striped sabre-tooth cat with long ivory canines, crouch/strike/recovery and low final death poses. All native-buffer bounds, hard alpha, baseline, palette and distinct-frame checks passed; Git blob SHA-1 independently computed from generated bytes and matched for all 13 PNGs. Full repository audit and individual PNG decode not run. Contact sheet rendered and inspected. Visual review needed: compact/cubby side silhouette, pale stripes on torso partly hidden by oversized head, modest lunge, feet remain grounded, provisional seat coordinates. Separate saddle overlays next; W-06 exact redraws after B-03 in owner order. No code/tests/Firebase changes."
+}
