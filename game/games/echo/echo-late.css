@@ -27,3 +27,9 @@ ul.medals li { font-size: calc(12px * var(--ui-scale, 1)); }
   #board { grid-column: 1; grid-row: 1 / span 8; width: auto; max-width: none; height: calc(100vh - 112px); min-height: 200px; aspect-ratio: 360 / 400; align-self: start; }
   .overlay { top: 4px; left: 16px; right: 16px; max-height: calc(100vh - 12px); }
 }
+/* cyc11 L (a11y sweep at 160x284): the board width follows the height left after the HUD ((100vh - 248px) * 0.9), which is 32 px on a
+   284 px tall screen: a 32x36 garden nobody can tap. Upright, the board is never narrower than 128 px (or the column, if smaller), so
+   each of the four flowers is a 60 px target; the page already scrolls at this height. */
+@media (orientation: portrait) {
+  #board { min-width: min(100%, 128px); }
+}

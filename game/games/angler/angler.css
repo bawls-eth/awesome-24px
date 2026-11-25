@@ -177,3 +177,9 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
   .bar h1 { flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #bait-type { display:inline-block; max-width:4.5em; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
 }
+/* cyc11 L (a11y sweep at 160x284): the Menu reserve (62 px) plus the Journal button (87 px) left the title 0 px wide, so the page had
+   no visible h1. Under 190 px the bar wraps and the title takes its own row under the buttons. */
+@media (max-width:189px) {
+  .bar { flex-wrap:wrap; height:auto; }
+  .bar h1, body.mm-nav-on .bar h1.mm-nav-avoid { order:9; flex:1 0 100%; margin-left:0 !important; text-align:center; } /* its own row sits under the Menu button, so it needs no reserve */
+}

@@ -310,3 +310,10 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
   .howto.compact .howto-more { margin: 0; min-width: 44px; padding: 0 4px; font-size: 12px; letter-spacing: 0; }
   body:has(#howto.compact:not([hidden])) #toast { top: calc(222px + env(safe-area-inset-top)); left: 64px; }
 }
+/* cyc11 L (a11y sweep at 160x284 = a 320 px phone at 200% zoom): the Map toggle sat left of the 68 px mini-map at x 34-78, under the
+   48 px Menu button (x 8-56). Under 190 px the top row cannot hold Menu + Map + a 68 px map (188 px), so the mini-map is 40 px there
+   (44 with its frame) and the toggle sits between the Menu and the map: Menu 8-56, Map 60-104, mini-map 108-152 on a 160 px screen. */
+@media (max-width: 189px) and (orientation: portrait) {
+  body.touch #mini { width: 40px; height: 40px; }
+  body.touch #btn-map { right: calc(8px + 44px + 4px + env(safe-area-inset-right)); }
+}

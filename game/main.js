@@ -311,7 +311,7 @@ const TOWN_SAVE_FIELDS = ['name', 'species', 'frame', 'realm', 'resources', 'cra
   'fishlog', 'home', 'mail', 'birthdays', 'dailies', 'bugoff', 'loginStreak', 'lastLoginDate', 'sellStreak', 'lastSellDate',
   'visitDays', 'lastVisitDate', 'sellDays', 'lastSellDay', 'bounty', 'sfxMuted', 'musicEnabled', 'reduceMotion', 'lastSeenVersion', 'villagerAffinity', 'villagerTalkDay', 'bestieId', 'bestieName',
   'ffDiscovered', 'weedsPulled', 'turnipBuys', 'questClaimedBucket', 'triviaAnsweredBucket', 'tournamentBonusBucket',
-  'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen', 'errand'];
+  'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen', 'errand', 'stars'];
 function cleanTownSave(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
   if (obj.format === 'pixeltown-backup') return null; // a bundle is never a town save (S-01: it used to be written as one)
@@ -2168,7 +2168,25 @@ class TownScene extends Phaser.Scene {
       duration: 4000,
       repeat: -1,
     });
-    this.localScore = 0;
+    // Cycle 11 L: offline, the star wallet is kept in the save (additive key `stars`, 0..1e9), so it no longer starts at 0 on every
+    // visit. Online is unchanged on purpose (the server sets the score to 0 at join and the player list ranks stars earned this
+    // visit): carrying the wallet online changes the live leaderboard and the economy, which is a design call (cycle11-lead.md).
+    this.localScore = this.starsPersist() ? cleanCount(loadSave().stars) : 0;
+    this._starsBase = this.localScore; // what storage held when this tab last read or wrote it; saveStars adds only (mine - base)
+    if (this.localScore && this.selfData) this.selfData.score = this.localScore;
+  }
+
+  starsPersist() { return !!(this.net && this.net.offline); }
+
+  // Stars are a counter like the bag: stored + this tab's own change, so two offline tabs never undo each other. A refused write
+  // (null) keeps the base, so the change stays a pending delta for the next save that lands.
+  saveStars() {
+    if (!this.starsPersist()) return;
+    const base = Number(this._starsBase) || 0;
+    const p = writeSaveMerged((stored) => ({ stars: cleanCount(cleanCount(stored.stars) + ((Number(this.localScore) || 0) - base)) }));
+    if (!p) return;
+    this.localScore = p.stars;
+    this._starsBase = p.stars;
   }
 
   updateSparkle(time) {
@@ -2193,6 +2211,7 @@ class TownScene extends Phaser.Scene {
   awardPoint(amount, label, x, y, sound) {
     this.localScore += amount;
     this.net.addScore(amount);
+    this.saveStars();
     const mine = this.allPlayers.get(this.selfData.id);
     if (mine) mine.score = this.localScore;
     this.renderPlayerList();
@@ -4858,6 +4877,7 @@ class TownScene extends Phaser.Scene {
         return;
       }
       this.adoptSave(s);
+      this.flushPendingSave();
     };
     window.addEventListener('storage', this._onSaveStorage);
     this.events.once('shutdown', () => window.removeEventListener('storage', this._onSaveStorage));
@@ -4867,30 +4887,76 @@ class TownScene extends Phaser.Scene {
     if (!s || typeof s !== 'object') return;
     const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
     const sr = obj(s.resources), sc = obj(s.crafted), si = obj(s.caveInv);
-    if (this.resources) Object.keys(this.resources).forEach((k) => { this.resources[k] = cleanCount(sr[k]); });
-    if (this.craftedGoods) Object.keys(this.craftedGoods).forEach((k) => { this.craftedGoods[k] = cleanCount(sc[k]); });
-    if (this.caveInv) Object.keys(this.caveInv).forEach((k) => { this.caveInv[k] = Math.min(9999, cleanCount(si[k])); });
-    if (this.resources) this.snapshotResourceBase();
+    // Cycle 11 L: a change this tab has not been able to save yet (storage refused it, SAVE_OK false) used to be thrown away here:
+    // every counter was reset to storage and the base moved with it, so the pending delta was gone. Now a counter becomes
+    // stored + (mine - base) and the base becomes what storage holds, so the next save that lands still writes this tab's change.
+    // With nothing pending (mine === base, the normal case) this is exactly the old "take what storage holds".
+    const sb = this._saveBase || {};
+    const carry = (mine, base, stored, cap) => {
+      const b = obj(base);
+      Object.keys(mine).forEach((k) => {
+        const sv = Math.min(cap, cleanCount(stored[k]));
+        mine[k] = Math.min(cap, cleanCount(sv + ((Number(mine[k]) || 0) - (Number(b[k]) || 0))));
+        b[k] = sv;
+      });
+      return b;
+    };
+    if (this.resources) sb.resources = carry(this.resources, sb.resources || { ...this.resources }, sr, 1e9);
+    if (this.craftedGoods) sb.crafted = carry(this.craftedGoods, sb.crafted || { ...this.craftedGoods }, sc, 1e9);
+    if (this.caveInv) sb.caveInv = carry(this.caveInv, sb.caveInv || { ...this.caveInv }, si, 9999);
+    if (this.resources) this._saveBase = sb;
     if (this.lifetimeStats) {
       const st = obj(s.lifetimeStats);
-      Object.keys(this.lifetimeStats).forEach((k) => { if (!(k in st)) delete this.lifetimeStats[k]; });
-      Object.keys(st).forEach((k) => { this.lifetimeStats[k] = cleanCount(st[k]); });
-      this._statsBase = { ...this.lifetimeStats };
+      const base = obj(this._statsBase || this.lifetimeStats);
+      const next = {};
+      Object.keys(st).forEach((k) => { next[k] = cleanCount(st[k]); });
+      Object.keys(this.lifetimeStats).forEach((k) => {
+        const d = (Number(this.lifetimeStats[k]) || 0) - (Number(base[k]) || 0);
+        if (d !== 0) next[k] = cleanCount(cleanCount(st[k]) + d); // this tab's own unsaved increase
+        if (!(k in next)) delete this.lifetimeStats[k];
+      });
+      Object.keys(next).forEach((k) => { this.lifetimeStats[k] = next[k]; });
+      this._statsBase = {};
+      Object.keys(st).forEach((k) => { this._statsBase[k] = cleanCount(st[k]); });
+    }
+    if (this.starsPersist()) {
+      const sv = cleanCount(s.stars);
+      this.localScore = cleanCount(sv + ((Number(this.localScore) || 0) - (Number(this._starsBase) || 0)));
+      this._starsBase = sv;
+      const mine = this.allPlayers && this.selfData ? this.allPlayers.get(this.selfData.id) : null;
+      if (mine && mine.score !== this.localScore) { mine.score = this.localScore; this.renderPlayerList(); }
     }
     let achChanged = false;
     if (this.achievementsUnlocked) {
-      // Storage is the truth here (a Restore may have replaced the list); every unlock of this tab was written when it happened.
+      // Storage is the truth here (a Restore may have replaced the list); every unlock of this tab was written when it happened,
+      // unless storage is refusing this tab's writes: then its own unlocks are kept too (saveAchievements writes the union later).
       const next = (Array.isArray(s.achievementsUnlocked) ? s.achievementsUnlocked : []).filter((id) => typeof id === 'string');
+      if (!SAVE_OK) this.achievementsUnlocked.forEach((id) => { if (!next.includes(id)) next.push(id); });
       achChanged = next.length !== this.achievementsUnlocked.size || next.some((id) => !this.achievementsUnlocked.has(id));
       if (achChanged) { this.achievementsUnlocked.clear(); next.forEach((id) => this.achievementsUnlocked.add(id)); }
     }
     if (this.museumCollection) {
-      ['museumCollection', 'museumFauna', 'museumFlora'].forEach((k) => { this[k].clear(); (Array.isArray(s[k]) ? s[k] : []).forEach((id) => this[k].add(id)); });
-      if (Array.isArray(s.fossilsHeld)) this.fossilsHeld = s.fossilsHeld.slice(0, FOSSIL_BAG_CAP);
+      ['museumCollection', 'museumFauna', 'museumFlora'].forEach((k) => {
+        const keep = SAVE_OK ? [] : [...this[k]]; // unsaved donations of this tab survive (saveFossils writes the union)
+        this[k].clear(); (Array.isArray(s[k]) ? s[k] : []).forEach((id) => this[k].add(id)); keep.forEach((id) => this[k].add(id));
+      });
+      if (SAVE_OK && Array.isArray(s.fossilsHeld)) this.fossilsHeld = s.fossilsHeld.slice(0, FOSSIL_BAG_CAP);
       this.updateFossilHUD();
     }
     this.updateInventoryHUD();
     if (achChanged) this.renderAchievementsPanel();
+  }
+
+  // Cycle 11 L: another tab just wrote the save, so storage takes writes again. If this tab still holds changes it could not write,
+  // try once now instead of waiting for the player's next action (closing the tab first would lose them). No ping-pong: the other
+  // tab's storage event finds nothing pending there and writes nothing.
+  flushPendingSave() {
+    if (SAVE_OK || SAVE_RESTORING) return;
+    if (writeSave({}) === false) return; // still refused: everything stays pending
+    if (this.resources) this.saveResources();
+    if (this.lifetimeStats && this.achievementsUnlocked) this.saveAchievements();
+    if (this.museumCollection) this.saveFossils();
+    this.saveStars();
   }
 
   setupSaveBackup() {

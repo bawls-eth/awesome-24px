@@ -175,3 +175,12 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
   #overlay .grid { grid-template-columns: minmax(0, 1fr); }
   #overlay button.card { overflow-wrap: break-word; }
 }
+/* cyc11 L (a11y sweep at 160x284): the stick (64) + Sneak (48) + Swing (56) row with its gaps, padding and the 3 px button margins is
+   184 px, so Swing ended at x 193 on a 160 px screen and the page scrolled sideways. Under 190 px the row is a 50 px stick and two
+   44 px buttons (150 px with their margins) in the 152 px the stage leaves; both buttons stay >= 44 px. */
+@media (max-width: 189px) {
+  #touch { gap: 0; padding-left: 0; padding-right: 0; }
+  #joy { width: 50px; height: 50px; } #knob { left: 5px; top: 5px; }
+  #touch #btn-swing { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  #touch #btn-sneak { width: 44px; min-width: 44px; }
+}
