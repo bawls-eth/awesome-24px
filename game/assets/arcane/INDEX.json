@@ -752,6 +752,17 @@
       "source": "codex",
       "branch": "codex/b03-icicle-bat",
       "note": "WIP, audit not run; B-03 Tundra S48, 12 animation strips. Claude review required."
+    },
+    {
+      "id": "b03-shagtusk",
+      "label": "shagtusk",
+      "path": "assets/arcane/b03-shagtusk",
+      "manifest": "assets/arcane/b03-shagtusk/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/b03-shagtusk",
+      "note": "WIP, audit not run; 12 L96 enemy strips, 60 frames, per-frame provisional rider seats; saddle separate. Claude review required."
     }
   ]
 }

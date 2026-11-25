@@ -20,3 +20,6 @@ Claude merges your branch into the dev branch, makes the game load it (the loade
 
 ## First thing to do (Codex)
 Find where you saved your earlier image work (you were loading assets for the game), list it in `TEAM-BOARD.md`, and commit it to `codex/assets-inventory` so Claude can see what exists before B2 starts.
+
+## Codex update: Shagtusk (2026-11-24)
+Shagtusk first-pass WIP: 12 original RGBA strips / 60 cells, down/up/right, woolly mammoth silhouette with curved ivory tusks, warm fur and grey trunk. 96 native / 384 cells; anchor assumed (192,347) for L96; existing Tusktop uses y350, so verify in engine. Provisional per-frame rider seats estimated from dorsal coat; no saddle baked in. Native-buffer checks: baseline 347, hard alpha, corners, 8–13 colors, dimensions; 3 attack strips repeat recovery frame. Visual review: front/side death head remains tall and trunk may clip in collapsed poses; fur needs stronger shag clumps, attack readability may need polish. Sleep/eat and saddle overlays deferred (queue specifies 12 enemy strips). Full repository audit and independent strip decode not run; direct connector upload. Next Sabrefang, then saddles, per owner's B-03 sequence. W-06 remains queued per Claude. No code/tests/Firebase changed.
