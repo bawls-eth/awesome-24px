@@ -251,7 +251,7 @@
     $('price').textContent = fmt(price);
     $('price-note').textContent = sunday
       ? 'Buy price today. Stalks cannot be sold on Sunday.'
-      : (save.invested > 0 // b11-r3-08: only claim a Sunday purchase when stalks were really bought this week
+      : (save.invested > 0 // b11-r3-08: only claim a Sunday buy when stalks were really bought this week
         ? 'Sell price now. You paid ' + (save.holdings ? 'up to ' : '') + 'about ' + wk.buyPrice + ' on Sunday.' + (save.holdings ? ' Sell all now: ' + signed(save.earned + save.holdings * price - save.invested) + ' bells for the week.' : '')
         : 'Sell price now. You have no stalks this week (Sunday was the buy day).');
     $('buy1').disabled = clockBack || !sunday || M.maxBuy(save, wk) < 1;
