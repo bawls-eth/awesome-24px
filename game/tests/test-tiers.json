@@ -2361,5 +2361,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 180
+  },
+  "cyc7-lead-hash-alloc.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 180
   }
 }

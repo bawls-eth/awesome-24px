@@ -9,7 +9,7 @@
   function create(cellSize) {
     const cs = cellSize > 0 ? cellSize : 64;
     const inv = 1 / cs;
-    const cells = new Map();   // integer key -> reusable array of item indices
+    const cells = new Map();   // integer key -> reusable cell { n: live count, a: item indices }
     const used = [];           // cells touched this frame, so clear() resets only those
     let usedN = 0;
     const ids = [], xs = [], ys = [], rs = [], stamp = [];
@@ -20,10 +20,13 @@
     const BIG = 1024, big = [];
     let bigN = 0;
     const span = (x0, x1, y0, y1) => (x1 - x0 + 1) * (y1 - y0 + 1);
-    const key = (cx, cy) => (cx + 32768) * 65536 + (cy + 32768);
+    // cyc7 L: the key is a small integer (below 2^30) for every cell within +-16384 cells of the origin (+-1 million px at 64 px
+    // cells), so it is never boxed as a heap number; cells further out keep the old formula, moved clear of the small range.
+    const key = (cx, cy) => (cx >= -16384 && cx < 16384 && cy >= -16384 && cy < 16384 ? ((cx + 16384) * 32768 + (cy + 16384)) | 0 : (cx + 32768) * 65536 + (cy + 32768) + 8589934592);
 
     function clear() {
-      for (let i = 0; i < usedN; i++) { used[i].length = 0; used[i] = null; }
+      // cyc7 L: the count is reset and the array keeps its storage (length = 0 dropped it, so every cell grew a new one each frame)
+      for (let i = 0; i < usedN; i++) { used[i].n = 0; used[i] = null; }
       usedN = 0; n = 0; bigN = 0;
     }
 
@@ -39,9 +42,9 @@
         for (let cy = y0; cy <= y1; cy++) {
           const k = key(cx, cy);
           let c = cells.get(k);
-          if (!c) { c = []; cells.set(k, c); }
-          if (c.length === 0) used[usedN++] = c;
-          c.push(idx);
+          if (!c) { c = { n: 0, a: [] }; cells.set(k, c); }
+          if (c.n === 0) used[usedN++] = c;
+          c.a[c.n++] = idx;
         }
       }
     }
@@ -60,8 +63,9 @@
         for (let cy = y0; cy <= y1; cy++) {
           const c = cells.get(key(cx, cy));
           if (!c) continue;
-          for (let i = 0; i < c.length; i++) {
-            const idx = c[i];
+          const a = c.a, cn = c.n;
+          for (let i = 0; i < cn; i++) {
+            const idx = a[i];
             if (stamp[idx] === s) continue;
             stamp[idx] = s;
             cb(ids[idx], xs[idx], ys[idx], rs[idx]);
