@@ -115,7 +115,8 @@ async function journey(browser, label, viewport, touch, out) {
       const vis = (e) => { if (!e) return false; const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden'; };
       return { mounted: !!(window.MMNav && window.MMNav.mounted()), menu: vis(document.getElementById('mm-nav-btn')), where: vis(document.getElementById('where-to-btn')), path: location.pathname };
     });
-    check(L(`${id}: MMNav is mounted and the ${isTown ? 'Town "Where to?"' : 'shared Menu'} button shows`), nav.mounted && (isTown ? nav.where : nav.menu), JSON.stringify(nav));
+    // cyc8-ui: the Town has the shared corner Menu on every screen; on a phone it replaced "Where to?" (desktop keeps both)
+    check(L(`${id}: MMNav is mounted and the ${isTown && !touch ? 'Town "Where to?" and the shared Menu' : 'shared Menu'} button${isTown && !touch ? 's show' : ' shows'}`), nav.mounted && nav.menu && (isTown && !touch ? nav.where : true), JSON.stringify(nav));
     const a = await page.evaluate(audit);
     for (const k of AUDITS) seen[k][id] = a[k];
   }
@@ -130,7 +131,7 @@ async function journey(browser, label, viewport, touch, out) {
     t.reset();
   }
   async function openWhereTo() {
-    await tap('#where-to-btn');
+    await tap(touch ? '#mm-nav-btn' : '#where-to-btn'); // cyc8-ui: phones open the sheet from the corner Menu
     await sheetOpen();
   }
   const sheetOpen = () => page.waitForFunction(() => window.MMNav && window.MMNav.isOpen() && !document.getElementById('mm-nav-sheet').hidden, null, { timeout: 15000 });

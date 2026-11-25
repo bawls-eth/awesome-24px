@@ -60,3 +60,15 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
   #hud .stat { padding-left: 4px; padding-right: 4px; }
   #hud .stat strong { font-size: max(12px, min(calc(20px * var(--ui-scale,1)), calc(3.9vw * var(--ui-scale,1)))); }
 }
+
+/* cyc8-ui: at 195 px a 9-character best (1,234,567) at the 12 px floor needs 65 px; the box gave it 61. Under 300 px the stage and
+   the HUD give back side room (16 -> 8 px stage padding, 10 -> 6 px gap, no HUD padding), so each value box is ~74 px inside. */
+@media (max-width: 300px) {
+  #stage { padding-left: 8px; padding-right: 8px; }
+  html #hud { gap: 6px; padding: 0; }
+}
+
+/* cyc8-ui (b09-r3-01, P3): the result card floats over the stage, and the grey keys line (and the next-goal line) under the board peeked
+   out, half clipped, under its bottom edge. While the result card is up they are hidden (the card has its own lines); they return with
+   the next round. */
+#stage:has(#result:not([hidden])) #keys, #stage:has(#result:not([hidden])) #goal { visibility: hidden; }

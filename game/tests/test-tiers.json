@@ -2388,6 +2388,11 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc8-ui.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
+  },
   "cyc7-d-town-economy.test.js": {
     "class": "node",
     "tier": "smoke"

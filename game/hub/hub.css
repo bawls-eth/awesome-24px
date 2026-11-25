@@ -137,6 +137,8 @@ body.home-on #hud, body.home-on #hub-games, body.home-on #hub-continue, body.hom
 .home-next { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; background: var(--h-line); color: var(--h-ink); border: 2px solid var(--h-card); text-decoration: none; font-size: calc(13px * var(--ui-scale,1)); }
 .home-next[hidden] { display: none; }
 .home-next:hover, .home-next:focus-visible { border-color: var(--h-gold); outline: none; }
+/* cyc8-ui (b15-r3: no outline / box-shadow on focus): a real 3 px ring outside the card, like Play, not only the border colour */
+.home-next:focus-visible { outline: 3px solid var(--h-gold); outline-offset: 2px; }
 .hn-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .home-groups { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
 .home-group-title { margin: 0 0 4px; font-size: calc(12px * var(--ui-scale,1)); letter-spacing: 2px; text-transform: uppercase; color: var(--h-gold); text-shadow: 2px 2px 0 var(--h-line); }
