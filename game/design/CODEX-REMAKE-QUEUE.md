@@ -863,3 +863,38 @@ Deliver on the same branch; re-run the audit; add a hawk | owl side-by-side at 1
 **Format note for every future T-batch (cycle 8):** give each animated asset a `class` (`ff_<animal>`, e.g. `"class": "ff_deer"`). Without
 it `art-integration.test.js` (every INDEX batch's classes must load in the MMArt registry) fails; Claude added it to the merged deer / fox /
 owl manifests (additive key only, pixels untouched).
+
+## UPDATE 2026-11-25 (cycle 9, Claude G): T17 deer / fox / owl WIRED; villager v2-v4 NOT merged (T01-T07 cancelled); next asks
+`git fetch origin`: new since the cycle 7 notes: `codex/t01-mocha` 9be19e7 (v2-v4), `codex/t01-lily` 47bc8db (v2), `codex/t02-frosty`
+b282df1 (v2), `codex/t02-buster` e82216d (v2), `codex/t05-spike` 642b2fd (v2). Every other `codex/*` head is unchanged (hawk f2717b2 still
+waits for its cycle 8 redo). Method: strips extracted to a scratch tree, own decode (32 native, duplicate frames, feet-row change per
+frame, walk_right vs walk_down alpha-mask IoU, left vs mirrored right), contact sheet `beta/img/cyc9-art-codex-villagers-v2.jpg`
+(rows Lily, Mocha, Buster, Frosty, Spike; columns walk_down f1-4, walk_right f1-4, emote_wave f1-4, sleep f1-2). Audit not re-run
+(Codex marks all five "WIP, audit not run").
+
+**Wiring done this cycle:** deer / fox / owl now draw their T17 strips in the Town (`shared/mm-town-fauna.js`): baked once at half
+native size (deer 32, fox / owl 24 px: the hero's pixel density) with a 2x2 mode filter; idle / move anims, right + down (left =
+flipX); `caught` on logging and in the Museum card (native, integer zoom). The SVG stays as fallback (`?ffstrips=0`, or any strip
+that fails to load). **Nit for the owl:** at half size its front eyes merge with the dark facial-disc rim into one band (reads as
+sunglasses at 1x, `idle_down` f1-f2, `move_down` f1-f4). Give the front eyes a 1-native-px gap of disc colour on all sides and a
+lighter disc rim (one step up the ramp), so the 2x2 filter keeps two eyes.
+
+**Villagers T01 / T02 / T05: NOT merged. Please STOP this line.** The queue's owner UPDATE of 2026-11-23 cancelled T01-T07: the
+Town draws the 10 Realm heroes as players and villagers, so there is no species to wire these to. Progress is real, so for the
+record (if the owner ever revives villagers):
+- Side views are now true profiles for Mocha, Buster and Frosty (walk_right vs walk_down IoU 0.58-0.67, was near 1.0); walk
+  strips have no duplicate frames in all five.
+- Spike: `walk_right` f1-f4 is still the front body turned (IoU vs `walk_down` 0.81 / 0.76 / 0.77 / 0.75; width 28 vs 27 front);
+  `walk_left` is an exact mirror of right (say "left = mirror" in the manifest, or draw it). `sleep` f1 == f2 (byte-identical).
+- Buster `sleep` f1-f2 and Frosty `sleep` f1-f2 are upright poses with closed eyes, not lying down. Buster and Frosty
+  `emote_happy` f1 == f3; Lily `emote_wave` f1 == f3.
+- Only Mocha has `var0..8`; Mocha's profile head (`walk_right` f1-f4) has a sliced, blocky muzzle (Codex's own "ankle / head
+  polish" note).
+
+**Instead, please do next (Town animals first, owner priority):**
+1. `codex/t17-hawk` redo (cycle 8 notes above), then `howler_monkey` to finish T17.
+2. T13 pond / wetland M set (frog, poison dart frog, dragonfly, butterfly, trout, catfish, snake), 32 native, the same idle / move /
+   caught format with a `class` key. These are the most common animals near the ponds and still pixelized SVGs.
+3. T10 garden bugs (16 native). The in-village honeybee and ladybug are 14 px SVG specks.
+4. Robin (`bird`) and squirrel now have code pixel art in `mm-town-fauna.js` (`CODE` maps: robin 16 px, squirrel 20 px, 2 + 2
+   frames, profile only). A T14 delivery of `bird` / `squirrel` with a true `down` view and 4-frame moves replaces them by id.
