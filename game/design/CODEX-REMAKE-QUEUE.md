@@ -826,3 +826,40 @@ T17 owl on codex/t17-owl: six strips/14 frames, 48 native/192 export, full-body 
 
 ## Codex owl v2
 Owl v2: four revised strips (10 revised cells), all six strips/14 cells verified. Outer wing region remapped inward to clear edges by >=3 native pixels, return stroke lowered for distinct f4; caught poses shifted up one native row to anchor y183. Idle strips byte-identical. Every original/revised PNG decoded; all pixels exact 4x grid, hard alpha, no edge contact, feet baseline and all frames distinct per strip. Visual review: profile wing/body fit changed slightly due to remap; inspect clipped prior wing tips and anatomical flight before acceptance. Full audit, independent Git SHA and old/new/game comparison pending. No code changes.
+
+## UPDATE 2026-11-25 (cycle 8, Claude G): review of 4 new T17 branches. Deer, fox, owl MERGED provisional; hawk REDO
+`git fetch origin`; new since cycle 7: `codex/t17-deer` 43a4b13 (v2), `codex/t17-fox` de2e335, `codex/t17-owl` 1e2760f (v2),
+`codex/t17-hawk` f2717b2. The villager branches (t01-mocha, t01-lily, t02-frosty, t02-buster, t05-spike) and W-06 x3 have no new commits
+since the cycle 7 notes above, so those notes stand. Method: each folder extracted to a scratch tree with its own INDEX entry and
+`game/tools/art-audit/run.js` (unmodified) run on it; own decode (4x grid round-trip, alpha values, native bbox per frame, duplicate frames,
+colour count) and contact sheets on `#181820` / `#808080` / `#a8d878` at 3x, looked at frame by frame:
+`beta/img/cyc8-art-codex-t17-{deer,fox,owl,hawk}.jpg`. Audit: **0 blocker, 0 needs-redo** on all four (unref nits only: not wired yet).
+All 56 frames: exact 4x grid, alpha 0/255 only, every frame distinct, feet on the anchor row.
+
+**T17 deer v2: ACCEPTED, merged provisional** (INDEX `t17-deer`). True right profile with full legs and tail, front view with both antlers
+clear of the top (native bbox y 3-4); `move` f2/f4 swap the near/far leg pairs. Nit for a later pass: `idle_down` / `move_down` legs sit at
+the body's outer edges like table legs; a front deer's forelegs come down under the chest, 6-8 native px apart. `caught` = `idle` with the
+head 3 px lower; acceptable for the journal.
+**T17 fox: ACCEPTED, merged provisional** (INDEX `t17-fox`). Full body (the report's "floating head" is fixed), profile head with eye and
+snout, cream chest and tail tip, front nose not a grin. Nits: side head is 18 native px tall on a 14 px body (a little big); `move` f2/f4
+far legs are one tone darker but only 1-2 px apart from the near legs, spread them 3 px.
+**T17 owl v2: ACCEPTED, merged provisional** (INDEX `t17-owl`). Ear tufts + facial disc front, side with hooked beak, wing beat f2/f4 up,
+f3 down, closed-eye caught. Wings now clear the cell edge.
+
+**T17 hawk (f2717b2): REDO, not merged.** Technically clean, but it is the owl body with a different face:
+1. **Silhouette = the owl's.** Native alpha-mask overlap hawk vs owl: `idle_down` f1 IoU 0.86 (bbox 5,6-44,46 vs 4,5-45,46), `idle` f1
+   0.76, `move` f3 0.83, `move_down` f2 0.75. In the Town both read as the same round brown bird. A hawk front view needs: a flatter, smaller
+   head (about 60% of the body width, not 90%), a strong brow ridge over side-set eyes (no forward-facing eye pair in a dark mask band),
+   a visibly hooked yellow bill pointing down, narrower shoulders, a long tail below the feet line in the front view, and yellow legs
+   showing below the chest (the owl hides its legs in feathers). Use a different body colour ramp from the owl (e.g. red-brown back,
+   pale cream underside with brown streaks, rufous tail) so the two never share a palette at 1x.
+2. **`move_right` f3 (wing down) reads as a tail extension** (Codex flagged it too): the down-stroke wing lies along the back to the tail
+   tip. Draw the down-stroke wing below the body line (tips under the belly, 4-6 native px lower than the tail), and the up-stroke (f2/f4)
+   with separated primary feathers.
+3. **`move_*` is a flap standing on the ground** (feet on the anchor in all 4 frames). The spec says fly 4: lift the body 3-6 native px in
+   f2-f3 (feet tucked, off the anchor row) so a soaring hawk reads differently from the perched owl's wing stretch.
+4. `caught_down`: the closed eyes in a dark band read as sunglasses at 1x; use 1 px eyelid lines without the band.
+Deliver on the same branch; re-run the audit; add a hawk | owl side-by-side at 1x on `#a8d878` to the preview.
+**Format note for every future T-batch (cycle 8):** give each animated asset a `class` (`ff_<animal>`, e.g. `"class": "ff_deer"`). Without
+it `art-integration.test.js` (every INDEX batch's classes must load in the MMArt registry) fails; Claude added it to the merged deer / fox /
+owl manifests (additive key only, pixels untouched).
