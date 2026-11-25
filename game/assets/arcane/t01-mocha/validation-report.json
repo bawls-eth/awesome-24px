@@ -173,5 +173,55 @@
       "blob_sha": "9d9f09fed8452471c59c59995d978ed12e8b7d2a"
     }
   ],
-  "limitations": "T01 Mocha (coolcats): original ginger tabby in teal cardigan, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; left mirrors symmetric profile, rear has no eyes. Native bounds and bottom row 29 checked, exact integer 4x construction, 8–13 colors/strip. Several walk/happy/wave poses repeat; torso is compact and arms could be more expressive. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority from Claude branch followed."
+  "limitations": "T01 Mocha (coolcats): original ginger tabby in teal cardigan, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; left mirrors symmetric profile, rear has no eyes. Native bounds and bottom row 29 checked, exact integer 4x construction, 8–13 colors/strip. Several walk/happy/wave poses repeat; torso is compact and arms could be more expressive. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority from Claude branch followed.",
+  "revision2": {
+    "status": "WIP audit not run",
+    "revised_strips": 6,
+    "revised_frames": 20,
+    "checks": [
+      {
+        "id": "vil_coolcats_walk_down",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "21cc32d4cd6aed365a529e463c97cfc74615d11e"
+      },
+      {
+        "id": "vil_coolcats_walk_up",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "e8a634286013349dd41fe7e963d7913e6fd1e391"
+      },
+      {
+        "id": "vil_coolcats_walk_left",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "8690242fe16e5fffd76e416071e0d716a86e1eea"
+      },
+      {
+        "id": "vil_coolcats_walk_right",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "a3d716093963b4fc5538b356b4adaa04e1e70142"
+      },
+      {
+        "id": "vil_coolcats_idle_left",
+        "distinct_frames": 2,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "689f67e0f6bea99a612482cd94ae8c9636d14a2c"
+      },
+      {
+        "id": "vil_coolcats_idle_right",
+        "distinct_frames": 2,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "102b3ba1d43c1d41b09bf5121e22a402282862e5"
+      }
+    ],
+    "limitations": "Cycle 7 Mocha WIP partial redo: six strips/20 frames revised, original head pixels retained; narrow profile torso with a single visible arm, near/far feet and opposite contact stride, side-specific tail stripe. Front/rear feet alternate, all four walk frames distinct. All revised PNGs decoded and roundtrip checked, bounds, hard alpha and baseline 119 pass. Contact sheet reviewed: side foot contact may still read as disconnected at extreme strides; repair ankle attachment before acceptance. Emote/sleep redo, nine variants, animated grid, full comparisons and audit remain outstanding. No code changes."
+  }
 }
