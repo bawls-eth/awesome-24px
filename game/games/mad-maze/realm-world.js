@@ -3007,7 +3007,8 @@
         const bot = [['realm-abilities', 8], ['realm-stick-move', 40], ['realm-stick-aim', 40], ['realm-help', 6]];
         bot.forEach(([id, gap]) => { const e = document.getElementById(id); if (jhVisible(e)) { const r = e.getBoundingClientRect(); if (r.height > 0) top = Math.min(top, r.top - gap); } });
         [portalBtn, siteBtn, lairBtn, siteNote].forEach((e) => { if (jhVisible(e)) top = Math.min(top, e.getBoundingClientRect().top - 6); });
-        jhEl.style.top = ''; jhEl.style.left = ''; jhEl.style.transform = ''; jhEl.style.maxWidth = '';
+        jhEl.style.top = ''; jhEl.style.left = ''; jhEl.style.transform = ''; jhEl.style.maxWidth = ''; jhEl.style.width = '';
+        jhEl.classList.remove('rw-jhint-goal'); goalEl.classList.remove('rw-yield');
         jhEl.style.bottom = Math.max(4, Math.round(o.bottom - top)) + 'px';
       } catch (e) { /* the CSS position stays */ }
     }
@@ -3018,20 +3019,39 @@
         const o = ov.getBoundingClientRect(); let top = o.top + 4; let right = o.right - 8;
         ['realm-hud', 'realm-xp', 'realm-partner', 'realm-boss'].forEach((id) => { const e = document.getElementById(id); if (jhVisible(e)) top = Math.max(top, e.getBoundingClientRect().bottom + 4); });
         if (jhVisible(mini)) { const r = mini.getBoundingClientRect(); if (r.top < top + 60 && r.bottom > top) right = Math.min(right, r.left - 6); }
-        jhEl.style.bottom = 'auto'; jhEl.style.transform = 'none'; jhEl.style.left = '8px'; jhEl.style.top = Math.round(top - o.top) + 'px';
+        jhUnGoal(); jhEl.style.bottom = 'auto'; jhEl.style.transform = 'none'; jhEl.style.left = '8px'; jhEl.style.top = Math.round(top - o.top) + 'px';
         jhEl.style.maxWidth = Math.max(100, Math.round(right - o.left - 8)) + 'px';
       } catch (e) { /* the first slot stays */ }
     }
+    // cycle 11 U (decision for the cycle-10 open item): below 300 px wide there is no free band (195x422: Daily, zone strip, goal line, minimap,
+    // ability grid and sticks fill it). The hint then BRIEFLY TAKES THE GOAL LINE'S PLACE: same left/top/width as #rw-goal, the close button on
+    // top (away from the sticks), the text under it; the goal line is visibility:hidden (class rw-yield) only while the hint shows and comes back
+    // on every hide (max 12 s, 3 per visit). It must still end 8 px or more above the sticks and touch nothing else, or the next slot is tried.
+    function jhPlaceGoal() {
+      try {
+        if (!jhVisible(goalEl)) return false;
+        const o = ov.getBoundingClientRect(); const g = goalEl.getBoundingClientRect(); if (g.width < 60) return false;
+        jhEl.classList.add('rw-jhint-goal'); goalEl.classList.add('rw-yield');
+        jhEl.style.bottom = 'auto'; jhEl.style.transform = 'none'; jhEl.style.left = Math.round(g.left - o.left) + 'px'; jhEl.style.top = Math.round(g.top - o.top) + 'px';
+        jhEl.style.width = Math.round(g.width) + 'px'; jhEl.style.maxWidth = Math.round(g.width) + 'px';
+        const hr = jhEl.getBoundingClientRect(); let lim = o.bottom;
+        ['realm-stick-move', 'realm-stick-aim'].forEach((id) => { const e = document.getElementById(id); if (jhVisible(e)) { const r = e.getBoundingClientRect(); if (r.left < hr.right && r.right > hr.left) lim = Math.min(lim, r.top - 8); } });
+        return hr.bottom <= lim + 0.5;
+      } catch (e) { return false; }
+    }
+    function jhUnGoal() { jhEl.classList.remove('rw-jhint-goal'); goalEl.classList.remove('rw-yield'); jhEl.style.width = ''; }
     function jhHits() { // the named HUD strips plus EVERY visible control (button / link / role=button, e.g. the Daily and gear buttons) except its own
       const hr = jhEl.getBoundingClientRect(); const ctl = Array.prototype.filter.call(document.querySelectorAll('button, a[href], [role="button"]'), (e) => !jhEl.contains(e));
       for (const e of [zoneEl, goalEl, mini, document.getElementById('realm-hud'), document.getElementById('realm-xp'), document.getElementById('realm-abilities'), document.getElementById('realm-stick-move'), document.getElementById('realm-stick-aim')].concat(ctl)) { if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden' || !jhVisible(e)) continue; const r = e.getBoundingClientRect(); if (r.left < hr.right && r.right > hr.left && r.top < hr.bottom && r.bottom > hr.top) return true; } return hr.left < -0.5 || hr.top < -0.5 || hr.right > innerWidth + 0.5 || hr.bottom > innerHeight + 0.5; }
-    function jhHide(why) { if (!jh.on) return; jh.on = false; jh.why = why; jhEl.classList.add('hidden'); jh.log.push({ verb: jh.verb, why }); jh.t = 0; }
+    function jhHide(why) { if (!jh.on) return; jh.on = false; jh.why = why; jhEl.classList.add('hidden'); jhUnGoal(); jh.slot = ''; jh.log.push({ verb: jh.verb, why }); jh.t = 0; }
     function jhShow(p) {
       jh.on = true; jh.verb = p.verb; jh.used[p.verb] = 1; jh.shown++; jh.life = JH_LIFE; jh.why = '';
       const narrow = ov.getBoundingClientRect().width < 300;
       jhTxt.textContent = '💡 ' + (narrow && p.short ? p.short : p.text); jhEl.classList.remove('hidden'); jhPlace();
       // never over the goal / zone strip, the minimap, the ability grid or a stick: try the second slot, else it does not show (waits 20 s more)
-      if (jhHits()) { jhPlaceAlt(); if (jhHits()) { jh.shown--; jh.used[p.verb] = 0; jhHide('overlap'); jh.log.pop(); } }
+      jh.slot = 'main';
+      if (jhHits() && narrow) { if (jhPlaceGoal() && !jhHits()) jh.slot = 'goal'; else jhUnGoal(); }
+      if (jh.slot !== 'goal' && jhHits()) { jh.slot = 'alt'; jhPlaceAlt(); if (jhHits()) { jh.shown--; jh.used[p.verb] = 0; jhHide('overlap'); jh.log.pop(); } }
     }
     jhX.addEventListener('click', () => jhHide('close'));
     function jhTick(dt) {
@@ -3310,7 +3330,7 @@
       rewards: { questBags: () => (save.questBags || []).map((b) => ({ q: b.q, d: b.d })), bagFor: questBagFor, deliver: deliverQuestBags, lastBag: () => lastQuestBag, drink: (art) => (PK && POTION_COL[art] ? drinkPotion(art) : null), potions: () => potionLog.slice(), focusApi: () => typeof arena.restoreFocus === 'function', statusApi: () => typeof arena.applyStatus === 'function' },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
       // cycle 10 S: ID-53 just-in-time hint and ID-55 first-session ending card (test hooks, read-only state)
-      jitHint: { on: JH_ON, sec: JH_SEC, max: JH_MAX, state: () => ({ on: jh.on, t: jh.t, shown: jh.shown, verb: jh.verb, why: jh.why, moved: jh.moved, block: jhBlock(), text: jhTxt.textContent, log: jh.log.slice() }), showNow: () => { if (jh.on) return true; const pk = jhPick(); if (pk) jhShow(pk); return jh.on; } },
+      jitHint: { on: JH_ON, sec: JH_SEC, max: JH_MAX, state: () => ({ on: jh.on, t: jh.t, shown: jh.shown, verb: jh.verb, why: jh.why, moved: jh.moved, block: jhBlock(), text: jhTxt.textContent, slot: jh.slot || '', log: jh.log.slice() }), showNow: () => { if (jh.on) return true; const pk = jhPick(); if (pk) jhShow(pk); return jh.on; } },
       firstEnd: { on: FE_ON, sec: FE_SEC, state: () => ({ open: feOpen, done: feDone, ok: fe.ok, t: fe.t, d: fe.d, why: feWhy, goal: feGoal ? Object.assign({}, feGoal) : null }), go: feGo, close: feClose }, lastFirstEndUrl: null,
     };
     return { api, hooks };

@@ -631,3 +631,25 @@ body.mm-hud-big #rw-jhint { font-size: calc(12px * var(--mm-hud-scale, 1)); }
 #rw-firstend .mk-actions { flex-wrap: wrap; }
 #rw-firstend .mk-btn { min-height: 44px; flex: 1 1 120px; max-width: 100%; white-space: normal; overflow-wrap: normal; word-break: normal; }
 @media (max-width: 300px) { #rw-firstend { padding: 8px; top: 6px; width: calc(100% - 12px); max-height: calc(100% - 12px); } #rw-firstend .mk-head { font-size: 15px; letter-spacing: .04em; } #rw-firstend .mk-row dt { min-width: 5em; } }
+/* cycle 11 U: ID-53 below 300 px wide: the hint briefly takes the goal line's box (realm-world.js jhPlaceGoal). Close button on top, away from
+   the sticks; text under it, 12 px floor, never broken inside a word; the goal line is hidden (not removed) only while the hint shows. */
+#rw-goal.rw-yield { visibility: hidden; }
+#rw-jhint.rw-jhint-goal { flex-direction: column; align-items: stretch; gap: 0; padding: 0 4px 4px; border-radius: 6px; font-size: 12px; line-height: 1.2; }
+#rw-jhint.rw-jhint-goal .rw-jhint-x { order: -1; align-self: flex-end; }
+#rw-jhint.rw-jhint-goal .rw-jhint-txt { padding: 0; overflow-wrap: normal; word-break: normal; hyphens: none; }
+body.mm-hud-big #rw-jhint.rw-jhint-goal { font-size: 12px; }
+/* cycle 11 U: ID-55 first-session card below 300 px wide was 311 px tall (y 6-317 at 195x422) and covered the hero at the screen centre.
+   Compact top layout: stats in one row (label over value), smaller head and goal, both buttons on one row (44 px tall), so the card ends
+   above the hero; the sticks stay free. Text stays >= 12 px; nothing is removed. */
+@media (max-width: 300px) {
+  #rw-firstend { top: 4px; width: calc(100% - 8px); padding: 6px 6px 2px; max-height: calc(50% - 24px); }
+  #rw-firstend.mk-card { gap: 3px; }
+  #rw-firstend .mk-head { font-size: 13px; letter-spacing: .02em; text-shadow: 1px 1px 0 #0b0d1a, 2px 2px 0 #7e2553; }
+  #rw-firstend .mk-stats { flex-direction: row; justify-content: space-between; gap: 4px; padding: 3px 6px; margin: 2px 2px 3px; }
+  #rw-firstend .mk-row { flex-direction: column; align-items: center; gap: 0; flex: 1 1 0; min-width: 0; }
+  #rw-firstend .mk-row dt { min-width: 0; font-size: 12px; letter-spacing: 0; }
+  #rw-firstend .mk-row dd { font-size: 13px; }
+  #rw-firstend .mk-goal { font-size: 12px; line-height: 1.25; margin: 0; }
+  #rw-firstend .mk-actions { flex-wrap: nowrap; gap: 6px; margin-top: 2px; }
+  #rw-firstend .mk-btn, #rw-firstend .mk-primary { flex: 1 1 0; min-width: 0; min-height: 44px; font-size: 12px; letter-spacing: 0; padding: 2px 4px; margin: 2px 2px 8px; line-height: 1.15; text-align: center; }
+}
