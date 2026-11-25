@@ -44,7 +44,7 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
     }
     return null;
   };
-  const rooms = []; const visited = new Set(); let cur = null, rec = null, t0 = Date.now(), minHp = 1e9, hp0 = null, boltsSum = 0, boltsN = 0, ended = 'time'; const stall = { sig: '', t: Date.now(), told: 0, n: 0 }; const still = { x: 0, y: 0, t: Date.now(), n: 0 };
+  const rooms = []; const visited = new Set(); let cur = null, rec = null, t0 = Date.now(), minHp = 1e9, hp0 = null, boltsSum = 0, boltsN = 0, ended = 'time'; const stall = { sig: '', t: Date.now(), told: 0, n: 0 }; const still = { x: 0, y: 0, t: Date.now(), n: 0, centre: 0 };
   const dirs = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [.7, .7], [.7, -.7], [-.7, .7], [-.7, -.7]];
   while ((Date.now() - t0) / 1000 < MAXS) {
     const s = await E(page, (a, d) => {
@@ -94,6 +94,9 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
     // (realm.js listens on the canvas), so aiming at a mob near the bottom wall left the aim frozen at the last canvas point and every bolt flew
     // past it (seed 11 room 4: mob at y 473 for 80 s, bolts ending at y 477 far to its right). Aim only needs the direction, so the bot moves the
     // mouse to the farthest point on the hero->target ray that is really over the canvas.
+    // un-stick: for 0.7 s after a STUCK the waypoint is the centre of the hero's own tile (a 12 px box always fits there), which breaks the
+    // local minimum of "every step is blocked or longer" beside a wall row (seed 11 room 1: (298, 161) under a 4-tile wall)
+    if (Date.now() < still.centre) wp = { x: (Math.floor(s.px / 40) + 0.5) * 40, y: (Math.floor(s.py / 40) + 0.5) * 40 };
     if (tgt) {
       const pt = await page.evaluate(([px, py, tx, ty, cx, cy, W, H]) => { const cv = window.__mm.arena.canvas, cr = cv.getBoundingClientRect(); const L = Math.hypot(tx - px, ty - py) || 1;
         const scr = (wx, wy) => [(wx - cx) / W * cr.width + cr.left, (wy - cy) / H * cr.height + cr.top];
@@ -115,7 +118,7 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
     // and waypoint, so a stale or wrong grid shows in the log instead of a silent 200 s stand-still)
     if (Math.hypot(s.px - still.x, s.py - still.y) > 4) { still.x = s.px; still.y = s.py; still.t = Date.now(); }
     else if ((goal || tgt) && Date.now() - still.t > 1500) {
-      still.t = Date.now(); still.n++;
+      still.t = Date.now(); still.n++; still.centre = Date.now() + 700;
       const g2 = await E(page, (a) => { const o = []; for (let y = 0; y < 13; y++) { let r = ''; for (let x = 0; x < 17; x++) r += a.isWallAt(x * 40 + 20, y * 40 + 20) ? '#' : '.'; o.push(r); } return o; });
       console.log('STUCK', JSON.stringify({ room: s.room, p: [s.px | 0, s.py | 0], goal, wp, best, gridChanged: JSON.stringify(g2) !== JSON.stringify(grid), grid: g2 }));
       grid = g2;
