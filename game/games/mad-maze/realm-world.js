@@ -2281,7 +2281,7 @@
     function rushLayerFire(e, x, y, ang, speed, kind, life) {
       const L = rush.lay; const fb = arena.fireBudget; const was = arena._curDm; arena._curDm = e.dmgMul || 1;
       if (fb && FB_ON && fb.zone >= 0) fb.cap = ebCapFor(fb.zone) + rushCapMaxNow(); // a layer bolt is checked against the full Trial cap
-      let b = null; try { b = arena.fireEnemyBullet(x, y, ang, speed, kind); } finally { arena._curDm = was; }
+      let b = null; try { b = arena.fireEnemyBullet(x, y, ang, speed, kind, e); } finally { arena._curDm = was; }
       if (b) { b.rl = L.tok; if (life > 0 && b.life > life) b.life = life; L.capAdd = Math.min(rushCapMaxNow(), L.capAdd + 1); } else L.dropped++;
       rushCapSync();
       return b;

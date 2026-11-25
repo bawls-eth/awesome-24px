@@ -687,7 +687,7 @@ class RealmArena {
   _makePools() {
     const make = (n, f) => Array.from({ length: n }, f);
     this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ws: null, st: 0, age: 0, cx: 0, cy: 0, ph: 0, bc: 0, ch: 0, ux: 1, uy: 0, sp: 0, bk: false, tx: 0, ty: 0, lb: 0, ho: 0, sq: 0 })); // ws..ho: weapon-style bolt state (setHeroWeapon); sq: splashed (G11)
-    this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null }));
+    this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null, ok: null, oa: null, on: null })); // ok/oa/on: the owner's type, art id and boss name (cyc7 fall card)
     this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
     this.drifters = make(RM_POOL.drifters, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, turn: 0, kind: 'wisp' }));
     this.hazards = make(RM_POOL.hazards, () => ({ active: false, x: 0, y: 0, kind: 'lava', tick: 0 }));
@@ -2256,7 +2256,9 @@ class RealmArena {
     // AR aim toggle: a click latches firing on, the next click lets go (instead of holding the button down)
     this.onPointerDown = (e) => { if (e.pointerType === 'mouse') { toArena(e); this.mouse.down = this._aimToggle && this._ax2On() ? !this.mouse.down : true; } };
     this.onPointerUp = (e) => { if (e.pointerType === 'mouse' && !(this._aimToggle && this._ax2On())) this.mouse.down = false; };
-    this.canvas.addEventListener('pointermove', this.onPointerMove);
+    // cyc7 L: on the window, not the canvas: the HUD (#realm-abilities, the info line, the boss bar) lies over the canvas and swallowed
+    // the move, so the aim froze while the cursor crossed it. toArena maps against the canvas rect wherever the cursor is.
+    window.addEventListener('pointermove', this.onPointerMove, { passive: true });
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
     window.addEventListener('pointerup', this.onPointerUp);
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -2374,7 +2376,7 @@ class RealmArena {
     const pl = opts.pools && typeof opts.pools === 'object' ? opts.pools : {};
     const grow = (pool, want, max, f) => { const k = Math.min(max, n(want, 0)); while (pool.length < k) pool.push(f()); };
     grow(this.enemies, pl.enemies, 96, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
-    grow(this.eBullets, pl.eBullets, 900, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null }));
+    grow(this.eBullets, pl.eBullets, 900, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null, ok: null, oa: null, on: null }));
     const p = this.player; const R = RM_PLAYER.r;
     p.x = Math.max(R, Math.min(this.world.w - R, p.x)); p.y = Math.max(R, Math.min(this.world.h - R, p.y));
     this._camStep(-1); this._calcStats(); // the world hero scale depends on it
@@ -2532,7 +2534,7 @@ class RealmArena {
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0, assisted: false }; this._waveSc = null;
     if (this._assistOn() && MMAssist.isAssisted(this._assistPref())) this.run.assisted = true; // ID-06: tagged from the start
-    this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
+    this._felledBy = ''; this._hitSrc = null; this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
     this.shake = 0; this.flash = 0;
     this.displayShards = this.save.shards;
     this.state = 'banner';
@@ -2574,6 +2576,7 @@ class RealmArena {
     window.removeEventListener('blur', this.onBlur);
     ['keydown', 'pointerdown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.removeEventListener(ev, this._onGesture, { capture: true }));
     window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('resize', this.onResize);
     if (this._rzRaf) { cancelAnimationFrame(this._rzRaf); this._rzRaf = 0; } clearTimeout(this._bkT); this._bkT = 0;
     window.removeEventListener('orientationchange', this.onResize);
@@ -2724,13 +2727,13 @@ class RealmArena {
     el.dataset.phase = String(b.phase);
   }
 
-  fireEnemyBullet(x, y, angle, speed, kind) {
+  fireEnemyBullet(x, y, angle, speed, kind, owner) {
     const fb = this._fireBudget();
     if (fb && this._ebLive >= fb.cap) { this._ebCapped++; return null; } // world fire budget: the zone's live enemy-bullet cap is full
     const b = this._take(this.eBullets);
     if (!b) return null;
     if (this.team && this.role === 'host') this.team.ev('fe', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, speed, kind || 0]);
-    b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.rl = 0; b.dm = this._curDm; b.ea = this._boltArt ? this._ebSelect(b.kind) : null;
+    b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.rl = 0; b.dm = this._curDm; const ow = owner || this._curE; b.ok = ow ? ow.type : null; b.oa = ow ? ow.art : null; b.on = ow ? ow.bossName : null; b.ea = this._boltArt ? this._ebSelect(b.kind) : null;
     if (fb) { this._ebLive++; const t = fb.travel * Math.max(this.W, this.H) / (speed > 1 ? speed : 1); if (t < b.life) b.life = t; } // a bolt flies at most `travel` x the view's long side
     return b; // cyc5 (ID-36): additive, the Trial layers shorten their own bolts' life; every older caller ignores it
   }
@@ -3243,7 +3246,7 @@ class RealmArena {
       if (this.walls && this.isWallAt(b.x, b.y)) { b.active = false; continue; }
       if (!this.walls && this._shotSolidAt && this._shotSolidAt(b.x, b.y)) { b.active = false; continue; }
       if (this.state !== 'dead' && !this.down && p.iframes <= 0 && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) < pr * pr) {
-        b.active = false;
+        b.active = false; this._hitSrc = b; // cyc7 L: the bolt's owner, read (and cleared) by _hitPlayer for the fall card
         this._hitPlayer(this._guarded(b.dm > 0 && b.dm !== 1 ? Math.round(RM_ENEMY_BULLET_DAMAGE * b.dm) : RM_ENEMY_BULLET_DAMAGE));
       } else if (this.team && this.role === 'host' && this.team.partner && this.team.partner.ready) {
         const q = this.team.partner; // the partner takes the same (wave-scaled) bolt damage as the host; dm 1 = the old 8
@@ -3431,6 +3434,7 @@ class RealmArena {
 
   _hitPlayer(dmg) {
     const p = this.player;
+    const src = this._hitSrc; this._hitSrc = null; // set only by an enemy bolt; lava, slams and duel shots leave it null
     if (this.down) return; // already down: hazards must not reset the revive
     if (this.shield.hits > 0) { // Shield soaks the hit
       this.shield.hits -= 1; p.iframes = 0.25; this._burst(p.x, p.y, '#8fe9ff', 6, 140); this._floatText(p.x, p.y - 22, 'blocked', '#8fe9ff'); return;
@@ -3453,7 +3457,16 @@ class RealmArena {
     this._burst(p.x, p.y, '#ff6f91', 8, 160);
     this._floatText(p.x, p.y - 22, `-${dmg}`, '#ff6f91');
     this._syncHud();
-    if (p.hp <= 0) this._downOrDie();
+    if (p.hp <= 0) { this._felledBy = src ? this._boltOwnerName(src) : ''; this._downOrDie(); }
+  }
+
+  // cyc7 L: display name of the enemy that fired a bolt (fields written in fireEnemyBullet): the boss's own name, else the creature art id
+  // made readable ('frost_wolf' -> 'Frost Wolf'), else the base kind (Whirler / Sniper / Burster). '' = unknown owner (no row on the card).
+  _boltOwnerName(b) {
+    if (!b || !b.ok) return '';
+    if (typeof b.on === 'string' && b.on) return b.on.slice(0, 40);
+    if (typeof b.oa === 'string' && b.oa) return b.oa.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 40);
+    const d = RM_ENEMIES[b.ok]; return d ? d.name : '';
   }
 
   // With a living partner you go down (they can revive you); alone, or when both are down, the run ends.
@@ -3606,7 +3619,8 @@ class RealmArena {
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
     this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
     const dg = this.dungeon && this.dungeon.api && typeof this.dungeon.api.fellText === 'string' ? this.dungeon.api.fellText : ''; // G-24 (b03-14): "You fell in the Crypt", no "wave" in a dungeon
-    this._showBanner(dg ? `${dg}…  no 💎 lost — ${cache.text}  ·  ${this.run.kills} kills, +${this.run.shards} 💎 this run${this.run.assisted ? '  ·  Assisted' : ''}` : `You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run${this.run.assisted ? '  ·  Assisted' : ''}`, 2.6);
+    const fb = this._felledBy ? `  ·  felled by ${this._felledBy}` : ''; // cyc7 L: appended last, so every older banner match still holds
+    this._showBanner(dg ? `${dg}…  no 💎 lost — ${cache.text}  ·  ${this.run.kills} kills, +${this.run.shards} 💎 this run${this.run.assisted ? '  ·  Assisted' : ''}${fb}` : `You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run${this.run.assisted ? '  ·  Assisted' : ''}${fb}`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }
@@ -4411,6 +4425,7 @@ class RealmArena {
     d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>${this.run.assisted ? '<div class="realm-board-row rm-assisted"><span>🛟 Run</span><b>Assisted</b></div>' : ''}`;
     if (!showWave) { const zb = d.querySelector('.rm-zone-row b'); if (zb) zb.textContent = this._deathZone || this._zoneLabel(); } // textContent: the zone name comes from the page
     const sn = this.menuNote ? String(this.menuNote() || '') : '';
+    if (this._felledBy) { const fr = document.createElement('div'); fr.className = 'realm-board-row rm-felled-row'; const a = document.createElement('span'); a.textContent = '💥 Felled by'; const v = document.createElement('b'); v.textContent = this._felledBy; fr.appendChild(a); fr.appendChild(v); const rc = d.querySelector('.rm-recap'); rc.insertBefore(fr, rc.firstChild); } // textContent: boss names come from the page
     if (sn) { const row = document.createElement('div'); row.className = 'realm-board-row rm-stash-row'; row.textContent = sn; d.querySelector('.rm-recap').appendChild(row); }
     d.classList.remove('hidden'); d.style.display = 'flex'; this._deathGuard(true);
     const f = d.querySelector('button[data-d="again"]'); if (f && f.focus) f.focus({ preventScroll: true });

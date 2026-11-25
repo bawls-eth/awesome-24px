@@ -2351,5 +2351,15 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 120
+  },
+  "cyc7-lead-aim-over-hud.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 120
+  },
+  "cyc7-lead-felled-by.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 180
   }
 }
