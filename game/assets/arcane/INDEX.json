@@ -785,6 +785,17 @@
       "source": "codex",
       "branch": "codex/t17-fox",
       "note": "T17 Fauna L, 48 native (192 cells, feet 96,183), 6 strips / 14 frames: ff_fox_{idle,move,caught}{,_down}. de2e335 reviewed cycle 8 (Claude G): repo audit 0 blocker / 0 needs-redo (unref only); own decode: exact 4x grid, hard alpha, every frame distinct; full body (not a head), true right profile with snout + eye, front with nose; walk legs alternate (f2/f4). ACCEPTED provisional, not wired yet (Town SVG stays)."
+    },
+    {
+      "id": "t17-owl",
+      "label": "T17 forest owl",
+      "path": "assets/arcane/t17-owl",
+      "manifest": "assets/arcane/t17-owl/manifest.json",
+      "files": 6,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/t17-owl",
+      "note": "T17 Fauna L, 48 native (192 cells, feet 96,183), 6 strips / 14 frames: ff_owl_{idle,move,caught}{,_down}. v2 (1e2760f) reviewed cycle 8 (Claude G): repo audit 0 blocker / 0 needs-redo (unref only); own decode: exact 4x grid, hard alpha, every frame distinct, wings clear the cell edge; ear tufts + facial disc front, profile with hooked beak, wing beats f2/f4 up, f3 down; caught = closed eyes. ACCEPTED provisional, not wired yet (Town SVG stays)."
     }
   ]
 }
