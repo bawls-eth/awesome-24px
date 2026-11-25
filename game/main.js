@@ -8521,7 +8521,7 @@ class TownScene extends Phaser.Scene {
     // R4 D4 (b07-r2-13): the price sat at y+20, exactly where a shopper's name label is drawn. It now sits above the sign.
     this.turnipBuyLabel = this.add.text(x, y - 62, '', { fontSize: '11px', color: '#ffe066', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
     // cycle 4 art (U ask): the green sell price had no outline and sank into the Shop roof / grass; same dark stroke as the buy price
-    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 50, '', { fontSize: '11px', color: '#8fe08a', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(HOUSE_POS.y + HOUSE_POS.h + 1); // cyc3 U: drawn over the Shop roof like the title and deal lines
+    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2 - 14, HOUSE_POS.y - 50, '', { fontSize: '11px', color: '#8fe08a', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(HOUSE_POS.y + HOUSE_POS.h + 1); // cyc9 coord: 14 px left so a 3-digit price no longer touches the Able Sisters sign (cyc3-ui-town-labels failed solo at 109 and 197 shards); cyc3 U: drawn over the Shop roof like the title and deal lines
   }
 
   updateTurnipPriceLabels(time) {
