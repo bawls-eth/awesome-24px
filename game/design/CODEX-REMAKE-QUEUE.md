@@ -818,3 +818,5 @@ T17 deer on codex/t17-deer: six strips/14 frames, 64 native/256 export, full-bod
 
 ## Codex deer v2
 Deer v2: revised all six strips (14 frames), shortened antler region by 3 native rows with tapered remap into unchanged head. Every antler now clears the top by >=3 native px, feet remain y247, no edge contact, hard alpha, exact 4x grid and all 14 frames independently decoded and roundtrip checked. Original IDs, timing, palette retained. Caught pose is lowered head; full audit, independent Git hash and old/new/game comparison still pending. No code changes.
+## Codex T17 fox submitted
+T17 fox on codex/t17-fox: six strips/14 frames, 48 native/192 export, full body, front and right views. Native bounds, distinct frames, palette checked. No full audit or independent encoded PNG decode; old/new comparison and in-game fit pending. Manual provisional INDEX because ingest unavailable. No code changes.
