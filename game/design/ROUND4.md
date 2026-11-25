@@ -23,3 +23,17 @@ Shared files (main.js, realm.js, index.html, test-tiers.json): small commits, re
 
 ## Rules that never bend (AGENTS.md)
 Live Firebase: never chat/write/delete; tests use ADMIN* bots only or the offline stub / blockDb. Do not edit firebase-config.js or net.js. pixeltown-save-v1 stays backward-compatible (additive keys). Original art only (ART-HANDOFF.md). No weakening/skipping tests; honest test updates only when behaviour intentionally changed, named in the commit. Never push to master. Run everything through /tmp/bt.sh; each agent its own port.
+
+## STANDING OWNER DECISION 2026-11-25 ("Don't need my ok ever")
+The owner no longer wants to be asked. The coordinator (Claude) decides every open owner call, documents it here, and may merge a green-stamped
+dev tip to master. AGENTS.md "rules that never bend" are NOT affected (live Firebase untouched, firebase-config.js/net.js untouched, no secrets,
+original art only, additive saves, never skip or weaken a test).
+Decisions taken now:
+- **L-08 game day:** anything shared or paid out uses the UTC game day (mm-gameday.js); the player's local calendar is for display only.
+- **ID-09 streaks:** approved in a forgiving form only (a missed day never costs progress; no guilt or fake-urgency text), additive save key.
+- **ID-18 bounties:** approved: wire mm-bounties as a Town card; free currency only.
+- **art-integration / pinned creature-list tests:** may be edited ADDITIVELY to register new Codex art (never weakened or loosened).
+- **ID-14 hit pause:** threshold 15% -> 12% of max HP (a level-matched hero takes at most 12.3% per bolt, so the pause actually fires).
+- **ID-51 idle-hero rest:** approved (no provoke/aggro on a hero with no input for 8 s; any input restores normal rules).
+- **Deepdelve depth label:** keep "Surface" at ground and absolute depth below; medal thresholds unchanged.
+- **Master:** a stamped dev tip is merged to master by the coordinator after each green stamp (fast-forward only).
