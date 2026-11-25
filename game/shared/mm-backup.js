@@ -119,7 +119,7 @@
   // probe keys, sessionStorage, the Deepdelve IndexedDB chunk cache, and the lowGfx field inside pixeltown-access-v1 (apply keeps the
   // device's own value: a phone's low-graphics choice must not follow a backup onto a desktop).
   const FLAG_KEYS = ['pixeltown-panel-collapsed', 'mm-sfx-muted', 'mm-music', 'mm-high-contrast', 'mm-reduce-motion', 'mm-aim-assist',
-    'mm-aim-toggle', 'mm-bullet-shapes', 'mm-auto-fire', 'pixeltown-hub-hint-v1', 'pixeltown-bugs-hint-v1'];
+    'mm-aim-toggle', 'mm-bullet-shapes', 'mm-auto-fire', 'pixeltown-hub-hint-v1', 'pixeltown-bugs-hint-v1', 'mm-move-float'];
   ['pixeltown-realm-audio-v1', 'pixeltown-realm-tutorial-v1', 'pixeltown-calm-v1', 'pixeltown-gearhint-v1', 'pixeltown-medals-jam-v1']
     .forEach((k) => { CLEANERS[k] = (o, v) => cleanPlain(v); });
   // cyc2-S ID-04 Hero notebook: the owner cleaner keeps only valid page ids and times (capped); without the module, a bounded inline copy
@@ -158,7 +158,7 @@
     'pixeltown-medals-deepdelve-v1': 'Deepdelve medals', 'pixeltown-medals-echo-v1': 'Echo Garden medals', 'pixeltown-medals-pop-v1': 'Pop medals',
     'pixeltown-medals-stack-v1': 'Stack medals', 'pixeltown-medals-stalk-v1': 'Stalk Market medals',
     'mm-sfx-muted': 'sound setting', 'mm-music': 'music setting', 'mm-high-contrast': 'high contrast setting', 'mm-reduce-motion': 'reduce motion setting',
-    'mm-aim-assist': 'aim assist setting', 'mm-aim-toggle': 'aim toggle setting', 'mm-bullet-shapes': 'bullet shapes setting', 'mm-auto-fire': 'auto fire setting', 'mm-assist': 'assist setting',
+    'mm-aim-assist': 'aim assist setting', 'mm-aim-toggle': 'aim toggle setting', 'mm-bullet-shapes': 'bullet shapes setting', 'mm-auto-fire': 'auto fire setting', 'mm-assist': 'assist setting', 'mm-move-float': 'move from anywhere setting',
     'pixeltown-hub-hint-v1': 'hub hint seen', 'pixeltown-bugs-hint-v1': 'Bug Safari hint seen', 'pixeltown-realm-audio-v1': 'Realm ambience setting',
     'pixeltown-realm-tutorial-v1': 'Realm tutorial progress', 'pixeltown-calm-v1': 'hidden hub ideas', 'pixeltown-gearhint-v1': 'gear hint seen',
     'pixeltown-medals-jam-v1': 'Jam medals', 'pixeltown-notebook-v1': 'hero notebook'

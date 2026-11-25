@@ -99,3 +99,8 @@ html body.touch-device .realm-stick .knob { border-radius: 0; box-shadow: none; 
   html body.touch-device .realm-stick { width: 100px; height: 100px; }
   html body.touch-device .realm-stick .knob { width: 39px; height: 39px; margin: -19.5px 0 0 -19.5px; }
 }
+/* cyc11-S ID-54 'Move from anywhere' (html[data-move-float], set by shared/mm-move-float.js only while the option is active): the move
+   stick becomes a faint see-through ring with an opaque cream cap in a 2 px ink outline (U cycle 10 spec), at home and while it floats.
+   With the option off none of this applies and the stick keeps the pixel ring art above. */
+html[data-move-float] body.touch-device #realm-stick-move { background: transparent; border: 2px solid rgba(255, 241, 232, 0.35); border-radius: 50%; box-shadow: none; box-sizing: border-box; }
+html[data-move-float] body.touch-device #realm-stick-move .knob { background: var(--px-7, #fff1e8); border-radius: 50%; box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a); }

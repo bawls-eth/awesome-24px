@@ -129,8 +129,14 @@
     const uid = Number(btn.dataset.uid);
     if (btn.dataset.act === 'equip') arena.equip(uid); else if (btn.dataset.act === 'discard') arena.discard(uid);
   });
-  stick('realm-stick-move', (x, y) => arena.setMoveStick(x, y));
-  stick('realm-stick-aim', (x, y, on) => arena.setAimStick(x, y, on));
+  // cyc11-S ID-54: shared stick binding; the move stick may float to the thumb when the 'Move from anywhere' device pref is on
+  if (window.MMMoveFloat) {
+    MMMoveFloat.bindStick(document.getElementById('realm-stick-move'), (x, y) => arena.setMoveStick(x, y), { float: { wrap: document.getElementById('realm-canvas-wrap') } });
+    MMMoveFloat.bindStick(document.getElementById('realm-stick-aim'), (x, y, on) => arena.setAimStick(x, y, on));
+  } else {
+    stick('realm-stick-move', (x, y) => arena.setMoveStick(x, y));
+    stick('realm-stick-aim', (x, y, on) => arena.setAimStick(x, y, on));
+  }
 
   if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
     const dSeed = dailyFor('dungeon');

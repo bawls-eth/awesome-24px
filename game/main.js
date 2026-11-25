@@ -4091,8 +4091,14 @@ class TownScene extends Phaser.Scene {
       const uid = Number(btn.dataset.uid);
       if (btn.dataset.act === 'equip') r.equip(uid); else if (btn.dataset.act === 'discard') r.discard(uid);
     });
-    stick('realm-stick-move', (x, y) => r.setMoveStick(x, y));
-    stick('realm-stick-aim', (x, y, on) => r.setAimStick(x, y, on));
+    // cyc11-S ID-54: the same shared binding as the Mad Maze page (floating move stick behind the 'Move from anywhere' device pref)
+    if (window.MMMoveFloat) {
+      MMMoveFloat.bindStick(document.getElementById('realm-stick-move'), (x, y) => r.setMoveStick(x, y), { float: { wrap: document.getElementById('realm-canvas-wrap') } });
+      MMMoveFloat.bindStick(document.getElementById('realm-stick-aim'), (x, y, on) => r.setAimStick(x, y, on));
+    } else {
+      stick('realm-stick-move', (x, y) => r.setMoveStick(x, y));
+      stick('realm-stick-aim', (x, y, on) => r.setAimStick(x, y, on));
+    }
   }
 
   enterUnderground() {
