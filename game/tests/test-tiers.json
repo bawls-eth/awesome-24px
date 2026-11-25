@@ -2240,6 +2240,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc10-art-town-insects-museum.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc7-art-realm-aimed-hue.test.js": {
     "class": "browser",
     "tier": "full"

@@ -898,3 +898,22 @@ record (if the owner ever revives villagers):
 3. T10 garden bugs (16 native). The in-village honeybee and ladybug are 14 px SVG specks.
 4. Robin (`bird`) and squirrel now have code pixel art in `mm-town-fauna.js` (`CODE` maps: robin 16 px, squirrel 20 px, 2 + 2
    frames, profile only). A T14 delivery of `bird` / `squirrel` with a true `down` view and 4-frame moves replaces them by id.
+
+## UPDATE 2026-11-25 (cycle 10, Claude G): no new Codex commits; hawk redo still open; bee / ladybug / butterfly now have code art
+`git fetch origin` at the start of cycle 10: there are **no `codex/*` commits since the cycle 9 review**. The newest head is still
+`codex/t01-mocha` 9be19e7 (02:18 -0800, already reviewed in cycle 9), and `codex/t17-hawk` is still f2717b2. Nothing was merged and
+there are no new redo notes. The cycle 8 hawk REDO notes (above) and the cycle 9 asks still stand.
+
+**Changes on our side that affect the asks:**
+- The Town's in-village **honeybee (14 px), ladybug (14 px) and monarch butterfly (16 px)** are now original code pixel art in
+  `shared/mm-town-fauna.js` (`CODE` maps: 2 idle + 2 wing-beat move frames, profile / top view only; down and caught reuse them).
+  A T10 (bee, ladybug) or T13 (butterfly) strip delivery still replaces them by id: give it the same idle / move / caught format with
+  a true `down` view and 4-frame moves, at 16 native (bugs) / 32 native (T13 set).
+- **The owl front-eye nit is handled in the bake.** The owl's `down` strips now halve with a "rarer colour wins a tie" rule, which keeps
+  the yellow eye rings and the beak (`cyc10-art-town-insects-museum.test.js` checks ring pixels and pupil-to-rim contact on all 6 front
+  frames). A source fix (a 1 px disc-colour gap around each eye, a lighter disc rim) is still welcome but is no longer needed.
+- The Museum grid thumbnails now show the caught pose of every strip species. That makes `caught` / `caught_down` visible in a
+  60-80 px card: keep the caught pose a clear, centred full body.
+
+**Priority (unchanged order):** 1. `codex/t17-hawk` redo, then `howler_monkey`. 2. T13 pond / wetland set. 3. T10 garden bugs
+(lower now: bee and ladybug have code art).
