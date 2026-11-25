@@ -551,6 +551,10 @@ body.touch-device:has(#mm-deep) #realm-chase-toast { bottom: calc(200px + 150px 
 #rw-zone .rw-danger-ico { flex: none; min-width: 1em; text-align: center; }
 body #rw-zone .rw-danger { font-size: max(12px, 1em); } /* the 12 px HUD text floor (first-ten-minutes layout.tinyText; same rule as .rw-zname above) */
 body.mm-hud-big #rw-zone .rw-danger { font-size: 1em; }
+/* Cycle 8 S (ID-51 follow-up): the "Resting" chip inside #rw-zone while an idle hero rests (enemies stand down) */
+#rw-zone .rw-rest { display: inline-block; margin-top: 3px; padding: 1px 6px; border-radius: 8px; background: rgba(20, 40, 70, 0.8); border: 1px solid #9cc8ff; color: #e6f1ff; font-size: max(12px, 1em); font-weight: 700; }
+#rw-zone .rw-rest.hidden { display: none; }
+@media (max-width: 560px) { #rw-zone .rw-rest { order: -1; flex: none; margin-top: 0; padding: 0 4px; } #rw-zone .rw-rest-more { display: none; } } /* phone: first on the one-line zone strip, one word */
 body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale, 1)); height: calc(4px * var(--mm-hud-scale, 1)); }
 @media (prefers-reduced-motion: no-preference) { html:not([data-reduce-motion="1"]) #rw-zone .rw-danger-fill { transition: width 0.4s ease-out; } }
 /* cyc3 U (landscape audit, 844x390 touch): the zone panel (name, danger meter, raid line) ended at y 273 and its raid line ran under

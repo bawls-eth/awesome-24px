@@ -1,6 +1,6 @@
 // Cycle 7 S, ID-09 forgiving Town day count (spec: IDEAS.md "ID-09 / ID-18 implementation specs (D, cycle 7)"), part 1: the pure rule
 // MMGameDay.visitStep(lastKey, days, todayKey) on UTC 'YYYY-MM-DD' keys. Days visited only ever go up; a gap of any length is +1, never a reset.
-// The Town wiring (badge "Days in town N", toast, sell days, save keys, Backup) is NOT built yet; its browser checks join this file when it is.
+// The Town wiring (badge, toast, sell days, save keys, Backup) was built in cycle 8 S: its browser checks are cyc8-s-town-days.test.js.
 // Node only (no page, no network). Run: node game/tests/cyc7-s-visit-days.test.js
 const path = require('path');
 let fails = 0;

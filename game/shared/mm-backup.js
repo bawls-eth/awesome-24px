@@ -57,7 +57,8 @@
   const TOWN_FIELDS = ['name', 'species', 'frame', 'realm', 'lifetimeStats', 'lifetime', 'lastLoginDate', 'loginStreak',
     'resources', 'crafted', 'fishlog', 'home', 'tank', 'mail', 'birthdays', 'dailies', 'bugoff', 'sfxMuted', 'musicEnabled',
     'reduceMotion', 'achievementsUnlocked', 'equippedTitle', 'lastSeenVersion', 'villagerAffinity', 'caveInv', 'cavePick',
-    'caveSeed', 'bestieId', 'bestieName', 'ffDiscovered', 'weedsPulled', 'turnipBuys', 'sellStreak', 'lastSellDate', 'guests'];
+    'caveSeed', 'bestieId', 'bestieName', 'ffDiscovered', 'weedsPulled', 'turnipBuys', 'sellStreak', 'lastSellDate', 'guests',
+    'visitDays', 'lastVisitDate', 'sellDays', 'lastSellDay', 'bounty']; // ID-09 day counts, ID-18 bounties (cycle 8 S, additive)
   const looksLikeTown = (o) => isObj(o) && TOWN_FIELDS.some((f) => has(o, f));
 
   // key -> (owners, parsedValue) => cleaned value (or undefined when the owner module is missing / value unusable)

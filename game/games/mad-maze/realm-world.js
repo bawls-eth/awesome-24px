@@ -783,6 +783,12 @@
     const dIco = dangerEl.querySelector('.rw-danger-ico'); const dFill = dangerEl.querySelector('.rw-danger-fill'); const dTxt = dangerEl.querySelector('.rw-danger-txt');
     let dangerKey = ''; let dangerNow = null;
     if (DANGER_ON) zoneEl.appendChild(dangerEl);
+    // Cycle 8 S (ID-51 follow-up): a small "Resting" chip while the idle-hero rest is on, so a returning player knows why the enemies stand
+    // still. Shown / hidden only when arena.resting changes (no per-frame DOM write); role=status, the word is the cue (not a colour).
+    const restEl = document.createElement('span'); restEl.id = 'rw-rest'; restEl.className = 'rw-rest hidden'; restEl.setAttribute('role', 'status');
+    restEl.innerHTML = '<span aria-hidden="true">💤</span> Resting<span class="rw-rest-more">: move to play</span>'; zoneEl.appendChild(restEl);
+    let restShown = false;
+    function restTick() { const on = !!arena.resting && !nxOpen; if (on !== restShown) { restShown = on; restEl.classList.toggle('hidden', !on); } }
     function dangerTick(hide) {
       if (!DANGER_ON) return;
       try {
@@ -2987,7 +2993,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick(dt);
+        restTick(); portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); quietTick(dt); rushTick(dt);
         if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();

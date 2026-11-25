@@ -17,6 +17,8 @@ check('patient turnip trading pays (daily low, best of the week) but is bounded:
 check('at most 2 bundles per UTC day', S.C.CAP <= 2, 'cap ' + S.C.CAP);
 check('the all-chores bonus is worth at least 1 minute of gathering', S.C.DAILY >= GATHER, 'bonus ' + S.C.DAILY);
 check('all fixed daily income is at most 5 minutes of gathering', S.fixed <= 5 * GATHER, 'fixed ' + S.fixed.toFixed(0));
+// Cycle 8 S (ID-18 bounties, +about 60 stars a day): the worst bounty day still keeps all fixed income under the same 5-minute cap
+check('ID-18: bounties are counted in the fixed income (mean 50-70 a day) and even the best bounty day stays within 5 minutes of gathering', S.bounty.mean >= 50 && S.bounty.mean <= 70 && S.fixedMax <= 5 * GATHER, 'mean ' + S.bounty.mean.toFixed(1) + ' max day ' + S.fixedMax.toFixed(0));
 check('sell spike windows are within 2 points of the nominal ' + S.C.SPIKE * 100 + ' percent', Math.abs(S.spikeShare - S.C.SPIKE) < 0.02, 'actual ' + (S.spikeShare * 100).toFixed(1));
 check('mean sell price per bundle stays under the mean buy price (a blind seller loses)', S.mean.sell < S.mean.buy, S.mean.sell.toFixed(1) + ' vs ' + S.mean.buy.toFixed(1));
 const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');

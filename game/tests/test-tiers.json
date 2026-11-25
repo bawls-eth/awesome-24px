@@ -2423,5 +2423,19 @@
   "cyc7-s-visit-days.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "cyc7-s-town-bounties.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "cyc8-s-town-days.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc8-s-rest-chip.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
   }
 }

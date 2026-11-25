@@ -40,12 +40,18 @@ const sBest1 = strat('buy at the daily low, sell at the best of 96 windows in 1 
 const sBest3 = strat('buy at the daily low, sell at the best price in 3 days', 'min', 'best', 3);
 const sBest7 = strat('buy at the daily low, sell at the best price in 7 days', 'min', 'best', 7);
 // 3. daily fixed income vs gather income
-const quest = C.QBASE + 6; const fixed = 5 + quest + C.DAILY + C.BDAY / 10 + C.HOMECAP + 5;
+// ID-18 (cycle 8 S): the three daily Town bounties, from the REAL module and pool over 365 UTC days (mean and the worst day)
+const MB = require(path.join(__dirname, '..', 'shared', 'mm-bounties.js'));
+let bSum = 0, bMax = 0;
+for (let i = 0; i < 365; i++) { const d = new Date(t0 + i * DAY).toISOString().slice(0, 10); const v = MB.forDate(d, 'town', MB.TOWN_POOL).reduce((a, b) => a + b.reward.stars, 0); bSum += v; bMax = Math.max(bMax, v); }
+const bounty = { mean: bSum / 365, max: bMax };
+const quest = C.QBASE + 6; const fixedBase = 5 + quest + C.DAILY + C.BDAY / 10 + C.HOMECAP + 5;
+const fixed = fixedBase + bounty.mean; const fixedMax = fixedBase + bounty.max;
 const gatherPerMin = 33;
-say(`fixed daily income (login 5 + quest ~${quest} + chores ${C.DAILY} + birthday ${C.BDAY}/10 days + home <= ${C.HOMECAP} + sell streak 5) = about ${fixed.toFixed(0)} stars = ${(fixed / gatherPerMin).toFixed(1)} min of gathering at ${gatherPerMin} stars/min (cycle 3 bot)`);
+say(`fixed daily income (login 5 + quest ~${quest} + chores ${C.DAILY} + birthday ${C.BDAY}/10 days + home <= ${C.HOMECAP} + sell days 5 + bounties ~${bounty.mean.toFixed(0)}, worst day ${bounty.max}) = about ${fixed.toFixed(0)} stars = ${(fixed / gatherPerMin).toFixed(1)} min of gathering at ${gatherPerMin} stars/min (cycle 3 bot)`);
 for (const mins of [5, 15, 30, 60]) say(`  ${mins} min a day of gathering: ${(mins * gatherPerMin + fixed).toFixed(0)} stars per day`);
 // 4. sinks vs income
 say(`sinks: merchant look ${C.MERCH}, gift boxes ${C.GIFT} (once a day), turnip bundle ${(sb / nb).toFixed(0)} avg (${minB}-${maxB}). Merchant look = ${(C.MERCH / gatherPerMin * 60).toFixed(0)} s of gathering; gift boxes = ${(C.GIFT / gatherPerMin * 60).toFixed(0)} s.`);
 say(`best turnip patience (${sBest7.toFixed(0)} stars/day over 7 days) = ${(sBest7 / gatherPerMin).toFixed(1)} min of gathering per day; selling blind the same day (${sNow.toFixed(0)}/day) loses ${(-sNow / gatherPerMin).toFixed(1)} min per day`);
 say('polyroll: dice pays 5x on a 1-in-6 pick (EV 0), coin pays 1x on 50/50 (EV 0): neutral sinks.');
-module.exports = { C, sNow, sMin, sBest1, sBest3, sBest7, fixed, mean: { buy: sb / nb, sell: ss / ns }, spikeShare: spikes / ns, buyAt, sellAt };
+module.exports = { C, bounty, fixedMax, sNow, sMin, sBest1, sBest3, sBest7, fixed, mean: { buy: sb / nb, sell: ss / ns }, spikeShare: spikes / ns, buyAt, sellAt };

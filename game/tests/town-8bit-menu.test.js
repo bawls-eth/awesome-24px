@@ -79,7 +79,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r - 0.5 && a.r > b
       return { dts, dds, fs, streak: vis('streak-badge'), rating: vis('town-rating'), tidy: vis('town-tidy'), grid: vis('achievements-badge'), sel: document.getElementById('town-tab-stats').getAttribute('aria-selected') };
     });
     check(`${tag}: Stats tab shows the streak, town rating and tidiness lines`, st.streak && st.rating && st.tidy && st.sel === 'true', JSON.stringify(st));
-    check(`${tag}: plain stat block lists stars, trophies, museum, fish, bugs, streak`, st.dts.length === 6 && /Stars/.test(st.dts[0]) && /Streak/.test(st.dts[5]) && st.dds.every((v) => /^\d+(\/\d+)?$/.test(v)), JSON.stringify(st));
+    check(`${tag}: plain stat block lists stars, trophies, museum, fish, bugs, days in town (cycle 8 ID-09: was the streak)`, st.dts.length === 6 && /Stars/.test(st.dts[0]) && /Days in town/.test(st.dts[5]) && st.dds.every((v) => /^\d+(\/\d+)?$/.test(v)), JSON.stringify(st));
     check(`${tag}: Stats text is >= 12 px and the Town grid is hidden while Stats is open`, st.fs.every((f) => f >= 12) && !st.grid, JSON.stringify(st.fs));
 
     // ---- More pane (settings) ----

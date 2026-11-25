@@ -184,6 +184,30 @@ function streakStep(lastDate, streak, today) {
   return { streak: was === now - 1 ? streak + 1 : 1, date: today, counted: true, write: true };
 }
 
+// ID-09 (cycle 8 S, spec IDEAS.md "ID-09 / ID-18 implementation specs"): forgiving day COUNTS, never a streak. Additive keys
+// visitDays / lastVisitDate (days the player came to the village) and sellDays / lastSellDay (days with a sale at the shop), on UTC
+// 'YYYY-MM-DD' keys through MMGameDay.visitStep: any gap is just +1, nothing is ever lost or lowered. The old streak keys keep being
+// written by streakStep above (rollback safe) but are no longer shown or paid on. First load with no count: seeded from the old streak
+// so nobody starts lower than they were (visits: max(loginStreak, 1) when the old key exists; sales: sellStreak), with the old date,
+// so a day the old code already paid is not paid again. -> { days, date, counted, write }
+// The UTC game day (L-08) for the Town's day counts and bounties: MMGameDay.utcKey, never a new toISOString call.
+function townUtcKey() { return typeof MMGameDay !== 'undefined' ? MMGameDay.utcKey() : ''; }
+function townDayStep(saved, kind, today) {
+  const sell = kind === 'sell';
+  let days = sell ? saved.sellDays : saved.visitDays;
+  let date = sell ? saved.lastSellDay : saved.lastVisitDate;
+  let seeded = false;
+  if (days === undefined) {
+    const old = sell ? saved.sellStreak : saved.loginStreak;
+    const oldDate = sell ? saved.lastSellDate : saved.lastLoginDate;
+    if (old !== undefined || oldDate !== undefined) { days = sell ? cleanCount(old) : Math.max(cleanCount(old), 1); date = oldDate; seeded = true; }
+  }
+  const G = typeof MMGameDay !== 'undefined' ? MMGameDay : null;
+  if (!G || typeof G.visitStep !== 'function') return { days: cleanCount(days), date: date, counted: false, write: false };
+  const st = G.visitStep(date, days, today);
+  return { days: st.days, date: st.date, counted: st.counted, write: st.write || seeded };
+}
+
 // Beta S-01: true from the moment a Restore writes the save until the page reloads, so no other writer (a timer, the
 // cross-tab listener, a late gather) can put the old in-memory state back over the restored file.
 let SAVE_RESTORING = false;
@@ -268,7 +292,7 @@ const TOWN_RESTORE_MAX = 2000000;
 const TOWN_SAVE_FIELDS = ['name', 'species', 'frame', 'realm', 'resources', 'crafted', 'caveInv', 'cavePick', 'caveSeed',
   'lifetimeStats', 'achievementsUnlocked', 'equippedTitle', 'fossilsHeld', 'museumCollection', 'museumFauna', 'museumFlora',
   'fishlog', 'home', 'mail', 'birthdays', 'dailies', 'bugoff', 'loginStreak', 'lastLoginDate', 'sellStreak', 'lastSellDate',
-  'sfxMuted', 'musicEnabled', 'reduceMotion', 'lastSeenVersion', 'villagerAffinity', 'villagerTalkDay', 'bestieId', 'bestieName',
+  'visitDays', 'lastVisitDate', 'sellDays', 'lastSellDay', 'bounty', 'sfxMuted', 'musicEnabled', 'reduceMotion', 'lastSeenVersion', 'villagerAffinity', 'villagerTalkDay', 'bestieId', 'bestieName',
   'ffDiscovered', 'weedsPulled', 'turnipBuys', 'questClaimedBucket', 'triviaAnsweredBucket', 'tournamentBonusBucket',
   'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen', 'errand'];
 function cleanTownSave(obj) {
@@ -1057,7 +1081,7 @@ const ACHIEVEMENTS = [
   { id: 'trivia3', icon: '📝', label: 'Know-It-All', desc: "Answer 3 of Professor Byte's daily trivia questions correctly", reward: 5, check: (s) => (s.triviaCorrect || 0) >= 3 },
   { id: 'scavenger1', icon: '🔍', label: 'Treasure Hunter', desc: "Win the daily scavenger hunt", reward: 5, check: (s) => (s.scavengerHuntsWon || 0) >= 1 },
   { id: 'tournament1', icon: '🎣', label: 'Big Catch', desc: "Set a new record in the daily fishing tournament", reward: 5, check: (s) => (s.tournamentRecordsSet || 0) >= 1 },
-  { id: 'sellstreak3', icon: '🛍️', label: 'Regular', desc: "Sell at the shop 3 days in a row", reward: 5, check: (s) => (s.bestSellStreak || 0) >= 3 },
+  { id: 'sellstreak3', icon: '🛍️', label: 'Regular', desc: "Sell at the shop on 3 different days", reward: 5, check: (s, scene) => (s.bestSellStreak || 0) >= 3 || ((scene && scene.sellDays) || 0) >= 3 }, // ID-09: same id, so unlocked stays unlocked
   // Residential Lane villagers + wildlife log. These read live scene state
   // (affinity lives in the save, discoveries in scene.ffDiscovered), so
   // they're re-checked from awardPoint()/incrementStat(), which both of
@@ -2976,6 +3000,7 @@ class TownScene extends Phaser.Scene {
       this.shakeTreeVisual(tree.index);
       this.swingTool('🪓');
       this.gainResource('wood', 1, tree.x, tree.y - 40);
+      this.bountyEvent('town:shake'); // ID-18 (a tree on cooldown is never found, so a refusal never counts)
       const fruit = this.treeFruit[tree.index];
       if (fruit) {
         fruit.setVisible(false);
@@ -3183,17 +3208,22 @@ class TownScene extends Phaser.Scene {
   updateSellStreak() {
     const saved = loadSave();
     const today = new Date().toISOString().slice(0, 10);
-    const st = streakStep(saved.lastSellDate, saved.sellStreak, today);
+    const st = streakStep(saved.lastSellDate, saved.sellStreak, today); // still written (rollback safe), no longer shown or paid on
     if (st.write) writeSave({ sellStreak: st.streak, lastSellDate: st.date });
-    if (!st.counted) return; // already counted today (or the stored day is ahead of the clock: cycle1 L-07, see streakStep)
-    const streak = st.streak;
-    this.sellStreak = streak;
-    this.lifetimeStats.bestSellStreak = Math.max(this.lifetimeStats.bestSellStreak || 0, streak);
+    // ID-09: the bonus follows the forgiving count of days with a sale (a gap never resets it). Save first, then pay.
+    const sd = townDayStep(saved, 'sell', townUtcKey());
+    if (sd.write) writeSave({ sellDays: sd.days, lastSellDay: sd.date });
+    this.sellDays = sd.days;
+    if (st.counted) {
+      this.sellStreak = st.streak;
+      this.lifetimeStats.bestSellStreak = Math.max(this.lifetimeStats.bestSellStreak || 0, st.streak);
+    }
+    if (!sd.counted && !st.counted) return; // already counted today (or the stored day is ahead of the clock: cycle1 L-07)
     this.saveAchievements();
     this.checkAchievements();
-    if (streak >= 2) {
-      const bonus = Math.min(streak, 5);
-      this.awardPoint(bonus, `🛍️ ${streak}-day streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+    if (sd.counted && sd.days >= 2) {
+      const bonus = Math.min(sd.days, 5);
+      this.awardPoint(bonus, `🛍️ sell day ${sd.days}: +${bonus} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
     }
   }
 
@@ -4245,6 +4275,7 @@ class TownScene extends Phaser.Scene {
       this.placeBug(bug);
     });
     this.bugOffCaught();
+    this.bountyEvent('town:bug'); // ID-18
   }
 
   // ---------- daily Bug-Off ----------
@@ -4422,6 +4453,7 @@ class TownScene extends Phaser.Scene {
     const typeIndex = Phaser.Math.Between(0, FOSSIL_TYPES.length - 1);
     this.fossilsHeld.push(typeIndex);
     this.saveFossils();
+    this.bountyEvent('town:fossil'); // ID-18 (a full bag returns above and never counts)
     this.updateFossilHUD();
     this.showFloatingText(spot.x, spot.y - 20, `found ${FOSSIL_TYPES[typeIndex]}`);
     SFX.catch();
@@ -4931,16 +4963,20 @@ class TownScene extends Phaser.Scene {
   setupLoginStreak() {
     const saved = loadSave();
     const today = new Date().toISOString().slice(0, 10);
-    const st = streakStep(saved.lastLoginDate, saved.loginStreak, today); // cycle1 L-07: a clock that was ahead never resets it
-    const streak = st.streak;
-    if (st.write) writeSave({ loginStreak: streak, lastLoginDate: st.date });
-    if (st.counted) {
-      const bonus = Math.min(streak, 5);
-      this.awardPoint(bonus, `🔥 Day ${streak} streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 44);
+    const st = streakStep(saved.lastLoginDate, saved.loginStreak, today); // still written (rollback safe), no longer shown or paid on
+    if (st.write) writeSave({ loginStreak: st.streak, lastLoginDate: st.date });
+    this.loginStreak = st.streak;
+    // ID-09: "Days in town N", a count that only goes up (a gap of any length is +1). Save first, then pay, so a reload never pays twice.
+    const vd = townDayStep(saved, 'visit', townUtcKey());
+    if (vd.write) writeSave({ visitDays: vd.days, lastVisitDate: vd.date });
+    this.visitDays = vd.days;
+    if (vd.counted) {
+      const bonus = Math.min(vd.days, 5);
+      this.welcomeToast = `👋 Welcome back! Day ${vd.days} in the village. +${bonus} ⭐`;
+      this.awardPoint(bonus, this.welcomeToast, this.localBody.x, this.localBody.y - 44);
     }
-    this.loginStreak = streak;
     const el = document.getElementById('streak-count');
-    if (el) el.textContent = streak;
+    if (el) el.textContent = vd.days;
   }
 
   renderAchievementsPanel() {
@@ -5814,6 +5850,7 @@ class TownScene extends Phaser.Scene {
     this.fishlog.lastDay = this.questDayBucket();
     // Save first, then pay, so a reload can never double-pay the first-catch bonus.
     this.saveFishLog();
+    this.bountyEvent('town:fish'); // ID-18
     this.showFloatingText(spot.x, spot.y - 44, `${species.icon} ${species.name} ${sizeCm}cm${isNew ? ' — NEW!' : ''}`);
     if (isNew) {
       this.awardPoint(FISH_FIRST_CATCH_BONUS, `📖 new fish logged! +${FISH_FIRST_CATCH_BONUS} ⭐`, spot.x, spot.y - 60, 'sell');
@@ -8626,6 +8663,7 @@ class TownScene extends Phaser.Scene {
       });
     }
     this.gainResource('flowers', 1, spot.x, spot.y - 16);
+    this.bountyEvent('town:flower'); // ID-18
   }
 
   drawBeachItems() {
@@ -9367,6 +9405,7 @@ class TownScene extends Phaser.Scene {
     if (talkDays[v.id] !== today && !this.villagerIsAsleep()) {
       talkDays[v.id] = today;
       writeSave({ villagerTalkDay: talkDays });
+      this.bountyEvent('town:wave'); // ID-18: the first hello of the day to this neighbor (talking again does not count)
       const beforeTier = this.villagerTier(v.id);
       this.bumpVillagerAffinity(v.id, VILLAGER_DAILY_TALK_AFFINITY);
       const afterTier = this.villagerTier(v.id);
@@ -9558,6 +9597,90 @@ class TownScene extends Phaser.Scene {
     document.getElementById('dailies-summary').textContent = done === total && total > 0
       ? `All ${total} chores done today! ${rec.paid ? `(+${DAILY_BONUS} ⭐ collected)` : ''} Days completed: ${rec.days}`
       : `${done}/${total} done — finish them all for a +${DAILY_BONUS} ⭐ bonus. Days completed: ${rec.days}`;
+    this.renderBounties();
+  }
+
+  // ---------- ID-18 Town daily bounties (cycle 8 S; spec IDEAS.md "ID-09 / ID-18 implementation specs") ----------
+  // Three small errands a UTC day (MMGameDay.utcKey, L-08), the same for everyone, shown in the Dailies panel. Stars only (10-30 each),
+  // claimed by the player with a button, never counted in the "Today n/m" chores or the all-chores bonus. No timers, nothing expires:
+  // another day simply brings new rows. Save key `bounty` = { d, s: { id: [count, claimed 0|1] } }, written BEFORE any star is paid.
+  townBounties() {
+    const d = townUtcKey();
+    if (typeof MMBounties === 'undefined' || !d) return [];
+    if (!this.bountyCache || this.bountyCache.d !== d) this.bountyCache = { d, list: MMBounties.forDate(d, 'town', MMBounties.TOWN_POOL) };
+    return this.bountyCache.list;
+  }
+
+  bountyRecord() {
+    return MMBounties.cleanTown(loadSave().bounty, townUtcKey(), this.townBounties());
+  }
+
+  bountyEvent(type) {
+    const b = this.townBounties().find((x) => x.event === type);
+    if (!b) return;
+    const rec = this.bountyRecord();
+    const [count, claimed] = rec.s[b.id];
+    if (count >= b.goal) return;
+    const st = MMBounties.progress(b, { count, done: false, claimed: claimed === 1 }, { type });
+    rec.s[b.id] = [st.count, claimed];
+    writeSave({ bounty: rec });
+    if (st.done) this.showFloatingText(this.localBody.x, this.localBody.y - 58, `📜 ${b.text}: done! Claim it in 📋 Today`);
+    if (this.dailiesOpen) this.renderDailies();
+  }
+
+  claimBounty(id) {
+    const b = this.townBounties().find((x) => x.id === id);
+    if (!b) return false;
+    const rec = this.bountyRecord();
+    const [count, claimed] = rec.s[id];
+    const r = MMBounties.claim(b, { count, done: count >= b.goal, claimed: claimed === 1 });
+    if (!r || !(r.reward.stars > 0)) return false;
+    rec.s[id] = [r.state.count, 1];
+    writeSave({ bounty: rec }); // save first, then pay, so a reload can never pay twice
+    this.awardPoint(r.reward.stars, `📜 ${b.text}: +${r.reward.stars} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+    if (this.dailiesOpen) this.renderDailies();
+    return true;
+  }
+
+  renderBounties() {
+    const list = document.getElementById('bounty-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const bounties = this.townBounties();
+    const rec = bounties.length ? this.bountyRecord() : null;
+    bounties.forEach((b) => {
+      const [count, claimed] = rec.s[b.id];
+      const li = document.createElement('li');
+      li.dataset.bounty = b.id;
+      li.dataset.status = claimed ? 'claimed' : (count >= b.goal ? 'done' : 'todo');
+      const t = document.createElement('span');
+      t.className = 'bounty-text';
+      t.textContent = b.text;
+      const n = document.createElement('span');
+      n.className = 'bounty-count';
+      n.textContent = `${count}/${b.goal}`;
+      const r = document.createElement('span');
+      r.className = 'bounty-reward';
+      r.textContent = `+${b.reward.stars} ⭐`;
+      li.append(t, n, r);
+      if (claimed) {
+        const c = document.createElement('span');
+        c.className = 'bounty-claimed';
+        c.textContent = 'Claimed';
+        li.appendChild(c);
+      } else if (count >= b.goal) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bounty-claim';
+        btn.textContent = 'Claim';
+        btn.setAttribute('aria-label', `Claim ${b.reward.stars} stars for: ${b.text}`);
+        btn.addEventListener('click', () => this.claimBounty(b.id));
+        li.appendChild(btn);
+      }
+      list.appendChild(li);
+    });
+    const sec = document.getElementById('bounty-section');
+    if (sec) sec.classList.toggle('hidden', bounties.length === 0);
   }
 
   // ---------- birthdays ----------
@@ -10224,7 +10347,7 @@ class TownScene extends Phaser.Scene {
       ['🏛️ Museum', `${txt('museum-count')}/${txt('museum-cap')}`],
       ['🐟 Fish', txt('fish-count')],
       ['🦋 Bugs', txt('bug-count')],
-      ['🔥 Streak', txt('streak-count')],
+      ['🏡 Days in town', txt('streak-count')],
     ];
     const key = rows.map((r) => r.join('=')).join('|');
     if (block.dataset.key === key) return;
