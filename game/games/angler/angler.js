@@ -493,6 +493,13 @@
     if (list.length < 2) return false;
     return pickSpot(list[(i + 1) % list.length]);
   }
+  // Cycle 6 L: the journal, gear, tournament, market and aquarium cards own the shared Back entry: Back closes the card, the page stays.
+  if (window.MMNav && MMNav.backWatch) {
+    try {
+      MMNav.backWatch($('journal'), () => closeJournal(), 'angler-journal'); MMNav.backWatch($('gear'), () => closeGear(), 'angler-gear');
+      ['tourney', 'market', 'aquarium'].forEach((id) => MMNav.backWatch($(id), () => closeOverlay(id), 'angler-' + id));
+    } catch (e) { /* history unavailable */ }
+  }
   function closeTopPanel() {
     if (Settings && Settings.isOpen()) { Settings.close(); return true; }
     if (!$('journal').hidden) { closeJournal(); return true; }

@@ -4190,7 +4190,17 @@ class RealmArena {
   _backGuard(on, keepEntry) {
     const N = typeof window !== 'undefined' && this._menuMode ? window.MMNav : null;
     if (!N || !N.backLayer) return;
+    // Cycle 6 L: the hero picker that opens by itself on a first visit (the player has not touched the page yet) takes NO Back
+    // entry: Back on a screen you never touched leaves at once (a real browser skips such an entry anyway; a scripted one did not).
+    if (on && this.panel === 'hero') { try { const ua = navigator.userActivation; if (ua && !ua.hasBeenActive) { N.backRelease('realm-panel', keepEntry === true); return; } } catch (e) { /* older browsers: guard as before */ } }
     try { if (on) N.backLayer('realm-panel', () => { if (this.panel) this._panel(null); }); else N.backRelease('realm-panel', keepEntry === true); } catch (e) { /* history unavailable */ }
+  }
+  // Cycle 6 L: the fall card owns the Back entry too. Back = "Try again" (the card closes, a fresh run starts, the player stays in
+  // the Realm); the next Back leaves as usual. Leave keeps the entry (stop() never hides the card), so Leave is never pulled back.
+  _deathGuard(on) {
+    const N = typeof window !== 'undefined' && this._menuMode ? window.MMNav : null;
+    if (!N || !N.backLayer) return;
+    try { if (on) N.backLayer('realm-death', () => { if (this._deathShown && this.active) this.restart(); }); else N.backRelease('realm-death'); } catch (e) { /* history unavailable */ }
   }
 
   _panel(name, keepEntry) {
@@ -4355,11 +4365,11 @@ class RealmArena {
     if (!showWave) { const zb = d.querySelector('.rm-zone-row b'); if (zb) zb.textContent = this._deathZone || this._zoneLabel(); } // textContent: the zone name comes from the page
     const sn = this.menuNote ? String(this.menuNote() || '') : '';
     if (sn) { const row = document.createElement('div'); row.className = 'realm-board-row rm-stash-row'; row.textContent = sn; d.querySelector('.rm-recap').appendChild(row); }
-    d.classList.remove('hidden'); d.style.display = 'flex';
+    d.classList.remove('hidden'); d.style.display = 'flex'; this._deathGuard(true);
     const f = d.querySelector('button[data-d="again"]'); if (f && f.focus) f.focus({ preventScroll: true });
   }
 
-  _hideDeath() { const d = this._deathDom; if (d) { d.classList.add('hidden'); d.style.display = 'none'; } }
+  _hideDeath() { const d = this._deathDom; if (d) { d.classList.add('hidden'); d.style.display = 'none'; this._deathGuard(false); } }
 
   renderBoard() {
     const root = document.getElementById('realm-board-body');

@@ -381,9 +381,12 @@
       lastFocus = doc.activeElement;
       back.hidden = false; dlg.hidden = false;
       try { closeBtn.focus(); } catch (e) { /* ignore */ }
+      // Cycle 6 L: the open sheet owns the shared Back entry (MMNav.backLayer): Back closes the sheet, the page stays.
+      try { if (win && win.MMNav && win.MMNav.backLayer) win.MMNav.backLayer('mmset', () => close()); } catch (e) { /* history unavailable */ }
     }
     function close() {
       if (dlg.hidden) return;
+      try { if (win && win.MMNav && win.MMNav.backRelease) win.MMNav.backRelease('mmset'); } catch (e) { /* ignore */ }
       back.hidden = true; dlg.hidden = true;
       try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (e) { /* ignore */ }
     }

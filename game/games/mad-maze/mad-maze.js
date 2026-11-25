@@ -771,11 +771,13 @@
     return axPrefs;
   }
   let axEl = null, axBody = null, axLast = null, axGear = false;
+  let axBack = null;
   function axOpen(fromGear) {
     if (!AX_ON) return false;
     axBuild(); axGear = !!fromGear && arena.panel !== 'menu';
     if (fromGear && arena.setMenu && arena.panel !== 'menu') { try { arena.setMenu(true); } catch (e) { /* the sheet alone still works */ } }
     axLast = document.activeElement; axRender(); axEl.classList.remove('hidden'); axEl.style.display = 'flex';
+    if (!axBack && NAV && NAV.backWatch) { try { axBack = NAV.backWatch(axEl, () => axClose(), 'mm-access-sheet'); } catch (e) { axBack = null; } } // cycle 6 L: Back closes the sheet
     const f = axEl.querySelector('button'); if (f) f.focus({ preventScroll: true });
     return true;
   }

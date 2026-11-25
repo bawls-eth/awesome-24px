@@ -2313,5 +2313,14 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 180
+  },
+  "cyc6-lead-back.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "cyc6-lead-nav-scan.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

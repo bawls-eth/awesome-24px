@@ -1328,6 +1328,11 @@
     togglePanel('craft', false); togglePanel('goals', false); closeSummary();
     return was;
   }
+  // Cycle 6 L: crafting, goals and the dive summary own the shared Back entry: Back closes the panel, the dive goes on.
+  if (window.MMNav && MMNav.backWatch) {
+    ['craft', 'goals'].forEach((n) => { try { MMNav.backWatch($(n + '-panel'), () => togglePanel(n, false), 'dd-' + n); } catch (e) { /* history unavailable */ } });
+    try { MMNav.backWatch($('run-panel'), () => closeSummary(), 'dd-run'); } catch (e) { /* history unavailable */ }
+  }
   function togglePanel(name, on) {
     const el = $(name + '-panel'), want = on === undefined ? el.hidden : on;
     ['craft', 'goals'].forEach((n) => { $(n + '-panel').hidden = true; });

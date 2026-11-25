@@ -434,6 +434,25 @@
     backSync();
     return () => backRelease(key);
   }
+  // Cycle 6 L: backWatch(el, closeFn, key) guards an overlay that is shown / hidden from many places (the `hidden` attribute or a
+  // `hidden` class): one call at setup, the layer follows the element. closeFn runs on the player's Back while it is shown.
+  let watchN = 0;
+  function backWatch(el, closeFn, key) {
+    if (!el || typeof MutationObserver !== 'function' || typeof closeFn !== 'function') return null;
+    const k = key || 'watch-' + (el.id || ++watchN);
+    const shown = () => !!el.isConnected && !el.hidden && !el.classList.contains('hidden');
+    let on = false;
+    const sync = () => {
+      const s = shown();
+      if (s === on) return;
+      on = s;
+      if (s) backLayer(k, () => { if (shown()) closeFn(); }); else backRelease(k);
+    };
+    let mo = null;
+    try { mo = new MutationObserver(sync); mo.observe(el, { attributes: true, attributeFilter: ['hidden', 'class'] }); } catch (e) { return null; }
+    sync();
+    return { key: k, sync, stop: () => { mo.disconnect(); if (on) { on = false; backRelease(k); } } };
+  }
   function onPop() {
     if (popSkip > 0) { popSkip--; if (!popSkip) clearTimeout(popSkipT); backSync(); return; }
     if (layers.length && !flagged()) { // the player's Back: close every open overlay, stay on the page
@@ -550,7 +569,19 @@
     ui = build();
     hideLegacy();
     if (typeof MutationObserver === 'function') {
-      try { new MutationObserver(hideLegacy).observe(document.body, { childList: true, subtree: true }); } catch (e) { /* ignore */ }
+      // Cycle 6 L (perf): this observer sees EVERY child-list change under <body>. A busy page (the Realm HUD and its float texts
+      // rewrite text nodes many times a second) ran a whole-document query per change. Now only a batch that ADDS an element
+      // counts, and the scan runs at most once per frame.
+      let scanT = 0;
+      const scanSoon = (recs) => {
+        if (scanT) return;
+        let el1 = false;
+        for (let i = 0; i < recs.length && !el1; i++) { const ad = recs[i].addedNodes; for (let j = 0; j < ad.length; j++) if (ad[j].nodeType === 1) { el1 = true; break; } }
+        if (!el1) return;
+        const run = () => { scanT = 0; hideLegacy(); };
+        scanT = typeof requestAnimationFrame === 'function' && !document.hidden ? requestAnimationFrame(run) : setTimeout(run, 50);
+      };
+      try { new MutationObserver(scanSoon).observe(document.body, { childList: true, subtree: true }); } catch (e) { /* ignore */ }
     }
     document.body.classList.add('mm-nav-on');
     window.addEventListener('keydown', onKey, true);
@@ -584,7 +615,8 @@
     KEY, PLACES, GROUPS, mount, open, close, markPlace, setCovered, openSettings,
     isOpen: () => !!(ui && ui.isOpen),
     mounted: () => !!ui,
-    backLayer, backRelease,
+    backLayer, backRelease, backWatch,
+    backLayers: () => layers.map((l) => l.key),
     current: () => Object.assign({}, cur),
     last: () => load().last,
     state: load,

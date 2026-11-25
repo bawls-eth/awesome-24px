@@ -2651,10 +2651,13 @@
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
       nxDom.talk.textContent = nxHint();
       if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
+      // Cycle 6 L: the open Nexus owns the shared Back entry: Back returns to the Realm (like its own button), the page stays.
+      try { if (window.MMNav && MMNav.backLayer) MMNav.backLayer('rw-nexus', () => { nbHide(true); nexusClose(); }); } catch (e) { /* history unavailable */ }
       return true;
     }
     function nexusClose() {
       if (!nxOpen) return false;
+      try { if (window.MMNav && MMNav.backRelease) MMNav.backRelease('rw-nexus'); } catch (e) { /* ignore */ }
       nxOpen = false; nxWalkStop(); nxDom.root.classList.add('hidden'); arena.paused = false; arena.player.iframes = Math.max(arena.player.iframes, 1.5);
       nxNear = true; return true; // the prompt shows again next tick if the player is still beside the portal
     }
