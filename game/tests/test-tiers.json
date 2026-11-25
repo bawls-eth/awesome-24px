@@ -2228,6 +2228,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc8-art-glacier-shellback.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc7-art-realm-aimed-hue.test.js": {
     "class": "browser",
     "tier": "full"

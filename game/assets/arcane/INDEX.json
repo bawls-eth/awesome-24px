@@ -762,7 +762,7 @@
       "status": "provisional",
       "source": "codex",
       "branch": "codex/b03-glacier-shellback",
-      "note": "B-03 Tundra M64, 12 strips; v3 (d832a92) reviewed cycle 7: repo audit 0 blocker / 0 needs-redo (unref only), true low side profile, alternating feet, neck lunge, 5-beat tipped death. ACCEPTED provisional, not yet wired (code-drawn fallback stays in game)."
+      "note": "B-03 Tundra M64, 12 strips; v3 (d832a92) reviewed cycle 7: repo audit 0 blocker / 0 needs-redo (unref only), true low side profile, alternating feet, neck lunge, 5-beat tipped death. ACCEPTED provisional. Wired cycle 8 (MMCreatureStrips tundra, M 256 px, death 8 fps, code fallback kept; test cyc8-art-glacier-shellback)."
     }
   ]
 }

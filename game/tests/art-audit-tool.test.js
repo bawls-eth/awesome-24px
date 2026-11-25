@@ -14,6 +14,7 @@ check('every INDEX.json batch is walked (b40b + b40c included)', batches.length 
 check('no blocker: every registered PNG exists and fits its manifest frames', blockers.length === 0, JSON.stringify(blockers.slice(0, 5)));
 check('the wired tundra strips have no anchor / frame / background problems', !rows.some((r) => /^(b40a|b40b|b40c)$/.test(r.batch) && r.sev !== 'nit'));
 check('cycle 7: the wired b03 icicle bat is walked and has no anchor / frame / background problems', batches.some((b) => b.id === 'b03-icicle-bat' && b.assets === 12) && !rows.some((r) => r.batch === 'b03-icicle-bat' && r.sev !== 'nit'));
+check('cycle 8: the wired b03 glacier shellback is walked and has no anchor / frame / background problems', batches.some((b) => b.id === 'b03-glacier-shellback' && b.assets === 12) && !rows.some((r) => r.batch === 'b03-glacier-shellback' && r.sev !== 'nit'));
 // art-audit-4 heuristics: dark rim, flat fill, smiley mascot face
 const mk = (w, h, paint) => { const b = Buffer.alloc(w * h * 4); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = paint(x, y); if (c) { const q = (y * w + x) * 4; b[q] = c[0]; b[q + 1] = c[1]; b[q + 2] = c[2]; b[q + 3] = 255; } } return b; };
 const NAVY = [0x1b, 0x21, 0x40], BODY = [0x6c, 0xbf, 0x55], LITE = [0xb8, 0xf0, 0x90];

@@ -7,7 +7,9 @@
 // fin raider fins, the turtle profile with neutral seats at y 176: the old 6 px drawn-seat workaround is gone); b38g the Tide Hydra reef
 // boss (XL, the 12 core strips + a 6-frame roar at 10 fps in all three views); b40a the pengling (S, the first tundra species), provisional;
 // b40b the frostfox and b40c the rimewolf (both S, 192 px cells, feet 96,171, the 14 strips), provisional (art-audit-3);
-// b03 the icicle bat (S, 192 px cells, feet 96,171, the 12 core strips, death at 8 fps; not tameable, so no sleep / eat), provisional (cycle 7).
+// b03 the icicle bat (S, 192 px cells, feet 96,171, the 12 core strips, death at 8 fps; not tameable, so no sleep / eat), provisional (cycle 7);
+// b03 the glacier shellback v3 (M, 256 px cells, feet 128,231, the 12 core strips, death at 8 fps; no sleep / eat strips yet, so a knocked-out
+// or eating shellback shows its idle strip), provisional (cycle 8).
 // The strip table below mirrors the batch manifests (the node test checks it against manifest.json). Each strip is one row of square
 // cells (4x pixel art: 192 / 256 / 384 / 512 px cells hold 48 / 64 / 96 / 128 px native art for the S / M / L / XL size classes), facing
 // down / up / right; left is the mirrored right. A strip's cell is its manifest frame_h (= the PNG height); the loader trusts the PNG.
@@ -37,6 +39,7 @@
   const B40B = '../../assets/arcane/b40b-frostfox/creatures/';
   const B40C = '../../assets/arcane/b40c-rimewolf/creatures/';
   const B03 = '../../assets/arcane/b03-icicle-bat/creatures/';
+  const B03G = '../../assets/arcane/b03-glacier-shellback/creatures/';
   const DIRS = ['down', 'up', 'right'];       // dir codes 0 1 2; code 3 = left (the right strip, mirrored)
   const DOWN = 0, UP = 1, RIGHT = 2, LEFT = 3;
   const SCALE = 4;                            // cells are 4x upscaled pixel art: draw at 1/4 (native) so every pixel stays crisp
@@ -99,7 +102,9 @@
     frostfox: { dir: B40B + 'frostfox/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'tundra' },
     rimewolf: { dir: B40C + 'rimewolf/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'tundra' },
     // b03 the tundra night flyer (S, 192 px cells, feet 96,171, the 12 core strips, death at 8 fps per its manifest)
-    icicle_bat: { dir: B03 + 'icicle_bat/', cell: 192, ax: 96, ay: 171, acts: CORE.slice(), biome: 'tundra', fps: { death: 8 } }
+    icicle_bat: { dir: B03 + 'icicle_bat/', cell: 192, ax: 96, ay: 171, acts: CORE.slice(), biome: 'tundra', fps: { death: 8 } },
+    // b03 the tundra shelled grazer (M, 256 px cells, feet 128,231, the 12 core strips, death at 8 fps per its manifest)
+    glacier_shellback: { dir: B03G + 'glacier_shellback/', cell: 256, ax: 128, ay: 231, acts: CORE.slice(), biome: 'tundra', fps: { death: 8 } }
   };
   const KINDS = Object.keys(SPECS);
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
