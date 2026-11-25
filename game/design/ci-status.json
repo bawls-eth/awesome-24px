@@ -1,9 +1,9 @@
 {
-  "sha": "4e4770b98bdfe8a067fbd45388c0d5a4dd9c63d8",
-  "generated_utc": "2026-11-25T05:50:51Z",
+  "sha": "67f4c53a1bc9e3ca4f8eba6bfb2e8fe04d0f1a0e",
+  "generated_utc": "2026-11-25T08:46:54Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 585,
-  "suites_total": 585,
-  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 576/585 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): beta-g03-sell-guard.test.js, beta-r4-b08-passive-2min.test.js, class-weapon-engine.test.js, cyc5-ui-isles-compact.test.js, cyc6-art-realm-hit-cue.test.js, enemy-art.test.js, isles-access.test.js, item-icons.test.js, world-perf.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
+  "suites_passed": 596,
+  "suites_total": 596,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 580/596 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): arena-world-hooks.test.js, beta-r4-b08-passive-2min.test.js, cyc3-ui-town-labels.test.js, cyc4-town-cull-alloc.test.js, cyc5-ui-isles-compact.test.js, cyc6-art-realm-hit-cue.test.js, cyc6-lead-passive-landscape.test.js, deepdelve-bugbash.test.js, deepdelve-depth2.test.js, first-ten-minutes.test.js, isles-access.test.js, item-icons.test.js, realm-access2.test.js, realm-tutorial.test.js, smoke-journey.test.js, world-gradient.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }
