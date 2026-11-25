@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### Cycle 7 Mocha v3 emotes
+Cycle 7 Mocha v3 emote redo: three strips/10 frames, all distinct within strip; happy has changing head/arm pose, wave raised beside head in f2/f4, sleep lying with subtle breathing. Native bounds and baseline 119 passed; 4x hard alpha construction. New head matches original tabby palette but facial proportions differ slightly. Sleep breathing subtle. Previous v2 profile ankle attachment needs polish; nine recolors, animated grid, comparison panel, independent PNG decode/hash and full audit remain outstanding. No code changes.
+
 ### Cycle 7 Mocha partial redo
 Cycle 7 Mocha WIP partial redo: six strips/20 frames revised, original head pixels retained; narrow profile torso with a single visible arm, near/far feet and opposite contact stride, side-specific tail stripe. Front/rear feet alternate, all four walk frames distinct. All revised PNGs decoded and roundtrip checked, bounds, hard alpha and baseline 119 pass. Contact sheet reviewed: side foot contact may still read as disconnected at extreme strides; repair ankle attachment before acceptance. Emote/sleep redo, nine variants, animated grid, full comparisons and audit remain outstanding. No code changes.
 
@@ -364,4 +367,5 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 
 ## Codex T01 Mocha
 T01 Mocha (coolcats): original ginger tabby in teal cardigan, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; left mirrors symmetric profile, rear has no eyes. Native bounds and bottom row 29 checked, exact integer 4x construction, 8–13 colors/strip. Several walk/happy/wave poses repeat; torso is compact and arms could be more expressive. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority from Claude branch followed.
+
 

@@ -706,3 +706,7 @@ T01 Mocha (coolcats): original ginger tabby in teal cardigan, 13 strips/39 frame
 
 ## Codex Mocha v2
 Cycle 7 Mocha WIP partial redo: six strips/20 frames revised, original head pixels retained; narrow profile torso with a single visible arm, near/far feet and opposite contact stride, side-specific tail stripe. Front/rear feet alternate, all four walk frames distinct. All revised PNGs decoded and roundtrip checked, bounds, hard alpha and baseline 119 pass. Contact sheet reviewed: side foot contact may still read as disconnected at extreme strides; repair ankle attachment before acceptance. Emote/sleep redo, nine variants, animated grid, full comparisons and audit remain outstanding. No code changes.
+
+
+## Codex Mocha v3
+Cycle 7 Mocha v3 emote redo: three strips/10 frames, all distinct within strip; happy has changing head/arm pose, wave raised beside head in f2/f4, sleep lying with subtle breathing. Native bounds and baseline 119 passed; 4x hard alpha construction. New head matches original tabby palette but facial proportions differ slightly. Sleep breathing subtle. Previous v2 profile ankle attachment needs polish; nine recolors, animated grid, comparison panel, independent PNG decode/hash and full audit remain outstanding. No code changes.
