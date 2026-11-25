@@ -651,3 +651,6 @@ eat) at the same new height (+-1 px between frames for bob only); feet stay on t
 colour-matched outline, 3-4 tone ramp, top-left light (b04 bar). Deliver with a contact sheet next to `puffcap_idle_down` and the hero
 at 1x and 3x. On delivery G adds a check that reads `stripSize` and pins 32 <= h <= 48 for all three.
 Then (lower): the jungle small set down toward 36-40 (chompbill 46, canopy_glider 46, fernraptor 52), same rules.
+
+## Codex status — B-03 saddle overlays
+B-03 saddle overlays submitted: Shagtusk and Sabrefang, six strips per mount (idle/move x down/up/right), 60 cells total. Same frame sizes, timing, ground anchors and per-frame seat coordinates as PRs #64 and #65. Distinct front pommel, rear cantle and right profile with stirrup, warm leather/cargo pouches vs frost-blue blanket. Separate overlays, no rider or body pixels. Native bounds, hard alpha, palette and exact Git blob hashes checked. Repeated poses with equal seat coordinates can be intentional. Overlay lowest opaque row is not the creature ground anchor. No composite mount rendering or in-game rider fit tested; seats are provisional. Review both creature PRs first; remeasure seats if integration changes art. Full repo audit not run (no local checkout). Preview shows overlays alone; b04 comparison in Markdown. No code/tests/Firebase changes.
