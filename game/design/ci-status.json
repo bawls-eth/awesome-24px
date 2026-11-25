@@ -1,9 +1,9 @@
 {
-  "sha": "1375984a911cec1156f43b3eb6d7f6d565080218",
-  "generated_utc": "2026-11-24T20:09:27Z",
+  "sha": "420ae0cf994a1c9256b7ea758ed3332c897e1e69",
+  "generated_utc": "2026-11-25T02:09:07Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 559,
-  "suites_total": 559,
-  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 553/559 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): a11y-viewport-sweep.test.js, beta-r4-b08-passive-2min.test.js, bugoff.test.js, deepdelve-perf.test.js, item-icons.test.js, smoke-journey.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
+  "suites_passed": 576,
+  "suites_total": 576,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 574/576 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): art-six-heroes.test.js, beta-r4-b08-passive-2min.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }
