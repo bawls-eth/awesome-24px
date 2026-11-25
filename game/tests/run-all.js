@@ -52,6 +52,7 @@ if (process.argv.includes('--beta') || process.env.BETA === '1') {
 }
 
 const lib = require('./tiers-lib');
+const { failDetail } = require('./lib/fail-lines'); // FAIL lines + first stderr line / timeout, each prefixed FAIL- (shown by tools/stamp.sh)
 const argv = process.argv.slice(2);
 const flagVal = (name) => { const k = argv.indexOf(name); return k >= 0 ? argv[k + 1] : null; };
 const bail = (msg) => { console.error(msg); process.exit(2); };
@@ -118,7 +119,7 @@ const hasFlock = argv.includes('--lock-live') && spawnSync('flock', ['--version'
     timings[r.f] = Math.round(r.secs * 10) / 10;
     console.log(`${ok ? 'ok  ' : 'FAIL'} ${r.f} ${out} [${r.secs.toFixed(1)}s]`);
     if (ok) { passed++; outcome[r.f] = 'pass'; }
-    else { failed++; outcome[r.f] = 'fail'; console.log(r.stdout.split('\n').filter((l) => l.startsWith('FAIL')).join('\n') + r.stderr.slice(0, 400)); }
+    else { failed++; outcome[r.f] = 'fail'; console.log(failDetail(r)); }
   };
 
   // Default (--jobs 1): strictly serial in sorted order, as before. With --jobs N only node-class files go in parallel, first.
@@ -141,7 +142,7 @@ const hasFlock = argv.includes('--lock-live') && spawnSync('flock', ['--version'
     for (const f of again) {
       const r = await runOne(f);
       if (r.status === 0) { failed--; passed++; outcome[f] = 'solo'; console.log(`ok* ${f} PASSED ONLY ON SOLO RERUN [${r.secs.toFixed(1)}s] (first run failed under load or flaked)`); }
-      else console.log(`FAIL ${f} failed again alone (a real failure) [${r.secs.toFixed(1)}s]\n` + r.stdout.split('\n').filter((l) => l.startsWith('FAIL')).join('\n') + r.stderr.slice(0, 400));
+      else console.log(`FAIL ${f} failed again alone (a real failure) [${r.secs.toFixed(1)}s]\n` + failDetail(r));
     }
   }
   stop();

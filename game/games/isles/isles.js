@@ -487,9 +487,10 @@
       angry: 0, think: R.next() * 0.1, cd: 0, flash: 0, moving: false, t: R.next() * 4, gi: gi, seen: false, art: null,
       ph: '', pt: 0, ang: 0, ox: x, oy: y, hitDone: false, tgAt: -1, ko: false, calm: false, hostile: s.mood === 'hostile', awake: true,
       tm: null, tmAcc: 0, leaving: 0, wid: wid || (gi >= 0 ? 'g' + gi + '_' + (j | 0) : 'u' + uid), lv: 1,
-      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '', swim: false, rare: false, rng: own || null };
+      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '', swim: false, rare: false, rng: own || null,
+      // cycle 9 (L) pool-shape rule: fields that used to be added later, one by one, declared here with the value the old code read as "not set"
+      def: s.def, seeHold: null, variant: '', slide: 0, wslide: 0, ret: 0, stun: 0, compHit: 0, flashSil: false };
     c.swim = !!(s.def && s.def.behaviours && s.def.behaviours.indexOf('swim') >= 0);
-    c.def = s.def;
     if (s.def) c.lv = IC.levelFor(s.def, SEED, c.wid);
     if (TAME && s.def && s.def.tame) c.tm = TM.init(s.def, { seed: 'isles|' + SEED, wildId: c.wid, level: c.lv });
     c.art = baker.bake({ id: kind || sp, archetype: s.arch, size: s.size, biome: DRAW_BIOME }, { dpr: DPR }); // the code bake: always there as the fallback
@@ -3933,6 +3934,7 @@
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
       spawnTick: () => { spawnTick(); return creatures.length; }, howto: () => ({ open: !$('howto').hidden, auto: howtoStat.auto }), arrival: () => Object.assign({}, arrival), launchPad: () => Math.round(VH * 0.6), // R4-D2 hooks
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },
+      shapes: () => { const sig = (list) => { const m = {}; list.forEach((o) => { const k = Object.keys(o).join(','); m[k] = (m[k] || 0) + 1; }); return m; }; return { creatures: sig(creatures), bolts: sig(bolts), deadPool: sig(deadPool) }; }, // cycle 9 pool-shape rule (field lists only, test hook)
       // PI2: the graphics tier and the access state (sparks = glints drawn in the last frame, -1 when uncapped)
       gfx: () => ({ tier: GFX.tier, low: GFX_LOW, dpr: DPR, sparks: GFX.sparks === Infinity ? null : GFX.sparks, ghosts: deadPool.length, terrainAnim: GFX.terrainAnim,
         aiHz: GFX.aiHz, fogHz: GFX.fogHz, shadows: GFX.shadows, still: STILL, sparksDrawn: sparksDrawn, partySteps: partySteps, fogCalls: fogCalls, cap: CAP }),
