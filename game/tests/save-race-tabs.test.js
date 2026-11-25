@@ -189,7 +189,7 @@ const stored = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getIt
     });
     check('town merge-on-write: fields from two tabs are all kept', r.name === 'ADMINrace' && r.species === 'hero_mage' && r.coins === 6, JSON.stringify(r));
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'main.js'), 'utf8');
-    check('main.js writeSave still merges a fresh loadSave() into every write', /setItem\(SAVE_KEY, JSON\.stringify\(\{ \.\.\.loadSave\(\), \.\.\.partial \}\)\)/.test(src));
+    check('main.js writeSave still merges a fresh loadSave() into every write', /setItem\(SAVE_KEY, JSON\.stringify\(\{ \.\.\.loadSave\(\), (\.\.\.\(SAVE_PENDING \|\| \{\}\), )?\.\.\.partial \}\)\)/.test(src));
     await ctx.close();
   }
   await browser.close();

@@ -414,7 +414,7 @@ body #rw-zone .rw-zname, body #rw-zone .rw-arrow, body #rw-zone .rw-event { font
 a#mm-daily-btn { z-index: 32; left: calc(62px + env(safe-area-inset-left, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
 body.touch-device a#mm-daily-btn { left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(172px + env(safe-area-inset-bottom, 0px)); }
 @media (pointer: coarse) { a#mm-daily-btn { left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(172px + env(safe-area-inset-bottom, 0px)); } }
-body:has(#realm-overlay [role="dialog"]:not(.hidden), #realm-backpack:not(.hidden), #realm-board:not(.hidden), #realm-shop:not(.hidden), #realm-hero:not(.hidden), #mm-summary:not(.hidden)) a#mm-daily-btn { visibility: hidden; }
+body:has(#realm-overlay [role="dialog"]:not(.hidden):not([hidden]), #realm-backpack:not(.hidden), #realm-board:not(.hidden), #realm-shop:not(.hidden), #realm-hero:not(.hidden), #mm-summary:not(.hidden)) a#mm-daily-btn { visibility: hidden; }
 
 /* ---------- MMNav on the Realm (NAV-AUDIT 4.1, slice C) ----------
    mm-nav.js moves #realm-hud right by --mm-nav-reserve (class mm-nav-avoid), so the corner button never sits on the HP bar or the

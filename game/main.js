@@ -6938,6 +6938,7 @@ class TownScene extends Phaser.Scene {
       active: false,
       moving: false,
       idle: null,
+      walking: false, // cyc10 coord: declared up front (the strip animals set it on their first walk; pool-shape rule)
     };
     if (!move || move === 'still') {
       // Rooted plants sway, water-bound ones (and sessile sea life) bob.
