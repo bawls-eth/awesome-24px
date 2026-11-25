@@ -50,7 +50,6 @@ const RM_BOSS_HP = 120; const RM_BOSS_HP_TIER = 40;
 const RM_HAZARD_R = 46;
 const RM_LAVA_DAMAGE = 5; const RM_LAVA_TICK = 0.7; const RM_ICE_SLOW = 0.55;
 const RM_DRIFTER_COLORS = { wisp: '#8fb8ff', cinder: '#ffa04a', puff: '#eaf6ff' };
-const RM_DEATH_PENALTY = 0; // dying never costs banked shards any more: you get a Survivor's Cache item instead (see _deathBonus)
 const RM_SHOP_MULT = 8; // shop price = the item's sell value x this
 const RM_COMBINE_COUNT = 3; // identical items (same gear, same rarity) fuse into one of the next rarity
 const RM_SHOP_UNLOCK = [0, 2, 5]; // best wave needed before the shop stocks Common / Uncommon / Rare
@@ -89,6 +88,15 @@ function rmHueRotate(c, S, deg) {
 const RM_HIT_RGB = '232,100,60'; const RM_HIT_EDGE_A = 0.42; const RM_EB_SLOW = 190; const RM_EB_CORE_R = 2.0;
 const RM_FIRE_RANGE = 0.95; // world mode: an enemy fires only on screen and within this x the view's half-diagonal of the player
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
+// cyc8 L: ONE factory per pooled kind that is also grown later (setWorld grows the enemy and enemy-bolt pools): objects from two
+// different literals never share a hidden shape, even with the same fields. Every field the object ever gets is declared here.
+const RM_NEW_ENEMY = () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0,
+      provT: 0, slowT: 0, slowF: 1, boneT: 0, status: null, _stm: null, _stNext: Infinity, _stAcc: 0, fireMul: 1, _pipAt: -9, _pipN: 0, _pipMore: 0, _tg: 0, _tgW: 0, _tgP: 0, _tgA: 0, dg: null, _at: undefined,
+      spdMul: 1, dmgMul: 1, xpMul: 1, shardMul: 1, art: null, bossArt: null, zid: -1, evid: null, campId: null, bossName: null, bossTier: 0, diff: null, zone: undefined, rad: 0, cre: null, tame: null,
+      _px: 0, _py: 0, _mvT: -9, _dir: 'down', _flip: false, _key: '', _t0: 0, _pcd: 0, _atSeen: -9, _lt: 0, // enemy art state: written by the `_at === undefined` guard before any read (_lt 0: `e.t < e._lt` is false, as with no value)
+      _bk: undefined, _bn: undefined, _bt: -9, _ht: -9, _pcd2: 0, _pfl: 0, _hSeen: -9, _aSeen: -9, _bSeen: -9, _pipIds: undefined, // boss art state (same guard) + status pips
+      tier: undefined, _sl: undefined, rushStep: undefined, elite: undefined, did: undefined, lx: undefined, ly: undefined }); // set by the world / dungeon on some enemies only (never reset by spawnEnemy: unchanged)
+const RM_NEW_EBOLT = () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null, ok: null, oa: null, on: null, rl: 0, dm: 1 }); // ok/oa/on: the owner's type, art id and boss name; rl/dm: set by fireEnemyBullet on every shot
 
 // ---- progression (B2) ----
 const RM_MAX_LEVEL = 20;
@@ -708,15 +716,23 @@ class RealmArena {
 
   _makePools() {
     const make = (n, f) => Array.from({ length: n }, f);
-    this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ws: null, st: 0, age: 0, cx: 0, cy: 0, ph: 0, bc: 0, ch: 0, ux: 1, uy: 0, sp: 0, bk: false, tx: 0, ty: 0, lb: 0, ho: 0, sq: 0 })); // ws..ho: weapon-style bolt state (setHeroWeapon); sq: splashed (G11)
-    this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null, ok: null, oa: null, on: null })); // ok/oa/on: the owner's type, art id and boss name (cyc7 fall card)
-    this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
+    this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ws: null, st: 0, age: 0, cx: 0, cy: 0, ph: 0, bc: 0, ch: 0, ux: 1, uy: 0, sp: 0, bk: false, tx: 0, ty: 0, lb: 0, ho: 0, sq: 0, cr: 0, dmg: 0, own: 0, pr: 0, hn: 0, h0: -1, h1: -1, h2: -1 })); // ws..ho: weapon-style bolt state (setHeroWeapon); sq: splashed (G11); cr..h2: set by firePlayerBulletFrom on every shot (cyc8 L: declared here, see the note on the enemy pool)
+    this.eBullets = make(RM_POOL.eBullets, RM_NEW_EBOLT); // ok/oa/on: the owner's type, art id and boss name (cyc7 fall card); rl/dm: set by fireEnemyBullet on every shot
+    // cyc8 L: every field a pooled object ever gets is declared in its pool literal. Before, an enemy left the pool with 16 fields and
+    // was given about 45 more one by one (spawnEnemy, the world, the first draw, the first hit...), a bolt 8 more, a text 2 more.
+    // Each of those additions gives the object a new hidden shape, and the browser throws away its optimised code for every function
+    // that had assumed the old shape: _updateBullets, _updateEnemies, _buildHash, _draw... were sent back to the interpreter again
+    // and again while new enemies and bolts came into use (V8 trace: 17 x "dependent code ... changed" on _updateBullets in 12 s),
+    // and interpreted bullet maths allocates a number object per operation: that was the "13.5 KB per frame in _updateBullets while
+    // the hero fires and walks". The values below are exactly what spawnEnemy / the first-draw guards write (undefined where the old
+    // code relied on "not set yet"), so nothing reads differently; only the shape is fixed from the start.
+    this.enemies = make(RM_POOL.enemies, RM_NEW_ENEMY);
     this.drifters = make(RM_POOL.drifters, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, turn: 0, kind: 'wisp' }));
     this.hazards = make(RM_POOL.hazards, () => ({ active: false, x: 0, y: 0, kind: 'lava', tick: 0 }));
     this.biome = 0; this.clock = 0; this.bossT0 = 0; this._speedMul = 1;
     this.particles = make(RM_POOL.particles, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: '#fff', size: 3 }));
-    this.texts = make(RM_POOL.texts, () => ({ active: false, x: 0, y: 0, vy: 0, life: 0, text: '', color: '#fff', ico: '', ir: 0, plain: '' }));
-    this.bags = make(RM_POOL.bags, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, id: '', r: 0 }));
+    this.texts = make(RM_POOL.texts, () => ({ active: false, x: 0, y: 0, vy: 0, life: 0, text: '', color: '#fff', ico: '', ir: 0, plain: '', outline: '', notice: false }));
+    this.bags = make(RM_POOL.bags, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, id: '', r: 0, gear: null, tier: undefined, lifetime: Infinity, waitRoom: false, fb: undefined })); // cyc8 L: gear..fb declared here (were added on the first drop; fb by the world's first-bag rule)
     this.abilityCd = [0, 0, 0, 0];
     this.shield = { hits: 0, t: 0 };
     this.overdriveT = 0;
@@ -2404,8 +2420,8 @@ class RealmArena {
     this._solidAt = fn(opts.solidAt); this._shotSolidAt = fn(opts.shotSolidAt) || this._solidAt;
     const pl = opts.pools && typeof opts.pools === 'object' ? opts.pools : {};
     const grow = (pool, want, max, f) => { const k = Math.min(max, n(want, 0)); while (pool.length < k) pool.push(f()); };
-    grow(this.enemies, pl.enemies, 96, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
-    grow(this.eBullets, pl.eBullets, 900, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null, ok: null, oa: null, on: null }));
+    grow(this.enemies, pl.enemies, 96, RM_NEW_ENEMY); // cyc8 L: the same factory as _makePools (a second literal here gave the extra enemies a different hidden shape)
+    grow(this.eBullets, pl.eBullets, 900, RM_NEW_EBOLT);
     const p = this.player; const R = RM_PLAYER.r;
     p.x = Math.max(R, Math.min(this.world.w - R, p.x)); p.y = Math.max(R, Math.min(this.world.h - R, p.y));
     this._camStep(-1); this._calcStats(); // the world hero scale depends on it
@@ -3463,7 +3479,6 @@ class RealmArena {
   // ---------- ID-06 assist (MMAssist, device pref 'mm-assist'): damage taken + aim help. Assisted runs still record bests, tagged ----------
   _assistOn() { return typeof MMAssist !== 'undefined' && !!MMAssist && typeof MMAssist.read === 'function'; }
   _assistPref() { try { return MMAssist.read(localStorage); } catch (e) { return { dmg: 100, aim: 0 }; } }
-  refreshAssist() { this._wireRefresh(); if (this.run && this._assistOn() && MMAssist.isAssisted(this._assistPref())) this.run.assisted = true; return this.assistInfo(); }
   assistInfo() { const a = this._assistOn() ? this._assistPref() : { dmg: 100, aim: 0 }; return { dmg: a.dmg, aim: a.aim, cone: this._aimCone || 14, runAssisted: !!(this.run && this.run.assisted), bestWaveA: !!this.save.bestWaveA, bossBestTA: !!this.save.bossBestTA }; }
   // A new best keeps the run's tag; an unassisted run that ties the best clears it (the same score, now without assist).
   _setBestWave(w) {

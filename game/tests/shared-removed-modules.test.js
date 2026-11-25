@@ -22,5 +22,10 @@ for (const f of files) { const s = fs.readFileSync(f, 'utf8'); const m = re.exec
 check('no .js / .html / .json under game/ names a removed module or its global', hits.length === 0, hits.join('; '));
 for (const keep of ['mm-bounties', 'mm-labyrinth', 'mm-mini-art', 'rules-check', 'mm-island'])
   check(keep + '.js is still there (kept by decision)', fs.existsSync(path.join(ROOT, 'shared', keep + '.js')));
+// cycle 8 L: dead code found in cycle 7 stays gone (a constant that was never read, a method that was never called).
+const DEAD = ['RM_DEATH_' + 'PENALTY', 'refresh' + 'Assist'], dead = [];
+for (const f of files) { const s = fs.readFileSync(f, 'utf8'); for (const w of DEAD) if (s.includes(w)) dead.push(path.relative(ROOT, f) + ': ' + w); }
+check('no .js / .html / .json under game/ names the removed dead Realm code', dead.length === 0, dead.join('; '));
+for (const live of ['_wireRefresh(', 'assistInfo(', '_deathBonus(']) check('realm.js still has ' + live + ') (what the dead code sat next to is untouched)', fs.readFileSync(path.join(ROOT, 'realm.js'), 'utf8').includes(live));
 console.log(failed ? failed + ' FAILED' : 'ALL PASSED');
 process.exit(failed ? 1 : 0);
