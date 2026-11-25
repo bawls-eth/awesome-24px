@@ -92,7 +92,7 @@ const { launch, scene, check, done } = require('./helpers');
   });
   check('phone: the time-of-day badge fits beside the health badge and overlaps nothing (incl. the exit hint)', ph.inside && ph.overlaps === 0 && /Day|Dawn/.test(ph.text), JSON.stringify(ph));
   const keys = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('pixeltown-save-v1') || '{}')).sort().join(','));
-  check('save format: no new keys were added by day/night or lava (time of day is not saved)', !/timeOfDay|clock|lava|dayTime|cave(Time|Light)/i.test(keys) && keys === 'achievementsUnlocked,caveSeed,frame,lastLoginDate,lifetimeStats,loginStreak,name,resources,species', keys);
+  check('save format: no new keys were added by day/night or lava (time of day is not saved)', !/timeOfDay|clock|lava|dayTime|cave(Time|Light)/i.test(keys) && keys === 'achievementsUnlocked,caveSeed,frame,lastLoginDate,lastVisitDate,lifetimeStats,loginStreak,name,resources,species,visitDays', keys); // cycle 8: lastVisitDate + visitDays are the approved ID-09 days-in-town keys (written on Town load), not day/night keys
   if (process.env.SHOTS) { await scene(page, (s) => { const u = s.underground; u.setTime(0.5); u.physicsEnabled = false; u.rig.position.set(9, -1, 6); u.yaw = -Math.PI / 2 + 0.6; u.pitch = 0.1; for (let i = 0; i < 90; i++) u._update(1 / 60); }); await page.waitForTimeout(700); await page.screenshot({ path: process.env.SHOTS + '/cave-dusk-phone.png' }); }
   check('no console errors (phone)', errors.length === 0, errors.join('|'));
   await browser.close();
