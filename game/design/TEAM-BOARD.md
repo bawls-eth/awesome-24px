@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### Cycle 7 Mocha v4 variants
+Mocha v4 WIP: added vil_coolcats_var0..8 (nine 128x128 idle-down palette samples) and palette.json named ramps / source-to-target maps for all colors present in idle-down. Existing 13 animation strips untouched. Original idle frame decoded, 4x pixel blocks and hard alpha checked; native 32x32 silhouette retained, baseline 119 for every sample, 12 opaque colors per PNG. Variant sheet reviewed at 1x and 3x on all three required backgrounds; no old-avatar comparison, animated walk grid, ankle repair, extra animation-only color mapping, runtime variant wiring, independent PNG decode of new blobs or full repository audit/tests yet. Git DNS unavailable; connector push only. No code changes. Do not merge yet.
+
 ### Cycle 7 Mocha v3 emotes
 Cycle 7 Mocha v3 emote redo: three strips/10 frames, all distinct within strip; happy has changing head/arm pose, wave raised beside head in f2/f4, sleep lying with subtle breathing. Native bounds and baseline 119 passed; 4x hard alpha construction. New head matches original tabby palette but facial proportions differ slightly. Sleep breathing subtle. Previous v2 profile ankle attachment needs polish; nine recolors, animated grid, comparison panel, independent PNG decode/hash and full audit remain outstanding. No code changes.
 

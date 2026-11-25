@@ -221,6 +221,168 @@
         "x": 64,
         "y": 119
       }
+    },
+    {
+      "id": "vil_coolcats_var0",
+      "path": "villagers/coolcats/vil_coolcats_var0.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 0,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var1",
+      "path": "villagers/coolcats/vil_coolcats_var1.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 1,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var2",
+      "path": "villagers/coolcats/vil_coolcats_var2.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 2,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var3",
+      "path": "villagers/coolcats/vil_coolcats_var3.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 3,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var4",
+      "path": "villagers/coolcats/vil_coolcats_var4.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 4,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var5",
+      "path": "villagers/coolcats/vil_coolcats_var5.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 5,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var6",
+      "path": "villagers/coolcats/vil_coolcats_var6.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 6,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var7",
+      "path": "villagers/coolcats/vil_coolcats_var7.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 7,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_coolcats_var8",
+      "path": "villagers/coolcats/vil_coolcats_var8.png",
+      "category": "villager",
+      "species": "coolcats",
+      "action": "variant",
+      "dir": "down",
+      "variant": 8,
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
     }
   ]
 }

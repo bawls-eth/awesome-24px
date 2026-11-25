@@ -255,5 +255,119 @@
       }
     ],
     "limitations": "Cycle 7 Mocha v3 emote redo: three strips/10 frames, all distinct within strip; happy has changing head/arm pose, wave raised beside head in f2/f4, sleep lying with subtle breathing. Native bounds and baseline 119 passed; 4x hard alpha construction. New head matches original tabby palette but facial proportions differ slightly. Sleep breathing subtle. Previous v2 profile ankle attachment needs polish; nine recolors, animated grid, comparison panel, independent PNG decode/hash and full audit remain outstanding. No code changes."
+  },
+  "revision4": {
+    "status": "WIP audit not run",
+    "checks": [
+      {
+        "id": "vil_coolcats_var0",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "63c3ba6ca2a35e9a293680525edb8f622ee952e9"
+      },
+      {
+        "id": "vil_coolcats_var1",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "ac1c414087b5d5a76b31123e4af8d22626b313a8"
+      },
+      {
+        "id": "vil_coolcats_var2",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "20df134ac1570a07088a180fb5ad1ba6823680b0"
+      },
+      {
+        "id": "vil_coolcats_var3",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "69d8f14bf1861d17d65bb6a9095d6ba167b6a042"
+      },
+      {
+        "id": "vil_coolcats_var4",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "a4eb53f0b8fd769fbaaafb2789af59173cce4895"
+      },
+      {
+        "id": "vil_coolcats_var5",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "8a6acbbea4642178745b3d1713fe3f0e2c0735e0"
+      },
+      {
+        "id": "vil_coolcats_var6",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "fb4fb831d4d2c10f1d1721a2c7f7014bdfa18a71"
+      },
+      {
+        "id": "vil_coolcats_var7",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "c67d364b9b4e04a32b69fef43b5ed7cebd9f1c5d"
+      },
+      {
+        "id": "vil_coolcats_var8",
+        "dimensions": [
+          128,
+          128
+        ],
+        "native_grid": 4,
+        "hard_alpha": true,
+        "lowest_opaque_row": 119,
+        "colors": 12,
+        "blob_sha": "284aaf0509e672f9fc82ac1cc78fad24f6e92f79"
+      }
+    ],
+    "limitations": "Mocha v4 WIP: added vil_coolcats_var0..8 (nine 128x128 idle-down palette samples) and palette.json named ramps / source-to-target maps for all colors present in idle-down. Existing 13 animation strips untouched. Original idle frame decoded, 4x pixel blocks and hard alpha checked; native 32x32 silhouette retained, baseline 119 for every sample, 12 opaque colors per PNG. Variant sheet reviewed at 1x and 3x on all three required backgrounds; no old-avatar comparison, animated walk grid, ankle repair, extra animation-only color mapping, runtime variant wiring, independent PNG decode of new blobs or full repository audit/tests yet. Git DNS unavailable; connector push only. No code changes. Do not merge yet."
   }
 }
