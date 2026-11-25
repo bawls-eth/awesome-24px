@@ -1,0 +1,443 @@
+{
+  "status": "WIP, audit not run",
+  "local_blockers": 0,
+  "total_strips": 12,
+  "total_frames": 60,
+  "repository_audit": "not run",
+  "tests": "not run",
+  "checks": [
+    {
+      "id": "shagtusk_saddle_idle_down",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "frames": 4,
+      "distinct_frames": 3,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ],
+      "git_blob_sha": "d830c4e9be68c73a78b5bb9f77ce9189184635ae",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "shagtusk_saddle_move_down",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "frames": 6,
+      "distinct_frames": 4,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 92
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        }
+      ],
+      "git_blob_sha": "845245b3ac7cd4ab9dd0476b021fec7c23bb1c54",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "shagtusk_saddle_idle_up",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "frames": 4,
+      "distinct_frames": 3,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ],
+      "git_blob_sha": "e6794e2d843550b80ff0f997677ef5b7e5deb813",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "shagtusk_saddle_move_up",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "frames": 6,
+      "distinct_frames": 5,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 92
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ],
+      "git_blob_sha": "b6f4c6fc14b92727b7fec152e028488ca2c3de6f",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "shagtusk_saddle_idle_right",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "frames": 4,
+      "distinct_frames": 3,
+      "opaque_colors": 11,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 148,
+          "y": 120
+        },
+        {
+          "x": 148,
+          "y": 116
+        },
+        {
+          "x": 148,
+          "y": 112
+        },
+        {
+          "x": 148,
+          "y": 116
+        }
+      ],
+      "git_blob_sha": "b738c453ee7b85c745bf50030ec5c8c9fe00d8d2",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "shagtusk_saddle_move_right",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "frames": 6,
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 148,
+          "y": 120
+        },
+        {
+          "x": 148,
+          "y": 112
+        },
+        {
+          "x": 148,
+          "y": 108
+        },
+        {
+          "x": 148,
+          "y": 116
+        },
+        {
+          "x": 148,
+          "y": 120
+        },
+        {
+          "x": 148,
+          "y": 116
+        }
+      ],
+      "git_blob_sha": "e33daed92850f4ca8be08de887a9780985154d7a",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_saddle_idle_down",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "frames": 4,
+      "distinct_frames": 3,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ],
+      "git_blob_sha": "1620742634ae9cdea6424e1f55012bc802021745",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_saddle_move_down",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "frames": 6,
+      "distinct_frames": 6,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 200,
+          "y": 96
+        },
+        {
+          "x": 196,
+          "y": 92
+        },
+        {
+          "x": 196,
+          "y": 100
+        },
+        {
+          "x": 196,
+          "y": 104
+        },
+        {
+          "x": 196,
+          "y": 100
+        }
+      ],
+      "git_blob_sha": "a2d719216856a6df98b0f53d6ba102b59f26a156",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_saddle_idle_up",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "frames": 4,
+      "distinct_frames": 3,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ],
+      "git_blob_sha": "248ebcd9893f9c528bfac4dd6a8d22a6d4da8ede",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_saddle_move_up",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "frames": 6,
+      "distinct_frames": 6,
+      "opaque_colors": 9,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 200,
+          "y": 96
+        },
+        {
+          "x": 196,
+          "y": 92
+        },
+        {
+          "x": 196,
+          "y": 100
+        },
+        {
+          "x": 196,
+          "y": 104
+        },
+        {
+          "x": 196,
+          "y": 100
+        }
+      ],
+      "git_blob_sha": "864d1d0755d9b84e24a3eb96095d6aa62b3f971f",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_saddle_idle_right",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "frames": 4,
+      "distinct_frames": 4,
+      "opaque_colors": 11,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 168,
+          "y": 100
+        },
+        {
+          "x": 168,
+          "y": 96
+        },
+        {
+          "x": 168,
+          "y": 92
+        },
+        {
+          "x": 172,
+          "y": 96
+        }
+      ],
+      "git_blob_sha": "b1b7426a60a8249b4976f4b1800045e18a2f964c",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "sabrefang_saddle_move_right",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "frames": 6,
+      "distinct_frames": 6,
+      "opaque_colors": 11,
+      "transparent_cell_corners": true,
+      "hard_alpha": true,
+      "seat": [
+        {
+          "x": 168,
+          "y": 100
+        },
+        {
+          "x": 168,
+          "y": 92
+        },
+        {
+          "x": 164,
+          "y": 88
+        },
+        {
+          "x": 168,
+          "y": 96
+        },
+        {
+          "x": 172,
+          "y": 100
+        },
+        {
+          "x": 172,
+          "y": 96
+        }
+      ],
+      "git_blob_sha": "9414b20ccf47062ec647bbcb4bbe50386e83a77f",
+      "git_blob_sha_verified": true
+    }
+  ],
+  "limitations": "B-03 saddle overlays submitted: Shagtusk and Sabrefang, six strips per mount (idle/move x down/up/right), 60 cells total. Same frame sizes, timing, ground anchors and per-frame seat coordinates as PRs #64 and #65. Distinct front pommel, rear cantle and right profile with stirrup, warm leather/cargo pouches vs frost-blue blanket. Separate overlays, no rider or body pixels. Native bounds, hard alpha, palette and exact Git blob hashes checked. Repeated poses with equal seat coordinates can be intentional. Overlay lowest opaque row is not the creature ground anchor. No composite mount rendering or in-game rider fit tested; seats are provisional. Review both creature PRs first; remeasure seats if integration changes art. Full repo audit not run (no local checkout). Preview shows overlays alone; b04 comparison in Markdown. No code/tests/Firebase changes."
+}

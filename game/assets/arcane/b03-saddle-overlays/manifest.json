@@ -1,0 +1,497 @@
+{
+  "batch": "b03-saddle-overlays",
+  "assets": [
+    {
+      "id": "shagtusk_saddle_idle_down",
+      "path": "creatures/shagtusk/shagtusk_saddle_idle_down.png",
+      "category": "mount",
+      "class": "shagtusk",
+      "creature": "shagtusk",
+      "enemy": "shagtusk",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "shagtusk_saddle_move_down",
+      "path": "creatures/shagtusk/shagtusk_saddle_move_down.png",
+      "category": "mount",
+      "class": "shagtusk",
+      "creature": "shagtusk",
+      "enemy": "shagtusk",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 92
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        }
+      ]
+    },
+    {
+      "id": "shagtusk_saddle_idle_up",
+      "path": "creatures/shagtusk/shagtusk_saddle_idle_up.png",
+      "category": "mount",
+      "class": "shagtusk",
+      "creature": "shagtusk",
+      "enemy": "shagtusk",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "shagtusk_saddle_move_up",
+      "path": "creatures/shagtusk/shagtusk_saddle_move_up.png",
+      "category": "mount",
+      "class": "shagtusk",
+      "creature": "shagtusk",
+      "enemy": "shagtusk",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 92
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "shagtusk_saddle_idle_right",
+      "path": "creatures/shagtusk/shagtusk_saddle_idle_right.png",
+      "category": "mount",
+      "class": "shagtusk",
+      "creature": "shagtusk",
+      "enemy": "shagtusk",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 148,
+          "y": 120
+        },
+        {
+          "x": 148,
+          "y": 116
+        },
+        {
+          "x": 148,
+          "y": 112
+        },
+        {
+          "x": 148,
+          "y": 116
+        }
+      ]
+    },
+    {
+      "id": "shagtusk_saddle_move_right",
+      "path": "creatures/shagtusk/shagtusk_saddle_move_right.png",
+      "category": "mount",
+      "class": "shagtusk",
+      "creature": "shagtusk",
+      "enemy": "shagtusk",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 148,
+          "y": 120
+        },
+        {
+          "x": 148,
+          "y": 112
+        },
+        {
+          "x": 148,
+          "y": 108
+        },
+        {
+          "x": 148,
+          "y": 116
+        },
+        {
+          "x": 148,
+          "y": 120
+        },
+        {
+          "x": 148,
+          "y": 116
+        }
+      ]
+    },
+    {
+      "id": "sabrefang_saddle_idle_down",
+      "path": "creatures/sabrefang/sabrefang_saddle_idle_down.png",
+      "category": "mount",
+      "class": "sabrefang",
+      "creature": "sabrefang",
+      "enemy": "sabrefang",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "sabrefang_saddle_move_down",
+      "path": "creatures/sabrefang/sabrefang_saddle_move_down.png",
+      "category": "mount",
+      "class": "sabrefang",
+      "creature": "sabrefang",
+      "enemy": "sabrefang",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 200,
+          "y": 96
+        },
+        {
+          "x": 196,
+          "y": 92
+        },
+        {
+          "x": 196,
+          "y": 100
+        },
+        {
+          "x": 196,
+          "y": 104
+        },
+        {
+          "x": 196,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "sabrefang_saddle_idle_up",
+      "path": "creatures/sabrefang/sabrefang_saddle_idle_up.png",
+      "category": "mount",
+      "class": "sabrefang",
+      "creature": "sabrefang",
+      "enemy": "sabrefang",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "sabrefang_saddle_move_up",
+      "path": "creatures/sabrefang/sabrefang_saddle_move_up.png",
+      "category": "mount",
+      "class": "sabrefang",
+      "creature": "sabrefang",
+      "enemy": "sabrefang",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 200,
+          "y": 96
+        },
+        {
+          "x": 196,
+          "y": 92
+        },
+        {
+          "x": 196,
+          "y": 100
+        },
+        {
+          "x": 196,
+          "y": 104
+        },
+        {
+          "x": 196,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "sabrefang_saddle_idle_right",
+      "path": "creatures/sabrefang/sabrefang_saddle_idle_right.png",
+      "category": "mount",
+      "class": "sabrefang",
+      "creature": "sabrefang",
+      "enemy": "sabrefang",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 168,
+          "y": 100
+        },
+        {
+          "x": 168,
+          "y": 96
+        },
+        {
+          "x": 168,
+          "y": 92
+        },
+        {
+          "x": 172,
+          "y": 96
+        }
+      ]
+    },
+    {
+      "id": "sabrefang_saddle_move_right",
+      "path": "creatures/sabrefang/sabrefang_saddle_move_right.png",
+      "category": "mount",
+      "class": "sabrefang",
+      "creature": "sabrefang",
+      "enemy": "sabrefang",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 168,
+          "y": 100
+        },
+        {
+          "x": 168,
+          "y": 92
+        },
+        {
+          "x": 164,
+          "y": 88
+        },
+        {
+          "x": 168,
+          "y": 96
+        },
+        {
+          "x": 172,
+          "y": 100
+        },
+        {
+          "x": 172,
+          "y": 96
+        }
+      ]
+    }
+  ]
+}
