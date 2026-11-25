@@ -2212,6 +2212,14 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc6-art-realm-hit-cue.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc6-art-isles-ice-hole.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc4-ui-assist-settings.test.js": {
     "class": "browser",
     "tier": "full"

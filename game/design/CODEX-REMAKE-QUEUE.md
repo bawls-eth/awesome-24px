@@ -651,3 +651,43 @@ eat) at the same new height (+-1 px between frames for bob only); feet stay on t
 colour-matched outline, 3-4 tone ramp, top-left light (b04 bar). Deliver with a contact sheet next to `puffcap_idle_down` and the hero
 at 1x and 3x. On delivery G adds a check that reads `stripSize` and pins 32 <= h <= 48 for all three.
 Then (lower): the jungle small set down toward 36-40 (chompbill 46, canopy_glider 46, fernraptor 52), same rules.
+
+## UPDATE 2026-11-25 (cycle 6, Claude G): review of `codex/b03-glacier-shellback` v2 (83e4d6e), NOT merged
+`git fetch origin`: the only new codex commit since cycle 4 is 83e4d6e (Glacier Shellback v2). Every other `codex/*` branch is unchanged
+since its earlier review. Contact sheet of all 60 cells with the y=231 baseline: `beta/img/cyc6-art-codex-shellback-v2.jpg`.
+
+Numbers (decoded from the PNGs in the branch, own script): 12 strips, frame counts match the manifest (4/6/5/5), 256 cells, anchor
+(128,231) in every entry, lowest opaque row = 231 in all 60 frames, alpha 0/255 only (0 soft pixels), every 4x4 block uniform (true 4x
+pixel grid), 11-13 colours per strip, dark outline in every view. `node game/tools/art-audit/run.js` NOT run on it (it reads INDEX.json in
+the working tree and I do not stage unaccepted art). Standing height 196-204 px in the cell = 49-51 native, fine for M64.
+
+What is now right (keep it): the up view is a true back (no face, tail visible, 4 different idle cells); the right view finally has a
+head and neck in profile with one eye; attack down has an anticipation frame (head up) and an open-jaw strike frame; the last two
+death frames lie on the ground.
+
+REDO (two things, both against ART-HANDOFF section 3 rules 1 and 3):
+1. **Right view body is still the front view.** Only the head was turned. The shell is the same tall, symmetric dome with the crest
+   spike centred over the body, and all four legs stand in one even row exactly like `idle_down`. A true side profile of a tortoise:
+   the shell is a long, LOW dome (about 1.4-1.6x wider than tall, the top line sloping down toward the tail), the crest spikes run along
+   the ridge from front to back (not a single crown on top), the near front leg and near back leg are drawn full in front of the shell
+   rim and the far legs only as a darker sliver behind them, the plastron (belly plate) shows as a flat band under the shell rim, and the
+   tail sticks out at the back. Target bbox for `idle_right`: about 220-236 wide x 150-170 tall (now 228 x 192). Same for move / attack /
+   death right. In `move_right` the near pair and far pair must alternate (near-front with far-back), with a visible lift of each foot.
+   In `attack_right` the head and neck must LUNGE forward 12-20 px on the strike frame (now the head only opens its jaw in place).
+2. **Death collapses in one step, it does not fall.** Frame 3 (standing, 176 px) jumps straight to frame 4 (lying, 120 px), and frames
+   4-5 read as the standing sprite squashed vertically ("shrink"). Required, 5 frames: f1 hit recoil (head pulled back, shell tilts
+   ~10 deg), f2 legs buckle on one side so the shell TIPS toward the camera-right side (shell top moves 12-20 px sideways and down,
+   not just down), f3 the shell lands on its side or rim (one side of the shell touches the ground, the other edge in the air), f4 the
+   shell rocks back and settles low, legs splayed out flat, head on the ground with the eye closed (a line, not the open eye), f5 the
+   same lying pose held (it is the frame the code holds before the dissolve). The lying silhouette must be WIDER than the standing one
+   (shell on its rim / flat), not the same width with less height. Same for down / up / right.
+Nits (fix while redrawing): `move_down` legs barely alternate (2 of 6 frames look the same); the attack down strike frame could push
+the head 4-8 px toward the camera (lower on the screen) so it reads at 48 px on a phone.
+
+Deliver on the same branch with a side-by-side panel (old v2 right / new right next to `puffcap_idle_down`), and run
+`node game/tools/art-audit/run.js` (0 needs-redo) before asking. On acceptance G stages it and the icicle bat wiring together.
+
+Code this cycle (no Codex ask): Realm hit flash is now a warm palette red edge ellipse + slow enemy bullets have a trail and a bright
+core (`?hitfx=0` = old); Isles tundra water next to ice gets a code ice ledge (`?icehole=0`). R05 PNG tundra tiles are still welcome but
+drop further in priority; the jungle small-creature W-06 heights (chompbill 46, canopy_glider 46, fernraptor 52 -> 36-40) still need a
+redraw (not solvable in code: non-integer scale).

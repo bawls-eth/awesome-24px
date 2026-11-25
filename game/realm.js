@@ -62,6 +62,11 @@ const RM_BOLT_R = { player: 5, enemy: 6 };
 const RM_AF_RANGE = 380; // AR auto-fire reach (logical px): about the player's bolt range, so it never fires at what it cannot hit
 const RM_EB_HUES = [['#ff4f6d', '#ffd0d8'], ['#b46bff', '#ecdcff'], ['#ffa62b', '#fff0c8']]; // aimed (red), spiral (violet), ring (orange)
 const RM_EB_DRAW = 320;
+// cyc6 G hit feedback: the hit vignette is a warm palette red (#e8643c, about 0.4 alpha at the screen edge) in an ellipse that follows
+// the view's aspect, so it reads over blue water and never tints the ground under the hero (the old radial magenta covered ~70% of a
+// phone screen); slow enemy bullets (speed < RM_EB_SLOW) carry a 2-dot motion trail and every enemy bullet a larger white core, so a
+// moving shot no longer reads as red litter on the ground. `?hitfx=0` restores the old look (A/B).
+const RM_HIT_RGB = '232,100,60'; const RM_HIT_EDGE_A = 0.42; const RM_EB_SLOW = 190; const RM_EB_CORE_R = 2.6;
 const RM_FIRE_RANGE = 0.95; // world mode: an enemy fires only on screen and within this x the view's half-diagonal of the player
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
@@ -483,7 +488,7 @@ class RealmArena {
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
     this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = rmKnownOf(this.save.items); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
-    this.dungeon = null; this.fixedWorld = null; this._dv = null; this._dvOff = rmFlagOff('dview'); // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
+    this._hitFxOff = rmFlagOff('hitfx'); this._ebTrails = 0; this.dungeon = null; this.fixedWorld = null; this._dv = null; this._dvOff = rmFlagOff('dview'); // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
     this.fireBudget = null; this._ebLive = 0; this._ebCapped = 0; // world fire budget {cap, travel} (PLAYTEST-REVIEW-2 #2), set by realm-world.js; null = today's bullets
@@ -1387,8 +1392,11 @@ class RealmArena {
       const R = RM_BOLT_R.enemy;
       g.fillStyle = '#1a0812'; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
       g.fillStyle = hue; g.beginPath(); g.arc(8, 8, R - 1.6, 0, Math.PI * 2); g.fill();
-      g.fillStyle = tint; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill();
+      if (this._hitFxOff) { g.fillStyle = tint; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill(); return; }
+      g.fillStyle = tint; g.beginPath(); g.arc(8, 8, RM_EB_CORE_R + 1, 0, Math.PI * 2); g.fill(); // cyc6: a tint ring round a bright white core
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(8, 8, RM_EB_CORE_R, 0, Math.PI * 2); g.fill();
     }));
+    this.sprites.ebCore = mk(8, 8, (g) => { g.fillStyle = '#ffffff'; g.beginPath(); g.arc(4, 4, RM_EB_CORE_R, 0, Math.PI * 2); g.fill(); }); // cyc6: the bright core laid over slow enemy bolt art
     // Enemies: chunky pixel creatures with a bold dark outline, ~36px.
     const body = (g, color, shape) => {
       g.fillStyle = '#1a0f2a';
@@ -1491,6 +1499,28 @@ class RealmArena {
     const rot = (Math.round(Math.atan2(b.vy, b.vx) / (Math.PI / 8)) + 16) & 15;
     const cv = this._boltCv(id, rot, this._boltFrame(), RM_BOLT_D.player); if (!cv) return false;
     g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); this._baDraws++; return true;
+  }
+  _drawEBTrail(g, b, spr) { // cyc6: two shrinking, fading copies 6 and 11 px behind a slow enemy bullet (no allocation)
+    const v2 = b.vx * b.vx + b.vy * b.vy; if (v2 >= RM_EB_SLOW * RM_EB_SLOW || v2 < 1) return false;
+    const inv = 1 / Math.sqrt(v2), ux = b.vx * inv, uy = b.vy * inv; this._ebTrails++;
+    g.globalAlpha = 0.55; g.drawImage(spr, b.x - ux * 6 - 5.5, b.y - uy * 6 - 5.5, 11, 11);
+    g.globalAlpha = 0.3; g.drawImage(spr, b.x - ux * 11 - 4, b.y - uy * 11 - 4, 8, 8);
+    g.globalAlpha = 1; return true;
+  }
+  _drawHitFlash(g) { // cyc6: warm elliptical edge vignette, baked once in unit space and stretched to the view (no per-frame allocation)
+    const VW = this._dv ? this._dv.vw : this.W;
+    if (this._hitFxOff) {
+      if (!this._vignette) { const gr = g.createRadialGradient(VW / 2, this.H / 2, Math.min(VW, this.H) * 0.3, VW / 2, this.H / 2, Math.max(VW, this.H) * 0.7); gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)'); this._vignette = gr; }
+      g.globalAlpha = this._reduced ? 0.35 : this.flash; g.fillStyle = this._vignette; g.fillRect(0, 0, this.W, this.H); g.globalAlpha = 1; return;
+    }
+    if (!this._hitVig) { // unit ellipse: clear inside r 0.66, the palette red at RM_HIT_EDGE_A on the edge midpoints (r 1), a little stronger in the corners
+      const gr = g.createRadialGradient(0, 0, 0.66, 0, 0, 1.42);
+      gr.addColorStop(0, 'rgba(' + RM_HIT_RGB + ',0)'); gr.addColorStop((1 - 0.66) / (1.42 - 0.66), 'rgba(' + RM_HIT_RGB + ',' + RM_HIT_EDGE_A + ')'); gr.addColorStop(1, 'rgba(' + RM_HIT_RGB + ',0.55)');
+      this._hitVig = gr;
+    }
+    g.save(); g.translate(VW / 2, this.H / 2); g.scale(VW / 2, this.H / 2);
+    g.globalAlpha = this._reduced ? 0.8 : Math.min(1, this.flash); g.fillStyle = this._hitVig; g.fillRect(-1, -1, (2 * this.W) / VW, 2);
+    g.restore(); g.globalAlpha = 1;
   }
   _drawEBoltArt(g, b) {
     const id = b.ea; if (!id) return false;
@@ -2449,7 +2479,7 @@ class RealmArena {
     const vw = this._dv ? this._dv.vw : this.W; // dungeon view: the backing store holds only the visible slice of the room
     const cw = Math.max(1, Math.round(vw * s)); const ch = Math.max(1, Math.round(this.H * s));
     if (this.canvas.width !== cw || this.canvas.height !== ch) { this.canvas.width = cw; this.canvas.height = ch; }
-    this.scale = this.canvas.width / vw; this._vignette = null;
+    this.scale = this.canvas.width / vw; this._vignette = null; this._hitVig = null;
   }
 
   // After a rotation the world changes shape: pull anything that is now outside back in.
@@ -5233,7 +5263,8 @@ class RealmArena {
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
     let ebn = 0; const ebs = this.sprites.eBullet; const cb = this._ebCB; // cb: colour-blind palette sprites (they replace hues and bolt art)
-    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (cb) g.drawImage(cb[b.kind] || cb[0], b.x - 8, b.y - 8); else if (!(b.ea && this._drawEBoltArt(g, b))) g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
+    const trail = !this._hitFxOff && !this._lowGfx(); // cyc6: slow shots get a 2-dot motion trail (their own sprite, scaled down, behind them)
+    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const slow = trail && this._drawEBTrail(g, b, cb ? (cb[b.kind] || cb[0]) : (ebs[b.kind] || ebs[0])); if (cb) g.drawImage(cb[b.kind] || cb[0], b.x - 8, b.y - 8); else if (!(b.ea && this._drawEBoltArt(g, b))) g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); else if (slow) g.drawImage(this.sprites.ebCore, b.x - 4, b.y - 4); ebn++; } }
     this._ebDrawn = ebn;
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else if (!(this._boltArt && this._drawBoltArt(g, b))) g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10); } }
     if (this._sparks) this._drawSparks(g);
@@ -5317,14 +5348,7 @@ class RealmArena {
     g.globalAlpha = 1;
     g.restore();
     this._drawStatusIcons(g); // screen space, above the world and the floating numbers
-    if (this.flash > 0 && this._flashesOn()) { // red hit vignette (off with the `flashes: false` access pref) (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
-      if (!this._vignette) {
-        const VW = this._dv ? this._dv.vw : this.W; const gr = g.createRadialGradient(VW / 2, this.H / 2, Math.min(VW, this.H) * 0.3, VW / 2, this.H / 2, Math.max(VW, this.H) * 0.7); // screen space (the dungeon view slice)
-        gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)');
-        this._vignette = gr;
-      }
-      g.globalAlpha = this._reduced ? 0.35 : this.flash; g.fillStyle = this._vignette; g.fillRect(0, 0, this.W, this.H); g.globalAlpha = 1;
-    }
+    if (this.flash > 0 && this._flashesOn()) this._drawHitFlash(g); // hit vignette (off with the `flashes: false` access pref) (reduced motion: a steady tint while it lasts, no fade or blink)
   }
 
   // ---------- HUD (plain DOM, only touched when a value changes) ----------
