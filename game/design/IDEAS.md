@@ -14,7 +14,7 @@ Effort S under half a day, M about a day, L several days. Evidence tags: [M] mea
 | ID-05 | Bullet-readability presets | M | medium | approved-spec (D, cycle 2): High contrast only, per-frame style, bench before/after |
 | ID-06 | Assist sliders (damage taken, speed, aim help) | M | medium | approved-spec (D, cycle 2): damage taken + aim help only, no speed slider |
 | ID-07 | Tame bond hearts (Isles) | M | low | built (cycle 3 build, status set by D in cycle 4; earlier note: approved-spec (D, cycle 2): hearts are a view of `bond` (no new field)) |
-| ID-08 | Dungeon first-clear milestones | S | low | approved-spec (D, cycle 2): first clears live in the Realm/dungeon save, Hub reads only |
+| ID-08 | Dungeon first-clear milestones | S | low | built (S, cycle 6; not yet verified in play by D/U): the first floor-1 boss of a biome on this device turns the summary banner gold and adds "First clear <Biome> · next: <next>" (once); record = the dungeon's own `pixeltown-deep-v1` (no new key, so not the Realm-save `fc` of the cycle 2 spec; clears made before G-25 shipped are not known and show the card once more); test `cyc6-dungeon-first-clear` |
 | ID-09 | Cozy daily chore card (no streak) | S | low | blocked-owner (D, cycle 2): spec ready as an additive card; needs the owner decision on login/sell streaks |
 | ID-10 | Shared result card across arcade games | M | medium | approved-spec (D, cycle 2): migration plan, one game per commit, Pop first |
 | ID-11 | Realm retreat flag (safe walk-back) | M | medium | approved-spec (D, cycle 2): Nexus trip reuses `returnTo` + `safeReturn` |
@@ -213,7 +213,7 @@ Sources (generic queries, cycle 1): [feeding-based taming in cozy games](https:/
 |---|---|---|---|---|
 | ID-34 | Show-hitbox option for the hero (small core dot, device pref) | S | low | proposed |
 | ID-35 | Bolt colour roles: one colour per threat class (aimed / ring / spiral / minion), never two colours that behave the same | S | low | proposed |
-| ID-36 | Trial of Six ramp: fights 1-3 stay, fights 4-6 add one pattern layer each, and a carried-HP readout | M | medium | proposed |
+| ID-36 | Trial of Six ramp: fights 1-3 stay, fights 4-6 add one pattern layer each, and a carried-HP readout | M | medium | built, tuning NOT signed off (S, cycles 5-6): layers A/B/C in `mm-endgame.js` + `realm-world.js`; cycle 6 values lead 1.2 s / 0.5 s ahead, arm 0.7 s / 95 px/s; bot targets only partly met (see `beta/cycle6-systems.md`); the carried-HP readout is NOT built |
 | ID-37 | Gear sink ladder: reforge shards 25 x (t-6) (shipped as data in cycle 3) plus a Godlands-only shard sink that never touches outcomes | M | low | proposed |
 | ID-38 | Cozy 20-minute day: a Town "that's the day" card once the chores are done (names tomorrow's board, no streak, no timer) | S | low | proposed |
 | ID-39 | Species temperaments on the Isles: each tameable has a liked verb (feed / sing / ride) shown in the journal after first sighting; bond grows faster with it | M | low | proposed |

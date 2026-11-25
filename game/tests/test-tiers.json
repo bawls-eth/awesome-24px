@@ -2313,5 +2313,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 180
+  },
+  "cyc6-dungeon-first-clear.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 120
   }
 }

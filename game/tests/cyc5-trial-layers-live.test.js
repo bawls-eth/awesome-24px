@@ -1,7 +1,7 @@
 // ID-36 (cycle 5 S) Trial of Six ramp, in the page. The Trial is entered with REAL keys only: Enter beside the Nexus portal, WASD across
 // the plaza to the gate, E. Fights 1-3 are cleared with the boss-kill hook (as world-boss-rush.test.js does), "Next fight" is a real mouse
-// click. Checks per fight: fights 1-3 fire no layer bolt and keep the zone's bolt cap; fight 4 fires lead shots (cap +1), fight 5 lead + slow
-// arm (cap +12), fight 6 all three with the sweep telegraphed 0.8 s before it fires (cap +21); layer bolts carry the boss's damage multiplier;
+// click. Checks per fight: fights 1-3 fire no layer bolt and keep the zone's bolt cap; fight 4 fires lead shots (cap +2), fight 5 lead + slow
+// arm (cap +11), fight 6 all three with the sweep telegraphed 0.8 s before it fires (cap +20; cycle 6 tuning: lead every 1.2 s, arm 0.7 s); layer bolts carry the boss's damage multiplier;
 // leaving the Trial puts the cap back. ?trialramp=0 keeps fight 4 as before. The hero is made unhittable (iframes) so the clock is the only
 // variable. Offline: blockDb + every WebSocket closed, town stubbed, db.attempts() === 0. No chat, no writes.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc5-trial-layers-live.test.js
@@ -71,22 +71,23 @@ const watch = (page, ms) => E(page, (a, w, ms) => new Promise((res) => {
   const zoneCap = await E(p, (a) => (a.fireBudget ? a.fireBudget.cap : 0));
   const en = await enterByKeys(p);
   check('the Trial starts from the Nexus with real keys only (Enter, WASD, E): prompt "Enter the Trial of Six"', /Enter the Trial of Six/.test(en.label) && en.st.on && en.st.phase === 'fight' && en.st.i === 0, JSON.stringify(en));
-  const res = [];
+  const res = []; const hpLines = [];
   for (let step = 1; step <= 6; step++) {
-    if (step > 1) await nextFight(p);
+    if (step > 1) { await p.waitForSelector('#rw-rush-next', { state: 'visible', timeout: 5000 }); hpLines.push(await p.evaluate(() => { const el = document.getElementById('rw-rush-hp'); return { t: el ? el.textContent : null, hp: Math.ceil(window.__mm.arena.player.hp), max: Math.round(window.__mm.arena.stats.maxHp) }; })); await nextFight(p); }
     const r = await watch(p, step <= 3 ? 2500 : step === 6 ? 10500 : 5500);
     res.push(r);
     if (step < 6) await kill(p);
   }
   console.log('INFO', JSON.stringify(res.map((r) => ({ step: r.step, fired: r.L && r.L.fired, cap: [r.capMin, r.capMax], live: r.liveMax, boss: r.bossMax, lay: r.layMax, sweeps: r.L && r.L.sweeps }))));
   const f = (i) => (res[i].L ? res[i].L.fired : {});
+  check('ID-36 carried-HP readout: every rest panel says "You carry <hp> of <max> HP into it." with the hero\'s real HP', hpLines.length === 5 && hpLines.every((h) => h.t === 'You carry ' + h.hp + ' of ' + h.max + ' HP into it.'), JSON.stringify(hpLines));
   check('fights 1-3: no layer bolt, the zone\'s own cap (' + zoneCap + ') unchanged', [0, 1, 2].every((i) => res[i].L && res[i].L.ids.length === 0 && !f(i).lead && !f(i).arm && !f(i).sweep && res[i].capMax === zoneCap), JSON.stringify(res.slice(0, 3).map((r) => [r.step, r.L, r.capMax])));
-  check('fight 4: lead shots fire (every 1.6 s after the shield + 0.6 s wind-up: at least 2 in 5.5 s), no arm / sweep, cap 40 + 1 max', f(3).lead >= 2 && !f(3).arm && !f(3).sweep && res[3].capMax <= zoneCap + 1 && res[3].extra === 1, JSON.stringify([res[3].L, res[3].capMax]));
-  check('fight 5: lead + slow arm (2 bolts per 0.5 s: at least 12 in 5.5 s), no sweep, cap 40 + 12 max', f(4).lead >= 2 && f(4).arm >= 12 && !f(4).sweep && res[4].capMax <= zoneCap + 12 && res[4].extra === 12, JSON.stringify([res[4].L, res[4].capMax]));
+  check('fight 4: lead shots fire (every 1.2 s after the shield + 0.6 s wind-up: at least 3 in 5.5 s), no arm / sweep, cap 40 + 2 max', f(3).lead >= 3 && !f(3).arm && !f(3).sweep && res[3].capMax <= zoneCap + 2 && res[3].extra === 2, JSON.stringify([res[3].L, res[3].capMax]));
+  check('fight 5: lead + slow arm (2 bolts per 0.7 s: at least 8 in 5.5 s), no sweep, cap 40 + 11 max', f(4).lead >= 2 && f(4).arm >= 8 && !f(4).sweep && res[4].capMax <= zoneCap + 11 && res[4].extra === 11, JSON.stringify([res[4].L, res[4].capMax]));
   const sw = res[5].L ? res[5].L.sweeps : [];
-  check('fight 6: all three layers; one sweep of 9 bolts fired after 0.8 s of telegraph (faded bolts seen), cap 40 + 21 max', f(5).lead >= 2 && f(5).arm >= 12 && sw.length >= 1 && sw[0].n === 9 && Math.abs(sw[0].warnS - 0.8) < 0.06 && res[5].pendSeen > 0 && res[5].capMax <= zoneCap + 21 && res[5].extra === 21, JSON.stringify([res[5].L, res[5].capMax, res[5].pendSeen]));
+  check('fight 6: all three layers; one sweep of 9 bolts fired after 0.8 s of telegraph (faded bolts seen), cap 40 + 20 max', f(5).lead >= 2 && f(5).arm >= 8 && sw.length >= 1 && sw[0].n === 9 && Math.abs(sw[0].warnS - 0.8) < 0.06 && res[5].pendSeen > 0 && res[5].capMax <= zoneCap + 20 && res[5].extra === 20, JSON.stringify([res[5].L, res[5].capMax, res[5].pendSeen]));
   check('layer bolts carry the boss\'s damage multiplier (no other multiplier in flight)', [3, 4, 5].every((i) => res[i].dms.every((d) => Math.abs(d - res[i].dmgMul) < 1e-9)), JSON.stringify(res.slice(3).map((r) => [r.dmgMul, r.dms])));
-  check('the bosses\' own bolts stay inside the zone cap in every fight, the layer bolts inside their budget (1 / 12 / 21)', res.every((r) => r.bossMax <= zoneCap) && res[3].layMax <= 1 && res[4].layMax <= 12 && res[5].layMax <= 21, JSON.stringify(res.map((r) => [r.bossMax, r.layMax])));
+  check('the bosses\' own bolts stay inside the zone cap in every fight, the layer bolts inside their budget (2 / 11 / 20)', res.every((r) => r.bossMax <= zoneCap) && res[3].layMax <= 2 && res[4].layMax <= 11 && res[5].layMax <= 20, JSON.stringify(res.map((r) => [r.bossMax, r.layMax])));
   check('no layer bolt was dropped at the cap in fights 4-6', [3, 4, 5].every((i) => res[i].L && res[i].L.dropped === 0), JSON.stringify(res.slice(3).map((r) => r.L && r.L.dropped)));
   await E(p, (a, w) => { w.rush.leave(); return true; }); await p.waitForTimeout(200);
   const after = await E(p, (a, w) => ({ cap: a.fireBudget ? a.fireBudget.cap : 0, extra: w.rush.ramp.capExtra(), L: w.rush.ramp.layers() }));
