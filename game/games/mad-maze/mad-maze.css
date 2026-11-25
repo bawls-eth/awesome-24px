@@ -589,3 +589,17 @@ body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale,
   html body.touch-device:not(.dungeon-mode) a#mm-daily-btn { top: calc(150px + env(safe-area-inset-top, 0px)); }
   html body.touch-device:not(.dungeon-mode) #rw-zone, html body.touch-device:not(.dungeon-mode) #rw-minimap.big + #rw-zone { top: calc(198px + env(safe-area-inset-top, 0px)); }
 }
+
+/* cyc9-ui (Resting chip review at 360 / 390 / 414 px): on the one-line phone zone strip the chip (order -1) pushed the fixed-width danger
+   meter past the strip's clipped right edge, so "Comfortable" was cut to "Comfo". While the chip shows, the danger word is visually hidden
+   (screen readers still read it) and the meter keeps its icon (✓ / ! / ☠, not colour alone) and bar; the word comes back with the first
+   input, when the chip goes. */
+@media (max-width: 560px) {
+  #rw-zone:has(.rw-rest:not(.hidden)) .rw-danger-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/* cyc9-ui: at <= 260 px portrait the zone strip is only 77 px wide (cyc7/cyc8 left column), so after the chip the zone name and danger
+   meter were cut at the strip edge. While the chip shows, it stands in for the strip: the other pieces are visually hidden (still read by
+   screen readers) and come back with the first input. */
+@media (orientation: portrait) and (max-width: 260px) {
+  html body #rw-zone:has(.rw-rest:not(.hidden)) > :not(.rw-rest) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}

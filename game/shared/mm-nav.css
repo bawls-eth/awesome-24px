@@ -243,3 +243,10 @@ body.mm-nav-on .mm-nav-avoid { margin-left: var(--mm-nav-reserve) !important; }
 #mm-nav-root .mm-nav-dest-desc { font-size: calc(12px * var(--ui-scale, 1)); }
 #mm-nav-root .mm-nav-foot-btn { font-size: calc(14px * var(--ui-scale, 1)); }
 @media (max-width: 560px) { html[data-ui-big] #mm-nav-root .mm-nav-grid { grid-template-columns: minmax(0, 1fr); } }
+/* cyc9-ui (Town Menu review at 195x422, 200% zoom on a 390 phone): two place cards per row left each card ~80 px, so names broke mid-word
+   ("To|wn", "The Rea|l|m", "Lan|ter") and the hints shrank to "Wal…". At 300 px or less it is one place per row, as with big text; a name
+   then wraps only at spaces unless one word is longer than the line. */
+@media (max-width: 300px) {
+  #mm-nav-root .mm-nav-grid { grid-template-columns: minmax(0, 1fr); }
+  #mm-nav-root .mm-nav-dest-name { overflow-wrap: break-word; }
+}

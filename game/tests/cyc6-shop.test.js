@@ -34,10 +34,11 @@ const state = (page) => page.evaluate(() => {
   let msgSeen = false;
   if (msg && msg.textContent) { const r = msg.getBoundingClientRect(); const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); msgSeen = r.height > 0 && r.top >= 0 && r.bottom <= innerHeight && !!top && (top === msg || msg.contains(top)); }
   const rows = Array.from(document.querySelectorAll('#realm-shop-body li')).map((li) => {
-    const b = li.querySelector('button[data-buy]').getBoundingClientRect(); const ink = (el) => { const g = document.createRange(); g.selectNodeContents(el); const a = g.getBoundingClientRect(); const e = el.getBoundingClientRect(); return { right: Math.max(a.right, e.right) }; }; // the text itself, even when it overflows its box
+    const b = li.querySelector('button[data-buy]').getBoundingClientRect(); const ink = (el) => { const g = document.createRange(); g.selectNodeContents(el); const a = g.getBoundingClientRect(); const e = el.getBoundingClientRect(); return { right: Math.max(a.right, e.right), bottom: Math.max(a.bottom, e.bottom) }; }; // the text itself, even when it overflows its box
     const n = ink(li.querySelector('.nm')); const r = ink(li.querySelector('.rar'));
     const bt = li.querySelector('button[data-buy]'); const cs = getComputedStyle(bt);
-    return { nmClear: n.right <= b.left + 0.5, rarLeft: r.right <= b.left + 0.5, off: bt.getAttribute('aria-disabled') === 'true', dis: bt.disabled, op: Number(cs.opacity), bg: cs.backgroundColor, label: bt.getAttribute('aria-label') };
+    return { nmClear: n.right <= b.left + 0.5 || n.bottom <= b.top + 0.5, rarLeft: r.right <= b.left + 0.5 || r.bottom <= b.top + 0.5, // cyc9-ui: at <= 300 px Buy has its own row under the text, so clear = left of it or wholly above it (never under it)
+    off: bt.getAttribute('aria-disabled') === 'true', dis: bt.disabled, op: Number(cs.opacity), bg: cs.backgroundColor, label: bt.getAttribute('aria-label') };
   });
   return { panel: a.panel, shards: a.save.shards, n: a.save.items.length, msg: msg ? msg.textContent : null, msgSeen, rows, docW: document.documentElement.scrollWidth, vw: innerWidth };
 });

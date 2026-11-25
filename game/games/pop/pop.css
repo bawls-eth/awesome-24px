@@ -72,3 +72,20 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
    out, half clipped, under its bottom edge. While the result card is up they are hidden (the card has its own lines); they return with
    the next round. */
 #stage:has(#result:not([hidden])) #keys, #stage:has(#result:not([hidden])) #goal { visibility: hidden; }
+
+/* cyc9-ui (160x284 = a 320 px phone at 200% zoom): two overflows the cycle-8 195 px fix left.
+   1. The intro / result cards are 120 px wide here, but the Play / Play again buttons kept min-width:120px, so the card scrolled
+      sideways by 18 px and cut the button off. Under 300 px the buttons drop the floor (flex:1 still fills the row), and the
+      floating card follows the 8 px stage inset instead of 16 px.
+   2. A 9-character value (1,234,567) at the 12 px floor needs 65 px; each HUD box gave 61 px inside. Under 180 px the stage and the HUD
+      give back 4 px per side and per gap, and the box's side padding goes 4 -> 2 px (the 8-bit skin keeps its 2 px margin and 4 px ring,
+      so the rings never collide): each box is 70 px with 66 px inside. */
+@media (max-width: 300px) {
+  #stage .big { min-width: 0; }
+  #stage .overlay { left: 8px; right: 8px; }
+}
+@media (max-width: 180px) {
+  #stage { padding-left: 4px; padding-right: 4px; }
+  html #hud { gap: 4px; }
+  html #hud .stat { padding-left: 2px; padding-right: 2px; }
+}
