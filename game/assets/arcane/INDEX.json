@@ -763,6 +763,17 @@
       "source": "codex",
       "branch": "codex/b03-glacier-shellback",
       "note": "B-03 Tundra M64, 12 strips; v3 (d832a92) reviewed cycle 7: repo audit 0 blocker / 0 needs-redo (unref only), true low side profile, alternating feet, neck lunge, 5-beat tipped death. ACCEPTED provisional. Wired cycle 8 (MMCreatureStrips tundra, M 256 px, death 8 fps, code fallback kept; test cyc8-art-glacier-shellback)."
+    },
+    {
+      "id": "t17-deer",
+      "label": "T17 forest deer",
+      "path": "assets/arcane/t17-deer",
+      "manifest": "assets/arcane/t17-deer/manifest.json",
+      "files": 6,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/t17-deer",
+      "note": "T17 Fauna L, 64 native (256 cells, feet 128,247), 6 strips / 14 frames: ff_deer_{idle,move,caught}{,_down}. v2 (43a4b13) reviewed cycle 8 (Claude G): repo audit 0 blocker / 0 needs-redo (unref only); own decode: exact 4x grid, hard alpha, every frame distinct, antlers clear the top; true right profile + front; walk legs alternate (f2/f4). ACCEPTED provisional, not wired yet (Town SVG stays)."
     }
   ]
 }
