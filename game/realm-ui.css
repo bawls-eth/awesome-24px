@@ -331,3 +331,24 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
    background; the wallet line keeps its dim look through its colour instead. It also sticks at the card's border edge (-12 px card padding
    -1 px), not 12 px below it, so no scrolled row shows in a band above the header. */
 #realm-shop .rm-shop-top { opacity: 1; background: #0a0610; color: rgba(230, 237, 243, 0.72); top: -13px; }
+
+/* cyc10-ui (cycle-9 open item "shop close button scrolls away" + "use the Realm pixel font"):
+   1. The whole card scrolled, so after a few rows the ✖ (and the "🛒 Shop" title) left the screen at every size (-374 px at 195x422,
+      -13 px at 1280x720) and the only way out was Esc / Back. The card is now a column: the title row with ✖ stays fixed and only
+      #realm-shop-body scrolls, with the wallet / message line sticky at its top edge (top 0: the body has no top padding), so the ✖,
+      the wallet and the last shop message are always on screen together.
+   2. The shop was the one Realm panel still in system-ui (backpack, HUD, abilities and buttons use --px-font from shared/mm-8bit.css):
+      the card, the title, the rows and the Buy buttons (buttons do not inherit font-family) now use the pixel font, and the frame and
+      ✖ match the backpack's BP8 panel. */
+#realm-shop .realm-bp-card { display: flex; flex-direction: column; overflow: hidden; font-family: var(--px-font, monospace); border-radius: 0; border: 0;
+  background: var(--px-bg, #12142a); color: var(--px-text, #fff1e8); box-shadow: 0 0 0 4px var(--px-ink, #0b0d1a), 0 0 0 6px var(--px-6, #c2c3c7), 6px 8px 0 4px rgba(0, 0, 0, .5); }
+#realm-shop .realm-bp-card button { font-family: var(--px-font, monospace); }
+#realm-shop .realm-bp-head { flex: none; margin-bottom: 6px; }
+#realm-shop .realm-bp-head strong { font-family: var(--px-font, monospace); letter-spacing: .1em; text-transform: uppercase; text-shadow: 2px 2px 0 var(--px-ink, #0b0d1a); }
+#realm-shop #realm-shop-close { border-radius: 0; border: 0; background: var(--px-8, #ff004d); color: var(--px-7, #fff1e8); box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a), inset 0 -3px 0 rgba(0, 0, 0, .3); }
+#realm-shop #realm-shop-close:focus-visible, #realm-shop #realm-bp-list button:focus-visible { outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px; }
+#realm-shop #realm-shop-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding: 0 2px 4px; }
+#realm-shop #realm-shop-body .rm-shop-top { top: 0; margin-top: 0; border-radius: 0; background: var(--px-ink, #0b0d1a); }
+/* cyc10-ui: in the pixel font "Buy 120💎" is 81 px against 80 px for "Buy 24💎", which made the Buy column ragged again (cyc9-ui check):
+   every Buy is now at least 92 px (the <= 300 px layout still stretches Buy to the full row). */
+#realm-shop #realm-bp-list button.eq { min-width: 92px; }

@@ -897,7 +897,10 @@
       if (typeof nxOpen !== 'undefined' && nxOpen) return;
       toggleMinimap();
     });
-    const zName = zoneEl.querySelector('.rw-zname'); const zArrow = zoneEl.querySelector('.rw-arrow'); const zCoords = zoneEl.querySelector('.rw-coords');
+    const zName = zoneEl.querySelector('.rw-zname'); // cyc10-ui: two spans (name + " · danger word"), so the 195 px strip can show the name alone with
+    // an ellipsis; zName.textContent stays "Shore · Safe-ish" for hudText() and every older check
+    const zNm = document.createElement('span'); zNm.className = 'rw-zn'; const zDw = document.createElement('span'); zDw.className = 'rw-zd'; zName.append(zNm, zDw);
+    const zArrow = zoneEl.querySelector('.rw-arrow'); const zCoords = zoneEl.querySelector('.rw-coords');
     let miniBase = null;
     // fog of discovered tiles: 8x8-tile cells (MMFog), revealed within ~12 tiles of the player, saved in `discovered`; ?fog=0 turns it off
     const FOG = window.MMFog; const FOG_R = 12;
@@ -1009,7 +1012,7 @@
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
       const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty); fireBudgetFor(zi); if (gearHintSt.checked) gearHintNote();
       const txt = `${zi.name} · ${zi.danger}`;
-      if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
+      if (txt !== zoneTxt || force) { zoneTxt = txt; zNm.textContent = zi.name; zDw.textContent = ` · ${zi.danger}`; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
       goalTick(zi, force);
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
       let goal = null;

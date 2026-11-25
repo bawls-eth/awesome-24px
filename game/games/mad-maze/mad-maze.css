@@ -603,3 +603,16 @@ body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale,
 @media (orientation: portrait) and (max-width: 260px) {
   html body #rw-zone:has(.rw-rest:not(.hidden)) > :not(.rw-rest) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+
+/* cyc10-ui (cycle-9 open item "195x422 zone strip clips"): at <= 260 px the one-line zone strip is 75-85 px wide (77 px in the cyc7/cyc8
+   left column), but it laid out "➤ Shore · Safe-ish ✓ ▬ Comfortable ⚑ Raid in 1:27 · Highlands" (241 px) and the strip cut it to
+   "➤ Shore · Sa". Here the strip shows the arrow, the zone NAME (it shrinks with an ellipsis when even that is too long) and the danger
+   meter as its icon only (✓ / ! / ☠: a shape, not colour alone). The danger word after the name, the meter bar and word, and the raid
+   line are visually hidden, not removed: screen readers still read them (#rw-danger keeps its aria-label), and every wider screen is
+   unchanged. Letting the strip wrap instead would push the Next-goal text onto the move stick (cycle 9 measurement). */
+@media (max-width: 260px) {
+  html body #rw-zone .rw-zname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html body #rw-zone .rw-zd, html body #rw-zone .rw-danger-txt, html body #rw-zone .rw-event { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html body #rw-zone .rw-danger-bar { display: none; }
+  html body #rw-zone .rw-danger { gap: 0; }
+}

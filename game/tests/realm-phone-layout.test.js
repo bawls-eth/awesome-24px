@@ -79,20 +79,21 @@ const fills = (c) => Math.abs(c.w - c.vw) <= 2 && Math.abs(c.h - c.vh) <= 2 && M
     check(`${tag}: HP / XP bars readable (HP >= 100 px wide)`, R.hp.w >= 100 && R.xp.w >= 100, JSON.stringify([R.hp, R.xp]));
 
     // panels: scroll inside the viewport, buttons >= 44 px
-    const panelInfo = async (open, sel, cardSel) => {
+    // cyc10-ui: scrollSel = the element that scrolls inside the card (the shop scrolls #realm-shop-body so its ✖ stays put); default the card
+    const panelInfo = async (open, sel, cardSel, scrollSel) => {
       await page.evaluate(open);
       await page.waitForTimeout(150);
-      return page.evaluate(([s, cs]) => {
-        const card = document.querySelector(`${s} ${cs}`); const r = card.getBoundingClientRect(); const cs2 = getComputedStyle(card);
+      return page.evaluate(([s, cs, ss]) => {
+        const card = document.querySelector(`${s} ${cs}`); const r = card.getBoundingClientRect(); const sc = ss ? document.querySelector(ss) : card; const cs2 = getComputedStyle(sc);
         const btns = [...card.querySelectorAll('button')].map((b) => { const q = b.getBoundingClientRect(); return [q.width, q.height, b.id || b.className || b.textContent]; }).filter((q) => q[0] > 0);
-        const before = card.scrollTop; card.scrollTop = 60; const moved = card.scrollTop > before; card.scrollTop = 0;
-        return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, vw: window.innerWidth, vh: window.innerHeight, ov: cs2.overflowY, sh: card.scrollHeight, ch: card.clientHeight, sw: card.scrollWidth, cw: card.clientWidth, moved, small: JSON.stringify(btns.filter(([bw, bh]) => bw < 43.5 || bh < 43.5)), n: btns.length };
-      }, [sel, cardSel]);
+        const before = sc.scrollTop; sc.scrollTop = 60; const moved = sc.scrollTop > before; sc.scrollTop = 0;
+        return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, vw: window.innerWidth, vh: window.innerHeight, ov: cs2.overflowY, sh: sc.scrollHeight, ch: sc.clientHeight, sw: card.scrollWidth, cw: card.clientWidth, moved, small: JSON.stringify(btns.filter(([bw, bh]) => bw < 43.5 || bh < 43.5)), n: btns.length };
+      }, [sel, cardSel, scrollSel || '']);
     };
     const bp = await panelInfo(() => window.__mm.arena.setPaused(true), '#realm-backpack', '.realm-bp-card');
     check(`${tag}: backpack card stays inside the viewport and scrolls`, bp.top >= -0.5 && bp.bottom <= bp.vh + 0.5 && bp.left >= -0.5 && bp.right <= bp.vw + 0.5 && bp.ov === 'auto' && bp.sh > bp.ch && bp.moved, JSON.stringify(bp));
     check(`${tag}: backpack buttons >= 44 px and no sideways overflow`, bp.small === '[]' && bp.n > 5 && bp.sw <= bp.cw + 1, JSON.stringify(bp));
-    const shop = await panelInfo(() => window.__mm.arena.setShop(true), '#realm-shop', '.realm-bp-card');
+    const shop = await panelInfo(() => window.__mm.arena.setShop(true), '#realm-shop', '.realm-bp-card', '#realm-shop-body');
     check(`${tag}: shop card inside the viewport, scrolls, buttons >= 44 px`, shop.top >= -0.5 && shop.bottom <= shop.vh + 0.5 && shop.ov === 'auto' && shop.sh > shop.ch && shop.moved && shop.small === '[]' && shop.sw <= shop.cw + 1, JSON.stringify(shop));
     const bd = await panelInfo(() => window.__mm.arena.setBoard(true), '#realm-board', '.realm-bp-card');
     check(`${tag}: kill board inside the viewport, close >= 44 px`, bd.top >= -0.5 && bd.bottom <= bd.vh + 0.5 && bd.small === '[]', JSON.stringify(bd));
