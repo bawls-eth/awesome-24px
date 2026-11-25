@@ -330,8 +330,46 @@
     return v;
   }
   const LEAVES = ['rgba(138,106,42,0.85)', 'rgba(168,132,58,0.85)', 'rgba(107,74,36,0.85)', 'rgba(95,122,42,0.85)'];
+  // cyc6 art (G): water inside / beside tundra ice (frozen-lake holes, the ice-shelf coast) was a flat navy block boxed by the bake's dashed
+  // edge. A water tile with at least one tundra-ground neighbour gets an ice LEDGE on each side that meets ice / snow (a pale lip 1-2 art
+  // px deep with a jagged under-edge, a lit top row and a dark under-ice shadow below it), plus slow ripple glints and the odd floating
+  // ice chip. Only with opts.biomes.holes === true (the Isles page passes it on tundra detail; ?icehole=0 = off). Bake time only.
+  const ICE_WATER = { deep_water: 1, shallow_water: 1 };
+  function iceHole(ctx, at, names, wx, wy, px, py, T, u, A, seed, nm, out) {
+    const sides = [[0, -1], [1, 0], [0, 1], [-1, 0]]; let ice = 0;
+    for (let sd = 0; sd < 4; sd++) { const n2 = at(wx + sides[sd][0], wy + sides[sd][1]); const kk = n2 >= 0 ? BIOME_GROUND[names[n2]] : null; if (kk && kk !== 'j') ice |= 1 << sd; }
+    if (!ice) return;
+    const R = (x, y, ww, hh) => ctx.fillRect(x, y, ww, hh);
+    out.iceHoles++;
+    for (let sd = 0; sd < 4; sd++) {
+      if (!(ice & (1 << sd))) continue;
+      out.lips++;
+      for (let i = 0; i < A; i++) { // along the side: lip depth 1-2 art px (seeded), the outer row lit, a shadow row under the lip
+        const d = 1 + (dhash(wx * 13 + i, wy * 7 + sd, seed + 21) < 0.45 ? 1 : 0) + (dhash(wx + i * 3, wy - sd, seed + 22) < 0.12 ? 1 : 0);
+        for (let j = 0; j < d + 2; j++) {
+          ctx.fillStyle = j === 0 ? '#eef6ff' : j < d ? '#c4dcf0' : j === d ? 'rgba(6,18,48,0.55)' : 'rgba(6,18,48,0.25)';
+          const a = u * i, b = u * j;
+          if (sd === 0) R(px + a, py + b, u, u); else if (sd === 2) R(px + a, py + T - u - b, u, u); else if (sd === 1) R(px + T - u - b, py + a, u, u); else R(px + b, py + a, u, u);
+        }
+      }
+    }
+    const r = dhash(wx, wy, seed + 23), q = dhash(wy, wx, seed + 24);
+    const ax = 4 + ((q * 7) | 0), ay = 4 + ((dhash(wx + 5, wy + 9, seed + 25) * 7) | 0);
+    if (r < 0.55) { // ripple glints: two short lit dashes, offset
+      ctx.fillStyle = nm === 'deep_water' ? 'rgba(120,170,235,0.55)' : 'rgba(200,230,255,0.55)';
+      R(px + u * ax, py + u * ay, u * 3, u); R(px + u * (ax + 2), py + u * (ay + 2), u * 2, u);
+      out.ripples++;
+    }
+    if (r > 0.78) { // a floating ice chip: 3x2 pale slab, lit top-left pixel, a dark waterline under it
+      const cx2 = Math.min(A - 6, ax + 1), cy2 = Math.min(A - 6, ay + 3);
+      ctx.fillStyle = '#d6e8f8'; R(px + u * cx2, py + u * cy2, u * 3, u * 2);
+      ctx.fillStyle = '#ffffff'; R(px + u * cx2, py + u * cy2, u, u);
+      ctx.fillStyle = 'rgba(6,18,48,0.5)'; R(px + u * cx2, py + u * (cy2 + 2), u * 3, u);
+      out.chips++;
+    }
+  }
   function biomeDetail(ctx, terrain, w, h, cx, cy, opts) {
-    const out = { drifts: 0, sparkles: 0, cracks: 0, frost: 0, roots: 0, litter: 0, moss: 0, seams: 0, tiles: 0 };
+    const out = { drifts: 0, sparkles: 0, cracks: 0, frost: 0, roots: 0, litter: 0, moss: 0, seams: 0, tiles: 0, iceHoles: 0, lips: 0, ripples: 0, chips: 0 };
     try {
       const o = opts && typeof opts === 'object' ? opts : {};
       const names = o.names || NAMES, pal = o.palette || PALETTE, T = o.tile | 0 || 32, CH = o.ch | 0 || 16, seed = (o.seed | 0) + 7717;
@@ -344,6 +382,7 @@
         const wx = cx * CH + tx, wy = cy * CH + ty, t = at(wx, wy);
         if (t < 0) continue;
         const nm = names[t], k = BIOME_GROUND[nm];
+        if (!k && ICE_WATER[nm] && bi.holes === true && bi.tundra !== false) { iceHole(ctx, at, names, wx, wy, tx * T, ty * T, T, u, A, seed, nm, out); continue; }
         if (!k || (k === 'j' ? !bi.jungle : !bi.tundra)) continue;
         out.tiles++;
         const px = tx * T, py = ty * T, r = dhash(wx, wy, seed), q = dhash(wy, wx, seed + 1), q2 = dhash(wx + 31, wy - 17, seed + 2);
@@ -416,6 +455,7 @@
             ctx.fillStyle = soft;
             if (sd === 0) R(px, py, T, u); else if (sd === 2) R(px, py + T - u, T, u); else if (sd === 1) R(px + T - u, py, u, T); else R(px, py, u, T);
           }
+          if (bi.holes === true && ICE_WATER[names[n2]] && k !== 'j') continue; // cyc6: the water side draws an ice ledge; no navy bumps into the ice
           ctx.fillStyle = np[0];
           let any = false;
           for (let i = 1; i < A - 2; i += 3) {
