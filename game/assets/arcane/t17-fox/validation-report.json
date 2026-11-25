@@ -1,0 +1,74 @@
+{
+  "status": "WIP audit not run",
+  "strips": 6,
+  "frames": 14,
+  "checks": [
+    {
+      "id": "ff_fox_idle",
+      "distinct": 2,
+      "dimensions": [
+        384,
+        192
+      ],
+      "baseline": 183,
+      "native_bounds_checked": true,
+      "blob_sha": "eccee2eac5a9d115e4aacec20c7f35db04824d5e"
+    },
+    {
+      "id": "ff_fox_move",
+      "distinct": 4,
+      "dimensions": [
+        768,
+        192
+      ],
+      "baseline": 183,
+      "native_bounds_checked": true,
+      "blob_sha": "07867625d4c249097defd8b86427ec3ed1dab06f"
+    },
+    {
+      "id": "ff_fox_caught",
+      "distinct": 1,
+      "dimensions": [
+        192,
+        192
+      ],
+      "baseline": 183,
+      "native_bounds_checked": true,
+      "blob_sha": "af5d3e4be296b0ba71fd23ccac209326082a40e2"
+    },
+    {
+      "id": "ff_fox_idle_down",
+      "distinct": 2,
+      "dimensions": [
+        384,
+        192
+      ],
+      "baseline": 183,
+      "native_bounds_checked": true,
+      "blob_sha": "65fdcb1ee93fe695354c45d0fe089f3b6a43cb76"
+    },
+    {
+      "id": "ff_fox_move_down",
+      "distinct": 4,
+      "dimensions": [
+        768,
+        192
+      ],
+      "baseline": 183,
+      "native_bounds_checked": true,
+      "blob_sha": "14491a01b85d877f791096fd8bd87464f8079ea2"
+    },
+    {
+      "id": "ff_fox_caught_down",
+      "distinct": 1,
+      "dimensions": [
+        192,
+        192
+      ],
+      "baseline": 183,
+      "native_bounds_checked": true,
+      "blob_sha": "4551a43cd8e1cf43a5d4a557248421c7cad6b197"
+    }
+  ],
+  "limitations": "T17 fox: 6 strips/14 cells, true profile and front, russet coat, cream muzzle/chest and tail tip, dark paws. Native 48, 192 export, anchor (96,183). Native bounds, palette and distinct frames checked. Contact sheet visually reviewed. Side legs and tail could be more natural, caught pose is lowered head rather than net. No independent PNG decode or Git SHA calculation; full repository audit not run. Old SVG, three-background and in-game comparison pending. No code changes."
+}
