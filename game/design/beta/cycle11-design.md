@@ -20,7 +20,7 @@ Checks run:
 | new `game/tests/cyc11-d-first-end.test.js` (registered in test-tiers.json) on the change | all PASS (Lv 5 ok = 1, Lv 6 ok = 0, Lv 1 ok = 1; opens; danger close under 6 s keeps it armed and keeps the flag; no reopen while the enemy stays; reopens after cooldown; no retry after 6 s visible; Not now never repeats; 0 page errors; db.attempts() === 0) |
 | same test with realm-world.js reverted to bd92da2 | 8 FAIL (as required) |
 | `cyc10-s-first-end.test.js` (S's, unchanged) on the change | ALL PASSED |
-| `cyc9-lead-pool-shapes.test.js` | ALL PASSED |
+| `cyc9-lead-pool-shapes.test.js` | CORRECTION: my first run was killed by a timeout (not a pass). Full run: 1 FAILED, `[C] Isles exposes the field lists and the scene was busy (creatures alive, bolts fired) {n:2, fired:400, kills:0}`. That is the Isles scene, which this change does not touch (only realm-world.js); load factor was 3.5. Not rerun solo and not run on the base, so cause unconfirmed: coordinator please solo-rerun it in the stamp |
 | Screenshots of the card (Lv 5 profile) | `img/cyc11-design-firstend-lv5-1280x720.jpg`, `-390x844.jpg`, `-195x422.jpg` (card opened in all three; I did not re-check layout: S and U tests already cover it) |
 
 Not tested: a real human with a real clock; the Lv <= 5 effect on a returning day-2 player (the headline says "Nice first run!", acceptable for a Lv 5 hero, the numbers are the save's own). Not run: full stamp.
