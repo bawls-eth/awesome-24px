@@ -504,7 +504,7 @@ body.touch-device #rw-rush, body.touch-device #rw-rush-go { bottom: calc(230px +
 /* W-16 r3 (b03-r2-05): after a boss the floor-choice card (#mm-deep) is the next step: the ability pad steps aside while it is up (the card
    landed on it) and the "New best tier" toast sits above the card instead of under it (touch). */
 body:has(#mm-deep) #realm-abilities { visibility: hidden; }
-body.touch-device:has(#mm-deep) #realm-chase-toast { bottom: calc(200px + 150px + env(safe-area-inset-bottom, 0px)) !important; }
+body.touch-device:has(#mm-deep) #realm-chase-toast { bottom: calc(200px + 168px + env(safe-area-inset-bottom, 0px)) !important; }
 /* W-05 r3 (b03-r2-13): short landscape phones: the HUD info line wraps inside its slot instead of running under the button row */
 @media (orientation: landscape) and (max-height: 500px) {
   body #realm-info { flex-wrap: wrap; white-space: normal; gap: 0 8px; row-gap: 0; line-height: 1.15; max-height: 44px; align-content: center; font-size: 12px; }
@@ -602,6 +602,8 @@ body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale,
    screen readers) and come back with the first input. */
 @media (orientation: portrait) and (max-width: 260px) {
   html body #rw-zone:has(.rw-rest:not(.hidden)) > :not(.rw-rest) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* cycle 11 integration: the Realm pixel font made the chip 83 px wide, past the 77 px strip; while it shows it is the whole strip, so the strip may use the free width (the gear sits at 91 px, 48 px above) */
+  html body.touch-device:not(.dungeon-mode) #rw-zone:has(.rw-rest:not(.hidden)) { max-width: calc(100vw - 20px); }
 }
 
 /* cyc10-ui (cycle-9 open item "195x422 zone strip clips"): at <= 260 px the one-line zone strip is 75-85 px wide (77 px in the cyc7/cyc8
@@ -652,4 +654,10 @@ body.mm-hud-big #rw-jhint.rw-jhint-goal { font-size: 12px; }
   #rw-firstend .mk-goal { font-size: 12px; line-height: 1.25; margin: 0; }
   #rw-firstend .mk-actions { flex-wrap: nowrap; gap: 6px; margin-top: 2px; }
   #rw-firstend .mk-btn, #rw-firstend .mk-primary { flex: 1 1 0; min-width: 0; min-height: 44px; font-size: 12px; letter-spacing: 0; padding: 2px 4px; margin: 2px 2px 8px; line-height: 1.15; text-align: center; }
+}
+
+/* cycle 11 integration: the Realm pixel font widened the zone label to 189 px, which touched the open backpack card (x <= 652) at 844x390;
+   in short landscape it wraps inside 176 px instead (the label sits right-aligned, so the card side stays clear). */
+@media (orientation: landscape) and (max-height: 420px) and (min-width: 600px) {
+  html body.world-mode #rw-zone { max-width: 176px; }
 }
