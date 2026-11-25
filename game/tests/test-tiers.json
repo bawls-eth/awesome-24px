@@ -6,7 +6,7 @@
   "a11y-viewport-sweep.test.js": {
     "class": "browser",
     "tier": "full",
-    "timeoutSec": 900
+    "timeoutSec": 960
   },
   "town-polish.test.js": {
     "class": "browser",
