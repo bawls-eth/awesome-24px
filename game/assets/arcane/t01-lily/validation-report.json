@@ -173,5 +173,69 @@
       "blob_sha": "b8036aba9caa5de6beb197f58a3b00b7d91a7201"
     }
   ],
-  "limitations": "Town Lily (coolcats_frogs): original green frog villager with broad mouth, webbed feet, lavender outfit and asymmetric bow, four directions and emotes; 13 strips/39 cells, 32 native/128 output. All walk frames distinct, native bounds checked, feet row 29, 4x hard-alpha construction. Happy repeats a pose. Rear bow visibility needs visual review; nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes."
+  "limitations": "Town Lily (coolcats_frogs): original green frog villager with broad mouth, webbed feet, lavender outfit and asymmetric bow, four directions and emotes; 13 strips/39 cells, 32 native/128 output. All walk frames distinct, native bounds checked, feet row 29, 4x hard-alpha construction. Happy repeats a pose. Rear bow visibility needs visual review; nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.",
+  "revision2": {
+    "status": "WIP audit not run",
+    "revised_strips": 7,
+    "revised_frames": 22,
+    "checks": [
+      {
+        "id": "vil_coolcats_frogs_walk_left",
+        "frames": 4,
+        "distinct_frames": 4,
+        "baseline": 119,
+        "edge_contact": false,
+        "blob_sha": "aba732640f822d8b263a13a195096c17f15f4725"
+      },
+      {
+        "id": "vil_coolcats_frogs_walk_right",
+        "frames": 4,
+        "distinct_frames": 4,
+        "baseline": 119,
+        "edge_contact": true,
+        "blob_sha": "2e7a7bf45b1973f7e8f229a503254a232ac05c8f"
+      },
+      {
+        "id": "vil_coolcats_frogs_idle_left",
+        "frames": 2,
+        "distinct_frames": 2,
+        "baseline": 119,
+        "edge_contact": false,
+        "blob_sha": "ad54de75e087371d3934a15563a155b9035ddd2f"
+      },
+      {
+        "id": "vil_coolcats_frogs_idle_right",
+        "frames": 2,
+        "distinct_frames": 2,
+        "baseline": 119,
+        "edge_contact": false,
+        "blob_sha": "1ba8e22afcc8ac34bd5da1630f0b22d3673e6197"
+      },
+      {
+        "id": "vil_coolcats_frogs_emote_happy",
+        "frames": 4,
+        "distinct_frames": 4,
+        "baseline": 119,
+        "edge_contact": true,
+        "blob_sha": "c1d68adfef8b7c1bc1e17cec0bce8b2173b11043"
+      },
+      {
+        "id": "vil_coolcats_frogs_emote_wave",
+        "frames": 4,
+        "distinct_frames": 3,
+        "baseline": 119,
+        "edge_contact": true,
+        "blob_sha": "807ea2891a07782f05038d1f03a53c886b9fdf71"
+      },
+      {
+        "id": "vil_coolcats_frogs_sleep",
+        "frames": 2,
+        "distinct_frames": 2,
+        "baseline": 119,
+        "edge_contact": true,
+        "blob_sha": "e4abdfffb1d3710593699acd634f1ac1c914729e"
+      }
+    ],
+    "limitations": "Cycle 7 Lily v2 partial redo: seven strips/22 cells revised; true profile torso, single near arm, connected alternating webbed feet, bow appears on visible side, happy emote and lying sleep. Native buffer checks: all baseline 119, happy 4 distinct, wave 3 distinct, sleep 2 distinct. WIP: right walk f2/f4 and happy/wave touch top row, sleeping snout touches right edge; shorten bow and shift sleeping head left. Wave paw is obscured by the head; redraw foreground paw. Nine variants, animated grid, comparisons, independent PNG decode/hash and full audit pending. Other six base strips unchanged. No code changes."
+  }
 }

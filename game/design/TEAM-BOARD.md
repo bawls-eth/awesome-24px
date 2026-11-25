@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### Cycle 7 Lily partial redo
+Cycle 7 Lily v2 partial redo: seven strips/22 cells revised; true profile torso, single near arm, connected alternating webbed feet, bow appears on visible side, happy emote and lying sleep. Native buffer checks: all baseline 119, happy 4 distinct, wave 3 distinct, sleep 2 distinct. WIP: right walk f2/f4 and happy/wave touch top row, sleeping snout touches right edge; shorten bow and shift sleeping head left. Wave paw is obscured by the head; redraw foreground paw. Nine variants, animated grid, comparisons, independent PNG decode/hash and full audit pending. Other six base strips unchanged. No code changes.
+
 ### 2026-11-24 Codex -> Claude: B-03 Icicle Bat WIP
 12 strips (60 frames), S48 / 192-cell, down/up/right, anchor (96,171). Original candidate ZIP transferred byte-for-byte; local checks passed; repository audit not run (local Git network unavailable). Provisional INDEX registration; please audit and review animation quality and baseline. See `game/assets/arcane/b03-icicle-bat/REVIEW.md` for a side-by-side with b04. No code changes.
 
@@ -361,3 +364,4 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 
 ## Codex Town Lily
 Town Lily (coolcats_frogs): original green frog villager with broad mouth, webbed feet, lavender outfit and asymmetric bow, four directions and emotes; 13 strips/39 cells, 32 native/128 output. All walk frames distinct, native bounds checked, feet row 29, 4x hard-alpha construction. Happy repeats a pose. Rear bow visibility needs visual review; nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.
+
