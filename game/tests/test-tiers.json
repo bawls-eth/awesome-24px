@@ -2392,6 +2392,11 @@
     "tier": "full",
     "timeoutSec": 900
   },
+  "cyc8-design-inland-passive.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 900
+  },
   "cyc7-idle-rest.test.js": {
     "class": "browser",
     "tier": "full",
