@@ -1,0 +1,5 @@
+# Buster WIP
+
+![Native 2x contact sheet](preview.png)
+
+Town Buster (doge): original shiba with curled tail, blue sports vest, cream muzzle, four directions and emotes; 13 strips/39 cells, 32 native/128 output, eye line approx 11 and feet row 29. Native bounds checked; 4x hard-alpha construction. Walk passing poses repeat and profile left mirrored; asymmetric vest detail, nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.

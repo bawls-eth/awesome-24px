@@ -1,0 +1,177 @@
+{
+  "status": "WIP audit not run",
+  "total_strips": 13,
+  "total_frames": 39,
+  "checks": [
+    {
+      "id": "vil_doge_walk_down",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "d4296477b92909770b48af0a895a7dc28ba385e9"
+    },
+    {
+      "id": "vil_doge_walk_up",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "f41a9295f897ab1bcf981e42316ac6ab09dc8e7c"
+    },
+    {
+      "id": "vil_doge_walk_left",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "3dcde83f08f0537fdb9f140601e1a0241acbbeb1"
+    },
+    {
+      "id": "vil_doge_walk_right",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "6f23163db039f4ce7802b925ec3eaae74d2c9840"
+    },
+    {
+      "id": "vil_doge_idle_down",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "8c4860ffcc0a246436a748de084ff29adb5b5325"
+    },
+    {
+      "id": "vil_doge_idle_up",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "286bdedb58fd87134ec0277478b39af8cedf6785"
+    },
+    {
+      "id": "vil_doge_idle_left",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "0ad2d17de4df566cf6e3177a42416b4577ac1340"
+    },
+    {
+      "id": "vil_doge_idle_right",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "e0a90c9ec351041684ce6b92d9baeab058da975f"
+    },
+    {
+      "id": "vil_doge_emote_happy",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "a082370e3e34064c2034d41f9e4bfa52273a8ee7"
+    },
+    {
+      "id": "vil_doge_emote_sad",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "d2b5df1072ec9ba06ede93691a72976f3ea0dc51"
+    },
+    {
+      "id": "vil_doge_emote_wave",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "c9ad8a56a230f1ecfc5b9feda92c43ac9871cfdd"
+    },
+    {
+      "id": "vil_doge_sit_down",
+      "frames": 1,
+      "distinct_frames": 1,
+      "dimensions": [
+        128,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "ea6101b9f0349287d55a5bae7ec60d8cf1edac61"
+    },
+    {
+      "id": "vil_doge_sleep",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "167570ee26cd7598cfb6440e901f0f268cce6351"
+    }
+  ],
+  "limitations": "Town Buster (doge): original shiba with curled tail, blue sports vest, cream muzzle, four directions and emotes; 13 strips/39 cells, 32 native/128 output, eye line approx 11 and feet row 29. Native bounds checked; 4x hard-alpha construction. Walk passing poses repeat and profile left mirrored; asymmetric vest detail, nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes."
+}

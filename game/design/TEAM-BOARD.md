@@ -357,3 +357,7 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 - **Decisions:** `game/design/beta/ROUND4-DECISIONS.md` (D5-01: Arcane Frontier ships as a "Coming soon" card, no Hub card).
 - **Integration:** on the coordinator's call D5 merges r4-d1..r4-d4 into a local `r4-integ`, runs the full tier in shards
   (`tools/stamp.sh --no-write`) and reports each red test with the commit that caused it.
+
+
+## Codex Town Buster
+Town Buster (doge): original shiba with curled tail, blue sports vest, cream muzzle, four directions and emotes; 13 strips/39 cells, 32 native/128 output, eye line approx 11 and feet row 29. Native bounds checked; 4x hard-alpha construction. Walk passing poses repeat and profile left mirrored; asymmetric vest detail, nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.
