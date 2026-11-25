@@ -2437,5 +2437,15 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "cyc9-design-shop-flow.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "cyc9-design-town-bounty-deviations.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
   }
 }
