@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### T17 owl v2
+Owl v2: four revised strips (10 revised cells), all six strips/14 cells verified. Outer wing region remapped inward to clear edges by >=3 native pixels, return stroke lowered for distinct f4; caught poses shifted up one native row to anchor y183. Idle strips byte-identical. Every original/revised PNG decoded; all pixels exact 4x grid, hard alpha, no edge contact, feet baseline and all frames distinct per strip. Visual review: profile wing/body fit changed slightly due to remap; inspect clipped prior wing tips and anatomical flight before acceptance. Full audit, independent Git SHA and old/new/game comparison pending. No code changes.
+
 ### T17 owl WIP
 T17 owl on codex/t17-owl: six strips/14 frames, 48 native/192 export, full-body owl with front and right views and flight wing poses. Native palette and frame count checked, preview reviewed. Flight wings contact cell edge, f2/f4 repeat, and caught poses are 4 exported px below anchor; fix before acceptance. Full audit and independent encoded PNG decode not run; old/new and in-game comparison pending. Provisional INDEX because ingest unavailable. No code changes.
 
@@ -363,3 +366,4 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 - **Decisions:** `game/design/beta/ROUND4-DECISIONS.md` (D5-01: Arcane Frontier ships as a "Coming soon" card, no Hub card).
 - **Integration:** on the coordinator's call D5 merges r4-d1..r4-d4 into a local `r4-integ`, runs the full tier in shards
   (`tools/stamp.sh --no-write`) and reports each red test with the commit that caused it.
+

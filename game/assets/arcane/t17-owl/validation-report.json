@@ -5,70 +5,142 @@
   "checks": [
     {
       "id": "ff_owl_idle",
-      "distinct_frames": 2,
-      "dimensions": [
-        384,
-        192
+      "bounds_native": [
+        [
+          5,
+          5,
+          43,
+          45
+        ],
+        [
+          5,
+          6,
+          43,
+          45
+        ]
       ],
+      "distinct_frames": 2,
       "lowest_opaque_row": 183,
-      "edge_contact": false,
+      "roundtrip_decoded": true,
       "blob_sha": "4fa8dd1fca62cf162ce98088dae570cddd39d787"
     },
     {
       "id": "ff_owl_move",
-      "distinct_frames": 3,
-      "dimensions": [
-        768,
-        192
+      "bounds_native": [
+        [
+          5,
+          5,
+          43,
+          45
+        ],
+        [
+          3,
+          4,
+          41,
+          45
+        ],
+        [
+          3,
+          3,
+          41,
+          45
+        ],
+        [
+          5,
+          4,
+          39,
+          45
+        ]
       ],
+      "distinct_frames": 4,
       "lowest_opaque_row": 183,
-      "edge_contact": true,
-      "blob_sha": "01d9ab5edbb8ef5a2927f882245d159adfed8910"
+      "roundtrip_decoded": true,
+      "blob_sha": "601c54151765aea580ca5abf93ae3d9b6c317cfa"
     },
     {
       "id": "ff_owl_caught",
-      "distinct_frames": 1,
-      "dimensions": [
-        192,
-        192
+      "bounds_native": [
+        [
+          5,
+          6,
+          43,
+          45
+        ]
       ],
-      "lowest_opaque_row": 187,
-      "edge_contact": false,
-      "blob_sha": "441da5a5d52e5d7a07c3aea0f92f65edee217abc"
+      "distinct_frames": 1,
+      "lowest_opaque_row": 183,
+      "roundtrip_decoded": true,
+      "blob_sha": "6cab95a85a2cff35d21399be6d96e5bf9d9af87e"
     },
     {
       "id": "ff_owl_idle_down",
-      "distinct_frames": 2,
-      "dimensions": [
-        384,
-        192
+      "bounds_native": [
+        [
+          4,
+          5,
+          44,
+          45
+        ],
+        [
+          4,
+          6,
+          44,
+          45
+        ]
       ],
+      "distinct_frames": 2,
       "lowest_opaque_row": 183,
-      "edge_contact": false,
+      "roundtrip_decoded": true,
       "blob_sha": "01f6493cc01244e19e714e40f97cbbc55ec9c154"
     },
     {
       "id": "ff_owl_move_down",
-      "distinct_frames": 3,
-      "dimensions": [
-        768,
-        192
+      "bounds_native": [
+        [
+          4,
+          5,
+          44,
+          45
+        ],
+        [
+          3,
+          4,
+          44,
+          45
+        ],
+        [
+          3,
+          3,
+          44,
+          45
+        ],
+        [
+          5,
+          4,
+          42,
+          45
+        ]
       ],
+      "distinct_frames": 4,
       "lowest_opaque_row": 183,
-      "edge_contact": true,
-      "blob_sha": "fd937987699fc2f37c6fe2855cdb988fde9e80c8"
+      "roundtrip_decoded": true,
+      "blob_sha": "b274671567bd21d80c6a89a078df40d2e95c4f87"
     },
     {
       "id": "ff_owl_caught_down",
-      "distinct_frames": 1,
-      "dimensions": [
-        192,
-        192
+      "bounds_native": [
+        [
+          4,
+          6,
+          44,
+          45
+        ]
       ],
-      "lowest_opaque_row": 187,
-      "edge_contact": false,
-      "blob_sha": "ca88669a560783f5e1e5b350bb7f8dd7b5ffcc64"
+      "distinct_frames": 1,
+      "lowest_opaque_row": 183,
+      "roundtrip_decoded": true,
+      "blob_sha": "bb014ab28d7a91f16d9083c2e4f8f11b794615fc"
     }
   ],
-  "limitations": "T17 owl: six strips/14 frames, 48 native/192 export, feathered full-body owl with ear tufts, amber eyes, barred breast, profile and front, folded/upstroke/downstroke wings and closed-eye caught pose. Native palette and frame counts checked; preview visually reviewed. WIP: flight wing tips contact cell edges, flight f2/f4 repeat, caught poses reach native row 46 rather than 45 (4 exported px below anchor). Shorten wings and correct caught baseline before acceptance. No independent PNG decode/hash verification or repository audit run. Old SVG and in-game comparison pending. No code changes."
+  "limitations": "Owl v2: four revised strips (10 revised cells), all six strips/14 cells verified. Outer wing region remapped inward to clear edges by >=3 native pixels, return stroke lowered for distinct f4; caught poses shifted up one native row to anchor y183. Idle strips byte-identical. Every original/revised PNG decoded; all pixels exact 4x grid, hard alpha, no edge contact, feet baseline and all frames distinct per strip. Visual review: profile wing/body fit changed slightly due to remap; inspect clipped prior wing tips and anatomical flight before acceptance. Full audit, independent Git SHA and old/new/game comparison pending. No code changes."
 }
