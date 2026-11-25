@@ -666,6 +666,7 @@
         arena.dropBag(e.x - 20, e.y + 20, bagR1); arena.dropBag(e.x + 20, e.y + 20, bagR2);
         if (gearOn) dropBossGear(e, bagR1);
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
+        firstClear = floor === 1 && deepCleared(biome) === 0; // ID-08 (cycle 6 S): read BEFORE deepMark writes this clear
         arena.onSave(arena.save); mapSig = ''; deepMark(biome, floor); deepShow(); // G-25: this floor counts as cleared on this device
         if (window.MMNotebook && !/[?&]notebook=0(&|$)/.test(location.search)) { try { MMNotebook.record(localStorage, MMNotebook.ids.clear(biome)); } catch (e2) { /* storage blocked */ } } // ID-04: first clear of this dungeon
       }
@@ -806,6 +807,13 @@
         if (st && MUT) add('mm-sum-mut', 'Mutator', MUT.label);
         if (st && floor > 1) add('mm-sum-floor', 'Floor', floor + ' of ' + (deepInfo ? deepInfo.maxFloor : 3));
       }
+      if (s.bossDefeated && firstClear) { // ID-08 (cycle 6 S): the first clear of this biome on this device (pixeltown-deep-v1 had no floor for it), shown once
+        const st = sumEl.querySelector('.mm-sum-stats'); const h2 = sumEl.querySelector('h2');
+        const next = MMBiomes.IDS.filter((id) => id !== biome && deepCleared(id) === 0).map((id) => MMBiomes.get(id).name)[0] || '';
+        if (h2) h2.classList.add('mm-sum-first'); // the cosmetic: a gold banner on this one summary
+        if (st) { const li = document.createElement('li'); li.className = 'mm-sum-firstclear'; li.id = 'mm-sum-firstclear'; li.append(document.createTextNode('First clear ')); const b = document.createElement('b'); b.textContent = B.name + (next ? ' · next: ' + next : ' · every dungeon cleared'); li.appendChild(b); st.appendChild(li); }
+        api.firstClear = { biome, next };
+      }
       deepHide();
       sumEl.classList.remove('hidden');
       api.summary = s; api.summaryTitle = sumEl.querySelector('h2').textContent;
@@ -832,7 +840,7 @@
     // The chip names the run's mutator(s) under the map button (textContent only). After the boss, a calm choice: the stairs down to the next floor
     // of the same biome (gear one tier up, at most floor 3 and T11) or "Leave with your loot" (the summary, as the portal does). No timer, nothing lost:
     // every find is already in the pack, and the Lantern stash is settled before the stairs load the next floor.
-    let mutEl = null; let deepEl = null; let stairsArmed = false;
+    let mutEl = null; let deepEl = null; let stairsArmed = false; let firstClear = false; // ID-08
     function mutChip() {
       if (!MUT || mutEl) return;
       mutEl = document.createElement('div'); mutEl.id = 'mm-mut'; mutEl.setAttribute('role', 'note'); mutEl.dataset.mut = MUT.ids.join(',');

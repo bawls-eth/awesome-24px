@@ -2219,12 +2219,18 @@
       const p = document.createElement('p');
       p.textContent = rush.phase === 'done' ? 'The Trial of Six is done: ' + done.name + ' was the last. Every drop is already in your pack.'
         : 'Step ' + done.step + ' of ' + steps.length + ' done: ' + done.name + '. Next is ' + next.name + '. Take your time; every drop is already in your pack.';
+      if (rush.phase === 'rest') { // ID-36 carried-HP readout (cycle 6 S): the HP the hero takes into the next fight
+        const hp = document.createElement('p'); hp.id = 'rw-rush-hp'; hp.className = 'rw-rush-hp';
+        hp.textContent = 'You carry ' + Math.max(0, Math.ceil(arena.player.hp)) + ' of ' + Math.round(arena.stats.maxHp) + ' HP into it.';
+        rushHpEl = hp;
+      } else rushHpEl = null;
       const row = document.createElement('div'); row.className = 'rw-rush-btns';
       const btn = (id, text, fn) => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.textContent = text; b.addEventListener('click', fn); row.appendChild(b); return b; };
       if (rush.phase === 'rest') { btn('rw-rush-next', 'Next fight: ' + next.name, () => rushNext()); btn('rw-rush-rest', done.restText, () => rushRest()); }
       btn('rw-rush-leave', done.leaveText, () => rushEnd('leave'));
-      rushEl.append(p, row); rushEl.classList.remove('hidden'); rushGoEl.classList.add('hidden');
+      rushEl.append(p); if (rushHpEl) rushEl.append(rushHpEl); rushEl.append(row); rushEl.classList.remove('hidden'); rushGoEl.classList.add('hidden');
     }
+    let rushHpEl = null;
     function rushHide() { if (rushEl) rushEl.classList.add('hidden'); if (rushGoEl) rushGoEl.classList.add('hidden'); }
     function rushRest() { // the panel folds into a small pill; the hero walks, heals and shops as usual
       if (!rush.on || rush.phase !== 'rest') return false;

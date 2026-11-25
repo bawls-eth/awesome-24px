@@ -143,10 +143,10 @@
   // Boss HP / damage ramps (RUSH.ramp), bolt speeds of the bosses' own patterns, the 15 px hit radius and the 0.6 s boss wind-up are untouched;
   // every layer waits at least the 0.6 s wind-up before its first bolt and is telegraphed (C by 0.8 s of faded bolts where the line will spawn).
   // The world fire budget (40 live bolts at the Trial) silently drops bolts over the cap, so each layer raises the Trial cap by its own budget:
-  // fights 1-3 +0, fight 4 +1 (40 -> 41), fight 5 +12 (40 -> 52, as the spec), fight 6 +21 (52 + the 9 bolts of a sweep line).
+  // fights 1-3 +0, fight 4 +2 (40 -> 42: two lead shots can be alive), fight 5 +11 (40 -> 51), fight 6 +20 (51 + the 9 bolts of a sweep line).
   const LAYERS = Object.freeze({
-    lead: Object.freeze({ id: 'lead', name: 'Lead shot', from: 4, every: 1.6, ahead: 0.35, velWin: 0.2, speed: 207 /* 0.9 x the 230 aimed bolt */, life: 1.45 /* one alive at a time (310 px > the 240 px orbit) */, budget: 1, windup: 0.6 }),
-    arm: Object.freeze({ id: 'arm', name: 'Slow arm', from: 5, every: 0.5, turnDeg: 40, bolts: 2, speed: 110, life: 2.4 /* at most 5 pairs alive */, budget: 11, windup: 0.6 }),
+    lead: Object.freeze({ id: 'lead', name: 'Lead shot', from: 4, every: 1.2 /* cycle 6 tuning: was 1.6 */, ahead: 0.5 /* was 0.35 */, velWin: 0.2, speed: 207 /* 0.9 x the 230 aimed bolt */, life: 1.45 /* 310 px > the 240 px orbit; life > every, so at most 2 alive */, budget: 2, windup: 0.6 }),
+    arm: Object.freeze({ id: 'arm', name: 'Slow arm', from: 5, every: 0.7 /* cycle 6 tuning: was 0.5 */, turnDeg: 40, bolts: 2, speed: 95 /* was 110 */, life: 2.4 /* at most 4 pairs alive */, budget: 9, windup: 0.6 }),
     sweep: Object.freeze({ id: 'sweep', name: 'Edge sweep', from: 6, every: 7, bolts: 9, gap: 3, speed: 140, warn: 0.8, spacing: 28, dist: 300, budget: 9, windup: 0.8 }),
   });
   const LAYER_IDS = Object.freeze(['lead', 'arm', 'sweep']);

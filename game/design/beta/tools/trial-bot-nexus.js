@@ -11,6 +11,9 @@ const ORIGIN = process.env.BASE_ORIGIN || 'http://localhost:9505';
 const Q = process.env.Q || '';
 const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345&qdate=2030-05-01&heropick=0&tutorial=0' + Q;
 const LEVEL = +process.argv[2] || 20, SLOW = +process.argv[3] || 0, MAXF = (+process.argv[4] || 100) * 1000;
+// Cycle 6 S, tuning aid only: FROM=4 env fast-forwards fights before 4 (their boss is set to 1 HP after it spawns, the bot still has to
+// land the killing shot with real input). Every FIGHT line says ff:true for those fights. Leave FROM unset for a real full run.
+const FROM = +process.env.FROM || 1;
 const sv = { realm: { level: LEVEL, xp: 0, shards: 50, bestWave: 2, items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2, eq: { weapon: 1 }, gv: 1, gp: { b: 0, d: 0 } } };
 const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena, window.__mm.world, ${JSON.stringify(arg)})`);
 (async () => {
@@ -70,6 +73,8 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
       }
       const info = await E(page, (a, w) => { const e = w.rush.entity(); return e ? { boss: e.art, step: e.rushStep, hp: e.maxHp, hp0: a.player.hp, maxHp: a.stats.maxHp } : null; });
       if (!info) { out.push({ step: step + 1, error: 'no boss' }); break; }
+      const ff = step + 1 < FROM;
+      if (ff) await E(page, (a, w) => { const e = w.rush.entity(); e.invuln = 0; e.hp = 1; return true; });
       const tS = Date.now(); let dmg = 0, last2 = info.hp0, outcome = 'timeout', n = 0, minD = 1e9, liveMax = 0, capMax = 0; await page.evaluate(() => { window.__hp.calls = 0; window.__hp.dmgs = []; });
       while (Date.now() - tS < MAXF) {
         const s = await E(page, (a, w) => {
@@ -105,14 +110,15 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
       const secs = +((Date.now() - tS) / 1000).toFixed(1);
       const hpc = await page.evaluate(() => window.__hp);
       const lay = await E(page, (a, w) => (w.rush.ramp ? w.rush.ramp.layers() : null));
-      const rec = { step: step + 1, boss: info.boss, outcome, secs, hp0: Math.round(info.hp0), maxHp: info.maxHp, dmgTaken: Math.round(dmg), hitPlayerCalls: hpc.calls, closestPx: +minD.toFixed(1), boltsAliveMax: liveMax, capMax, loopHz: +(n / secs).toFixed(1), layers: lay ? { ids: lay.ids, fired: lay.fired, dropped: lay.dropped, sweeps: lay.sweeps.length } : null };
+      const rec = { step: step + 1, ff, boss: info.boss, outcome, secs, hp0: Math.round(info.hp0), maxHp: info.maxHp, dmgTaken: Math.round(dmg), hitPlayerCalls: hpc.calls, closestPx: +minD.toFixed(1), boltsAliveMax: liveMax, capMax, loopHz: +(n / secs).toFixed(1), layers: lay ? { ids: lay.ids, fired: lay.fired, dropped: lay.dropped, sweeps: lay.sweeps.length } : null };
       out.push(rec); console.log('FIGHT', JSON.stringify(rec));
       if (outcome !== 'won') break;
     }
   }
   await release();
   const fin = await E(page, (a, w) => ({ st: w.rush.state(), hp: Math.round(a.player.hp) }));
+  const lay0 = await page.evaluate(() => { const L = window.MMEndgame.LAYERS; return { ahead: L.lead.ahead, every: L.lead.every, armEvery: L.arm.every, armSpeed: L.arm.speed }; });
   const reached = out.filter((f) => !f.error).length, won = out.filter((f) => f.outcome === 'won').length;
-  console.log('RESULT', JSON.stringify({ level: LEVEL, slowMs: SLOW, db, errs, entered: !!(entry.started && entry.started.on), fightsReached: reached, fightsWon: won, final: fin }));
+  console.log('RESULT', JSON.stringify({ level: LEVEL, slowMs: SLOW, from: FROM, ahead: lay0.ahead, leadEvery: lay0.every, armEvery: lay0.armEvery, armSpeed: lay0.armSpeed, db, errs, entered: !!(entry.started && entry.started.on), fightsReached: reached, fightsWon: won, final: fin }));
   await browser.close();
 })();

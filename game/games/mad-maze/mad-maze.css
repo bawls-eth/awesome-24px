@@ -277,6 +277,7 @@ body.touch-device .realm-ab .key { display: none; }
 .mm-sum-loot li { padding: 3px 0; }
 .mm-sum-loot li.none { opacity: 0.6; }
 .mm-sum-stash { margin: 10px 0 0; color: #7ee787; font-weight: 700; }
+body .mm-sum-card h2.mm-sum-first { color: #ffd45a; text-shadow: 0 0 6px rgba(255, 212, 90, 0.45); } /* ID-08: a first clear of the biome gets a gold banner, once */
 .mm-sum-cache { margin: 6px 0 0; color: #ffd45a; font-weight: 700; }
 .mm-sum-btns { display: flex; gap: 10px; margin-top: 16px; }
 .mm-btn { flex: 1; text-align: center; padding: 12px 8px; border-radius: 10px; background: #8a63e0; color: #fff; text-decoration: none; font-weight: 700; min-height: 20px; }

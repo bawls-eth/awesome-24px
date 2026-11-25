@@ -2342,5 +2342,10 @@
   "cyc6-lead-nav-scan.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc6-dungeon-first-clear.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 120
   }
 }
