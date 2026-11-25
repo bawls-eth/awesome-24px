@@ -66,7 +66,7 @@ const RM_EB_DRAW = 320;
 // the view's aspect, so it reads over blue water and never tints the ground under the hero (the old radial magenta covered ~70% of a
 // phone screen); slow enemy bullets (speed < RM_EB_SLOW) carry a 2-dot motion trail and every enemy bullet a larger white core, so a
 // moving shot no longer reads as red litter on the ground. `?hitfx=0` restores the old look (A/B).
-const RM_HIT_RGB = '232,100,60'; const RM_HIT_EDGE_A = 0.42; const RM_EB_SLOW = 190; const RM_EB_CORE_R = 2.6;
+const RM_HIT_RGB = '232,100,60'; const RM_HIT_EDGE_A = 0.42; const RM_EB_SLOW = 190; const RM_EB_CORE_R = 2.0;
 const RM_FIRE_RANGE = 0.95; // world mode: an enemy fires only on screen and within this x the view's half-diagonal of the player
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
@@ -1393,7 +1393,7 @@ class RealmArena {
       g.fillStyle = '#1a0812'; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
       g.fillStyle = hue; g.beginPath(); g.arc(8, 8, R - 1.6, 0, Math.PI * 2); g.fill();
       if (this._hitFxOff) { g.fillStyle = tint; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill(); return; }
-      g.fillStyle = tint; g.beginPath(); g.arc(8, 8, RM_EB_CORE_R + 1, 0, Math.PI * 2); g.fill(); // cyc6: a tint ring round a bright white core
+      g.fillStyle = tint; g.beginPath(); g.arc(8, 8, RM_EB_CORE_R + 0.2, 0, Math.PI * 2); g.fill(); // cyc6: a tint ring round a bright white core
       g.fillStyle = '#ffffff'; g.beginPath(); g.arc(8, 8, RM_EB_CORE_R, 0, Math.PI * 2); g.fill();
     }));
     this.sprites.ebCore = mk(8, 8, (g) => { g.fillStyle = '#ffffff'; g.beginPath(); g.arc(4, 4, RM_EB_CORE_R, 0, Math.PI * 2); g.fill(); }); // cyc6: the bright core laid over slow enemy bolt art

@@ -43,13 +43,13 @@ const inside = (r, W, H) => r && r.x >= 0 && r.y >= 0 && r.r <= W && r.b <= H;
     await p.tap('#hud-more-btn'); await p.waitForTimeout(250);
     const o = await boxes(p);
     check(tag + 'Tools open: B / Photo / A / C on screen, A and C still >= 56 px, nothing on the joystick', [o.a, o.c, o.b, o.photo].every((r) => inside(r, o.W, o.H) && !hit(r, o.stick)) && o.a.h >= 56 && o.c.h >= 56, JSON.stringify(o));
-    attempts += P.db.attempts(); errs.push(...P.errors); await P.ctx.close();
+    attempts += P.db.attempts(); check('no database request in this profile (offline stub)', P.db.attempts() === 0, String(P.db.attempts())); errs.push(...P.errors); await P.ctx.close();
   }
   { // under 280 px the one-column strip is unchanged
     const P = await open(browser, { width: 160, height: 284 }), p = P.page;
     const s = await boxes(p);
     check('160x284: the one-column strip keeps 48 x 44 buttons (unchanged)', s.a && s.a.w === 48 && s.a.h === 44 && s.c && s.c.w === 48 && s.c.h === 44, JSON.stringify({ a: s.a, c: s.c }));
-    attempts += P.db.attempts(); errs.push(...P.errors); await P.ctx.close();
+    attempts += P.db.attempts(); check('no database request in this profile (offline stub)', P.db.attempts() === 0, String(P.db.attempts())); errs.push(...P.errors); await P.ctx.close();
   }
   check('no database request attempted (offline stub)', attempts === 0, String(attempts));
   check('no page errors', errs.length === 0, errs.join(' | '));
