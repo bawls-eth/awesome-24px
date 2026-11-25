@@ -751,7 +751,7 @@
       "status": "provisional",
       "source": "codex",
       "branch": "codex/b03-icicle-bat",
-      "note": "B-03 Tundra S48, 12 strips; frost-detail revision (5985c6c) reviewed cycle 6: audit 0 rows, same ids/frames/anchor/bbox, provisional. Not wired (tundra list pinned in shared-mm-creature-strips test)."
+      "note": "B-03 Tundra S48, 12 strips; frost-detail revision (5985c6c) reviewed cycle 6: audit 0 rows, same ids/frames/anchor/bbox, provisional. Wired cycle 7 (MMCreatureStrips tundra, code fallback kept; test cyc7-art-icicle-bat)."
     }
   ]
 }
