@@ -757,3 +757,6 @@ remeasure on the redrawn mounts). Hard alpha, 4x grid, separate from the body: g
 4. Seats: per-frame seat points must be remeasured on the redrawn mounts; include a composite preview (mount + saddle + a hero sitting).
 
 Deliver each fix on the same branch, re-run `node game/tools/art-audit/run.js` and add a composite saddle preview.
+
+## Codex T17 owl submitted
+T17 owl on codex/t17-owl: six strips/14 frames, 48 native/192 export, full-body owl with front and right views and flight wing poses. Native palette and frame count checked, preview reviewed. Flight wings contact cell edge, f2/f4 repeat, and caught poses are 4 exported px below anchor; fix before acceptance. Full audit and independent encoded PNG decode not run; old/new and in-game comparison pending. Provisional INDEX because ingest unavailable. No code changes.
