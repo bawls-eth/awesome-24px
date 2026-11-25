@@ -21,9 +21,15 @@ async function watch(browser, seed) {
   await ctx.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html>town' }));
   const page = await ctx.newPage(); const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(ORIGIN + '/game/games/mad-maze/index.html?mode=world&from=hub&test=1&tutorial=1&seed=' + seed);
+  // cycle 8 L (flaky under load, 2 stamps): this goto waited for the window "load" event (every script, sheet and image of three Realm
+  // pages opened at once) under Playwright's fixed 30 s default. On a busy 4-core box that event came later than 30 s, goto threw and
+  // the whole test exited 1 with no FAIL line (reproduced: 3 copies in parallel, all 3 died here). Nothing below needs "load": the
+  // loop waits for the real condition (the arena is in play). So: stop at DOM ready, and both budgets follow the load measured NOW
+  // (the cached factor is from process start; the second batch of pages starts minutes later).
+  const F = Math.max(LS.factor(), LS.fresh());
+  await page.goto(ORIGIN + '/game/games/mad-maze/index.html?mode=world&from=hub&test=1&tutorial=1&seed=' + seed, { waitUntil: 'domcontentloaded', timeout: Math.round(30000 * F) });
   const t0 = Date.now(); let picked = '';
-  while (Date.now() - t0 < LS.budget(30000)) {
+  while (Date.now() - t0 < Math.round(30000 * F)) {
     const st = await page.evaluate(() => (window.__mm && window.__mm.arena && window.__mm.arena.active && window.__mm.arena.state === 'play' ? 'play' : ''));
     if (st === 'play') break;
     const h = await page.$('.hp-hero');
@@ -51,7 +57,7 @@ async function watch(browser, seed) {
     return true;
   });
   const log = []; let fell = null; let c0 = null; let minHp = Infinity; let maxNear = 0; let zone = ''; let hpMax = 0;
-  const tEnd = Date.now() + LS.budget(230000);
+  const tEnd = Date.now() + Math.round(230000 * F);
   while (started && Date.now() < tEnd) {
     const s = await page.evaluate(() => { const a = window.__mm.arena; const p = a.player; let near = 0; for (const e of a.enemies) if (e.active && Math.hypot(e.x - p.x, e.y - p.y) < 420) near++; return { clock: a.clock, state: a.state, hp: Math.round(p.hp), max: a.stats.maxHp, near, zone: (document.getElementById('rw-zone') || {}).textContent || '' }; });
     if (c0 === null) c0 = s.clock;
