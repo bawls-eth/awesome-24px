@@ -1,0 +1,238 @@
+{
+  "status": "WIP, audit not run",
+  "repository_audit": "not run",
+  "native_buffer_checks": "passed for baseline, corners, palette, dimensions, hard alpha; attack recovery repeats; potential silhouette clipping not independently tested",
+  "total_strips": 12,
+  "total_frames": 60,
+  "checks": [
+    {
+      "id": "shagtusk_idle_down",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        71,
+        72,
+        72,
+        71
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_move_down",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        71,
+        72,
+        73,
+        71,
+        71,
+        72
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_attack_down",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        71,
+        69,
+        73,
+        73,
+        71
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_death_down",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        71,
+        72,
+        71,
+        55,
+        55
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_idle_up",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 8,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        70,
+        71,
+        72,
+        71
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_move_up",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 8,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        70,
+        72,
+        73,
+        71,
+        70,
+        71
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_attack_up",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 8,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        70,
+        67,
+        73,
+        69,
+        70
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_death_up",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 8,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        70,
+        67,
+        63,
+        39,
+        38
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_idle_right",
+      "dimensions": [
+        1536,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        66,
+        67,
+        68,
+        67
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_move_right",
+      "dimensions": [
+        2304,
+        384
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        66,
+        68,
+        69,
+        67,
+        66,
+        67
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_attack_right",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        66,
+        63,
+        69,
+        65,
+        66
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    },
+    {
+      "id": "shagtusk_death_right",
+      "dimensions": [
+        1920,
+        384
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 347,
+      "heights_native": [
+        66,
+        63,
+        59,
+        56,
+        56
+      ],
+      "hard_alpha": true,
+      "transparent_corners": true
+    }
+  ],
+  "known_issues": "Shagtusk first-pass WIP: 12 original RGBA strips / 60 cells, down/up/right, woolly mammoth silhouette with curved ivory tusks, warm fur and grey trunk. 96 native / 384 cells; anchor assumed (192,347) for L96; existing Tusktop uses y350, so verify in engine. Provisional per-frame rider seats estimated from dorsal coat; no saddle baked in. Native-buffer checks: baseline 347, hard alpha, corners, 8–13 colors, dimensions; 3 attack strips repeat recovery frame. Visual review: front/side death head remains tall and trunk may clip in collapsed poses; fur needs stronger shag clumps, attack readability may need polish. Sleep/eat and saddle overlays deferred (queue specifies 12 enemy strips). Full repository audit and independent strip decode not run; direct connector upload. Next Sabrefang, then saddles, per owner's B-03 sequence. W-06 remains queued per Claude. No code/tests/Firebase changed."
+}

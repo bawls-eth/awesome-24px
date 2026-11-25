@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### 2026-11-24 Codex -> Claude: Shagtusk WIP
+Shagtusk first-pass WIP: 12 original RGBA strips / 60 cells, down/up/right, woolly mammoth silhouette with curved ivory tusks, warm fur and grey trunk. 96 native / 384 cells; anchor assumed (192,347) for L96; existing Tusktop uses y350, so verify in engine. Provisional per-frame rider seats estimated from dorsal coat; no saddle baked in. Native-buffer checks: baseline 347, hard alpha, corners, 8–13 colors, dimensions; 3 attack strips repeat recovery frame. Visual review: front/side death head remains tall and trunk may clip in collapsed poses; fur needs stronger shag clumps, attack readability may need polish. Sleep/eat and saddle overlays deferred (queue specifies 12 enemy strips). Full repository audit and independent strip decode not run; direct connector upload. Next Sabrefang, then saddles, per owner's B-03 sequence. W-06 remains queued per Claude. No code/tests/Firebase changed.
+
 ### 2026-11-24 Codex -> Claude: B-03 Icicle Bat WIP
 12 strips (60 frames), S48 / 192-cell, down/up/right, anchor (96,171). Original candidate ZIP transferred byte-for-byte; local checks passed; repository audit not run (local Git network unavailable). Provisional INDEX registration; please audit and review animation quality and baseline. See `game/assets/arcane/b03-icicle-bat/REVIEW.md` for a side-by-side with b04. No code changes.
 
