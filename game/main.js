@@ -1687,6 +1687,8 @@ class TownScene extends Phaser.Scene {
     FF_ASSETS.forEach((a) => {
       this.load.svg(`ff_${a.id}`, `assets/flora-fauna/svg/${a.id}.svg`, { width: 64, height: 64 });
     });
+    // Cycle 9 art (G): Codex T-batch PNG strips for the species that have them (shared/mm-town-fauna.js); the SVG above stays the fallback.
+    if (window.MMTownFauna) MMTownFauna.preload(this);
   }
 
   create() {
@@ -1694,6 +1696,7 @@ class TownScene extends Phaser.Scene {
     MMTownHeroes.bake(this, SPECIES.concat(RARE_SPECIES).map((s) => s.key).concat(['boredapes']));
     MMTownHeroes.animate(this);
     this.pixelizeFloraFauna();
+    if (window.MMTownFauna) MMTownFauna.bake(this);
     this.physics.world.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
     this.cameras.main.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
     // Phones (and especially standalone "Add to Home Screen" launches, which
@@ -5110,7 +5113,10 @@ class TownScene extends Phaser.Scene {
     card.classList.add('museum-detail-open');
     detail.classList.remove('hidden');
     detail.innerHTML = '<button type="button" class="museum-detail-back">‹ Back</button>'
-      + `<div class="museum-detail-art"><img src="assets/flora-fauna/svg/${encodeURIComponent(id)}.svg" alt=""></div>`
+      + `<div class="museum-detail-art">${this.ffStrips && this.ffStrips.caughtUrl[id]
+        // Cycle 9 art (G): the T-batch caught pose at an integer zoom of the native art (crisp); the SVG stays for every other species.
+        ? `<img class="ff-strip-art" src="${this.ffStrips.caughtUrl[id]}" alt="" style="width:auto;height:auto;max-width:100%;max-height:100%;margin:auto;display:block;image-rendering:pixelated">`
+        : `<img src="assets/flora-fauna/svg/${encodeURIComponent(id)}.svg" alt="">`}</div>`
       + `<h3 class="museum-detail-name">${escapeHtml(asset.name)}</h3>`
       + '<p class="museum-detail-sci"></p>'
       + '<dl class="museum-facts"><div class="museum-facts-loading">Loading field notes…</div></dl>';
@@ -6842,11 +6848,16 @@ class TownScene extends Phaser.Scene {
     // never below 14px so the microscopic species stay findable specks.
     const size = Math.max(14, a.w, a.h); // gameplay size (reach / speed / range), unchanged
     const fly = move === 'fly';
-    const shown = ffDisplaySize(a); // W-06: what is drawn
-    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(shown, shown).setDepth(fly ? s.y + 40 : s.y);
+    // Cycle 9 art (G): a species with T-batch strips is an animated Sprite (idle / move / caught, right + down, left = flipX) drawn at
+    // its baked half-native cell (deer 32, fox / owl 24: the hero's pixel density); every other species is the SVG Image as before.
+    const strip = !!(window.MMTownFauna && MMTownFauna.has(this, a.id));
+    const shown = strip ? this.ffStrips.cells[a.id] : ffDisplaySize(a); // W-06: what is drawn
+    const sprite = (strip ? this.add.sprite(s.x, s.y, `fft_${a.id}`, 'idle_down_0') : this.add.image(s.x, s.y, this.floraFaunaKey(a.id)))
+      .setDisplaySize(shown, shown).setDepth(fly ? s.y + 40 : s.y);
+    if (strip) { sprite.ffDir = i % 2 ? 'right' : 'down'; sprite.setFlipX(i % 3 === 1); MMTownFauna.play(sprite, a.id, 'idle', sprite.ffDir); }
     const inWater = !!s.pond && FF_IN_WATER.has(a.id);
     const spec = {
-      id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean,
+      id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean, strip,
       baseScaleY: sprite.scaleY,
       phase: i * 1.7 + a.w,
       // Big animals are reachable from their edge, not just their centre;
@@ -6910,6 +6921,10 @@ class TownScene extends Phaser.Scene {
       const inView = x > v.x - m && x < v.right + m && y > v.y - m && y < v.bottom + m;
       if (inView) near.push(spec);
       spec.active = inView && !reduceMotion;
+      if (spec.strip && spec.sprite.anims) { // strip animals only animate near the camera (and never with reduced motion)
+        if (spec.active && spec.sprite.anims.isPaused) spec.sprite.anims.resume();
+        else if (!spec.active && spec.sprite.anims.isPlaying) spec.sprite.anims.pause();
+      }
       if (spec.idle) {
         if (spec.active && spec.idle.isPaused()) spec.idle.resume();
         else if (!spec.active && !spec.idle.isPaused()) spec.idle.pause();
@@ -6968,6 +6983,12 @@ class TownScene extends Phaser.Scene {
     const dx = tx - spec.px;
     const dist = Math.hypot(dx, ty - spec.py);
     if (Math.abs(dx) > 2) sprite.setFlipX((dx < 0) !== FF_FACES_LEFT.has(spec.id));
+    if (spec.strip) {
+      sprite.ffDir = MMTownFauna.pick(dx, ty - spec.py);
+      spec.walking = true;
+      if (sprite.ffDir === 'down') sprite.setFlipX(false);
+      MMTownFauna.play(sprite, spec.id, 'move', sprite.ffDir);
+    }
     const fly = spec.move === 'fly';
     const swim = spec.move === 'swim';
     const pos = { x: spec.px, y: spec.py };
@@ -6982,7 +7003,7 @@ class TownScene extends Phaser.Scene {
         if (fly) {
           // Bob up and down and flap (squash) while flying.
           sprite.setPosition(pos.x, pos.y - 10 + Math.sin(now / 160 + spec.phase) * 5);
-          sprite.scaleY = spec.baseScaleY * (0.8 + 0.2 * Math.abs(Math.sin(now / 60 + spec.phase)));
+          if (!spec.strip) sprite.scaleY = spec.baseScaleY * (0.8 + 0.2 * Math.abs(Math.sin(now / 60 + spec.phase))); // strips flap in frames
           sprite.setDepth(pos.y + 40);
         } else if (swim) {
           sprite.setPosition(pos.x, pos.y + Math.sin(now / 500 + spec.phase) * 2);
@@ -6990,7 +7011,7 @@ class TownScene extends Phaser.Scene {
         } else {
           // Little side-to-side waddle while walking.
           sprite.setPosition(pos.x, pos.y);
-          sprite.angle = Math.sin(now / 90 + spec.phase) * 5;
+          if (!spec.strip) sprite.angle = Math.sin(now / 90 + spec.phase) * 5; // strips walk in frames, no waddle tilt
           sprite.setDepth(pos.y);
         }
       },
@@ -6999,6 +7020,7 @@ class TownScene extends Phaser.Scene {
         spec.py = ty;
         sprite.angle = 0;
         sprite.scaleY = spec.baseScaleY;
+        if (spec.strip) { spec.walking = false; MMTownFauna.play(sprite, spec.id, 'idle', sprite.ffDir || 'right'); }
         this.time.delayedCall(fly ? Phaser.Math.Between(200, 1400) : Phaser.Math.Between(900, 4000), () => this.stepFloraFauna(spec));
       },
     });
@@ -7066,6 +7088,7 @@ class TownScene extends Phaser.Scene {
 
   collectFloraFauna(spec) {
     const { x, y } = spec.sprite;
+    if (spec.strip) this.showFloraFaunaCaught(spec);
     if (this.ffDiscovered.has(spec.id)) {
       this.showFloatingText(x, y - 30, `${spec.name} (already logged)`);
       SFX.pop();
@@ -7074,6 +7097,14 @@ class TownScene extends Phaser.Scene {
     this.ffDiscovered.add(spec.id);
     this.saveFloraFaunaLog();
     this.awardPoint(1, `🔍 ${spec.name} added to the Museum! (${this.ffDiscovered.size}/${FF_ASSETS.length})`, x, y - 30, 'achievement');
+  }
+
+  // Cycle 9 art (G): a strip animal shows its T-batch `caught` pose for a moment when it is logged, then goes back to idle.
+  showFloraFaunaCaught(spec) {
+    const sp = spec.sprite, dir = sp.ffDir === 'down' ? 'down' : 'right';
+    sp.anims.stop();
+    sp.setFrame(`caught_${dir}_0`);
+    this.time.delayedCall(900, () => { if (sp.scene) MMTownFauna.play(sp, spec.id, spec.walking ? 'move' : 'idle', sp.ffDir || dir); });
   }
 
   drawGround() {

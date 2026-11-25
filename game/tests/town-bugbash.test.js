@@ -53,9 +53,12 @@ async function open(browser, viewport, touch, qs) {
       });
       const grave = s.children.list.filter((c) => c.x > -20 && c.x < 140 && c.y > 640 && c.y < 760 && c.texture && /baked|__/.test(c.texture.key) === false);
       const px = Object.keys(s.textures.list).filter((k) => /^ffpx_/.test(k)).length;
-      const specimens = (s.ffSpecimens || []).map((f) => f.sprite && f.sprite.texture.key).filter(Boolean);
+      // cycle 9: deer / fox / owl draw their Codex T17 strips (fft_<id>, shared/mm-town-fauna.js); every other specimen stays ffpx_.
+      const specimens = (s.ffSpecimens || []).filter((f) => !f.strip).map((f) => f.sprite && f.sprite.texture.key).filter(Boolean);
+      const strips = (s.ffSpecimens || []).filter((f) => f.strip);
+      const stripOk = strips.length >= 15 && strips.every((f) => f.sprite.texture.key === 'fft_' + f.id);
       const cp = getComputedStyle(document.getElementById('chat-panel'));
-      return { statues, px, pxMs: s.ffPixelizeMs, specimens: specimens.length, pxSpecimens: specimens.filter((k) => /^ffpx_/.test(k)).length,
+      return { statues, px, pxMs: s.ffPixelizeMs, specimens: specimens.length, pxSpecimens: specimens.filter((k) => /^ffpx_/.test(k)).length, strips: strips.length, stripOk,
         chatBorder: cp.borderTopWidth, chatShadow: cp.boxShadow, quiet: Array.isArray(s._quietLines), grave: grave.length };
     });
     check('phone: 3 pond statues', r.statues.length === 3, JSON.stringify(r.statues));
@@ -63,6 +66,7 @@ async function open(browser, viewport, touch, qs) {
     check('phone: statues depth-sort by their feet (not under the pond layer)', r.statues.every((t) => t.depth > t.y), JSON.stringify(r.statues));
     check('phone: 98 flora/fauna baked to ffpx_ textures', r.px === 98, String(r.px));
     check('phone: specimens draw the pixelized textures', r.specimens > 0 && r.pxSpecimens === r.specimens, JSON.stringify(r));
+    check('phone: deer / fox / owl specimens draw their T17 strip textures (fft_<id>)', r.stripOk, JSON.stringify({ strips: r.strips, ok: r.stripOk }));
     check('phone: the chat stack has no frame of its own', r.chatBorder === '0px' && r.chatShadow === 'none', r.chatBorder + ' ' + r.chatShadow);
     // Graveyard: every tombstone draws above the plot.
     const g = await p.page.evaluate(() => {
@@ -148,7 +152,7 @@ async function open(browser, viewport, touch, qs) {
     const p = await open(browser, { width: 1280, height: 720 }, false, '?pixelize=0');
     const r = await p.page.evaluate(() => {
       const s = window.__g.scene.getScene('Town');
-      return { px: Object.keys(s.textures.list).filter((k) => /^ffpx_/.test(k)).length, keys: (s.ffSpecimens || []).slice(0, 5).map((f) => f.sprite.texture.key) };
+      return { px: Object.keys(s.textures.list).filter((k) => /^ffpx_/.test(k)).length, keys: (s.ffSpecimens || []).filter((f) => !f.strip).slice(0, 5).map((f) => f.sprite.texture.key) };
     });
     check('?pixelize=0: no ffpx_ textures, the SVG art stays', r.px === 0 && r.keys.length > 0 && r.keys.every((k) => /^ff_/.test(k)), JSON.stringify(r));
     // Shared Settings panel (mm-settings.js): a More entry opens it, the Town stops acting behind it, changes reach the Town live.
