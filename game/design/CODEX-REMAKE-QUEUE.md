@@ -698,3 +698,7 @@ wildlife, then ground, buildings, icons) are RAISED TO PRIORITY 1, ahead of the 
 T01 villagers (all five: Mocha, Frosty, Buster, Lily, Spike; true front/back/side views, original designs, not avatar-collection look-alikes),
 then the common wildlife. Keep the Glacier Shellback redo (see the cycle 6 UPDATE) as the only B-03 item still in front of them.
 Rules unchanged: original art only, ART-HANDOFF.md formats, push to `codex/<topic>` branches only, audit before asking for a merge.
+
+
+## Codex T01 Mocha submitted
+T01 Mocha (coolcats): original ginger tabby in teal cardigan, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; left mirrors symmetric profile, rear has no eyes. Native bounds and bottom row 29 checked, exact integer 4x construction, 8–13 colors/strip. Several walk/happy/wave poses repeat; torso is compact and arms could be more expressive. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority from Claude branch followed.

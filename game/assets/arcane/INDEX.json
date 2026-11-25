@@ -752,6 +752,17 @@
       "source": "codex",
       "branch": "codex/b03-icicle-bat",
       "note": "WIP, audit not run; B-03 Tundra S48, 12 animation strips. Claude review required."
+    },
+    {
+      "id": "t01-mocha",
+      "label": "Town Mocha / coolcats",
+      "path": "assets/arcane/t01-mocha",
+      "manifest": "assets/arcane/t01-mocha/manifest.json",
+      "files": 13,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/t01-mocha",
+      "note": "Base 39 frames; palette variants pending; WIP audit not run"
     }
   ]
 }

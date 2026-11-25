@@ -1,0 +1,177 @@
+{
+  "status": "WIP audit not run",
+  "total_strips": 13,
+  "total_frames": 39,
+  "checks": [
+    {
+      "id": "vil_coolcats_walk_down",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "52698f95433429682d00cb68b38e931cf86531a9"
+    },
+    {
+      "id": "vil_coolcats_walk_up",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "04ccf8c1fe9e4ac17cc6c9462a4e9e2e987afe1b"
+    },
+    {
+      "id": "vil_coolcats_walk_left",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "531e214343871674aa19cb1794dae0ea9b41c7c3"
+    },
+    {
+      "id": "vil_coolcats_walk_right",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "4fd1a42a9347568c967c68a9d3a940e4e7605039"
+    },
+    {
+      "id": "vil_coolcats_idle_down",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "b57db6fcf7d287a1f30d52cd24c2f22a299d2d45"
+    },
+    {
+      "id": "vil_coolcats_idle_up",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "dbe01e42002023d314cb00150d2b125880f553c8"
+    },
+    {
+      "id": "vil_coolcats_idle_left",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "40b913b6b304af84d6184a509f3f5c10e49fe979"
+    },
+    {
+      "id": "vil_coolcats_idle_right",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "c86bfe4e9464dae1d83baa3864b08cff1186c28d"
+    },
+    {
+      "id": "vil_coolcats_emote_happy",
+      "frames": 4,
+      "distinct_frames": 2,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "f17b2fda6a7c7e5f8a096977a43c6390bb6eb675"
+    },
+    {
+      "id": "vil_coolcats_emote_sad",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "803d306425d8fc8921450dcba2d81476cc688d96"
+    },
+    {
+      "id": "vil_coolcats_emote_wave",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "affc8e09a28db30c43abe234202024e0466b3185"
+    },
+    {
+      "id": "vil_coolcats_sit_down",
+      "frames": 1,
+      "distinct_frames": 1,
+      "dimensions": [
+        128,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "7d617beac4f566f9d607c7afe3e938080d4771cc"
+    },
+    {
+      "id": "vil_coolcats_sleep",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "9d9f09fed8452471c59c59995d978ed12e8b7d2a"
+    }
+  ],
+  "limitations": "T01 Mocha (coolcats): original ginger tabby in teal cardigan, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; left mirrors symmetric profile, rear has no eyes. Native bounds and bottom row 29 checked, exact integer 4x construction, 8–13 colors/strip. Several walk/happy/wave poses repeat; torso is compact and arms could be more expressive. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority from Claude branch followed."
+}
