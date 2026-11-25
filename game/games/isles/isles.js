@@ -560,6 +560,55 @@
       arrival.n++;
     }
     arrival.sp = calm.creature;
+    arrival.dir = lead ? { x: (lead.x - htx) / ld, y: (lead.y - hty) / ld } : null;
+    arrival.from = { x: hero.x, y: hero.y }; arrival.settle = simT + 3; // the HUD and the Menu button settle in the first seconds: re-check then
+    arrivalInView(arrival.dir);
+  }
+  // cycle 6 U (b05-r3-05, 195x422 jungle): the greeter ring (8.5-11 tiles = 272-352 px) is off a small screen or lands under the HUD,
+  // the how-to card or the thumb controls. When the placed greeter is not in the free part of the first screen, it moves to a free,
+  // walkable spot on screen: a ring spot when one is free, else the farthest free spot 3+ (at worst 2+) tiles out, leaning toward the gather node.
+  // A moved greeter stands still until the hero has walked 2 tiles; closer than the 8-tile sighting radius its journal sighting waits
+  // for that too (no toast at arrival).
+  const UI_BLOCK = '#hud, #howto, #acts button, #touch-btns button, #stick, #mm-nav-btn';
+  function uiRects() {
+    const out = [];
+    document.querySelectorAll(UI_BLOCK).forEach((e) => {
+      if (e.hidden || !e.getClientRects().length) return; const cs = getComputedStyle(e); if (cs.visibility === 'hidden' || cs.display === 'none') return;
+      const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0) out.push(r);
+    });
+    return out;
+  }
+  function freeOnScreen(px, py, rects) { // the creature's drawn box (about one tile, head above its feet) fully on screen and clear of the UI
+    const sx = px - hero.x + VW / 2, sy = py - hero.y + VH / 2, l = sx - 22, r = sx + 22, t = sy - 34, b = sy + 16; // the drawn box plus 4 px
+    if (l < 4 || t < 4 || r > VW - 4 || b > VH - 4) return false;
+    for (let i = 0; i < rects.length; i++) { const q = rects[i]; if (l < q.right && q.left < r && t < q.bottom && q.top < b) return false; }
+    // anything else drawn over the map there (minimap, Map / settings buttons, boss bar): sample the box; the canvas, the page shells
+    // and the passing toast / hint line do not count
+    const pts = [[sx, sy - 10], [l + 2, t + 2], [r - 2, t + 2], [l + 2, b - 2], [r - 2, b - 2]];
+    for (let i = 0; i < pts.length; i++) {
+      const els = document.elementsFromPoint(pts[i][0], pts[i][1]);
+      for (let k = 0; k < els.length; k++) { const e = els[k]; if (e === view) break; if (!MAP_SHELL.test(e.id || '') && e !== document.body && e !== document.documentElement) return false; }
+    }
+    return true;
+  }
+  const MAP_SHELL = /^(isle-main|touch|toast|hint)$/;
+  function arrivalInView(dir) {
+    const c = creatures.find((x) => x.wid && x.wid.indexOf('arrival_') === 0); if (!c) return;
+    const rects = uiRects();
+    if (freeOnScreen(c.x, c.y, rects)) { if (!arrival.view) arrival.view = 'ring'; return; }
+    const htx = tileOf(hero.x), hty = tileOf(hero.y), R = Math.min(12, Math.ceil(Math.max(VW, VH) / 2 / TILE) + 1);
+    let best = null, bs = -Infinity;
+    // 195x422 with the how-to column and the thumbs up: the only free map is about two tiles around the hero, so 2 tiles is the floor
+    for (let pass = 0; pass < 2 && !best; pass++) for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const tx = htx + dx, ty = hty + dy, px = (tx + 0.5) * TILE, py = (ty + 0.5) * TILE, d = Math.hypot(px - hero.x, py - hero.y) / TILE;
+      if (d < (pass ? 2 : 3) || d > 11 || !walkableAt(tx, ty) || !freeOnScreen(px, py, rects)) continue;
+      const s = (d >= 8.5 ? 100 : 0) + d + (dir ? 3 * (dir.x * (px - hero.x) + dir.y * (py - hero.y)) / (d * TILE) : 0);
+      if (s > bs) { bs = s; best = { px, py, d }; }
+    }
+    if (!best) { arrival.view = 'none'; return; }
+    c.x = c.hx = c.ox = best.px; c.y = c.hy = c.oy = best.py;
+    c.seeHold = { x: hero.x, y: hero.y }; // it stands where it was put (on the first screen) until the hero walks; under 8 tiles its sighting waits too
+    arrival.view = best.d < 8.5 ? 'close' : 'ring-moved'; arrival.d = Math.round(best.d * 10) / 10;
   }
   // R4-D2 (b06-r2-05 empty first screen): groups closer than 7 tiles never pop in, so the spawn view stayed empty (meadow 0, jungle 0).
   // The FIRST tick after an island loads runs arrivalFill below (on by default, ?firstfill=0 off). Groups keep the 7-tile rule.
@@ -589,6 +638,7 @@
     }
     if (firstFill) arrivalFill(htx, hty);
     firstFill = false;
+    if (arrival.settle > simT && arrival.from && Math.hypot(hero.x - arrival.from.x, hero.y - arrival.from.y) < TILE) arrivalInView(arrival.dir);
     rareTick(htx, hty);
     // despawn far creatures (their group can come back later, nothing is lost)
     creatures = creatures.filter((c) => {
@@ -651,6 +701,9 @@
   }
   function think(c) {
     const s = specOf(c.sp, c.kind);
+    // cycle 6 U: a moved arrival greeter stands still until the hero walks: no wander, no feed pull and no taming clock yet (its
+    // "curious about you" toast would land on the first screen at 195 px, over the action column)
+    if (c.seeHold) { c.vx = 0; c.vy = 0; return; }
     // taming clock (10 Hz with the accumulated time)
     if (c.tm) tameTick(c);
     if (c.ko || c.ph) { if (c.ko) { c.vx = 0; c.vy = 0; } return; }
@@ -735,7 +788,8 @@
       c.moving = Math.abs(c.vx) + Math.abs(c.vy) > 4;
       c.awake = !c.ko;
       c.hostile = !c.ko && !c.calm && s.dmg > 0 && (c.mood === 'hostile' || c.angry > 0);
-      if (!c.seen && Math.abs(hero.x - c.x) < 8 * TILE && Math.hypot(hero.x - c.x, hero.y - c.y) < 8 * TILE) { c.seen = true; noteSeen(c); }
+      if (c.seeHold && Math.hypot(hero.x - c.seeHold.x, hero.y - c.seeHold.y) >= 2 * TILE) c.seeHold = null; // cycle 6 U: a close greeter is sighted once the hero walks
+      if (!c.seen && !c.seeHold && Math.abs(hero.x - c.x) < 8 * TILE && Math.hypot(hero.x - c.x, hero.y - c.y) < 8 * TILE) { c.seen = true; noteSeen(c); }
     }
     // cycle 2 (L): a plain scan, no closure per frame (was creatures.some(...) every frame, and a second closure when one left)
     let gone = false;
@@ -1005,7 +1059,7 @@
     let best = null, bd = 1e9, fed = null, fk = -1e9;
     for (let i = 0; i < creatures.length; i++) {
       const c = creatures[i];
-      if (!c.tm || !(c.ko || c.calm)) continue;
+      if (!c.tm || !(c.ko || c.calm) || c.seeHold) continue; // cycle 6 U: the close greeter brings up no Feed button (it would cover it at 195 px) until the hero walks
       const d = Math.hypot(hero.x - c.x, hero.y - c.y);
       if (d > (c.ko ? FEED_R : TM.K.CALM_RANGE)) continue;
       if (d < bd) { bd = d; best = c; }
@@ -3359,7 +3413,7 @@
   // companion, and the saddle while riding (fitted = the crafted saddle is in your pack; bareback only with ?saddles=0)
   function tameHud(ft) {
     let c = ft;
-    if (!c && TAME) { let bd = 5 * TILE; for (let i = 0; i < creatures.length; i++) { const x = creatures[i]; if (!x.tm) continue; const d = Math.hypot(hero.x - x.x, hero.y - x.y); if (d < bd) { bd = d; c = x; } } }
+    if (!c && TAME) { let bd = 5 * TILE; for (let i = 0; i < creatures.length; i++) { const x = creatures[i]; if (!x.tm || x.seeHold) continue; const d = Math.hypot(hero.x - x.x, hero.y - x.y); if (d < bd) { bd = d; c = x; } } } // cycle 6 U: the standing greeter grows no taming line on the HUD until the hero walks
     const tm = c && c.tm;
     setMeter('trust', tm && (c.calm || c.ko) && tm.need > 0 ? Math.floor(tm.prog) + '/' + tm.need : '');
     setMeter('torpor', tm && tm.torporMax > 0 && (tm.torpor > 0 || c.ko) ? (c.ko ? 'asleep ' + Math.ceil(TM.sleepLeft(tm)) + 's' : Math.round(100 * clamp(tm.torpor / tm.torporMax, 0, 1)) + '%') : '');

@@ -120,7 +120,11 @@
   if (canvas.parentNode) canvas.parentNode.insertBefore(bloomEl, canvas);
   let bloomT = 0;
   function bloomText(text) {
-    bloomEl.textContent = text; bloomEl.style.top = Math.max(0, canvas.offsetTop - 22) + 'px';
+    bloomEl.textContent = text;
+    // cycle 6 U (b09-r3-04): it straddled the time bar. Portrait: it sits in the gap reserved under the bar (echo-late.css), clear of
+    // the bar and of the board ring; side by side (landscape), where the bar is not above the board, the old spot.
+    const tb = document.getElementById('timebar'), above = tb && tb.offsetParent === canvas.offsetParent && tb.offsetTop + tb.offsetHeight <= canvas.offsetTop;
+    bloomEl.style.top = (above ? tb.offsetTop + tb.offsetHeight + 5 : Math.max(0, canvas.offsetTop - 22)) + 'px';
     bloomEl.classList.remove('on'); void bloomEl.offsetWidth; bloomEl.classList.add('on');
     clearTimeout(bloomT); bloomT = setTimeout(() => { bloomEl.classList.remove('on'); }, 1100);
   }

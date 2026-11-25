@@ -44,3 +44,8 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 #intro.overlay { position:static; box-shadow:none; }
 @media (orientation: landscape) and (max-height: 500px) { #stage { max-width:min(560px, 100vw - 32px); } #view { max-height:46vh; width:auto; max-width:100%; margin:0 auto; } #jump { min-height:56px; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; } }
+
+/* cycle 6 U (b09-r3-02): after a crash the result card already shows the goal line and a green Play again. The page goal line hides
+   and the big Jump button steps back to a quiet 48 px outlined "Run again" (one tap still runs the same course; R too). */
+body.dash-over #goal { display:none; }
+body.dash-over #jump { min-height:48px; background:transparent; color:var(--accent, #ffd166); box-shadow:inset 0 0 0 2px currentColor; font-size:calc(15px * var(--ui-scale, 1)); }

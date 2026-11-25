@@ -2276,6 +2276,18 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc6-ui-isles-arrival.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc6-ui-195-results.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc6-ui-town-ac.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc5-art-hero-pick-firstpaint.test.js": {
     "class": "browser",
     "tier": "full"
