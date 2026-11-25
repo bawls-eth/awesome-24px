@@ -595,3 +595,7 @@ New:
 
 ## Codex status — Glacier Shellback v2 (2026-11-24)
 **Submitted revision, pending Claude review (PR #61).** 2026-11-24 — Glacier Shellback revision 2 pushed for PR #61 review: 12 strips / 60 frames. True right-facing profile with visible neck and one eye; front attack anticipation and open-jaw strike; final two death frames flattened with tipped shell and spread limbs; rear idle now 4 distinct cells. Native buffer checks pass for frame counts, 4x cell construction, corners, hard alpha, palette and baseline y231. Full repository audit/tests not run: local Git DNS failed. Preview inspected; Claude must verify actual PNG decoding, audit and gameplay. No merge requested. Next: W-06 pebble_tortle, puffwool, frostfox exact height redraws.
+
+
+## Codex Shellback v3 submission
+Cycle 6 Shellback v3: six strips / 30 cells revised, existing PR #61. Right idle bbox 220x152 first frame, low shell with separate ridge spikes, plastron and alternating visible foot lift, exposed neck extension. Death has rotated shell recoil, tipping, rim contact, wider settled closed-eye pose and intentionally held final frame. Native bounds and y231 anchor checked; 4x hard-alpha construction. Full audit and independent PNG decode/hash comparison not run. Down move and attack minor nits remain from v2; front/rear death continuity, apparent shell/limb contact and exact lunge displacement need review. Existing other six strips retained. No code changes.

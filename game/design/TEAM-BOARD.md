@@ -338,3 +338,7 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 - **Decisions:** `game/design/beta/ROUND4-DECISIONS.md` (D5-01: Arcane Frontier ships as a "Coming soon" card, no Hub card).
 - **Integration:** on the coordinator's call D5 merges r4-d1..r4-d4 into a local `r4-integ`, runs the full tier in shards
   (`tools/stamp.sh --no-write`) and reports each red test with the commit that caused it.
+
+
+## Codex Shellback v3
+Cycle 6 Shellback v3: six strips / 30 cells revised, existing PR #61. Right idle bbox 220x152 first frame, low shell with separate ridge spikes, plastron and alternating visible foot lift, exposed neck extension. Death has rotated shell recoil, tipping, rim contact, wider settled closed-eye pose and intentionally held final frame. Native bounds and y231 anchor checked; 4x hard-alpha construction. Full audit and independent PNG decode/hash comparison not run. Down move and attack minor nits remain from v2; front/rear death continuity, apparent shell/limb contact and exact lunge displacement need review. Existing other six strips retained. No code changes.
