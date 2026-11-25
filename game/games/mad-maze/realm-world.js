@@ -2990,9 +2990,9 @@
     }
     function jhPick() { // the one next verb, never "move", never one already shown this visit
       const coarse = isCoarse();
-      if (!jh.used.bag && picks.length > 0) return { verb: 'bag', text: 'Walk over the drops on the ground to pick them up' };
-      if (!jh.used.ab && !jh.abUsed) return { verb: 'ab', text: coarse ? 'Tap ability 1 to use your class skill' : 'Press Q (ability 1) to use your class skill' };
-      if (!jh.used.menu && !jh.panelSeen) return { verb: 'menu', text: coarse ? 'Open the Menu (☰) for your quests and bag' : 'Press Esc to open the Menu: quests and bag' };
+      if (!jh.used.bag && picks.length > 0) return { verb: 'bag', text: 'Walk over the drops on the ground to pick them up', short: 'Pick up the drops' };
+      if (!jh.used.ab && !jh.abUsed) return { verb: 'ab', text: coarse ? 'Tap ability 1 to use your class skill' : 'Press Q (ability 1) to use your class skill', short: coarse ? 'Tap ability 1' : 'Press Q' };
+      if (!jh.used.menu && !jh.panelSeen) return { verb: 'menu', text: coarse ? 'Open the Menu (☰) for your quests and bag' : 'Press Esc to open the Menu: quests and bag', short: coarse ? 'Open the Menu (☰)' : 'Press Esc: Menu' };
       // every verb shown once: repeat one the player has still not done (never the one just shown); the 3-per-visit cap is the limit
       const again = [!jh.abUsed && jh.verb !== 'ab' && 'ab', !jh.panelSeen && jh.verb !== 'menu' && 'menu'].filter(Boolean)[0];
       if (again) { jh.used[again] = 0; return jhPick(); }
@@ -3004,16 +3004,31 @@
         const bot = [['realm-abilities', 8], ['realm-stick-move', 40], ['realm-stick-aim', 40], ['realm-help', 6]];
         bot.forEach(([id, gap]) => { const e = document.getElementById(id); if (jhVisible(e)) { const r = e.getBoundingClientRect(); if (r.height > 0) top = Math.min(top, r.top - gap); } });
         [portalBtn, siteBtn, lairBtn, siteNote].forEach((e) => { if (jhVisible(e)) top = Math.min(top, e.getBoundingClientRect().top - 6); });
+        jhEl.style.top = ''; jhEl.style.left = ''; jhEl.style.transform = ''; jhEl.style.maxWidth = '';
         jhEl.style.bottom = Math.max(4, Math.round(o.bottom - top)) + 'px';
       } catch (e) { /* the CSS position stays */ }
     }
+    // 195x422 (cycle 10): the band above the ability grid is full (zone strip, goal line, minimap). Second slot: under the top HUD, left of the
+    // minimap, short wording, wraps to 2 lines. Used only when the first slot touches something; the overlap check still decides.
+    function jhPlaceAlt() {
+      try {
+        const o = ov.getBoundingClientRect(); let top = o.top + 4; let right = o.right - 8;
+        ['realm-hud', 'realm-xp', 'realm-partner', 'realm-boss'].forEach((id) => { const e = document.getElementById(id); if (jhVisible(e)) top = Math.max(top, e.getBoundingClientRect().bottom + 4); });
+        if (jhVisible(mini)) { const r = mini.getBoundingClientRect(); if (r.top < top + 60 && r.bottom > top) right = Math.min(right, r.left - 6); }
+        jhEl.style.bottom = 'auto'; jhEl.style.transform = 'none'; jhEl.style.left = '8px'; jhEl.style.top = Math.round(top - o.top) + 'px';
+        jhEl.style.maxWidth = Math.max(100, Math.round(right - o.left - 8)) + 'px';
+      } catch (e) { /* the first slot stays */ }
+    }
+    function jhHits() { // the named HUD strips plus EVERY visible control (button / link / role=button, e.g. the Daily and gear buttons) except its own
+      const hr = jhEl.getBoundingClientRect(); const ctl = Array.prototype.filter.call(document.querySelectorAll('button, a[href], [role="button"]'), (e) => !jhEl.contains(e));
+      for (const e of [zoneEl, goalEl, mini, document.getElementById('realm-hud'), document.getElementById('realm-xp'), document.getElementById('realm-abilities'), document.getElementById('realm-stick-move'), document.getElementById('realm-stick-aim')].concat(ctl)) { if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden' || !jhVisible(e)) continue; const r = e.getBoundingClientRect(); if (r.left < hr.right && r.right > hr.left && r.top < hr.bottom && r.bottom > hr.top) return true; } return hr.left < -0.5 || hr.top < -0.5 || hr.right > innerWidth + 0.5 || hr.bottom > innerHeight + 0.5; }
     function jhHide(why) { if (!jh.on) return; jh.on = false; jh.why = why; jhEl.classList.add('hidden'); jh.log.push({ verb: jh.verb, why }); jh.t = 0; }
     function jhShow(p) {
       jh.on = true; jh.verb = p.verb; jh.used[p.verb] = 1; jh.shown++; jh.life = JH_LIFE; jh.why = '';
-      jhTxt.textContent = '💡 ' + p.text; jhEl.classList.remove('hidden'); jhPlace();
-      // never over the goal / zone strip: if it would touch them it does not stay
-      const hr = jhEl.getBoundingClientRect();
-      for (const e of [zoneEl, goalEl, mini]) { if (!jhVisible(e)) continue; const r = e.getBoundingClientRect(); if (r.left < hr.right && r.right > hr.left && r.top < hr.bottom && r.bottom > hr.top) { jh.shown--; jh.used[p.verb] = 0; jhHide('overlap'); jh.log.pop(); return; } }
+      const narrow = ov.getBoundingClientRect().width < 300;
+      jhTxt.textContent = '💡 ' + (narrow && p.short ? p.short : p.text); jhEl.classList.remove('hidden'); jhPlace();
+      // never over the goal / zone strip, the minimap, the ability grid or a stick: try the second slot, else it does not show (waits 20 s more)
+      if (jhHits()) { jhPlaceAlt(); if (jhHits()) { jh.shown--; jh.used[p.verb] = 0; jhHide('overlap'); jh.log.pop(); } }
     }
     jhX.addEventListener('click', () => jhHide('close'));
     function jhTick(dt) {
@@ -3037,7 +3052,9 @@
       const pk = jhPick(); if (!pk) { jh.t = 0; return; }
       jhShow(pk);
     }
-    function onHintKey(ev) { if (ev.key === 'Escape' && jh.on) { ev.preventDefault(); ev.stopImmediatePropagation(); jhHide('esc'); } }
+    // Esc closes the hint. With the Menu hint up ("Press Esc to open the Menu") the key also goes through, so the Menu opens as the text says
+    // (L review, cycle 10); for the other verbs it is swallowed so dismissing a tip never opens the Menu by surprise.
+    function onHintKey(ev) { if (ev.key !== 'Escape' || !jh.on) return; if (jh.verb === 'menu') { jhHide('esc-menu'); return; } ev.preventDefault(); ev.stopImmediatePropagation(); jhHide('esc'); }
     if (JH_ON && typeof window !== 'undefined') window.addEventListener('keydown', onHintKey, true);
 
     // ---------- cycle 10 S, ID-55: first-session ending card (L + U review conditions) ----------
@@ -3061,7 +3078,8 @@
       return s;
     })();
     function feStore() { try { sessionStorage.setItem(FE_KEY, JSON.stringify(fe)); } catch (e) { /* session storage blocked: the clock restarts on a reload */ } }
-    if (FE_ON) feStore();
+    if (FE_ON) { feStore(); if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { if (fe.ok === 1) feStore(); }); }
+    let feStoreN = 0;
     const feEl = document.createElement('section'); feEl.id = 'rw-firstend'; feEl.hidden = true; feEl.setAttribute('role', 'dialog'); feEl.setAttribute('aria-labelledby', 'rw-fe-head');
     if (FE_ON) ov.appendChild(feEl);
     function feQuietWhy() {
@@ -3097,12 +3115,12 @@
     function feShow() {
       feDone = true; // in memory first: a failed save never shows it twice in this visit
       const sv = arena.save; const K = MMMiniKit; feGoal = feGoalNow();
-      try { sv.firstEndSeen = 1; arena.onSave(sv); } catch (e) { /* storage blocked: shown once this visit anyway */ }
-      fe.ok = 0; feStore();
       const vm = K.result({ headline: 'Nice first run!', stats: [{ label: 'Level', value: K.fmt(sv.level), id: 'rw-fe-lv' }, { label: 'Tames', value: K.fmt(feTames()), id: 'rw-fe-tames' }, { label: 'Shards', value: K.fmt(sv.shards), id: 'rw-fe-shards' }],
         goalText: feGoal.text, more: [{ id: 'rw-fe-later', label: 'Not now' }], ids: { again: 'rw-fe-go', goal: 'rw-fe-goal', head: 'rw-fe-head' } });
       feCard = K.panel(feEl, vm, { again: () => feGo(), more: [() => feClose('later')], keyReady: () => false, holdMs: 600 });
-      if (!feCard) return;
+      if (!feCard) return; // not built: not marked seen (L review, cycle 10)
+      try { sv.firstEndSeen = 1; arena.onSave(sv); } catch (e) { /* storage blocked: shown once this visit anyway */ }
+      fe.ok = 0; feStore();
       feCard.again.textContent = 'Go: ' + feGoal.label;
       feEl.hidden = false; feOpen = true; feWhy = '';
       if (jh.on) jhHide('card');
@@ -3121,7 +3139,7 @@
       if (feDone || fe.ok !== 1) return;
       fe.t += Math.min(dt, 0.1); // game time only
       feSec -= dt; if (feSec > 0) return; feSec = 1;
-      feStore();
+      if (++feStoreN >= 5) { feStoreN = 0; feStore(); } // every 5 s (and on pagehide), not every second (L review, cycle 10)
       const due = fe.t >= FE_SEC || feDeep() > fe.d;
       if (!due) return;
       feWhy = feQuietWhy(); if (feWhy) return; // wait for the next quiet moment

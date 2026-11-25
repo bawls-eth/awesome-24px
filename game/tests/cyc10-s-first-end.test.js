@@ -64,7 +64,7 @@ const waitOpen = (page, ms) => page.waitForFunction(() => window.__mm.world.firs
   // ---- 1) save + Backup (in the Realm page: realm.js globals + shared/mm-backup.js) and the desktop card ----
   {
     const v = { view: [1280, 720], touch: false, name: '1280x720' };
-    const s = await open(browser, v, URL0 + '&fesec=4'); const { page } = s;
+    const s = await open(browser, v, URL0 + '&fesec=12'); const { page } = s; // 12 s: page setup under load can take a few game seconds
     const sv = await page.evaluate(() => {
       const a = rmCleanSave({ level: 3, firstEndSeen: 1 }); const b = rmCleanSave({ level: 3, firstEndSeen: 'yes' }); const c = rmCleanSave({ level: 3 });
       const m1 = rmMergeSave({ firstEndSeen: 1 }, {}); const m2 = rmMergeSave({}, { firstEndSeen: 1 }); const m3 = rmMergeSave({}, {});
@@ -87,7 +87,7 @@ const waitOpen = (page, ms) => page.waitForFunction(() => window.__mm.world.firs
       window.__feT = setInterval(() => { if (window.__feHold) { window.__feHold.active = true; window.__feHold.x = a.player.x + 150; window.__feHold.y = a.player.y; window.__feHold.fireT = 99; } }, 16);
       return true;
     });
-    await page.waitForFunction(() => window.__mm.world.firstEnd.state().t >= 6, null, { timeout: LS.budget(20000) }).catch(() => null);
+    await page.waitForFunction(() => window.__mm.world.firstEnd.state().t >= 14, null, { timeout: LS.budget(20000) }).catch(() => null);
     await page.waitForTimeout(1200);
     const cq = await card(page);
     check(v.name + ': due (clock past ?fesec) but a live enemy within 420 px: the card waits (why = enemy)', held && !cq.shown && cq.st.why === 'enemy' && !cq.st.done, JSON.stringify(cq.st));
