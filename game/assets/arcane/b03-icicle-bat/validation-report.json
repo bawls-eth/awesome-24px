@@ -1,21 +1,33 @@
 {
+  "status": "WIP, audit not run",
   "local_blockers": 0,
-  "assets": [
+  "repository_audit": "not run",
+  "tests": "not run",
+  "total_strips": 12,
+  "total_frames": 60,
+  "changed_frames": 54,
+  "checks": [
     {
       "id": "icicle_bat_idle_down",
       "dimensions": [
         768,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 4,
       "distinct_frames": 4,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "git_blob_sha": "09589e0e6f6276a56b8c1233bcd4ffcf090f591a",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_move_down",
@@ -23,17 +35,23 @@
         1152,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 6,
       "distinct_frames": 6,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "git_blob_sha": "a3ae0511fa676cfa6e2542ea3b4f65584783a63d",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_attack_down",
@@ -41,16 +59,22 @@
         960,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 5,
       "distinct_frames": 5,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "git_blob_sha": "55d7e27a87bf8b9b4bd9d9276e38eec119d1fda5",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_death_down",
@@ -58,16 +82,22 @@
         960,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 5,
       "distinct_frames": 5,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        0,
+        0
+      ],
+      "git_blob_sha": "c8e90c921a3789d11eab7344cec46fc52da8f086",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_idle_up",
@@ -75,15 +105,21 @@
         768,
         192
       ],
-      "colors": 8,
-      "baseline": [
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 4,
       "distinct_frames": 4,
-      "passed": true
+      "opaque_colors": 8,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "git_blob_sha": "88f9ee0b3d4a5975ada98317a8dd4cad9864e9df",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_move_up",
@@ -91,17 +127,23 @@
         1152,
         192
       ],
-      "colors": 8,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 6,
       "distinct_frames": 6,
-      "passed": true
+      "opaque_colors": 8,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "git_blob_sha": "b46d7a719f4e812cd8d2ad6f7d083462e64a0908",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_attack_up",
@@ -109,16 +151,22 @@
         960,
         192
       ],
-      "colors": 8,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 5,
       "distinct_frames": 5,
-      "passed": true
+      "opaque_colors": 8,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "git_blob_sha": "f26ef18f86eb72a6e030bc26dc6de9ed2156d123",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_death_up",
@@ -126,16 +174,22 @@
         960,
         192
       ],
-      "colors": 8,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 5,
       "distinct_frames": 5,
-      "passed": true
+      "opaque_colors": 8,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        3,
+        3,
+        3,
+        0,
+        0
+      ],
+      "git_blob_sha": "bbe7cd4f233ce6769cefa60db2a45f08ef013385",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_idle_right",
@@ -143,15 +197,21 @@
         768,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 4,
       "distinct_frames": 4,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "git_blob_sha": "42f138081dae279ee161d181a3d7c9522892bbe4",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_move_right",
@@ -159,17 +219,23 @@
         1152,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 6,
       "distinct_frames": 6,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "git_blob_sha": "b04ffcf7bad3e930006dddb52a5504b36038e80a",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_attack_right",
@@ -177,16 +243,22 @@
         960,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 5,
       "distinct_frames": 5,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "git_blob_sha": "90ce95297b753115de667e8bc58fdb53848bad83",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     },
     {
       "id": "icicle_bat_death_right",
@@ -194,19 +266,23 @@
         960,
         192
       ],
-      "colors": 10,
-      "baseline": [
-        171,
-        171,
-        171,
-        171,
-        171
-      ],
+      "frames": 5,
       "distinct_frames": 5,
-      "passed": true
+      "opaque_colors": 9,
+      "baseline": 171,
+      "exact_4x": true,
+      "hard_alpha": true,
+      "spikes": [
+        2,
+        2,
+        2,
+        0,
+        0
+      ],
+      "git_blob_sha": "b16ec99e5979316fb11369c1e3c5c6eb30036928",
+      "git_blob_sha_verified": true,
+      "roundtrip_decoded": true
     }
   ],
-  "repository_audit": "not run",
-  "reference_comparison": "not run",
-  "gameplay": "not run"
+  "limitations": "Icicle Bat detail pass: in-place revision of accepted PR #60 art, all 12 strips / 60 cells; 54 active or falling frames receive 2–3 tapered attached ice spikes on wing edges, final six flat death cells unchanged in visible pixels. Existing palette, IDs, 192 cells, timing and anchor (96,171) unchanged. Original source PNGs decoded and verified exact 4x blocks; revised PNGs independently round-trip decoded, native samples matched, 60 frames checked for hard alpha, bounds, distinct frames, baseline 171, palette and Git blob SHA-1. Two 3x native contact sheets visually reviewed. Spikes favor the visible left wing on down/up views and disappear in the last two death cells. Full repository audit/tests not run; pending Claude review. No code/tests/Firebase changes. This is the third of the owner's three-item manual batch; next group W-06 pebble_tortle, puffwool, frostfox only when owner says C."
 }
