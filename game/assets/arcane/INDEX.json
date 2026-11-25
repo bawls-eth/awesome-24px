@@ -751,7 +751,7 @@
       "status": "provisional",
       "source": "codex",
       "branch": "codex/b03-icicle-bat",
-      "note": "WIP, audit not run; B-03 Tundra S48, 12 animation strips. Claude review required."
+      "note": "B-03 Tundra S48, 12 strips; frost-detail revision (5985c6c) reviewed cycle 6: audit 0 rows, same ids/frames/anchor/bbox, provisional. Not wired (tundra list pinned in shared-mm-creature-strips test)."
     }
   ]
 }
