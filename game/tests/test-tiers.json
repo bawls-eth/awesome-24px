@@ -2495,6 +2495,11 @@
     "tier": "full",
     "timeoutSec": 420
   },
+  "cyc11-lead-town-stars.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
+  },
   "cyc10-lead-town-shop-reliability.test.js": {
     "class": "browser",
     "tier": "full",
