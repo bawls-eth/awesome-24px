@@ -388,3 +388,15 @@ Review of the cycle 9 proposals (D, for L/U to confirm):
 - ID-59: reviewers of cozy games repeatedly say villagers and animals with visible personality, not systems, are what make the first hours feel warm ([Gfinity: heart over stats](https://www.gfinityesports.com/article/heart-over-stats-what-truly-makes-cozy-games-feel-like-home), [PC Gamer: Dragon Shelter first season](https://www.pcgamer.com/games/life-sim/14-days-in-dragon-shelter-a-play-by-play-of-my-first-season-in-the-stardew-style-farm-sim-where-dragons-help-bake-pies/)), and one player says collecting animals right away is what hooked them ([Starsand Island, 25 hours](https://www.inkl.com/news/i-ve-played-starsand-island-for-25-hours-and-this-is-the-most-invested-i-ve-been-in-a-cozy-game-for-years)). The Town animals (deer, fox, owl, robin, squirrel are now Codex art) are free of cost to react. It also gives the first-ten-minutes goal a creature to meet before the Realm. Check with G that the reaction needs no new art (turn + existing heart icon).
 - ID-60: a quiet collection that has no reward avoids obligation; pairs with ID-04 (notebook exists, key `pixeltown-notebook-v1`, additive page). [M10] no measured data; effort depends on how the notebook lists pages.
 - ID-61: practitioner write-ups say the first seconds back should make the player glad to return, and that lists of what was missed read as chores ([Game Developer: catch-up systems](https://gamedeveloper.com/design/catch-up-systems-and-what-the-heck-are-those-), [Bugnet: onboarding for returning players](https://bugnet.io/blog/how-to-design-a-games-onboarding-for-returning-players), [MCV: should games welcome back lapsed players](https://mcvuk.com/development-news/opinion-shouldnt-games-adapt-to-busy-life/)). Fits the no-guilt rules (ID-09 counts days, never resets). The save already holds level and zone; no new key beyond a device-pref "seen today" in memory.
+
+## Cycle 11 additions (D; all `proposed`; generic web queries only; Town animals and the first Realm hour)
+
+| ID | Idea | Size | Risk | Status |
+|---|---|---|---|---|
+| ID-62 | Animal treat bubble (Town): an animal that has liked the hero (ID-59) sometimes shows a small food icon when the hero is near; handing over a carried flower or berry gives a heart and a second line. No hunger, no penalty if ignored | S | low | proposed |
+| ID-63 | Isles tame callback in Town: after the first Isles tame the nearest Town animals turn to the new companion and one line mentions it | S | low | proposed |
+| ID-64 | First-build choice at the first Lv 5 level-up: a card offers 2 plainly worded options for ability 1; additive save key; needs an economy check and U for the card | M | medium | proposed |
+
+- Sources and ranking of ID-56..61: `design/beta/cycle11-design.md`. D ranking by impact: ID-58, ID-59, ID-61, ID-56, ID-60, ID-57.
+- ID-55 tuned in cycle 11 (D): first session = Lv <= 5 at first world load; a card closed by danger within 6 s retries (max 2).
+
