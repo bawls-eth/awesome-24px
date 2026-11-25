@@ -3071,12 +3071,17 @@
     const FE_ON = !/[?&]firstend=0(&|$)/.test(qs0) && !!window.MMMiniKit && typeof MMMiniKit.panel === 'function';
     const FE_TEST = /[?&]test=1(&|$)/.test(qs0); const feQ = /[?&]fesec=(\d{1,4})(&|$)/.exec(qs0);
     const FE_SEC = FE_TEST && feQ ? Math.max(1, +feQ[1]) : 480; const FE_KEY = 'pixeltown-firstend-s'; const FE_QUIET = 420; const FE_NEAR = 300;
+    // cycle 11 D (measured with the first-ten bot, design/beta/cycle11-design.md): "first session" = Lv <= 5 at the first world load in this tab (the bot reaches Lv 5 after
+    // 64-99 s, a human after about 3-4 min; Lv 3 shut out everyone who had played more than a minute); a card that the world closes again within FE_MIN s (an enemy came
+    // within 300 px: the bot saw it for 1-5 s) shows again at the next quiet moment, up to FE_RETRY times and FE_COOL s apart; the save flag stays written at the first show.
+    const FE_LV = 5; const FE_MIN = 6; const FE_RETRY = 2; const FE_COOL = 10;
+    let feVis = 0; let feRe = false; let feReN = 0; let feCool = 0;
     let feOpen = false; let feDone = false; let feSec = 1; let feCard = null; let feBack = null; let feWhy = ''; let feGoal = null;
     function feDeep() { try { const o = JSON.parse(localStorage.getItem('pixeltown-deep-v1') || 'null'); const f = o && o.f && typeof o.f === 'object' ? o.f : {}; return Object.keys(f).filter((k) => Number.isInteger(f[k]) && f[k] > 0).length; } catch (e) { return 0; } }
     function feTames() { try { const o = JSON.parse(localStorage.getItem('pixeltown-tames-v1') || 'null'); return o && Array.isArray(o.roster) ? o.roster.length : 0; } catch (e) { return 0; } }
     const fe = (() => { // per-tab session: {ok, t (game seconds), d (dungeon clears at the start)}
       let s = null; try { s = JSON.parse(sessionStorage.getItem(FE_KEY) || 'null'); } catch (e) { s = null; }
-      if (!s || typeof s !== 'object' || !(s.ok === 0 || s.ok === 1)) s = { ok: (arena.save && arena.save.firstEndSeen !== 1 && (arena.save.level | 0) <= 3) ? 1 : 0, t: 0, d: feDeep() };
+      if (!s || typeof s !== 'object' || !(s.ok === 0 || s.ok === 1)) s = { ok: (arena.save && arena.save.firstEndSeen !== 1 && (arena.save.level | 0) <= FE_LV) ? 1 : 0, t: 0, d: feDeep() };
       s.t = Math.max(0, Math.min(1e6, Number(s.t) || 0)); s.d = Math.max(0, Number(s.d) | 0);
       return s;
     })();
@@ -3105,6 +3110,7 @@
     }
     function feClose(why) {
       if (!feOpen) return; feOpen = false; feWhy = why; feEl.hidden = true;
+      if (why === 'danger' && feVis < FE_MIN && feReN < FE_RETRY) { feReN++; feRe = true; feCool = FE_COOL; } // closed by the world before it could be read: once more at the next quiet moment
       if (feBack) { try { feBack.stop(); } catch (e) { /* nav hook */ } feBack = null; }
       const cw = document.getElementById('realm-canvas-wrap'); if (cw) { try { cw.focus({ preventScroll: true }); } catch (e) { cw.focus(); } }
     }
@@ -3116,7 +3122,7 @@
       return null;
     }
     function feShow() {
-      feDone = true; // in memory first: a failed save never shows it twice in this visit
+      feDone = true; feVis = 0; // in memory first: a failed save never shows it twice in this visit
       const sv = arena.save; const K = MMMiniKit; feGoal = feGoalNow();
       const vm = K.result({ headline: 'Nice first run!', stats: [{ label: 'Level', value: K.fmt(sv.level), id: 'rw-fe-lv' }, { label: 'Tames', value: K.fmt(feTames()), id: 'rw-fe-tames' }, { label: 'Shards', value: K.fmt(sv.shards), id: 'rw-fe-shards' }],
         goalText: feGoal.text, more: [{ id: 'rw-fe-later', label: 'Not now' }], ids: { again: 'rw-fe-go', goal: 'rw-fe-goal', head: 'rw-fe-head' } });
@@ -3133,12 +3139,13 @@
     function feTick(dt) {
       if (!FE_ON) return;
       if (feOpen) { // close it when the world gets dangerous again (the world never pauses for it)
-        feSec -= dt; if (feSec > 0) return; feSec = 1;
+        feSec -= dt; if (feSec > 0) return; feSec = 1; feVis++;
         const p = arena.player; const es = arena.enemies || []; let near = false;
         for (let i = 0; i < es.length && !near; i++) { const e = es[i]; if (e && e.active && Math.hypot(e.x - p.x, e.y - p.y) < FE_NEAR) near = true; }
         if (near || bossRect() || rush.on || arena.state !== 'play') feClose('danger');
         return;
       }
+      if (feRe) { feCool -= dt; if (feCool > 0) return; feWhy = feQuietWhy(); if (feWhy) return; feRe = false; feShow(); return; } // cycle 11 D: the retry
       if (feDone || fe.ok !== 1) return;
       fe.t += Math.min(dt, 0.1); // game time only
       feSec -= dt; if (feSec > 0) return; feSec = 1;
@@ -3311,7 +3318,7 @@
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
       // cycle 10 S: ID-53 just-in-time hint and ID-55 first-session ending card (test hooks, read-only state)
       jitHint: { on: JH_ON, sec: JH_SEC, max: JH_MAX, state: () => ({ on: jh.on, t: jh.t, shown: jh.shown, verb: jh.verb, why: jh.why, moved: jh.moved, block: jhBlock(), text: jhTxt.textContent, log: jh.log.slice() }), showNow: () => { if (jh.on) return true; const pk = jhPick(); if (pk) jhShow(pk); return jh.on; } },
-      firstEnd: { on: FE_ON, sec: FE_SEC, state: () => ({ open: feOpen, done: feDone, ok: fe.ok, t: fe.t, d: fe.d, why: feWhy, goal: feGoal ? Object.assign({}, feGoal) : null }), go: feGo, close: feClose }, lastFirstEndUrl: null,
+      firstEnd: { on: FE_ON, sec: FE_SEC, state: () => ({ open: feOpen, done: feDone, re: feRe, reN: feReN, vis: feVis, lv: FE_LV, ok: fe.ok, t: fe.t, d: fe.d, why: feWhy, goal: feGoal ? Object.assign({}, feGoal) : null }), go: feGo, close: feClose }, lastFirstEndUrl: null,
     };
     return { api, hooks };
   }
