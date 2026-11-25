@@ -1,0 +1,190 @@
+{
+  "status": "WIP audit not run",
+  "total_strips": 13,
+  "total_frames": 39,
+  "checks": [
+    {
+      "id": "vil_mohawks_walk_down",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "63cd328223f7ce2965de2e7f597a733f8d81e32c",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_walk_up",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "dcdd883e1d2d44ed80b29613cd7955ac353d2a1b",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_walk_left",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "6f7705369384518895a50b893876f70cc465a33e",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_walk_right",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "31349af110b895aeeaf4b07d75ea17448ff28b29",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_idle_down",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "635765afb29c81f6b65b05beb5f313b46e57113f",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_idle_up",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "6de3cf47e5066c0d5d1e651453f0b3b2cc78748c",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_idle_left",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "07283a41099d814ef19ee5fc471cf295371b7dea",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_idle_right",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "f7ac104c0e697592580bc5c4dadc70bf9cef28ea",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_emote_happy",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "f1c42efc496247933100617d97fe1d4947c1ce3e",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_emote_sad",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "6f683b93781876872ac86dc2f6dabe2446dcc0b9",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_emote_wave",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "9008d1749c852f8d325bfd1842f93fd3f494d778",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_sit_down",
+      "frames": 1,
+      "distinct_frames": 1,
+      "dimensions": [
+        128,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "60e1c820aaa34ca37693ed910c440071baf90078",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "vil_mohawks_sleep",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "git_blob_sha": "2ed14d2d8f271613045094854921d5500d37204d",
+      "git_blob_sha_verified": true
+    }
+  ],
+  "limitations": "Town Spike (mohawks): original hedgehog with spiny mantle, purple quill crest, pointed snout, green work apron and rear cross straps; 13 strips/39 cells, 32 native/128 output, four directions and all required actions. All 16 walk cells distinct within strips; exact native baseline row 29, bounds, palette and hard alpha checked; all 14 PNG Git blob SHA-1 values independently computed and matched. Happy repeats one pose; left profile mirrored. Nine recolors, old/new multi-background comparison, GIF/APNG, independent PNG decoding, full repository audit and gameplay review remain pending. git ls-remote failed: Could not resolve host github.com; no local checkout. INDEX provisional entry because ingest unavailable. No code/tests/Firebase changes."
+}
