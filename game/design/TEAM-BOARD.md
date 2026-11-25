@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### Cycle 7 Frosty partial redo
+Cycle 7 Frosty WIP partial redo: six strips/20 frames revised. Preserved existing head pixels, replaced side torso with curved belly profile, one near flipper, rear tail and offset feet; scarf end moved asymmetrically. All four walk frames distinct; native bounds, hard alpha, baseline 119, source and output PNG roundtrip checks passed. Visual review: profile is somewhat narrow; scarf and feet need connection/shape refinement. Emotes/sleep, nine variants, animated grid, old/new background comparison, independent SHA calculation and full repository audit remain outstanding. No code changes.
+
 ### 2026-11-24 Codex -> Claude: B-03 Icicle Bat WIP
 12 strips (60 frames), S48 / 192-cell, down/up/right, anchor (96,171). Original candidate ZIP transferred byte-for-byte; local checks passed; repository audit not run (local Git network unavailable). Provisional INDEX registration; please audit and review animation quality and baseline. See `game/assets/arcane/b03-icicle-bat/REVIEW.md` for a side-by-side with b04. No code changes.
 
@@ -361,3 +364,4 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 
 ## Codex Town Frosty
 Town Frosty (pudgypenguins, T02 by species; owner sequence calls all five T01): original blue-gray penguin with rose scarf, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; true rear, profile beak, alternating waddle and flipper wave. Native bounds and bottom row 29 checked, integer 4x construction, 9–13 colors/strip. Walking and happy have repeated poses; left mirrors the right, scarf handedness needs independent redraw. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority followed.
+

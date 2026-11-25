@@ -173,5 +173,55 @@
       "blob_sha": "cbe34110dd355c0e1c77a9a72a44c9a6cf0b8416"
     }
   ],
-  "limitations": "Town Frosty (pudgypenguins, T02 by species; owner sequence calls all five T01): original blue-gray penguin with rose scarf, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; true rear, profile beak, alternating waddle and flipper wave. Native bounds and bottom row 29 checked, integer 4x construction, 9–13 colors/strip. Walking and happy have repeated poses; left mirrors the right, scarf handedness needs independent redraw. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority followed."
+  "limitations": "Town Frosty (pudgypenguins, T02 by species; owner sequence calls all five T01): original blue-gray penguin with rose scarf, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; true rear, profile beak, alternating waddle and flipper wave. Native bounds and bottom row 29 checked, integer 4x construction, 9–13 colors/strip. Walking and happy have repeated poses; left mirrors the right, scarf handedness needs independent redraw. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority followed.",
+  "revision2": {
+    "status": "WIP audit not run",
+    "revised_strips": 6,
+    "revised_frames": 20,
+    "checks": [
+      {
+        "id": "vil_pudgypenguins_walk_down",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "60d57b7247e75bbcff7d468d2fa9e23b7f3b3472"
+      },
+      {
+        "id": "vil_pudgypenguins_walk_up",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "6b1a8510f8b9d8814dee289cb1ee5e3cb20efdd6"
+      },
+      {
+        "id": "vil_pudgypenguins_walk_left",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "e7c13941ec8ad5b2de652ca5d3a6952f7833afc0"
+      },
+      {
+        "id": "vil_pudgypenguins_walk_right",
+        "distinct_frames": 4,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "60c430e269d7f8b7a417fafb6e95e497b58954b4"
+      },
+      {
+        "id": "vil_pudgypenguins_idle_left",
+        "distinct_frames": 2,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "a846979d2cbe8cfd0651ab3b129ed493c646b2cd"
+      },
+      {
+        "id": "vil_pudgypenguins_idle_right",
+        "distinct_frames": 2,
+        "baseline": 119,
+        "roundtrip_decoded": true,
+        "blob_sha": "dc8bf67e07b25e14081195bba29ac127b6c265ec"
+      }
+    ],
+    "limitations": "Cycle 7 Frosty WIP partial redo: six strips/20 frames revised. Preserved existing head pixels, replaced side torso with curved belly profile, one near flipper, rear tail and offset feet; scarf end moved asymmetrically. All four walk frames distinct; native bounds, hard alpha, baseline 119, source and output PNG roundtrip checks passed. Visual review: profile is somewhat narrow; scarf and feet need connection/shape refinement. Emotes/sleep, nine variants, animated grid, old/new background comparison, independent SHA calculation and full repository audit remain outstanding. No code changes."
+  }
 }
