@@ -1,0 +1,5 @@
+# Spike WIP
+
+![Native 2x contact sheet](preview.png)
+
+Town Spike (mohawks): original hedgehog with spiny mantle, purple quill crest, pointed snout, green work apron and rear cross straps; 13 strips/39 cells, 32 native/128 output, four directions and all required actions. All 16 walk cells distinct within strips; exact native baseline row 29, bounds, palette and hard alpha checked; all 14 PNG Git blob SHA-1 values independently computed and matched. Happy repeats one pose; left profile mirrored. Nine recolors, old/new multi-background comparison, GIF/APNG, independent PNG decoding, full repository audit and gameplay review remain pending. git ls-remote failed: Could not resolve host github.com; no local checkout. INDEX provisional entry because ingest unavailable. No code/tests/Firebase changes.
