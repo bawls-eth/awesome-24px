@@ -432,6 +432,10 @@
     "class": "live",
     "tier": "full"
   },
+  "cyc6-shop.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "realm-team.test.js": {
     "class": "live",
     "tier": "full"

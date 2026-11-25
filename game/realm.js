@@ -3490,7 +3490,7 @@ class RealmArena {
     wrap.querySelector('#realm-shop-close').addEventListener('click', () => this.setShop(false));
     wrap.querySelector('#realm-shop-body').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-buy]'); if (!btn) return;
-      this.buy(btn.dataset.buy, Number(btn.dataset.r));
+      this._shopTap(btn.dataset.buy, Number(btn.dataset.r));
     });
     const bpBody = document.getElementById('realm-backpack-body'); // the backpack carries a Shop button (the HUD row is full on phones); V works too
     if (bpBody) bpBody.addEventListener('click', (e) => {
@@ -3500,13 +3500,30 @@ class RealmArena {
     return (this._shopDom = wrap);
   }
 
+  // cyc6: a tap on a Buy always answers in the panel (a refused Buy used to be a silent `disabled` button that looked live).
+  _shopTap(id, r) {
+    const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[r];
+    if (!def || !rar) return false;
+    const price = rar.sell * RM_SHOP_MULT; const n0 = sv.items.length;
+    const ok = this.buy(id, r);
+    this._shopMsg = ok ? `Bought ${rar.name} ${def.name}: it is in your backpack (${sv.items.length} / ${RM_BACKPACK}).`
+      : n0 >= RM_BACKPACK ? 'Your backpack is full: sell or combine something first.'
+        : sv.shards < price ? `You need ${price - sv.shards} more 💎 for the ${rar.name} ${def.name}.` : 'That is not for sale right now.';
+    this.renderShop();
+    const again = document.querySelector(`#realm-shop-body button[data-buy="${def.id}"][data-r="${r}"]`); // the re-render dropped focus: keep keyboard / pad users on the same row
+    if (again && this._shopDom && !this._shopDom.contains(document.activeElement)) { try { again.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+    return ok;
+  }
+
   renderShop() {
     const root = document.getElementById('realm-shop-body'); if (!root) return;
     const sv = this.save; const full = sv.items.length >= RM_BACKPACK;
-    let html = `<div class="realm-bp-count">You have ${sv.shards} 💎 · ${sv.items.length} / ${RM_BACKPACK} items${full ? ' · backpack full' : ''}</div><ul id="realm-bp-list">`;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    let html = `<div class="realm-bp-count rm-shop-top">You have ${sv.shards} 💎 · ${sv.items.length} / ${RM_BACKPACK} items${full ? ' · backpack full' : ''}<div id="realm-shop-msg" role="status" aria-live="polite">${esc(this._shopMsg || '')}</div></div><ul id="realm-bp-list" class="rm-shop-list">`;
     this.shopStock().forEach((o) => {
       const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
-      html += `<li><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
+      const why = full ? 'backpack full' : can ? '' : `need ${o.price - sv.shards} more shards`; // not `disabled`: a dead button swallows the tap, this one answers it
+      html += `<li><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq${can ? '' : ' off'}" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' aria-disabled="true"'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards${why ? ` (${why})` : ''}">Buy ${o.price}💎</button></li>`;
     });
     let foot = '';
     if (this._worldCopy()) { const nr = RM_SHOP_UNLOCK_LV.findIndex((l, r) => sv.level < l && sv.bestWave < RM_SHOP_UNLOCK[r]); if (nr > 0) foot = `Reach level ${RM_SHOP_UNLOCK_LV[nr]} to unlock ${RM_RARITIES[nr].name} gear.`; } else {
@@ -4174,7 +4191,7 @@ class RealmArena {
     const shopEl = this._ensureShopDom(); if (shopEl) { shopEl.classList.toggle('hidden', name !== 'shop'); shopEl.style.display = name === 'shop' ? 'flex' : 'none'; }
     const heroEl = document.getElementById('realm-hero'); if (heroEl) { heroEl.classList.toggle('hidden', name !== 'hero'); heroEl.style.display = name === 'hero' ? 'flex' : 'none'; } // hero picker / stats (mad-maze.js owns the DOM)
     if (name === 'hero') { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (this.onHeroPanel) this.onHeroPanel(this._heroTab || 'pick'); return; }
-    if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else if (name === 'shop') this.renderShop(); else if (name === 'menu') this._syncMenu(); else this.renderBoard(); }
+    if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else if (name === 'shop') { this._shopMsg = ''; this.renderShop(); } else if (name === 'menu') this._syncMenu(); else this.renderBoard(); }
   }
 
   setPaused(on) { this._panel(on ? 'bp' : null); } // false closes whichever panel is open
