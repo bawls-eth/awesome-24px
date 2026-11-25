@@ -1,0 +1,74 @@
+{
+  "status": "WIP audit not run",
+  "strips": 6,
+  "frames": 14,
+  "checks": [
+    {
+      "id": "ff_deer_idle",
+      "distinct": 2,
+      "dimensions": [
+        512,
+        256
+      ],
+      "baseline": 247,
+      "top_edge_contact": true,
+      "blob_sha": "40761d1a40707aff65fb45c6fc17fc41ad426c3c"
+    },
+    {
+      "id": "ff_deer_move",
+      "distinct": 4,
+      "dimensions": [
+        1024,
+        256
+      ],
+      "baseline": 247,
+      "top_edge_contact": true,
+      "blob_sha": "33607d801e7739cd64d5b17b5b6af8b6b908d2b6"
+    },
+    {
+      "id": "ff_deer_caught",
+      "distinct": 1,
+      "dimensions": [
+        256,
+        256
+      ],
+      "baseline": 247,
+      "top_edge_contact": false,
+      "blob_sha": "9fa9b3d7bce6de5dceba09835bec8359e0212bad"
+    },
+    {
+      "id": "ff_deer_idle_down",
+      "distinct": 2,
+      "dimensions": [
+        512,
+        256
+      ],
+      "baseline": 247,
+      "top_edge_contact": false,
+      "blob_sha": "c49319413f7d6958f03edcfdc3d40ea350a06191"
+    },
+    {
+      "id": "ff_deer_move_down",
+      "distinct": 4,
+      "dimensions": [
+        1024,
+        256
+      ],
+      "baseline": 247,
+      "top_edge_contact": true,
+      "blob_sha": "41233fc2793fe6ad9017ffa59ca6be05f9fcf75b"
+    },
+    {
+      "id": "ff_deer_caught_down",
+      "distinct": 1,
+      "dimensions": [
+        256,
+        256
+      ],
+      "baseline": 247,
+      "top_edge_contact": false,
+      "blob_sha": "93697cc97751ad51118d6f85bb49472b8e4c7b4c"
+    }
+  ],
+  "limitations": "T17 deer: six strips/14 frames, native 64/256 export, anchor (128,247), full body with branched antlers, tawny coat, pale throat, alternating hooves and true front and right views. Native feet baseline, palette, distinct frames checked. WIP: several antler tips touch top row and may be clipped; shorten or lower antlers before acceptance. Caught pose is lowered head. Contact sheet inspected; old SVG and grass/gray comparison pending. No independent encoded PNG decode/hash verification or full repository audit run. No code changes."
+}
