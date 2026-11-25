@@ -2,7 +2,8 @@
 // Shore (realm-world.js restOk: zone === 0). Same set-up as cyc6-lead-passive-landscape (phone landscape, brand-new profile, first hero,
 // coach skipped with its own button, no input for 120 game seconds, several seeds), but the hero is first put on the free Midlands tile
 // nearest to the spawn point (the border a player crosses first). It then records WHEN the idle hero falls.
-// This is a MEASUREMENT test: it asserts the set-up was real (hero really in zone 1, no page errors, literal 0 db attempts) and prints
+// Cycle 9 S: for ZONE 0..1 it now ALSO asserts every idle hero rests and survives the watch (ID-51 extended to zone <= 1).
+// It was a MEASUREMENT test: it asserts the set-up was real (hero really in zone 1, no page errors, literal 0 db attempts) and prints
 // the per-seed numbers (INFO lines). The decision lives in game/design/beta/cycle8-design.md.
 // OFFLINE: blockDb + every WebSocket closed + the town page stubbed; literal 0 database attempts.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc8-design-inland-passive.test.js   (SEEDS=1,2,3 / ZONE=1 / WATCH=120)
@@ -72,11 +73,18 @@ async function watch(browser, seed) {
   const runs = [];
   for (let i = 0; i < SEEDS.length; i += 2) runs.push(...await Promise.all(SEEDS.slice(i, i + 2).map((s) => watch(browser, s))));
   let fellEarly = 0, fellAny = 0;
+  // Cycle 9 S (ID-51 inland follow-up shipped: realm-world.js restOk zone <= 1, RM_IDLE_REST_S 8 -> 5): with the game as it is (no
+  // REST_ZONES simulation) an idle hero on the first inland tile now rests and lives the whole watch. Asserted for zone 0..1 only;
+  // ZONE=2 stays a measurement (Highlands keeps today's rules on purpose).
+  const ASSERT_LIVE = !SIM_REST && ZONE <= 1;
   for (const r of runs) {
     const tag = `zone ${ZONE} seed ${r.seed}: `;
     check(tag + 'the idle hero was really put on a free tile of the zone, coach skipped with its own button', !!(r.placed && r.placed.ok && r.placed.zone === ZONE) && r.skipped, JSON.stringify({ placed: r.placed, skipped: r.skipped }));
     if (r.fell !== null) { fellAny++; if (r.fell <= 30) fellEarly++; }
     console.log('INFO ' + tag + (r.fell === null ? 'alive' : 'FELL at ' + r.fell + ' s') + ', first damage at ' + r.firstHit + ' s, lowest HP ' + r.minHp + '/' + r.hpMax + ', most enemies within 420 px ' + r.maxNear + '; [t, HP, near, rest, zone] ' + JSON.stringify(r.log));
+    if (ASSERT_LIVE) {
+      check(tag + 'the idle hero rested (R seen in the log) and is still alive after ' + WATCH + ' game s (ID-51 zone <= 1)', r.fell === null && r.log.some((l) => l[3] === 'R' && l[4] === ZONE) && r.log.length && r.log[r.log.length - 1][0] >= WATCH - 10, JSON.stringify({ fell: r.fell, minHp: r.minHp, log: r.log }));
+    }
     check(tag + 'no page errors, no database traffic (literal 0)', r.errors.length === 0 && r.db === 0, r.errors.join(' | ') + ' db=' + r.db);
   }
   console.log(`INFO zone ${ZONE}: ${fellAny}/${runs.length} idle heroes fell within ${WATCH} s, ${fellEarly}/${runs.length} within 30 s`);
