@@ -1,0 +1,209 @@
+// Cycle 9 art (G): Town wildlife drawn from Codex T-batch PNG strips (original art, game/assets/arcane/tNN-*/fauna/).
+// Each strip is a 4x export (every art pixel a 4x4 block). The Town draws fauna at the hero's pixel density (W-06: deer ~31 px,
+// fox ~25 px next to the 24 px hero), so every frame is baked ONCE at create into ONE canvas texture per animal at HALF native size
+// (deer 64 -> 32 px cell, fox / owl 48 -> 24 px cell) with a 2x2 mode filter: a cell is opaque when 2+ of its 4 native pixels are,
+// its colour is the most common one (ties -> darker), and a single very dark pixel (an eye) in a solid cell wins so faces keep eyes.
+// Frames: <action>_<dir>_<n> on texture fft_<id>; Phaser anims fft_<id>_<action>_<dir>. A strip that fails to load, a missing module
+// or ?ffstrips=0 leaves the species on its SVG / pixelized SVG art (unchanged fallback). Nothing runs per frame.
+(function (root) {
+  'use strict';
+  const BASE = 'assets/arcane/';
+  // id -> batch folder + native cell. Actions per the T-format: idle 2 f, move 4 f, caught 1 f; dirs right (left = flipX) + down.
+  const SPECS = {
+    deer: { batch: 't17-deer', cell: 64, fps: { idle: 2, move: 8 } },
+    fox: { batch: 't17-fox', cell: 48, fps: { idle: 2, move: 8 } },
+    owl: { batch: 't17-owl', cell: 48, fps: { idle: 2, move: 8 } },
+    // code-drawn (no PNG): baked 1:1, cell = map size (robin 16 = its old W-06 size; squirrel 20, was 16 and read as a speck)
+    bird: { code: true, cell: 16, fps: { idle: 2, move: 8 } },
+    squirrel: { code: true, cell: 20, fps: { idle: 2, move: 6 } },
+  };
+  // Cycle 9 art (G, original code pixel art): in-village species redrawn at the hero's density (one char = one pixel, '.' clear;
+  // light top-left, dark colour-matched rim). Right view only: left = flipX, the down / caught poses reuse the profile frames.
+  const CODE = {
+    bird: { pal: {'o': '#3b2a22', 'b': '#6e5440', 'B': '#94744f', 'h': '#b89468', 'r': '#c9502e', 'R': '#ec7a4a', 'w': '#efe2c6', 'k': '#15131c', 'y': '#e8a83a', 'l': '#9a6a3a', 'W': '#56402f'},
+      idle_right: [
+        ['................', '................', '................', '........ooo.....', '.......oBhBo....', '......oBhBbkoyy.', '......obBbbbo...', '..o..orRRbbo....', '.obooorRRrbo....', 'obbBbbrrRrro....', '.obbbBbrrrwo....', '..oobbbwwwwo....', '....oobbwwo.....', '......oooo......', '.......l.l......', '......ll.ll.....'],
+        ['................', '................', '................', '................', '........ooo.....', '.......oBhBo....', '......oBhBbkoyy.', '..o...obBbbbo...', '.obo.orRRbbo....', 'obbBoorRRrbo....', '.obbBbrrRrro....', '..oobbBrrrwo....', '....oobbwwwo....', '......oooo......', '.......l.l......', '......ll.ll.....'],
+      ],
+      move_right: [
+        ['................', '....oooo........', '...oBhhBo.ooo...', '....obBBooBhBo..', '.....obBbBhBbkoy', '......obBbbbbo..', '..o..orRRbbbo...', '.oboorRRrbbo....', 'obbBbrrRrro.....', '.obbbbrrrwo.....', '..oobbwwwo......', '....ooooo.......', '................', '................', '................', '................'],
+        ['................', '................', '................', '..........ooo...', '.........oBhBo..', '........oBhBbkoy', '..o....obBbbbo..', '.obo..orRRbbo...', 'obbBoorRRrbo....', '.obbbWWWWbro....', '..oobWBBhWwo....', '....oWBhWwo.....', '.....oWWoo......', '......oo........', '................', '................'],
+      ],
+    },
+    squirrel: { pal: {'o': '#2e2a33', 'g': '#6f6c78', 'G': '#8d8a96', 'h': '#b4b1bc', 'c': '#e6dccb', 'k': '#141218', 'n': '#5a4a48', 't': '#7c7986', 'T': '#a6a3b0', 'p': '#c99a9a'},
+      idle_right: [
+        ['....................', '...ooooo............', '..oTThTTo...........', '.oThhTTTto..........', '.oThTTTTTo....oo....', '.oTTTttTTto..oGo....', '.otTTo.otTo.oGGGo...', '.otTTo..oo.oGhGGko..', '.otTTo....oGhGGGGno.', '.ottTTo...oGGcGGoo..', '..otTTo..ogGcccGo...', '..ottTTo.ogGcccGo...', '...ottTTooggGccgo...', '...otttTTgggGccgo...', '....otttTgggGccgo...', '.....ottttggcccgo...', '......oogggggggo....', '........ogo.oco.....', '........oo..ooo.....', '....................'],
+        ['....................', '....................', '...ooooo............', '..oTThTTo.....oo....', '.oThhTTTto...oGo....', '.oThTTTTTo..oGGGo...', '.oTTTttTTtooGhGGko..', '.otTTo.otToGhGGGGno.', '.otTTo..o.oGGcGGoo..', '.ottTTo..ogGcccGo...', '..otTTo..ogGcccGo...', '..ottTTo.ogGcccGo...', '...ottTTooggGccgo...', '...otttTTgggGccgo...', '....otttTgggGccgo...', '.....ottttggcccgo...', '......oogggggggo....', '........ogo.oco.....', '........oo..ooo.....', '....................'],
+      ],
+      move_right: [
+        ['....................', '....................', '....................', '....................', '..ooooo.............', '.oTThTTo............', 'oThhTTTTo.....oo....', 'oThTTTTTTo...oGo....', 'otTTooottTo.oGGGo...', '.ooo...otTToGhGGko..', '........otTTGGGGGno.', '.......ottTggGGcGoo.', '.......ottgggGccGo..', '........ooggggcGGo..', '.......ogo.oogggo...', '......ogo....ogo....', '......oo.....oco....', '.............oo.....', '....................', '....................'],
+        ['....................', '....................', '....................', '....................', '....................', '...ooooo............', '..oTThTTo...........', '.oThhTTTTo....oo....', '.oThTTTTTTo..oGo....', '.otTToootTToooGGGo..', '..ooo...otTTGhGGGko.', '.........ottGGGGGGno', '.........ogggggGcGoo', '........ogggggGcco..', '.......ogo.oooocGo..', '.......oco.....ogo..', '.......oo.......oo..', '....................', '....................', '....................'],
+      ],
+    },
+  };
+  const STRIPS = [
+    { action: 'idle', dir: 'right', file: 'idle' }, { action: 'idle', dir: 'down', file: 'idle_down' },
+    { action: 'move', dir: 'right', file: 'move' }, { action: 'move', dir: 'down', file: 'move_down' },
+    { action: 'caught', dir: 'right', file: 'caught' }, { action: 'caught', dir: 'down', file: 'caught_down' },
+  ];
+  const enabled = () => { try { return !/[?&]ffstrips=0(&|$)/.test(root.location.search); } catch (e) { return true; } };
+  const srcKey = (id, file) => `ffsrc_${id}_${file}`;
+  const url = (id, file) => `${BASE}${SPECS[id].batch}/fauna/ff_${id}_${file}.png`;
+  const lum = (r, g, b) => r * 0.3 + g * 0.59 + b * 0.11;
+
+  // 4x PNG image -> native RGBA (sample the centre of each 4x4 block).
+  function nativeData(img) {
+    const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const src = cx.getImageData(0, 0, w, h).data;
+    const nw = w >> 2, nh = h >> 2, out = new Uint8ClampedArray(nw * nh * 4);
+    for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) {
+      const s = ((y * 4 + 1) * w + (x * 4 + 1)) * 4, d = (y * nw + x) * 4;
+      out[d] = src[s]; out[d + 1] = src[s + 1]; out[d + 2] = src[s + 2]; out[d + 3] = src[s + 3] > 127 ? 255 : 0;
+    }
+    return { w: nw, h: nh, data: out };
+  }
+
+  // native RGBA -> half size, 2x2 mode filter (see the header).
+  function halve(n) {
+    const hw = n.w >> 1, hh = n.h >> 1, out = new Uint8ClampedArray(hw * hh * 4), p = n.data;
+    for (let y = 0; y < hh; y++) for (let x = 0; x < hw; x++) {
+      const cols = [];
+      for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
+        const s = ((y * 2 + j) * n.w + (x * 2 + i)) * 4;
+        if (p[s + 3]) cols.push([p[s], p[s + 1], p[s + 2]]);
+      }
+      const d = (y * hw + x) * 4;
+      if (cols.length < 2) continue;
+      const count = (c) => cols.filter((o) => o[0] === c[0] && o[1] === c[1] && o[2] === c[2]).length;
+      let best = cols[0];
+      cols.forEach((c) => {
+        const k = count(c), kb = count(best);
+        if (k > kb || (k === kb && lum(c[0], c[1], c[2]) < lum(best[0], best[1], best[2]))) best = c;
+      });
+      if (cols.length === 4) {
+        const dark = cols.reduce((a, c) => (lum(c[0], c[1], c[2]) < lum(a[0], a[1], a[2]) ? c : a), cols[0]);
+        if (count(dark) === 1 && lum(dark[0], dark[1], dark[2]) < 70 && lum(best[0], best[1], best[2]) - lum(dark[0], dark[1], dark[2]) > 90) best = dark;
+      }
+      out[d] = best[0]; out[d + 1] = best[1]; out[d + 2] = best[2]; out[d + 3] = 255;
+    }
+    return { w: hw, h: hh, data: out };
+  }
+
+  // Code species: frames straight from the CODE maps at 1:1; caught / down reuse the profile (frame aliases + anim copies).
+  function bakeCode(scene, st, id) {
+    const spec = SPECS[id], m = CODE[id], n = spec.cell;
+    const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const list = [['idle', m.idle_right], ['move', m.move_right]];
+    const total = list.reduce((a, l) => a + l[1].length, 0);
+    const cv = document.createElement('canvas'); cv.width = total * n; cv.height = n;
+    const cx = cv.getContext('2d');
+    const slots = []; let col = 0;
+    list.forEach(([action, frames]) => frames.forEach((rows, f) => {
+      const data = new Uint8ClampedArray(n * n * 4);
+      rows.forEach((row, y) => { for (let x = 0; x < n; x++) { const c = row[x]; if (c === '.' || !m.pal[c]) continue; const v = rgb(m.pal[c]), d = (y * n + x) * 4; data[d] = v[0]; data[d + 1] = v[1]; data[d + 2] = v[2]; data[d + 3] = 255; } });
+      cx.putImageData(new ImageData(data, n, n), col * n, 0);
+      slots.push({ action, f, col }); col++;
+    }));
+    const key = `fft_${id}`;
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+    const tex = scene.textures.addCanvas(key, cv);
+    slots.forEach((sl) => ['right', 'down'].forEach((dir) => tex.add(`${sl.action}_${dir}_${sl.f}`, 0, sl.col * n, 0, n, n)));
+    ['right', 'down'].forEach((dir) => tex.add(`caught_${dir}_0`, 0, 0, 0, n, n));
+    ['idle', 'move'].forEach((action) => ['right', 'down'].forEach((dir) => {
+      const ak = `${key}_${action}_${dir}`;
+      if (scene.anims.exists(ak)) return;
+      const frames = slots.filter((sl) => sl.action === action).map((sl) => ({ key, frame: `${action}_${dir}_${sl.f}` }));
+      scene.anims.create({ key: ak, frames, frameRate: spec.fps[action], repeat: -1 });
+    }));
+    // journal: idle f1 at 6x (crisp in the 160 px card)
+    const c2 = document.createElement('canvas'); c2.width = n * 6; c2.height = n * 6;
+    const g2 = c2.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(cv, 0, 0, n, n, 0, 0, n * 6, n * 6);
+    st.caughtUrl[id] = c2.toDataURL('image/png');
+    st.ids.push(id); st.cells[id] = n;
+  }
+
+  const MMTownFauna = {
+    CODE,
+    SPECS,
+    enabled,
+    ids: () => Object.keys(SPECS),
+    url,
+    // Phaser preload: queue every strip as a plain image (the bake slices it).
+    preload(scene) {
+      if (!enabled()) return;
+      Object.keys(SPECS).filter((id) => !SPECS[id].code).forEach((id) => STRIPS.forEach((s) => scene.load.image(srcKey(id, s.file), url(id, s.file))));
+    },
+    // Phaser create: one canvas texture + anims per species whose 6 strips all loaded. Returns the wired ids.
+    bake(scene) {
+      const st = scene.ffStrips = { on: enabled(), ids: [], cells: {}, ms: 0, caughtUrl: {} };
+      if (!st.on) return st;
+      const t0 = performance.now();
+      Object.keys(SPECS).forEach((id) => {
+        try {
+          if (SPECS[id].code) { bakeCode(scene, st, id); return; }
+          if (!STRIPS.every((s) => scene.textures.exists(srcKey(id, s.file)))) return;
+          const half = SPECS[id].cell >> 1;
+          const parts = STRIPS.map((s) => {
+            const n = nativeData(scene.textures.get(srcKey(id, s.file)).getSourceImage());
+            return { s, n, frames: Math.round(n.w / SPECS[id].cell) };
+          });
+          const total = parts.reduce((a, p) => a + p.frames, 0);
+          const cv = document.createElement('canvas'); cv.width = total * half; cv.height = half;
+          const cx = cv.getContext('2d');
+          const slots = [];
+          let col = 0;
+          parts.forEach((p) => {
+            for (let f = 0; f < p.frames; f++) {
+              const cell = { w: SPECS[id].cell, h: SPECS[id].cell, data: new Uint8ClampedArray(SPECS[id].cell * SPECS[id].cell * 4) };
+              for (let y = 0; y < cell.h; y++) {
+                const so = (y * p.n.w + f * cell.w) * 4;
+                cell.data.set(p.n.data.subarray(so, so + cell.w * 4), y * cell.w * 4);
+              }
+              const h2 = halve(cell);
+              cx.putImageData(new ImageData(h2.data, h2.w, h2.h), col * half, 0);
+              slots.push({ name: `${p.s.action}_${p.s.dir}_${f}`, col });
+              col++;
+            }
+            // The journal shows the caught pose at an integer zoom of the NATIVE art (crisp in the 160 px card).
+            if (p.s.action === 'caught' && p.s.dir === 'right') {
+              const z = SPECS[id].cell >= 64 ? 2 : 3, c2 = document.createElement('canvas');
+              c2.width = p.n.w * z; c2.height = p.n.h * z;
+              const t = document.createElement('canvas'); t.width = p.n.w; t.height = p.n.h;
+              t.getContext('2d').putImageData(new ImageData(p.n.data, p.n.w, p.n.h), 0, 0);
+              const g2 = c2.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(t, 0, 0, c2.width, c2.height);
+              st.caughtUrl[id] = c2.toDataURL('image/png');
+            }
+          });
+          const key = `fft_${id}`;
+          if (scene.textures.exists(key)) scene.textures.remove(key);
+          const tex = scene.textures.addCanvas(key, cv);
+          slots.forEach((sl) => tex.add(sl.name, 0, sl.col * half, 0, half, half));
+          STRIPS.forEach((s) => {
+            if (s.action === 'caught') return;
+            const ak = `${key}_${s.action}_${s.dir}`;
+            if (scene.anims.exists(ak)) return;
+            const frames = slots.filter((sl) => sl.name.startsWith(`${s.action}_${s.dir}_`)).map((sl) => ({ key, frame: sl.name }));
+            scene.anims.create({ key: ak, frames, frameRate: SPECS[id].fps[s.action], repeat: -1 });
+          });
+          st.ids.push(id);
+          st.cells[id] = half;
+        } catch (e) { /* this species keeps its SVG art */ }
+      });
+      st.ms = Math.round(performance.now() - t0);
+      return st;
+    },
+    has(scene, id) { return !!(scene.ffStrips && scene.ffStrips.ids.indexOf(id) >= 0); },
+    // Which strip to show: down when moving mostly toward the camera, else the profile (left = flipX of right).
+    pick(dx, dy) { return dy > Math.abs(dx) ? 'down' : 'right'; },
+    play(sprite, id, action, dir) {
+      const ak = `fft_${id}_${action}_${dir}`;
+      if (sprite.anims && sprite.anims.currentAnim && sprite.anims.currentAnim.key === ak && sprite.anims.isPlaying) return;
+      sprite.play(ak, true);
+    },
+    _halve: halve,
+  };
+  root.MMTownFauna = MMTownFauna;
+  if (typeof module !== 'undefined' && module.exports) module.exports = MMTownFauna;
+})(typeof window !== 'undefined' ? window : globalThis);
