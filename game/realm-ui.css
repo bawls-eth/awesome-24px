@@ -352,3 +352,10 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
 /* cyc10-ui: in the pixel font "Buy 120💎" is 81 px against 80 px for "Buy 24💎", which made the Buy column ragged again (cyc9-ui check):
    every Buy is now at least 92 px (the <= 300 px layout still stretches Buy to the full row). */
 #realm-shop #realm-bp-list button.eq { min-width: 92px; }
+/* cyc11-ui (cycle-10 proposal 3, measured first): the kill board scrolled as a whole card, so at 195x422 (card 502 px in 394 px) its ✖
+   ended at y -82 after a scroll and the only way out was Esc / Back. Same pattern as the shop: the card is a column, the title row with the
+   ✖ and the "Hero stats" button stay put, only #realm-board-body scrolls. #realm-hero needed nothing: its ✖ already stays put (.hp-body
+   scrolls inside the card) at 195x422, 390x844 and 1280x720. */
+#realm-board .realm-bp-card { display: flex; flex-direction: column; overflow: hidden; }
+#realm-board .realm-bp-head, #realm-board #realm-board-hero { flex: none; }
+#realm-board #realm-board-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }

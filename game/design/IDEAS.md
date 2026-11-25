@@ -362,7 +362,7 @@ Approved and size S: ID-09 (forgiving Town day count, spec above). ID-51 inland 
 
 | ID | Idea | Size | Risk | Status |
 |---|---|---|---|---|
-| ID-56 | Shop "saving for" pin: tapping a star on a shop row pins ONE item; the Realm info line and the shop header show "Saving for Common Spark Wand: 6 more shards" (about N Shore kills). No timer, no push, unpin any time, device pref only | S | low | proposed |
+| ID-56 | Shop "saving for" pin: tapping a star on a shop row pins ONE item; the Realm info line and the shop header show "Saving for Common Spark Wand: 6 more shards" (about N Shore kills). No timer, no push, unpin any time, device pref only | S | low | approved (U cycle 11, spec below) |
 | ID-57 | Bullet shape option (device pref, off by default): enemy bolts differ by SHAPE as well as colour (aimed = diamond, ring = round, spiral = small triangle), so colour alone is never the only cue | M | medium | proposed |
 | ID-58 | "Neighbors are asleep" hint on the Town wave bounty: the row reads "Say hi to 2 neighbors (they are asleep until 6 am)" between 23:00 and 06:00 local, so a hello that cannot count is explained, not silent | S | low | proposed |
 
@@ -381,9 +381,9 @@ Review of the cycle 9 proposals (D, for L/U to confirm):
 
 | ID | Idea | Size | Risk | Status |
 |---|---|---|---|---|
-| ID-59 | First-visit animal hello: the first time a new profile walks within about 160 px of a Town animal, it turns toward the hero and shows a small heart; one line in the existing hint chip names it ("Mocha the deer likes you"). No reward, no timer, once per animal per profile (in memory plus one additive Town-save bitmask) | S | low | proposed |
-| ID-60 | Animal sightings page in the notebook: each Town animal met (first time within 160 px) adds a line (name, where it was seen, time of day), unmet ones show "?"; no completion reward, no counter pressure | S to M | low | proposed |
-| ID-61 | Welcome-back line: when a returning profile opens the Town after 1 or more days away, one dismissible line says where the hero stopped ("Welcome back. You were in the Midlands at Lv 6; the goal was ...") and nothing else: no list of missed days, no gift, no streak | S | low | proposed |
+| ID-59 | First-visit animal hello: the first time a new profile walks within about 160 px of a Town animal, it turns toward the hero and shows a small heart; one line in the existing hint chip names it ("Mocha the deer likes you"). No reward, no timer, once per animal per profile (in memory plus one additive Town-save bitmask) | S | low | approved with conditions (U cycle 11, spec below) |
+| ID-60 | Animal sightings page in the notebook: each Town animal met (first time within 160 px) adds a line (name, where it was seen, time of day), unmet ones show "?"; no completion reward, no counter pressure | S to M | low | rejected (U cycle 11: duplicates the Museum Wild Fauna wing; see below) |
+| ID-61 | Welcome-back line: when a returning profile opens the Town after 1 or more days away, one dismissible line says where the hero stopped ("Welcome back. You were in the Midlands at Lv 6; the goal was ...") and nothing else: no list of missed days, no gift, no streak | S | low | approved (U cycle 11, spec below) |
 
 - ID-59: reviewers of cozy games repeatedly say villagers and animals with visible personality, not systems, are what make the first hours feel warm ([Gfinity: heart over stats](https://www.gfinityesports.com/article/heart-over-stats-what-truly-makes-cozy-games-feel-like-home), [PC Gamer: Dragon Shelter first season](https://www.pcgamer.com/games/life-sim/14-days-in-dragon-shelter-a-play-by-play-of-my-first-season-in-the-stardew-style-farm-sim-where-dragons-help-bake-pies/)), and one player says collecting animals right away is what hooked them ([Starsand Island, 25 hours](https://www.inkl.com/news/i-ve-played-starsand-island-for-25-hours-and-this-is-the-most-invested-i-ve-been-in-a-cozy-game-for-years)). The Town animals (deer, fox, owl, robin, squirrel are now Codex art) are free of cost to react. It also gives the first-ten-minutes goal a creature to meet before the Realm. Check with G that the reaction needs no new art (turn + existing heart icon).
 - ID-60: a quiet collection that has no reward avoids obligation; pairs with ID-04 (notebook exists, key `pixeltown-notebook-v1`, additive page). [M10] no measured data; effort depends on how the notebook lists pages.
@@ -400,3 +400,61 @@ Review of the cycle 9 proposals (D, for L/U to confirm):
 - Sources and ranking of ID-56..61: `design/beta/cycle11-design.md`. D ranking by impact: ID-58, ID-59, ID-61, ID-56, ID-60, ID-57.
 - ID-55 tuned in cycle 11 (D): first session = Lv <= 5 at first world load; a card closed by danger within 6 s retries (max 2).
 
+## U cycle 11: UI feasibility review of ID-56, ID-59, ID-60, ID-61 (with build specs for S)
+All numbers below were measured on the cycle-10 tip (bd92da2) in a real browser. General rules for all three approved ideas: text >= 12 px, every tap target >= 44 x 44 px, nothing over the sticks / A-C buttons / bag bar, no animation that cannot be switched off (reduced motion and flashes-off both mean static), no sound, no new key in `pixeltown-save-v1` unless stated, 0 database traffic in tests, and the a11y sweep at 195x422 stays at 0 offenders.
+
+### ID-56 shop "saving for" pin: APPROVED (size S)
+What was measured at 195x422: a Realm shop row is 126 px tall (name line, rarity, stat, then a full-width Buy of 127 px at the bottom); Buy has a 92 px minimum width (cycle 10, the pixel font), so a 44 px star cannot share the Buy line. The HUD info box `#realm-info` is 75 px wide, `nowrap`, 12 px ("Lv 1 · Safe-ish · 💎 0"): no sentence fits there. At 390x844 the row is 63 px tall (name, rarity, stat and Buy on one line) and `#realm-info` is 318 px wide.
+Spec:
+1. **Pin control:** one `<button class="rm-pin" aria-pressed="false|true">` per offer row, 44 x 44, glyph ☆ / ★ (pixel font), `aria-label="Save for <rarity> <name>"` / `"Stop saving for <rarity> <name>"`.
+   - >= 301 px: it sits just left of Buy, on the Buy line.
+   - <= 300 px: it sits at the right end of the NAME line (the name gets `padding-right: 48px` so it never runs under it); the Buy line stays full width.
+   - Only one item can be pinned: pressing another star moves the pin; pressing the lit star clears it.
+   - Focus ring: the yellow 3 px ring used by the shop's ✖ (cycle 10).
+2. **Shop header:** the sticky wallet line under the ✖ (`.rm-shop-top`) gains a second line while a pin exists: "★ Saving for Spark Wand: 6 more 💎" (or "★ Spark Wand: ready to buy"), 12 px, wraps at word boundaries, never breaks a word. The pinned row also gets a 2 px yellow left border so it can be found when scrolling.
+3. **HUD:**
+   - >= 301 px: `#realm-info` appends " · ★ 6 💎 to go" (or " · ★ ready"). It must stay on one line; if it does not fit (measure with `scrollWidth`), drop the " to go".
+   - <= 300 px: no HUD text change (no room, measured). The shard count only turns yellow while a pin is set, and `#realm-info` gets `aria-label` "... 18 of 24 shards saved for Spark Wand".
+4. **State:** device pref `mm-shop-pin` = `{"v":1,"id":"<offer id>"}` in localStorage (not in `pixeltown-save-v1`; try/catch, missing = no pin).
+   - The pin clears silently when that item is bought or is no longer in stock.
+   - No toast, no sound and no timer when the goal is reached: the text just reads "ready".
+5. **Tests (S):**
+   - At 195x422, 390x844 and 1280x720: star size, placement rules, one pin at a time, header and HUD text, clearing on buy.
+   - No sideways scroll, no word broken, 0 DB attempts.
+   - `cyc10-ui` and `cyc9-ui` (Buy column, ✖ on top) still pass.
+
+### ID-59 first-visit animal hello: APPROVED WITH CONDITIONS (size S)
+1. **Names:** the wild Town animals (deer, fox, owl, robin, squirrel, bugs: `FF_ASSETS` fauna) have species names only. "Mocha" is a villager, not an animal, so the line uses the species: "A red fox noticed you 💛". Villagers are out of scope.
+2. **Heart:** drawn in code (a 7 x 6 px pixel heart, G owns the look), above the animal, for 1.2 s. With reduced motion or flashes-off it appears and disappears with no bounce or fade.
+   - "Turns toward the hero" only for species that have side frames (strips with `idle_right` / `idle_down`). Others just show the heart.
+3. **Text:**
+   - The Town has no generic hint chip. Use the existing `#achievement-toast` (aria-live polite) ONLY if it is free (not showing an achievement and the What's-new banner is down); otherwise skip the line (the heart still shows).
+   - Max one line per 30 s. Never while a dialog, shop, Museum, map or the bag is open.
+4. **Save:** one additive Town-save integer bitmask `animalHello` (one bit per `FF_ASSETS` fauna index; additive, unknown bits kept, never lowered). Backup carries it with the whole save.
+   - D and S must add it to SAVE-KEYS.md and test that an old save without it loads byte-identical.
+5. **Tests:** heart and line at 1280x720 and 195x422 (the toast inside the screen, not on A/C or the bag bar); once per animal across a reload; reduced motion = static; 0 DB attempts (ADMIN bot, offline).
+
+### ID-60 animal sightings page in the notebook: REJECTED
+Reasons (measured):
+- The Town page does not load `shared/mm-notebook.js`. Only the Realm (Mad Maze) and the Isles do. A Town page in the Realm notebook means writing the key from a page that never loaded it, or a second list.
+- The Museum's **Wild Fauna** wing already lists exactly these Town animals: a silhouette and "???" for unmet ones, the caught pose once caught (`main.js` renderIdSection over `FF_ASSETS` fauna). Two lists of the same animals in two places split one collection and confuse "met" with "caught".
+
+Counter-proposal for D (re-propose as a new ID if wanted, only after ID-59 ships): a third state on the Museum Wild Fauna card, "Seen" (silhouette in colour plus "Seen near the pond, evening"), fed by ID-59's `animalHello` bit. This needs no new page and no notebook coupling.
+
+### ID-61 welcome-back line: APPROVED (size S)
+1. **When:** on Town load, only if `lastVisitDate` exists and is 1 or more UTC days before today. Read it BEFORE the ID-09 day counter rewrites it on this load: S must order this explicitly and test it.
+   - Never on a first-ever visit.
+   - Once per load. A reload the same day does not show it again, because `lastVisitDate` is then today. No new key.
+2. **Text:** one line, no counts of missed days, no gift, no streak.
+   - "Welcome back! Your hero is Lv 6 in the Realm." Use the realm level from `pixeltown-save-v1.realm.level`; if missing, use "Welcome back to Pixeltown!".
+   - Add the zone name ("…, last seen in the Midlands") only if the Realm already saves a position the Town can read without loading Realm code. Otherwise leave it out: no guessing.
+3. **Element:** `#town-welcome`, `role=status`, `aria-live=polite`.
+   - Look: the What's-new banner's look, 13 px (12 px floor), max-width min(92vw, 420px), centred under the top HUD row.
+   - A 44 x 44 ✕ with `aria-label="Dismiss"`. Esc closes it (captured, so the Esc menu does not open).
+   - Auto-hide after 10 s, or 3 s after the hero first moves, whichever comes first.
+   - If the What's-new banner is up, wait until it closes.
+   - At 195x422 it may wrap to 2 lines, and it must not cover A/C, the Menu button, the bag bar or the joystick.
+4. **Tests:**
+   - A seeded save with `lastVisitDate` 2 days ago shows the line once at 1280x720, 390x844 and 195x422 (inside the screen, no overlap with the controls above, ✕ >= 44).
+   - The same day shows nothing, a save without `lastVisitDate` shows nothing, and Esc does not open the menu.
+   - The ID-09 visit count still increments exactly once. 0 DB attempts (offline ADMIN bot).

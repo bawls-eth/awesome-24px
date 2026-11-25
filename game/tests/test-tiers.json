@@ -2532,5 +2532,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "cyc11-ui.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
   }
 }

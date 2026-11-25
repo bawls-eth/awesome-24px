@@ -3164,3 +3164,16 @@ body.town-phone-nav #where-to-btn { display: none !important; }
   body.town-phone-nav.touch-device #player-list-panel.collapsed, body.town-phone-nav.a11y-hud-scaled.touch-device #player-list-panel.collapsed { right: calc(8px + env(safe-area-inset-right, 0px)); }
   body.town-phone-nav #inventory-panel.bag-compact:not(.bag-open), body.town-phone-nav.a11y-hud-scaled #inventory-panel.bag-compact:not(.bag-open) { top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: auto; }
 }
+
+/* cyc11-ui (cycle-10 G note "195x422 Museum: the sticky tab bar overlaps the top grid card when scrolled"), measured at 195x422 first:
+   the bar stuck at the card's CONTENT edge (y 48, under the 20 px top padding), so scrolled cards still showed in a 20 px strip above the
+   bar and 68 px of the 371 px card was bar or strip. On phones the bar now sticks flush with the card's top edge (top = -padding-top), is
+   slimmer below 300 px, and the card gets scroll-padding-top so focus / scrollIntoView never parks a specimen card under the bar. */
+@media (max-width: 480px) {
+  #museum-overlay .museum-card { scroll-padding-top: 56px; }
+  #museum-overlay .museum-tabs { top: -20px; }
+}
+@media (max-width: 300px) {
+  #museum-overlay .museum-tabs { padding: 4px 12px; gap: 4px; margin-bottom: 4px; }
+  #museum-overlay .museum-card { scroll-padding-top: 44px; }
+}

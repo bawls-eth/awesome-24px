@@ -7,7 +7,7 @@
 //    the zone strip, the goal line, the minimap and every visible control; a real Esc hides it (and opens the Menu only for the Menu hint,
 //    whose text says so: L review, cycle 10);
 //  - the next one comes after another 20 s; a real click on a close button hides one; max 3 per visit (no 4th after 25 s more);
-// and at 390x844, 844x390 and 195x422 (touch; at 195x422 the band above the ability grid is full, so the second slot under the top HUD is used; the line is placed by the same code, shown through the test hook): the touch wording, inside
+// and at 390x844, 844x390 and 195x422 (touch; at 195x422 the band above the ability grid is full, so since cycle 11 U the hint takes the goal line's place there, shown through the test hook): the touch wording, inside
 // the screen, 40 px or more above both sticks, not on the ability grid, the zone strip, the goal line or the minimap, no sideways scroll.
 // OFFLINE: blockDb + every WebSocket closed + the town page stubbed; literal 0 database attempts.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/cyc10-s-jit-hint.test.js   (SHOTS=<dir> also saves screenshots)
@@ -127,9 +127,13 @@ const waitHint = (page, ms) => page.waitForFunction(() => window.__mm.world.jitH
     await page.waitForTimeout(600);
     const on = await E(page, (a, w) => w.jitHint.showNow());
     const h = await hint(page);
-    if (v.name === '195x422' && !h.shown) { // cycle 10: at 195x422 every band is taken (Daily, zone strip, goal line, minimap, ability grid, sticks):
-      // the hint must then refuse (why = overlap) rather than cover a control. Reported as unresolved for U (no free 2-line slot at 195 px).
-      check(v.name + ': no free slot: the hint refuses (why = overlap) and covers nothing', h.st.why === 'overlap' && h.st.shown === 0 && h.hit.length === 0, JSON.stringify(h));
+    if (v.name === '195x422') { // cycle 10: at 195x422 every band is taken (Daily, zone strip, goal line, minimap, ability grid, sticks), so the hint refused.
+      // cycle 11 U decision (design/beta/cycle11-ui.md): below 300 px it briefly takes the goal line's place (the goal line is visibility:hidden
+      // while it shows, so it is not counted as covered); the 40 px stick clearance becomes 8 px in that slot (close button on top, away from the
+      // sticks). Full checks incl. a real tap on the close button: cyc11-ui.test.js.
+      const gv = await page.evaluate(() => getComputedStyle(document.getElementById('rw-goal')).visibility);
+      check(v.name + ': the hint shows in the goal line slot, the goal line steps aside, covers nothing else, 8 px or more above the sticks, >= 12 px text, >= 44 px close',
+        on && h.shown && h.st.slot === 'goal' && gv === 'hidden' && h.hit.filter((id) => id !== 'rw-goal').length === 0 && h.stickGap >= 8 && h.inView && !h.hscroll && h.fs >= 12 && h.x && h.x.w >= 44 && h.x.h >= 44, JSON.stringify({ h, gv }));
       check(v.name + ': no page errors, no database traffic (literal 0)', s.errors.length === 0 && s.db.attempts() === 0, s.errors.join(' | ') + ' db=' + s.db.attempts());
       await s.ctx.close(); continue;
     }
