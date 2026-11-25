@@ -2382,5 +2382,9 @@
   "cyc7-ui-hud.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc7-d-town-economy.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
