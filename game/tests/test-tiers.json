@@ -2224,6 +2224,18 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc7-art-icicle-bat.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc7-art-realm-aimed-hue.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc7-art-isles-tundra-road.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc4-ui-assist-settings.test.js": {
     "class": "browser",
     "tier": "full"

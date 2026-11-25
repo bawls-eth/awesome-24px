@@ -1,0 +1,416 @@
+{
+  "status": "WIP revision 2",
+  "repository_audit": "not run",
+  "full_tests": "not run",
+  "reason": "git ls-remote failed: Could not resolve host github.com. No local checkout; live Firebase untouched.",
+  "total_strips": 12,
+  "total_frames": 60,
+  "checks": [
+    {
+      "id": "glacier_shellback_idle_down",
+      "dimensions": [
+        1024,
+        256
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        50,
+        51,
+        50
+      ]
+    },
+    {
+      "id": "glacier_shellback_move_down",
+      "dimensions": [
+        1536,
+        256
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        50,
+        51,
+        50,
+        49,
+        50
+      ]
+    },
+    {
+      "id": "glacier_shellback_attack_down",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        52,
+        46,
+        46,
+        49
+      ]
+    },
+    {
+      "id": "glacier_shellback_death_down",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 12,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        47,
+        44,
+        30,
+        29
+      ]
+    },
+    {
+      "id": "glacier_shellback_idle_up",
+      "dimensions": [
+        1024,
+        256
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        50,
+        51,
+        50
+      ]
+    },
+    {
+      "id": "glacier_shellback_move_up",
+      "dimensions": [
+        1536,
+        256
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        50,
+        51,
+        50,
+        49,
+        50
+      ]
+    },
+    {
+      "id": "glacier_shellback_attack_up",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        52,
+        47,
+        48,
+        50
+      ]
+    },
+    {
+      "id": "glacier_shellback_death_up",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 11,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        49,
+        47,
+        44,
+        29,
+        28
+      ]
+    },
+    {
+      "id": "glacier_shellback_idle_right",
+      "dimensions": [
+        1024,
+        256
+      ],
+      "distinct_frames": 4,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        48,
+        49,
+        50,
+        49
+      ]
+    },
+    {
+      "id": "glacier_shellback_move_right",
+      "dimensions": [
+        1536,
+        256
+      ],
+      "distinct_frames": 6,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        48,
+        49,
+        50,
+        49,
+        48,
+        49
+      ]
+    },
+    {
+      "id": "glacier_shellback_attack_right",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        48,
+        51,
+        46,
+        47,
+        49
+      ]
+    },
+    {
+      "id": "glacier_shellback_death_right",
+      "dimensions": [
+        1280,
+        256
+      ],
+      "distinct_frames": 5,
+      "opaque_colors": 13,
+      "lowest_opaque_row": 231,
+      "transparent_corners": true,
+      "hard_alpha": true,
+      "heights_native": [
+        48,
+        46,
+        43,
+        30,
+        29
+      ]
+    }
+  ],
+  "visual_review": "Preview displayed and inspected. Right head projects from shell, one eye; front attack retracts and bites; all death strips end at 28–30 native px with tipped shell and legs spread. Some subtle idle/move motion; profile attack and front lunge still need game review.",
+  "method": "Native pixel buffers checked; PNG RGBA encoder constructs 4x cells; contact sheet decoded by image renderer. Individual strip decode and full repository audit not independently performed.",
+  "revision3": {
+    "status": "WIP, audit not run",
+    "revised_strips": 6,
+    "revised_frames": 30,
+    "checks": [
+      {
+        "id": "glacier_shellback_idle_right",
+        "bounds_native": [
+          [
+            55,
+            38
+          ],
+          [
+            55,
+            39
+          ],
+          [
+            56,
+            38
+          ],
+          [
+            54,
+            37
+          ]
+        ],
+        "lowest_opaque_row": 231,
+        "distinct_frames": 4,
+        "blob_sha": "c5e93159f363668bc8ed348493ea0d451bff33cc"
+      },
+      {
+        "id": "glacier_shellback_move_right",
+        "bounds_native": [
+          [
+            55,
+            38
+          ],
+          [
+            56,
+            39
+          ],
+          [
+            55,
+            37
+          ],
+          [
+            54,
+            37
+          ],
+          [
+            55,
+            38
+          ],
+          [
+            56,
+            38
+          ]
+        ],
+        "lowest_opaque_row": 231,
+        "distinct_frames": 6,
+        "blob_sha": "a370120a89b532b991fdbec1dcb8e1300a1caf2a"
+      },
+      {
+        "id": "glacier_shellback_attack_right",
+        "bounds_native": [
+          [
+            55,
+            38
+          ],
+          [
+            52,
+            40
+          ],
+          [
+            60,
+            37
+          ],
+          [
+            58,
+            38
+          ],
+          [
+            55,
+            37
+          ]
+        ],
+        "lowest_opaque_row": 231,
+        "distinct_frames": 5,
+        "blob_sha": "6c0a59aabfb15c02c544c9545d5b3eedb84ec672"
+      },
+      {
+        "id": "glacier_shellback_death_right",
+        "bounds_native": [
+          [
+            53,
+            42
+          ],
+          [
+            51,
+            35
+          ],
+          [
+            49,
+            38
+          ],
+          [
+            60,
+            29
+          ],
+          [
+            60,
+            29
+          ]
+        ],
+        "lowest_opaque_row": 231,
+        "distinct_frames": 4,
+        "blob_sha": "dc47b05ed7d28b67f2e798dabc77ade80169495b"
+      },
+      {
+        "id": "glacier_shellback_death_down",
+        "bounds_native": [
+          [
+            44,
+            47
+          ],
+          [
+            48,
+            38
+          ],
+          [
+            52,
+            39
+          ],
+          [
+            58,
+            30
+          ],
+          [
+            58,
+            30
+          ]
+        ],
+        "lowest_opaque_row": 231,
+        "distinct_frames": 4,
+        "blob_sha": "09f4403a9fb06113637a979e21fd631a445c9785"
+      },
+      {
+        "id": "glacier_shellback_death_up",
+        "bounds_native": [
+          [
+            44,
+            47
+          ],
+          [
+            48,
+            38
+          ],
+          [
+            52,
+            39
+          ],
+          [
+            58,
+            30
+          ],
+          [
+            58,
+            30
+          ]
+        ],
+        "lowest_opaque_row": 231,
+        "distinct_frames": 4,
+        "blob_sha": "61c106d73562236677398374bbb942cb766110e6"
+      }
+    ],
+    "limitations": "Cycle 6 Shellback v3: six strips / 30 cells revised, existing PR #61. Right idle bbox 220x152 first frame, low shell with separate ridge spikes, plastron and alternating visible foot lift, exposed neck extension. Death has rotated shell recoil, tipping, rim contact, wider settled closed-eye pose and intentionally held final frame. Native bounds and y231 anchor checked; 4x hard-alpha construction. Full audit and independent PNG decode/hash comparison not run. Down move and attack minor nits remain from v2; front/rear death continuity, apparent shell/limb contact and exact lunge displacement need review. Existing other six strips retained. No code changes."
+  }
+}
