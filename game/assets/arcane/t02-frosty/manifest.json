@@ -1,0 +1,226 @@
+{
+  "batch": "t02-frosty",
+  "assets": [
+    {
+      "id": "vil_pudgypenguins_walk_down",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_walk_down.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "walk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_walk_up",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_walk_up.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "walk",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_walk_left",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_walk_left.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "walk",
+      "dir": "left",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_walk_right",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_walk_right.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "walk",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_idle_down",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_idle_down.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "idle",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_idle_up",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_idle_up.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "idle",
+      "dir": "up",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_idle_left",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_idle_left.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "idle",
+      "dir": "left",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_idle_right",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_idle_right.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "idle",
+      "dir": "right",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_emote_happy",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_emote_happy.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "emote_happy",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 6,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_emote_sad",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_emote_sad.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "emote_sad",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 6,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_emote_wave",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_emote_wave.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "emote_wave",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 6,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_sit_down",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_sit_down.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "sit",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 1,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    },
+    {
+      "id": "vil_pudgypenguins_sleep",
+      "path": "villagers/pudgypenguins/vil_pudgypenguins_sleep.png",
+      "category": "villager",
+      "species": "pudgypenguins",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 119
+      }
+    }
+  ]
+}

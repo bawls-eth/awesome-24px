@@ -357,3 +357,7 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 - **Decisions:** `game/design/beta/ROUND4-DECISIONS.md` (D5-01: Arcane Frontier ships as a "Coming soon" card, no Hub card).
 - **Integration:** on the coordinator's call D5 merges r4-d1..r4-d4 into a local `r4-integ`, runs the full tier in shards
   (`tools/stamp.sh --no-write`) and reports each red test with the commit that caused it.
+
+
+## Codex Town Frosty
+Town Frosty (pudgypenguins, T02 by species; owner sequence calls all five T01): original blue-gray penguin with rose scarf, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; true rear, profile beak, alternating waddle and flipper wave. Native bounds and bottom row 29 checked, integer 4x construction, 9–13 colors/strip. Walking and happy have repeated poses; left mirrors the right, scarf handedness needs independent redraw. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority followed.
