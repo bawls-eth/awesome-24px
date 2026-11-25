@@ -752,6 +752,17 @@
       "source": "codex",
       "branch": "codex/b03-icicle-bat",
       "note": "B-03 Tundra S48, 12 strips; frost-detail revision (5985c6c) reviewed cycle 6: audit 0 rows, same ids/frames/anchor/bbox, provisional. Not wired (tundra list pinned in shared-mm-creature-strips test)."
+    },
+    {
+      "id": "t17-fox",
+      "label": "T17 forest fox",
+      "path": "assets/arcane/t17-fox",
+      "manifest": "assets/arcane/t17-fox/manifest.json",
+      "files": 6,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/t17-fox",
+      "note": "WIP audit not run"
     }
   ]
 }

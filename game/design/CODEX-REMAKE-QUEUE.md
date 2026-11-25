@@ -757,3 +757,6 @@ remeasure on the redrawn mounts). Hard alpha, 4x grid, separate from the body: g
 4. Seats: per-frame seat points must be remeasured on the redrawn mounts; include a composite preview (mount + saddle + a hero sitting).
 
 Deliver each fix on the same branch, re-run `node game/tools/art-audit/run.js` and add a composite saddle preview.
+
+## Codex T17 fox submitted
+T17 fox on codex/t17-fox: six strips/14 frames, 48 native/192 export, full body, front and right views. Native bounds, distinct frames, palette checked. No full audit or independent encoded PNG decode; old/new comparison and in-game fit pending. Manual provisional INDEX because ingest unavailable. No code changes.
