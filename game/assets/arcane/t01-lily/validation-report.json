@@ -1,0 +1,177 @@
+{
+  "status": "WIP audit not run",
+  "total_strips": 13,
+  "total_frames": 39,
+  "checks": [
+    {
+      "id": "vil_coolcats_frogs_walk_down",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "3be2fc7e7fd50de4ef8a51a910ef8ac90f556c0c"
+    },
+    {
+      "id": "vil_coolcats_frogs_walk_up",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "4d8a9d8fbf72d4b26efa92175de87ede08e76529"
+    },
+    {
+      "id": "vil_coolcats_frogs_walk_left",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "5b0cc4e280cefe4b799ca8e5a62ee139283e59a4"
+    },
+    {
+      "id": "vil_coolcats_frogs_walk_right",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "9533ecaa04c47c06f8fbc77b538e8c28803c7ff4"
+    },
+    {
+      "id": "vil_coolcats_frogs_idle_down",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "f024aca053add585cdda3b8b67e30c65ef622ca5"
+    },
+    {
+      "id": "vil_coolcats_frogs_idle_up",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "9fe666bc4f822be9ce0df1649a82ce2f4f1efdb1"
+    },
+    {
+      "id": "vil_coolcats_frogs_idle_left",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "6a9f51d018efeca362d54fe2189a16a71174b962"
+    },
+    {
+      "id": "vil_coolcats_frogs_idle_right",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "0407ad76b82b5de4a535d2ff97e77b7d4c635b75"
+    },
+    {
+      "id": "vil_coolcats_frogs_emote_happy",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "5e5657f2a5648c5324198c72e2b6d5a5d84c07f0"
+    },
+    {
+      "id": "vil_coolcats_frogs_emote_sad",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "7fe9637bec9fa1d9b7046ad7bfa30432bf914de8"
+    },
+    {
+      "id": "vil_coolcats_frogs_emote_wave",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "bceb23774e3f8de8e4a819ddb950933cdfeacb4a"
+    },
+    {
+      "id": "vil_coolcats_frogs_sit_down",
+      "frames": 1,
+      "distinct_frames": 1,
+      "dimensions": [
+        128,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "b3ebb38c290f77ccc748b19d3a4ed1a5a83595c4"
+    },
+    {
+      "id": "vil_coolcats_frogs_sleep",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "b8036aba9caa5de6beb197f58a3b00b7d91a7201"
+    }
+  ],
+  "limitations": "Town Lily (coolcats_frogs): original green frog villager with broad mouth, webbed feet, lavender outfit and asymmetric bow, four directions and emotes; 13 strips/39 cells, 32 native/128 output. All walk frames distinct, native bounds checked, feet row 29, 4x hard-alpha construction. Happy repeats a pose. Rear bow visibility needs visual review; nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes."
+}

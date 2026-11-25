@@ -357,3 +357,7 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 - **Decisions:** `game/design/beta/ROUND4-DECISIONS.md` (D5-01: Arcane Frontier ships as a "Coming soon" card, no Hub card).
 - **Integration:** on the coordinator's call D5 merges r4-d1..r4-d4 into a local `r4-integ`, runs the full tier in shards
   (`tools/stamp.sh --no-write`) and reports each red test with the commit that caused it.
+
+
+## Codex Town Lily
+Town Lily (coolcats_frogs): original green frog villager with broad mouth, webbed feet, lavender outfit and asymmetric bow, four directions and emotes; 13 strips/39 cells, 32 native/128 output. All walk frames distinct, native bounds checked, feet row 29, 4x hard-alpha construction. Happy repeats a pose. Rear bow visibility needs visual review; nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.

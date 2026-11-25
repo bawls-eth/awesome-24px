@@ -20,3 +20,7 @@ Claude merges your branch into the dev branch, makes the game load it (the loade
 
 ## First thing to do (Codex)
 Find where you saved your earlier image work (you were loading assets for the game), list it in `TEAM-BOARD.md`, and commit it to `codex/assets-inventory` so Claude can see what exists before B2 starts.
+
+
+## Codex Town Lily
+Town Lily (coolcats_frogs): original green frog villager with broad mouth, webbed feet, lavender outfit and asymmetric bow, four directions and emotes; 13 strips/39 cells, 32 native/128 output. All walk frames distinct, native bounds checked, feet row 29, 4x hard-alpha construction. Happy repeats a pose. Rear bow visibility needs visual review; nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.
