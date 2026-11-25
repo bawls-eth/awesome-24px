@@ -546,6 +546,17 @@ class RealmArena {
     this._enemyVis = 130; this._enemyDbg = null; this.lastDmgColor = undefined; this._dmgTxtT = undefined; this._numC = null; this._spS = null;
     this._noticeQ = null; this._noticeT = 0; this._dslOn = undefined; this.dissolveStats = undefined; this._dslKit = null;
     this._chaseBestT = undefined; this.lastChaseToast = undefined; this._chaseToastT = undefined; this._lootIco = null;
+    this.hurtGuard = undefined; // set from outside by the first-run tutorial (realm-tutorial.js); read with typeof === 'function'
+    // Cycle 10 L: the 60 fields the rarer paths used to add after the first frame of play (splash weapons _sp*, leech / regen, the forge,
+    // backpack and shop panels, a fall, a resize, a gamepad, a full backpack ...), found by a scan of every `this.x =` in this class against
+    // the arena's own keys at the first frame. Each is declared with the value every read saw before its first write (undefined), so no
+    // read changes; the arena no longer changes shape the first time a player opens a panel, lands a splash hit or falls.
+    this._saveWarnAt = undefined; this._padBk = undefined; this._setC = undefined; this._forC = undefined; this._affC = undefined; this.lastResist = undefined; this._apO = undefined; this._leechCap = undefined; this.leechHealed = undefined; this.regenHealed = undefined;
+    this._pipCache = undefined; this._heroScale = undefined; this._wsO = undefined; this._heroAtkSeen = undefined; this._rzAt = undefined; this._rzRaf = undefined; this.lastDmgSrc = undefined; this._wReach = undefined; this.deadT = undefined; this.dmgTxtSkipped = undefined;
+    this._spX = undefined; this._spY = undefined; this._spR = undefined; this._spOk = undefined; this._spOut = undefined; this._spD = undefined; this._spF = undefined; this.splashN = undefined; this.lastSplash = undefined; this._spFxO = undefined;
+    this.splashArtN = undefined; this._spTxtT = undefined; this._spRings = undefined; this.splashRingN = undefined; this._spCache = undefined; this._gHurtT = undefined; this._cacheKAt = undefined; this._shopDom = undefined; this._shopMsg = undefined; this.lastLoss = undefined;
+    this._deathZone = undefined; this._fullToastAt = undefined; this.lastFullToast = undefined; this.lastFullSale = undefined; this._fShortTimer = undefined; this._tgCodes = undefined; this.panel = undefined; this._forgeUid = undefined; this._armTs = undefined; this._forgeArmUntil = undefined;
+    this._forgeSalYesUntil = undefined; this._forgeAsk = undefined; this._forgeChainAt = undefined; this._bpTabName = undefined; this._bpHoverUid = undefined; this._bpDeltaUid = undefined; this._bpStatsOpen = undefined; this._relicOpen = undefined; this._cmpOnUid = undefined; this._floorPatterns = undefined;
     this._fx = null; this._fxPool = null; this._fxDraws = 0; // optional one-shot effect art (setFxArt)
     this.heroProfile = null; // setHeroProfile
     this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)

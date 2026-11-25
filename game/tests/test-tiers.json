@@ -2490,5 +2490,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 240
+  },
+  "cyc10-lead-arena-shape-rare.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 240
   }
 }
