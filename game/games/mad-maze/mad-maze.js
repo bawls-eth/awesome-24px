@@ -100,7 +100,10 @@
   // ("Back to the world" from a dungeon portal run, else "Back to <place>"). The id stays #realm-leave-btn.
   (function leaveLabel() {
     const lb = document.getElementById('realm-leave-btn'); if (!lb) return;
-    lb.textContent = '✖ Leave';
+    // cyc7-ui: the word sits in its own span so the 195 px icon-only button can hide it with display:none (it was font-size:0, which
+    // also blanked the ✖ fallback when the icon image failed, and read as 0 px text in the a11y sweep). textContent stays '✖ Leave'.
+    lb.textContent = '✖';
+    const word = document.createElement('span'); word.className = 'leave-word'; word.textContent = ' Leave'; lb.appendChild(word);
     lb.setAttribute('aria-label', (RETURN ? 'Leave the dungeon: ' : 'Leave the Realm: ') + HOME_LABEL.charAt(0).toLowerCase() + HOME_LABEL.slice(1));
     lb.title = HOME_LABEL;
   })();

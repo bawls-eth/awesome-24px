@@ -560,3 +560,18 @@ body.mm-hud-big #rw-zone .rw-danger-bar { width: calc(36px * var(--mm-hud-scale,
   body.touch-device #rw-minimap:not(.big) { width: 68px; height: 68px; }
   body.touch-device #rw-minimap:not(.big) + #rw-zone { top: calc(178px + env(safe-area-inset-top, 0px)); }
 }
+
+/* cyc7-ui (cycle-6 proposal, retest 3 b15-r3-04): on a touch phone in portrait, the Realm world kept two secondary controls in the
+   thumb zone: the Daily link right above the left stick (at 195 px it also sat on the Next-goal text) and the settings gear at the
+   bottom centre between the two sticks. Both move to the right column under the mini-map (gear, then Daily), above the ability
+   pad; at <= 260 px (200% zoom) that column is full, so the gear sits left of the mini-map and Daily in the free band under the
+   goal text, above the move stick. The dungeon keeps its own bottom row (gear beside the abilities). Landscape and desktop are unchanged. */
+@media (orientation: portrait) and (min-width: 261px) and (max-width: 600px) {
+  html body.touch-device:not(.dungeon-mode) #mm-gear-btn { left: auto; right: calc(10px + env(safe-area-inset-right, 0px)); bottom: auto; top: calc(212px + env(safe-area-inset-top, 0px)); }
+  html body.touch-device:not(.dungeon-mode) a#mm-daily-btn { left: auto; right: calc(10px + env(safe-area-inset-right, 0px)); bottom: auto; top: calc(264px + env(safe-area-inset-top, 0px)); }
+}
+@media (orientation: portrait) and (max-width: 260px) {
+  html body.touch-device:not(.dungeon-mode) #mm-gear-btn { left: calc(91px + env(safe-area-inset-left, 0px)); right: auto; bottom: auto; top: calc(150px + env(safe-area-inset-top, 0px)); }
+  html body.touch-device:not(.dungeon-mode) #rw-goal, html body.touch-device:not(.dungeon-mode) #rw-zone { max-width: 77px; box-sizing: border-box; }
+  html body.touch-device:not(.dungeon-mode) a#mm-daily-btn { left: calc(8px + env(safe-area-inset-left, 0px)); right: auto; bottom: auto; top: calc(262px + env(safe-area-inset-top, 0px)); padding: 0 8px; }
+}

@@ -48,11 +48,14 @@ html.reduce-motion .big:active, html.reduce-motion #btn-mute:active { transform:
 @media (max-width: 300px) {
   #top { flex-wrap: wrap; gap: 4px; padding-left: 8px; padding-right: 8px; box-sizing: border-box; }
   #top h1 { flex: 1 1 100%; min-width: 0; font-size: min(calc(20px * var(--ui-scale, 1)), 8vw); letter-spacing: .04em; overflow-wrap: break-word; } /* own row: words stay whole */
-  #btn-mute { margin: 4px 0 4px auto; padding-left: 6px; padding-right: 6px; font-size: min(calc(13px * var(--ui-scale, 1)), 6vw); letter-spacing: 0; }
+  #btn-mute { margin: 4px 0 4px auto; padding-left: 6px; padding-right: 6px; font-size: max(12px, min(calc(13px * var(--ui-scale, 1)), 6vw)); letter-spacing: 0; } /* cyc7-ui: 12 px floor (6vw was 11.7 px at 195) */
 }
 /* cyc0-ui: same width: the 4-up stat row squeezed BEST / COMBO labels into 6-30 px cells that overflowed; two columns instead. */
 @media (max-width: 300px) {
   html #hud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html #hud .stat { min-width: 0; }
-  html #hud .stat .lbl { letter-spacing: 0; overflow-wrap: break-word; font-size: min(calc(12px * var(--ui-scale, 1)), 5.5vw); } /* DISTANCE / COMBO whole at 200% zoom */
+  html #hud .stat .lbl { letter-spacing: 0; overflow-wrap: break-word; font-size: max(12px, min(calc(12px * var(--ui-scale, 1)), 5.5vw)); }
+  /* cyc7-ui: the shared HUD value size never drops under 12 px (4.6vw was 9 px at 195 in Stack); pages that set their own bigger
+     size (Dash, Echo: #hud .stat strong) keep it. Pop's own phone rule gets the same floor in pop.css. */
+  .stat strong { font-size: max(12px, min(calc(20px * var(--ui-scale, 1)), calc(4.6vw * var(--ui-scale, 1)))); letter-spacing: 0; } /* DISTANCE / COMBO whole at 200% zoom */
 }

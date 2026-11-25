@@ -2351,5 +2351,9 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 120
+  },
+  "cyc7-ui-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

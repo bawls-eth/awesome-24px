@@ -3083,7 +3083,7 @@ body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: no
   body.touch-device #joystick-knob { width: 40px; height: 40px; }
   body.touch-device #action-buttons, body.a11y-hud-scaled.touch-device #action-buttons { zoom: 1; gap: 4px; grid-template-columns: 48px; grid-template-rows: repeat(4, 44px); }
   body.touch-device #action-buttons button, body.touch-device #action-buttons #hud-more-btn,
-  body.touch-device #action-buttons #emote-toggle-btn, body.touch-device #action-buttons #tilt-toggle-btn { width: 48px !important; height: 44px !important; padding: 0 2px; font-size: 11px !important; }
+  body.touch-device #action-buttons #emote-toggle-btn, body.touch-device #action-buttons #tilt-toggle-btn { width: 48px !important; height: 44px !important; padding: 0 1px; font-size: 12px !important; letter-spacing: -0.02em; line-height: 1.05; } /* cyc7-ui: 12 px floor */
   body.touch-device #action-buttons #emote-toggle-btn { grid-column: 1; grid-row: 1; }
   body.touch-device #action-buttons #hud-more-btn { grid-column: 1; grid-row: 2; }
   body.touch-device #action-buttons #interact-btn { grid-column: 1; grid-row: 3; }
@@ -3108,3 +3108,10 @@ body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: no
   body.touch-device #action-buttons.more-open { grid-template-rows: repeat(4, 56px); }
   body.touch-device #action-buttons #interact-btn, body.touch-device #action-buttons #mobile-chat-btn { width: 56px; height: 56px; }
 }
+
+/* cyc7-ui (U-01, cycle-6 proposal): on wide screens (> 600 px, not a short landscape phone: main.js TOWN_NAV) the shared corner Menu
+   (#mm-nav-btn, shared/mm-nav.js) is top-left in the Town too, the same as every other page; "Where to?" opens the same sheet. It sits
+   just under the Town overlays (z 20+: the join card, map, mailbox, underground, Realm), so any full-screen card covers it like the rest
+   of the HUD, and it is hidden while the join card is up. */
+:root { --mm-nav-z: 19; }
+body:has(#hud.hidden) #mm-nav-btn { display: none; }

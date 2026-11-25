@@ -94,7 +94,10 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
     const place = await page.evaluate(() => { const b = document.getElementById('where-to-btn'); const p = document.getElementById('player-list-panel'); const kids = [...p.children]; return { inPanel: b.parentElement === p, afterToggle: kids.indexOf(b) === kids.indexOf(document.getElementById('panel-toggle')) + 1, collapsed: p.classList.contains('collapsed'), text: b.textContent }; });
     check(L('"Where to?" sits in #player-list-panel right under the panel toggle'), place.inPanel && place.afterToggle && /Where to\?/.test(place.text), JSON.stringify(place));
     if (touch) check(L('phone: the panel is collapsed and "Where to?" is still visible'), place.collapsed && wt.vis, JSON.stringify(place));
-    check(L('the Town has no corner Menu button (one HUD)'), await page.evaluate(() => !document.getElementById('mm-nav-btn') && window.MMNav.mounted()));
+    // cyc7-ui (U-01, owner standing decision in ROUND4.md): the Town now shows the same top-left corner Menu as every page; "Where to?" opens that same sheet
+    // (phones keep "Where to?" as the only Menu: the HUD diet leaves no room yet, see design/beta/cycle7-ui.md)
+    if (!touch) check(L('desktop: the Town has the shared corner Menu button top-left (same sheet as "Where to?")'), await page.evaluate(() => { const m = document.getElementById('mm-nav-btn'); if (!m || !window.MMNav.mounted()) return false; const r = m.getBoundingClientRect(); return r.width >= 44 && r.height >= 44 && r.left <= 16 && r.top <= 16 && m.getAttribute('aria-controls') === document.getElementById('where-to-btn').getAttribute('aria-controls'); }));
+    else check(L('phone: no corner Menu button ("Where to?" is the Menu)'), await page.evaluate(() => !document.getElementById('mm-nav-btn') && window.MMNav.mounted()));
 
     await tap('#where-to-btn');
     await page.waitForTimeout(250);

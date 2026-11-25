@@ -282,7 +282,8 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
    (the back icon stays, the word is hidden; its aria-label / title still name the destination) beside the Menu button, the aim toggle moves to the free left column under the Map
    button (nothing else lives at x 8..52, y 62..106 in the world or the dungeon) and the mini-map starts under the Leave row. */
 @media (max-width: 260px) {
-  html body #realm-overlay #realm-leave-btn { width: 44px; min-width: 44px; max-width: 44px; padding: 0; font-size: 0; border-radius: 50%; text-overflow: clip; }
+  html body #realm-overlay #realm-leave-btn { width: 44px; min-width: 44px; max-width: 44px; padding: 0; font-size: 12px; border-radius: 50%; text-overflow: clip; }
+  html body #realm-overlay #realm-leave-btn > .leave-word { display: none; } /* cyc7-ui: hide the word, not the font (the ✖ fallback stays when the icon fails) */
   html body #realm-overlay #realm-aim-btn { position: fixed !important; left: calc(8px + var(--sl)) !important; right: auto !important; top: calc(62px + var(--st)) !important; }
   html body #rw-minimap:not(.big) { top: calc(140px + env(safe-area-inset-top, 0px)); }
 }
