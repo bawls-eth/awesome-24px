@@ -166,5 +166,193 @@
       "git_blob_sha_verified": true
     }
   ],
-  "limitations": "T17 hawk: six strips/14 frames, 48 native/192 export, full body with hooked bill, banded feathers, fan tail and talons, front/right views, four distinct flight poses each. Bounds, feet baseline y183, native distinctness, hard-alpha construction and exact Git blob hashes checked. Reviewed native contact sheet and new sprite on three backgrounds. Caught pose closed eyes; side near wing can read as a tail extension and flight anatomy needs review. No independent PNG decode, old SVG comparison or full audit run. Manual provisional INDEX because ingest not available. No code changes."
+  "limitations": "T17 hawk: six strips/14 frames, 48 native/192 export, full body with hooked bill, banded feathers, fan tail and talons, front/right views, four distinct flight poses each. Bounds, feet baseline y183, native distinctness, hard-alpha construction and exact Git blob hashes checked. Reviewed native contact sheet and new sprite on three backgrounds. Caught pose closed eyes; side near wing can read as a tail extension and flight anatomy needs review. No independent PNG decode, old SVG comparison or full audit run. Manual provisional INDEX because ingest not available. No code changes.",
+  "revision2": {
+    "status": "WIP audit not run",
+    "checks": [
+      {
+        "id": "ff_hawk_caught",
+        "frames": 1,
+        "distinct_frames": 1,
+        "bounds_native_exclusive": [
+          [
+            3,
+            11,
+            46,
+            46
+          ]
+        ],
+        "lowest_opaque_rows": [
+          183
+        ],
+        "git_blob_sha": "04b469550d491f69a1bb76a4eab1594589641c35",
+        "git_blob_sha_verified": true,
+        "independent_png_decode": true,
+        "hard_alpha": true,
+        "exact_4x_grid": true
+      },
+      {
+        "id": "ff_hawk_caught_down",
+        "frames": 1,
+        "distinct_frames": 1,
+        "bounds_native_exclusive": [
+          [
+            15,
+            8,
+            34,
+            46
+          ]
+        ],
+        "lowest_opaque_rows": [
+          183
+        ],
+        "git_blob_sha": "13cd1b9ece52393027ef590ee8d3e036f5936eb5",
+        "git_blob_sha_verified": true,
+        "independent_png_decode": true,
+        "hard_alpha": true,
+        "exact_4x_grid": true
+      },
+      {
+        "id": "ff_hawk_idle",
+        "frames": 2,
+        "distinct_frames": 2,
+        "bounds_native_exclusive": [
+          [
+            3,
+            11,
+            46,
+            46
+          ],
+          [
+            3,
+            10,
+            46,
+            46
+          ]
+        ],
+        "lowest_opaque_rows": [
+          183,
+          183
+        ],
+        "git_blob_sha": "661e172fcbb8c1551f89f6ea283234e39b0243af",
+        "git_blob_sha_verified": true,
+        "independent_png_decode": true,
+        "hard_alpha": true,
+        "exact_4x_grid": true
+      },
+      {
+        "id": "ff_hawk_idle_down",
+        "frames": 2,
+        "distinct_frames": 2,
+        "bounds_native_exclusive": [
+          [
+            15,
+            8,
+            34,
+            46
+          ],
+          [
+            15,
+            7,
+            34,
+            46
+          ]
+        ],
+        "lowest_opaque_rows": [
+          183,
+          183
+        ],
+        "git_blob_sha": "b6200f675a4047db8a86e466e8c73b80b48441f6",
+        "git_blob_sha_verified": true,
+        "independent_png_decode": true,
+        "hard_alpha": true,
+        "exact_4x_grid": true
+      },
+      {
+        "id": "ff_hawk_move",
+        "frames": 4,
+        "distinct_frames": 4,
+        "bounds_native_exclusive": [
+          [
+            3,
+            9,
+            46,
+            44
+          ],
+          [
+            3,
+            1,
+            46,
+            42
+          ],
+          [
+            3,
+            6,
+            46,
+            42
+          ],
+          [
+            3,
+            8,
+            46,
+            43
+          ]
+        ],
+        "lowest_opaque_rows": [
+          175,
+          167,
+          167,
+          171
+        ],
+        "git_blob_sha": "d9a7a60a47353748497f6e2695dbb3dfece12f93",
+        "git_blob_sha_verified": true,
+        "independent_png_decode": true,
+        "hard_alpha": true,
+        "exact_4x_grid": true
+      },
+      {
+        "id": "ff_hawk_move_down",
+        "frames": 4,
+        "distinct_frames": 4,
+        "bounds_native_exclusive": [
+          [
+            3,
+            6,
+            46,
+            44
+          ],
+          [
+            3,
+            4,
+            45,
+            42
+          ],
+          [
+            4,
+            3,
+            45,
+            41
+          ],
+          [
+            3,
+            5,
+            45,
+            43
+          ]
+        ],
+        "lowest_opaque_rows": [
+          175,
+          167,
+          163,
+          171
+        ],
+        "git_blob_sha": "24a4bce669f4e344dac1560da6532b329c43ea6e",
+        "git_blob_sha_verified": true,
+        "independent_png_decode": true,
+        "hard_alpha": true,
+        "exact_4x_grid": true
+      }
+    ],
+    "limitations": "T17 hawk v2: six strips / 14 frames redrawn, same IDs and 192px cells. Slim front silhouette (19 native px wide), compact brow, cream streaked chest, yellow legs and hooked bill, long rufous tail. Profile downstroke now drops below belly, flight f2/f3 body rises 4/5 native px with tucked feet, caught eyes are small eyelid lines. Local Pillow independent PNG decode, hard alpha, exact 4x grid, bounds, distinct frames and Git SHA comparison passed on all six. Airborne bottom rows intentionally 163–175 rather than 183. Added class ff_hawk. Visual inspection on grass completed. Full repository audit/tests unavailable: Git DNS failure. Owl comparison, old SVG comparison, half-native in-game review and updated committed preview pending; no code changes. WIP, do not merge before review."
+  }
 }
