@@ -26,11 +26,14 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   // art-audit-3: b40b the frostfox (14) and b40c the rimewolf (14), provisional, wired in full
   const b40b = man('b40b-frostfox').assets, b40c = man('b40c-rimewolf').assets;
   assets.push.apply(assets, b40b); assets.push.apply(assets, b40c);
+  // cycle 7: b03 the icicle bat (12 core strips, no sleep / eat: it is not tameable; death 8 fps), provisional, wired in full
+  const b03 = man('b03-icicle-bat').assets;
+  assets.push.apply(assets, b03);
   const files = M.files();
   const byId = {}; files.forEach((f) => { byId[f.id] = f; });
-  check('392 strips: 40 b31a + 24 b31b + 43 b32 + 2 b31af + 20 b32s + 98 b36 + 14 b38a + 94 b38b-f (14 + 40 + 12 + 14 + 14) + 15 b38g + 14 b40a + 14 b40b + 14 b40c, one per manifest asset',
-    files.length === 392 && b31b.length === 24 && assets.length === 392 && b38.map((a) => a.length).join() === '14,40,12,14,14' && b38g.length === 15 && b40a.length === 14 && b40b.length === 14 && b40c.length === 14
-    && assets.every((a) => byId[a.id]) && new Set(files.map((f) => f.id)).size === 392, files.length + ' / ' + assets.length);
+  check('404 strips: 40 b31a + 24 b31b + 43 b32 + 2 b31af + 20 b32s + 98 b36 + 14 b38a + 94 b38b-f (14 + 40 + 12 + 14 + 14) + 15 b38g + 14 b40a + 14 b40b + 14 b40c + 12 b03, one per manifest asset',
+    files.length === 404 && b31b.length === 24 && assets.length === 404 && b38.map((a) => a.length).join() === '14,40,12,14,14' && b38g.length === 15 && b40a.length === 14 && b40b.length === 14 && b40c.length === 14
+    && b03.length === 12 && assets.every((a) => byId[a.id]) && new Set(files.map((f) => f.id)).size === 404, files.length + ' / ' + assets.length);
   const bad = [];
   assets.forEach((a) => {
     const k = a.enemy || a.creature, sp = M.SPECS[k], act = M.ACT[a.action];
@@ -94,16 +97,22 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
     M.kindsFor('tundra')[0] === 'pengling' && BP.canon('pengling') === 'pengling' && BP.creatureIds('tundra').indexOf('pengling') >= 0 && CR.get('pengling').biome === 'tundra'
     && files.filter((f) => f.kind === 'pengling').length === 14 && M.fpsOf('death', 'pengling') === 10 && M.actionFor('pengling', st({ eating: true })) === 'eat' && /b40a-pengling\/creatures\/pengling\/pengling_eat_down\.png$/.test(byId.pengling_eat_down.url));
   check('b40b/b40c: frostfox + rimewolf are tundra strip species by id (S 192 px, feet 96,171, 14 strips each, death 10 fps, sleep / eat down)',
-    M.kindsFor('tundra').join() === 'pengling,frostfox,rimewolf' && ['frostfox', 'rimewolf'].every((k) => CR.get(k).biome === 'tundra' && CR.get(k).size === 'S'
+    M.kindsFor('tundra').slice(0, 3).join() === 'pengling,frostfox,rimewolf' && ['frostfox', 'rimewolf'].every((k) => CR.get(k).biome === 'tundra' && CR.get(k).size === 'S'
       && BP.creatureIds('tundra').indexOf(k) >= 0 && M.SPECS[k].cell === 192 && files.filter((f) => f.kind === k).length === 14 && M.fpsOf('death', k) === 10
       && M.stripId(k, 'move', M.LEFT) === k + '_move_right' && M.stripId(k, 'sleep', M.UP) === k + '_sleep_down')
     && /b40b-frostfox\/creatures\/frostfox\/frostfox_attack_right\.png$/.test(byId.frostfox_attack_right.url) && /b40c-rimewolf\/creatures\/rimewolf\/rimewolf_eat_down\.png$/.test(byId.rimewolf_eat_down.url));
+  check('b03 (cycle 7): the icicle bat is a tundra strip species by id (S 192 px, feet 96,171, the 12 core strips, death 8 fps, no sleep / eat: ko / fed fall back to idle), in the tundra spawn table',
+    M.kindsFor('tundra').join() === 'pengling,frostfox,rimewolf,icicle_bat' && CR.get('icicle_bat').biome === 'tundra' && CR.get('icicle_bat').size === 'S' && CR.get('icicle_bat').tame === null
+    && BP.creatureIds('tundra').indexOf('icicle_bat') >= 0 && M.SPECS.icicle_bat.cell === 192 && M.SPECS.icicle_bat.ax === 96 && M.SPECS.icicle_bat.ay === 171
+    && files.filter((f) => f.kind === 'icicle_bat').length === 12 && M.fpsOf('death', 'icicle_bat') === 8 && Math.abs(M.duration('death', 'icicle_bat') - 5 / 8) < 1e-9
+    && M.stripId('icicle_bat', 'move', M.LEFT) === 'icicle_bat_move_right' && M.stripId('icicle_bat', 'sleep', 0) === null && M.saddleFor('icicle_bat', true) === null
+    && /b03-icicle-bat\/creatures\/icicle_bat\/icicle_bat_death_up\.png$/.test(byId.icicle_bat_death_up.url));
   check('b38c/f: the swim mounts are MMCreatures rideables (swim) with seats; tidesteed / skimray have saddle overlays, the turtle (saddle: null) rides bare',
     ['tidesteed', 'skimray', 'isleback_turtle'].every((k) => CR.get(k).ride && CR.get(k).ride.swim && M.seatOffset(k, false, M.DOWN, 0, { x: 0, y: 0 }))
     && M.saddleFor('tidesteed', true) === 'saddle_move' && M.saddleFor('skimray', false) === 'saddle_idle' && M.saddleFor('isleback_turtle', true) === null && CR.get('isleback_turtle').ride.saddle === null
     && M.saddleFor('shellcrab', false) === null);
-  check('kindsFor: an island preloads its biome plus the stable roster (jungle 8, reef 8, tundra 3, mars 0, meadow + a tusktop 8)', M.kindsFor('jungle').length === 8 && M.kindsFor('jungle').indexOf('stegolith') >= 0
-    && M.kindsFor('reef').length === 8 && M.kindsFor('tundra').length === 3 && M.kindsFor('mars').length === 0 && M.kindsFor('meadow', ['tusktop', 'nope']).length === 8);
+  check('kindsFor: an island preloads its biome plus the stable roster (jungle 8, reef 8, tundra 4, mars 0, meadow + a tusktop 8)', M.kindsFor('jungle').length === 8 && M.kindsFor('jungle').indexOf('stegolith') >= 0
+    && M.kindsFor('reef').length === 8 && M.kindsFor('tundra').length === 4 && M.kindsFor('mars').length === 0 && M.kindsFor('meadow', ['tusktop', 'nope']).length === 8);
   check('saddleFor: the stegolith has overlays; the meadow strider (no saddle) has none', M.saddleFor('stegolith', true) === 'saddle_move' && M.saddleFor('meadow_strider', false) === null);
   check('saddleFor: tusktop / tyrant have overlays, others none', M.saddleFor('tusktop', true) === 'saddle_move' && M.saddleFor('fernjaw_tyrant', false) === 'saddle_idle' && M.saddleFor('fernraptor', true) === null);
   check('stripId: precomputed, left reuses right, down-only actions stay down', M.stripId('tusktop', 'move', M.LEFT) === 'tusktop_move_right' && M.stripId('fernraptor', 'sleep', M.UP) === 'fernraptor_sleep_down'
@@ -129,13 +138,13 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   const set = M.create({ create: mk, loadImage: (u) => { asked.push(u); return Promise.resolve(/glimmerfrog_move_up/.test(u) ? null : img(u)); } });
   check('before ready: nothing is drawn from PNG', !set.has('fernraptor') && set.get('fernraptor', 'idle', 0) === null);
   await set.ready;
-  check('loads each of the 392 PNGs exactly once', asked.length === 392 && new Set(asked).size === 392);
+  check('loads each of the 404 PNGs exactly once', asked.length === 404 && new Set(asked).size === 404);
   check('complete creatures are on, glimmerfrog (a missing move_up) falls back to the code bake', set.has('fernraptor') && set.has('tusktop') && set.has('fernjaw_tyrant') && set.has('chompbill') && !set.has('glimmerfrog'));
   const fr = set.get('fernraptor', 'move', M.LEFT), tk = set.get('tusktop', 'saddle_move', M.DOWN), ty = set.get('fernjaw_tyrant', 'roar', M.UP);
   check('baked strips are native size (256 -> 64, 384 -> 96, 512 -> 128) with the anchor scaled', fr.w === 64 && fr.frames === 6 && fr.ax === 32 && fr.ay === 231 / 4 && tk.w === 96 && tk.id === 'tusktop_saddle_move_down' && ty.w === 128 && ty.id === 'fernjaw_tyrant_roar_up');
   const hr = set.get('tide_hydra', 'roar', M.LEFT);
-  check('the hydra roar bakes all 6 frames (512 -> 128) and the pengling is on', hr.frames === 6 && hr.w === 128 && hr.src.width === 128 * 6 && set.has('tide_hydra') && set.has('pengling') && set.has('frostfox') && set.has('rimewolf'));
-  check('each loaded strip (391: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 391 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
+  check('the hydra roar bakes all 6 frames (512 -> 128) and the pengling is on', hr.frames === 6 && hr.w === 128 && hr.src.width === 128 * 6 && set.has('tide_hydra') && set.has('pengling') && set.has('frostfox') && set.has('rimewolf') && set.has('icicle_bat'));
+  check('each loaded strip (403: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 403 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
   const oak = set.get('oakback', 'idle', M.DOWN), steg = set.get('stegolith', 'saddle_idle', M.RIGHT);
   const pw = set.get('puffwool', 'idle', M.DOWN), sd = set.get('meadow_strider', 'move', M.RIGHT), rp = set.get('reef_puffer', 'eat', M.LEFT);
   check('b36 / b38a redo cells bake to their size class: oakback 512 -> 128 (feet 463/4), strider 384 -> 96, puffwool / reef puffer 192 -> 48; stegolith 512 -> 128',
