@@ -1,0 +1,146 @@
+{
+  "status": "WIP audit not run",
+  "strips": 6,
+  "frames": 14,
+  "checks": [
+    {
+      "id": "ff_deer_idle",
+      "bounds_native": [
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          4,
+          60,
+          61
+        ]
+      ],
+      "distinct_frames": 2,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "e6db2b8622eca4205cc62d42da69fec57cb5daa3"
+    },
+    {
+      "id": "ff_deer_move",
+      "bounds_native": [
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          3,
+          60,
+          61
+        ],
+        [
+          4,
+          4,
+          60,
+          61
+        ]
+      ],
+      "distinct_frames": 4,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "86b676c36550a9697a376d1cc47d9ab7d22d2222"
+    },
+    {
+      "id": "ff_deer_caught",
+      "bounds_native": [
+        [
+          4,
+          6,
+          60,
+          61
+        ]
+      ],
+      "distinct_frames": 1,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "46a1ccd5bb71df51c3642dc15d63454fc85daf26"
+    },
+    {
+      "id": "ff_deer_idle_down",
+      "bounds_native": [
+        [
+          12,
+          4,
+          52,
+          61
+        ],
+        [
+          12,
+          5,
+          52,
+          61
+        ]
+      ],
+      "distinct_frames": 2,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "ad0797f23dbb20c05410b9f183de89d3d55e3363"
+    },
+    {
+      "id": "ff_deer_move_down",
+      "bounds_native": [
+        [
+          12,
+          4,
+          52,
+          61
+        ],
+        [
+          12,
+          3,
+          52,
+          61
+        ],
+        [
+          12,
+          4,
+          52,
+          61
+        ],
+        [
+          12,
+          5,
+          52,
+          61
+        ]
+      ],
+      "distinct_frames": 4,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "497366756b572472d54f1da4fb0c4224445bb6f3"
+    },
+    {
+      "id": "ff_deer_caught_down",
+      "bounds_native": [
+        [
+          12,
+          6,
+          52,
+          61
+        ]
+      ],
+      "distinct_frames": 1,
+      "lowest_opaque_row": 247,
+      "roundtrip_decoded": true,
+      "blob_sha": "a199e7507c6ed263502af497d749a88d1ec0b246"
+    }
+  ],
+  "limitations": "Deer v2: revised all six strips (14 frames), shortened antler region by 3 native rows with tapered remap into unchanged head. Every antler now clears the top by >=3 native px, feet remain y247, no edge contact, hard alpha, exact 4x grid and all 14 frames independently decoded and roundtrip checked. Original IDs, timing, palette retained. Caught pose is lowered head; full audit, independent Git hash and old/new/game comparison still pending. No code changes."
+}

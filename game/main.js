@@ -7119,7 +7119,87 @@ class TownScene extends Phaser.Scene {
     g.fillCircle(800, 600, 150);
     g.fillStyle(0xedd9ad, 1);
     g.fillCircle(800, 600, 142);
-    g.bake();
+    this.drawPathDetail(g, x, y, width, height);
+    const img = g.bake();
+    if (this.pathDetail && img) this.pathDetail.key = img.texture && img.texture.key;
+  }
+
+  // Cycle 8 art (G): the village dirt road and plaza were three flat beige fills (ART-TOWN-REPORT "Ground ... paths, plaza: D, beige path
+  // bands with no edge"). Drawn into the same baked Graphics, so it is still ONE image and costs nothing per frame: two worn wheel ruts
+  // (dark groove + lit lip, seeded gaps) along each road, a darker 2 px lip on the road edges with grass tufts leaning over it, seeded
+  // pebbles (body + 1 px catch light), and a cobble ring with radial joints round the plaza. Original pixel art, palette = the road's own
+  // ramp. ?townpath=0 = the old flat road.
+  drawPathDetail(g, x, y, width, height) {
+    const off = typeof location !== 'undefined' && /[?&]townpath=0(&|$)/.test(location.search);
+    const st = this.pathDetail = { on: !off, ruts: 0, lips: 0, tufts: 0, pebbles: 0, joints: 0 };
+    if (off) return st;
+    let seed = 0x5eed8;
+    const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return (seed >>> 8) / 16777216; };
+    const CX = 800, CY = 600, PR = 150;
+    const inPlaza = (px, py, m) => (px - CX) * (px - CX) + (py - CY) * (py - CY) < (PR + (m || 0)) * (PR + (m || 0));
+    // plaza: a cobble ring (two joint circles and radial joints) inside the rim
+    g.fillStyle(0xd9bd90, 1); g.fillCircle(CX, CY, 127);
+    g.fillStyle(0xe6cfa2, 1); g.fillCircle(CX, CY, 125);
+    g.fillStyle(0xedd9ad, 1); g.fillCircle(CX, CY, 123);
+    g.fillStyle(0xdcc195, 1); g.fillCircle(CX, CY, 58);
+    g.fillStyle(0xedd9ad, 1); g.fillCircle(CX, CY, 56);
+    for (let a = 0; a < 48; a++) {
+      const t = (a / 48) * Math.PI * 2 + (a % 2) * 0.03;
+      for (let r = 129; r <= 139; r += 2) { g.fillStyle(r === 139 ? 0xd2b487 : 0xd9bd90, 1).fillRect(Math.round(CX + Math.cos(t) * r), Math.round(CY + Math.sin(t) * r), 2, 2); }
+      st.joints++;
+    }
+    // wheel ruts: horizontal road (along x) and vertical road (along y), skipping the plaza and the rounded ends
+    const rut = (horiz, lane) => {
+      const len = horiz ? width : height, o = horiz ? CY + lane : CX + lane;
+      let p = 44;
+      while (p < len - 44) {
+        // long, slightly wandering grooves with short breaks (worn wheel tracks, not painted lane dashes)
+        const seg = 40 + Math.floor(rnd() * 90), gap = 3 + Math.floor(rnd() * 6);
+        let wob = 0;
+        for (let q = p; q < Math.min(p + seg, len - 44); q += 4) {
+          if (rnd() < 0.18) wob = Math.max(-2, Math.min(2, wob + (rnd() < 0.5 ? -1 : 1)));
+          const wx = horiz ? x + q : o + wob, wy = horiz ? o + wob : y + q;
+          if (inPlaza(wx, wy, 14)) continue;
+          const w = Math.min(4, len - 44 - q), deep = rnd() < 0.7;
+          if (horiz) { g.fillStyle(0xd4b688, 1).fillRect(wx, wy - 1, w, 1); g.fillStyle(deep ? 0xc8a777 : 0xcfb081, 1).fillRect(wx, wy, w, 2); g.fillStyle(0xeed9ae, 1).fillRect(wx, wy + 2, w, 1); }
+          else { g.fillStyle(0xd4b688, 1).fillRect(wx - 1, wy, 1, w); g.fillStyle(deep ? 0xc8a777 : 0xcfb081, 1).fillRect(wx, wy, 2, w); g.fillStyle(0xeed9ae, 1).fillRect(wx + 2, wy, 1, w); }
+          st.ruts++;
+        }
+        p += seg + gap;
+      }
+    };
+    rut(true, -14); rut(true, 11); rut(false, -14); rut(false, 11);
+    // road edge lip (2 px, darker) + grass tufts leaning over it
+    const edge = (horiz, side) => {
+      const len = horiz ? width : height;
+      for (let q = 34; q < len - 34; q += 6) {
+        const wx = horiz ? x + q : (side < 0 ? CX - 32 : CX + 30), wy = horiz ? (side < 0 ? CY - 32 : CY + 30) : y + q;
+        if (inPlaza(horiz ? wx : CX, horiz ? CY : wy, 12)) continue;
+        g.fillStyle(0xd3b386, 1).fillRect(wx, wy, horiz ? 6 : 2, horiz ? 2 : 6); st.lips++;
+        if (rnd() < 0.09) {
+          // three blades (3 / 4 / 2 px) from the grass edge into the road: down from the top edge, up from the bottom, inward on the sides
+          g.fillStyle(0x86ba66, 1);
+          [3, 4, 2].forEach((h, b) => {
+            if (horiz) g.fillRect(wx + 1 + b * 2, side < 0 ? wy : wy + 2 - h, 1, h);
+            else g.fillRect(side < 0 ? wx : wx + 2 - h, wy + 1 + b * 2, h, 1);
+          });
+          st.tufts++;
+        }
+      }
+    };
+    edge(true, -1); edge(true, 1); edge(false, -1); edge(false, 1);
+    // pebbles: body + 1 px catch light (top-left), seeded over both roads and the plaza
+    const pebble = (px, py) => {
+      const big = rnd() < 0.35, w = big ? 3 : 2;
+      g.fillStyle(rnd() < 0.5 ? 0xb8a07a : 0xc4ab83, 1).fillRect(px, py, w, 2);
+      g.fillStyle(0xf7ead0, 1).fillRect(px, py, 1, 1);
+      if (big) g.fillStyle(0xa58d68, 1).fillRect(px + 1, py + 2, 2, 1);
+      st.pebbles++;
+    };
+    for (let i = 0; i < 190; i++) { const px = x + 40 + Math.floor(rnd() * (width - 80)), py = CY - 26 + Math.floor(rnd() * 50); if (!inPlaza(px, py, 6)) pebble(px, py); }
+    for (let i = 0; i < 95; i++) { const px = CX - 26 + Math.floor(rnd() * 50), py = y + 40 + Math.floor(rnd() * (height - 80)); if (!inPlaza(px, py, 6)) pebble(px, py); }
+    for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 118; pebble(Math.round(CX + Math.cos(a) * r), Math.round(CY + Math.sin(a) * r)); }
+    return st;
   }
 
   // Static vector art drawn with ordinary Graphics calls but BAKED once into a texture and shown as

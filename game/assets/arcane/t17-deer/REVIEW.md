@@ -1,0 +1,5 @@
+# Deer v2
+
+![Revised sheet](preview.png)
+
+Deer v2: revised all six strips (14 frames), shortened antler region by 3 native rows with tapered remap into unchanged head. Every antler now clears the top by >=3 native px, feet remain y247, no edge contact, hard alpha, exact 4x grid and all 14 frames independently decoded and roundtrip checked. Original IDs, timing, palette retained. Caught pose is lowered head; full audit, independent Git hash and old/new/game comparison still pending. No code changes.

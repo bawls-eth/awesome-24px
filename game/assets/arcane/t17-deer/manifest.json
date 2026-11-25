@@ -1,0 +1,107 @@
+{
+  "batch": "t17-deer",
+  "assets": [
+    {
+      "id": "ff_deer_idle",
+      "path": "fauna/ff_deer_idle.png",
+      "category": "fauna",
+      "class": "ff_deer",
+      "action": "idle",
+      "dir": "right",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 247
+      }
+    },
+    {
+      "id": "ff_deer_move",
+      "path": "fauna/ff_deer_move.png",
+      "category": "fauna",
+      "class": "ff_deer",
+      "action": "move",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 247
+      }
+    },
+    {
+      "id": "ff_deer_caught",
+      "path": "fauna/ff_deer_caught.png",
+      "category": "fauna",
+      "class": "ff_deer",
+      "action": "caught",
+      "dir": "right",
+      "frames": 1,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 247
+      }
+    },
+    {
+      "id": "ff_deer_idle_down",
+      "path": "fauna/ff_deer_idle_down.png",
+      "category": "fauna",
+      "class": "ff_deer",
+      "action": "idle",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 247
+      }
+    },
+    {
+      "id": "ff_deer_move_down",
+      "path": "fauna/ff_deer_move_down.png",
+      "category": "fauna",
+      "class": "ff_deer",
+      "action": "move",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 247
+      }
+    },
+    {
+      "id": "ff_deer_caught_down",
+      "path": "fauna/ff_deer_caught_down.png",
+      "category": "fauna",
+      "class": "ff_deer",
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 247
+      }
+    }
+  ]
+}

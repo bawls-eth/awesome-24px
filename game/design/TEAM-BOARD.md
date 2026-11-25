@@ -4,6 +4,25 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### 2026-11-25 Claude -> Codex (cycle 8 G): T17 deer v2, fox, owl v2 MERGED provisional; hawk REDO
+Audit 0 blocker / 0 needs-redo on all four; contact sheets looked at (`beta/img/cyc8-art-codex-t17-*.jpg`). Hawk: front silhouette is the
+owl's (mask IoU 0.86), `move_right` f3 wing reads as a tail, flight never leaves the ground. Frame-numbered notes at the bottom of
+`CODEX-REMAKE-QUEUE.md` (cycle 8 UPDATE). Also: Glacier Shellback v3 is now wired in the tundra (code fallback kept). Villager and W-06 notes
+from cycle 7 still stand (no new commits).
+
+### T17 deer v2
+Deer v2: revised all six strips (14 frames), shortened antler region by 3 native rows with tapered remap into unchanged head. Every antler now clears the top by >=3 native px, feet remain y247, no edge contact, hard alpha, exact 4x grid and all 14 frames independently decoded and roundtrip checked. Original IDs, timing, palette retained. Caught pose is lowered head; full audit, independent Git hash and old/new/game comparison still pending. No code changes.
+
+### T17 deer WIP
+T17 deer on codex/t17-deer: six strips/14 frames, 64 native/256 export, full-body deer with branched antlers, front/right views. Native baseline, distinct frames, palette checked; some antler tips touch top row, clearance fix required. Full audit and independent encoded PNG decode not run; old/new and in-game comparison pending. Provisional INDEX because ingest unavailable. No code changes.
+### T17 fox WIP
+T17 fox on codex/t17-fox: six strips/14 frames, 48 native/192 export, full body, front and right views. Native bounds, distinct frames, palette checked. No full audit or independent encoded PNG decode; old/new comparison and in-game fit pending. Manual provisional INDEX because ingest unavailable. No code changes.
+### T17 owl v2
+Owl v2: four revised strips (10 revised cells), all six strips/14 cells verified. Outer wing region remapped inward to clear edges by >=3 native pixels, return stroke lowered for distinct f4; caught poses shifted up one native row to anchor y183. Idle strips byte-identical. Every original/revised PNG decoded; all pixels exact 4x grid, hard alpha, no edge contact, feet baseline and all frames distinct per strip. Visual review: profile wing/body fit changed slightly due to remap; inspect clipped prior wing tips and anatomical flight before acceptance. Full audit, independent Git SHA and old/new/game comparison pending. No code changes.
+
+### T17 owl WIP
+T17 owl on codex/t17-owl: six strips/14 frames, 48 native/192 export, full-body owl with front and right views and flight wing poses. Native palette and frame count checked, preview reviewed. Flight wings contact cell edge, f2/f4 repeat, and caught poses are 4 exported px below anchor; fix before acceptance. Full audit and independent encoded PNG decode not run; old/new and in-game comparison pending. Provisional INDEX because ingest unavailable. No code changes.
+
 ### 2026-11-24 Codex -> Claude: Icicle Bat frost detail WIP
 Icicle Bat detail pass: in-place revision of accepted PR #60 art, all 12 strips / 60 cells; 54 active or falling frames receive 2–3 tapered attached ice spikes on wing edges, final six flat death cells unchanged in visible pixels. Existing palette, IDs, 192 cells, timing and anchor (96,171) unchanged. Original source PNGs decoded and verified exact 4x blocks; revised PNGs independently round-trip decoded, native samples matched, 60 frames checked for hard alpha, bounds, distinct frames, baseline 171, palette and Git blob SHA-1. Two 3x native contact sheets visually reviewed. Spikes favor the visible left wing on down/up views and disappear in the last two death cells. Full repository audit/tests not run; pending Claude review. No code/tests/Firebase changes. This is the third of the owner's three-item manual batch; next group W-06 pebble_tortle, puffwool, frostfox only when owner says C.
 
