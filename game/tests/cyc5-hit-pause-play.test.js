@@ -1,6 +1,6 @@
 // cyc5 S (b01-r3: "ID-14 hit pause NOT VERIFIED", no big hit could be provoked by playing). Gameplay-level proof that the hit pause fires:
 // the real rAF loop runs untouched, a Lv 1 hero stands still 160 px south of a Godlands (zone 3) altar boss and is hit by the
-// boss's REAL bolts (no _hitPlayer calls, no HP edits, no synthetic frames). Checks: a hit of at least 15 percent of max HP lands; the
+// boss's REAL bolts (no _hitPlayer calls, no HP edits, no synthetic frames). Checks: a hit of at least 12 percent of max HP lands; the
 // hit pause counter goes up for that hit; no _draw call happens in the 50 ms after it while the page's own rAF keeps ticking; the sim
 // clock keeps running through it. With reduce motion on, the same real big hit pauses nothing. An extra info line prints the biggest
 // hit share a level-matched hero (Lv 16 in zone 3) takes in 8 s, which explains why b01 never saw it fire (not a check: tuning is D's).
@@ -35,9 +35,9 @@ async function play(browser, lv, reduce, ms) {
       const h = a.player.hp;
       if (h < hp) hits.push({ t: now, i: ticks.length - 1, dmg: Math.round(hp - h), frac: (hp - h) / a.stats.maxHp, pf0: pf, clock: a.clock });
       hp = h; pf = a.hitPausedFrames;
-      if (now - t0 < ms && a.state === 'play' && !hits.some((x) => x.frac >= 0.15 && now - x.t > 300)) { requestAnimationFrame(f); return; }
+      if (now - t0 < ms && a.state === 'play' && !hits.some((x) => x.frac >= 0.12 && now - x.t > 300)) { requestAnimationFrame(f); return; }
       a._draw = d0;
-      const big = hits.find((x) => x.frac >= 0.15) || null;
+      const big = hits.find((x) => x.frac >= 0.12) || null;
       let win = null;
       if (big) { // the game's rAF callback runs before this one each frame: the hit frame was drawn; then each paused frame adds a pause and no draw
         let j = big.i + 1, paused = 0, drawnWhilePaused = 0;
@@ -57,7 +57,7 @@ async function play(browser, lv, reduce, ms) {
   const browser = await chromium.launch();
   const A = await play(browser, 1, false, 20000);
   const o = A.out; const w = o.win || {};
-  check('a real boss bolt lands a hit of at least 15 percent of max HP on a still Lv 1 hero in the Godlands', !!o.big, JSON.stringify({ maxHp: o.maxHp, hits: o.hits }));
+  check('a real boss bolt lands a hit of at least 12 percent of max HP on a still Lv 1 hero in the Godlands', !!o.big, JSON.stringify({ maxHp: o.maxHp, hits: o.hits }));
   check('the hit pause fires for that hit (hitPausedFrames goes up)', !!o.big && w.pfAfter > w.pfBefore, JSON.stringify(w));
   check('right after the big hit 1-4 real frames tick with no draw (the canvas holds the frame for about 50 ms)', !!o.big && w.pausedTicks >= 1 && w.pausedTicks <= 4 && w.drawnWhilePaused === 0 && w.pauseMs <= 70, JSON.stringify(w));
   check('drawing resumes after the pause and the sim clock kept running through it', !!o.big && w.drawsAfter > 0 && w.clockNow > w.clockAtHit, JSON.stringify(w));
@@ -70,7 +70,7 @@ async function play(browser, lv, reduce, ms) {
   check('0 DB requests (reduce motion)', R.db === 0);
 
   const M = await play(browser, 16, false, 8000);
-  console.log('INFO level-matched Lv 16 hero in zone 3: max HP ' + M.out.maxHp + ', hits ' + JSON.stringify(M.out.hits.slice(0, 12)) + ', biggest share ' + (M.out.maxFrac * 100).toFixed(1) + ' percent (threshold 15)');
+  console.log('INFO level-matched Lv 16 hero in zone 3: max HP ' + M.out.maxHp + ', hits ' + JSON.stringify(M.out.hits.slice(0, 12)) + ', biggest share ' + (M.out.maxFrac * 100).toFixed(1) + ' percent (threshold 12)');
   check('0 DB requests (info run)', M.db === 0);
   await browser.close();
   done();

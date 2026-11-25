@@ -1,9 +1,9 @@
-// ID-14 hit pause (cycle 3 S): draw-only, 50 ms, only for hits >= 15 percent of max HP; the renderer keeps the last drawn frame while the
+// ID-14 hit pause (cycle 3 S): draw-only, 50 ms, only for hits >= 12 percent of max HP; the renderer keeps the last drawn frame while the
 // sim (clock, bullets, timers) keeps running. Off under reduce motion and with ?hitpause=0.
 // Method (Realm world page, blockDb, db.attempts() === 0): the rAF loop is stopped and _loop is driven by hand with the same synthetic
 // timestamps twice, pause on and pause off, a big hit landing in the same frame. Checks: the dt sequence fed to _update, the sim clock
 // (_stT), the hero HP and the enemy-bolt positions are IDENTICAL with pause on and off; with it on, exactly the frames within 50 ms after
-// the hit skip _draw (2 at 60 fps); a small hit (< 15 percent) pauses nothing; reduce motion (mm-reduce-motion = '1') pauses nothing.
+// the hit skip _draw (2 at 60 fps); a small hit (< 12 percent) pauses nothing; reduce motion (mm-reduce-motion = '1') pauses nothing.
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
@@ -52,7 +52,11 @@ function run(page, on, hitFrac) {
   check('big hit, pause ON: exactly the 2 frames within 50 ms after the hit skip the draw (18 of 20 drawn)', on.paused === 2 && on.draws === 18, JSON.stringify({ d: on.draws, p: on.paused }));
   check('the sim is identical with pause on and off: same dt sequence, sim clock, hero HP and all 24 enemy-bolt positions', on.dts === off.dts && on.stT === off.stT && on.hp === off.hp && on.bolts === off.bolts && on.hp < (await s.page.evaluate(() => window.__mm.arena.stats.maxHp)), JSON.stringify({ stOn: on.stT, stOff: off.stT, hpOn: on.hp, hpOff: off.hp, same: on.bolts === off.bolts }));
   const small = await run(s.page, true, 0.1);
-  check('a small hit (10 percent < 15) pauses nothing', small.paused === 0 && small.draws === 20, JSON.stringify({ d: small.draws, p: small.paused }));
+  check('a small hit (10 percent < 12) pauses nothing', small.paused === 0 && small.draws === 20, JSON.stringify({ d: small.draws, p: small.paused }));
+  const below = await run(s.page, true, 0.11);
+  check('ID-14 threshold is 12 percent: a hit of 11 percent pauses nothing', below.paused === 0 && below.draws === 20, JSON.stringify({ d: below.draws, p: below.paused }));
+  const above = await run(s.page, true, 0.13);
+  check('ID-14 threshold is 12 percent: a hit of 13 percent (under the old 15) pauses 2 frames', above.paused === 2 && above.draws === 18, JSON.stringify({ d: above.draws, p: above.paused }));
   check('no page errors', s.errors.length === 0, s.errors.join(' | '));
   check('0 DB requests', s.db.attempts() === 0);
   await s.ctx.close();

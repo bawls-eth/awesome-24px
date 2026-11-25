@@ -37,7 +37,7 @@ const RM_ENEMIES = {
 const RM_ENEMY_BULLET_DAMAGE = 8;
 // ID-14 (cycle 3 S): draw-only hit pause. A hit of at least RM_HIT_PAUSE_FRAC of max HP holds the last drawn frame for RM_HIT_PAUSE_MS;
 // the sim (_update: clock, bullets, timers) keeps running every frame. Off under reduce motion and with ?hitpause=0.
-const RM_HIT_PAUSE_MS = 50; const RM_HIT_PAUSE_FRAC = 0.15;
+const RM_HIT_PAUSE_MS = 50; const RM_HIT_PAUSE_FRAC = 0.12;
 // ---- biomes, wanderers and the boss (B3) ----
 const RM_BIOMES = [
   { id: 'hollow', name: 'Violet Hollow', border: 'rgba(179,107,255,0.55)', floor: [26, 18, 50], hazard: null, mix: ['aimed', 'ring', 'spiral'], drifter: 'wisp' },

@@ -2351,5 +2351,9 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 120
+  },
+  "cyc7-d-town-economy.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
