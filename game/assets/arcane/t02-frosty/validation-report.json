@@ -1,0 +1,177 @@
+{
+  "status": "WIP audit not run",
+  "total_strips": 13,
+  "total_frames": 39,
+  "checks": [
+    {
+      "id": "vil_pudgypenguins_walk_down",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "28980945446d59c83b681970b5b97951f3f63453"
+    },
+    {
+      "id": "vil_pudgypenguins_walk_up",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "e1c5bd9b546519bd5047ae68e7a592ca7080bfb1"
+    },
+    {
+      "id": "vil_pudgypenguins_walk_left",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "aedace03438aa3dc75656092064eed8e509ebd8e"
+    },
+    {
+      "id": "vil_pudgypenguins_walk_right",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "bf41b628a9f4c93e0f9c9ce35c14e51f197f41f5"
+    },
+    {
+      "id": "vil_pudgypenguins_idle_down",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "a3396ca38c3a1e928b3074c06394e305f3e7553a"
+    },
+    {
+      "id": "vil_pudgypenguins_idle_up",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "600e6e73fb15baddae21c7f41d3bd481f6718c8f"
+    },
+    {
+      "id": "vil_pudgypenguins_idle_left",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "7a0fabf969e7b4b4ff92670b938d54f8339c4cac"
+    },
+    {
+      "id": "vil_pudgypenguins_idle_right",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "06862bd96d3dace04c2ce84cb1b172ea7d4277d3"
+    },
+    {
+      "id": "vil_pudgypenguins_emote_happy",
+      "frames": 4,
+      "distinct_frames": 3,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "94ed37681d1a3ba03d7165676221d9c02d5b8958"
+    },
+    {
+      "id": "vil_pudgypenguins_emote_sad",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "62b162baecef9a0294fb164973725de47761b4b9"
+    },
+    {
+      "id": "vil_pudgypenguins_emote_wave",
+      "frames": 4,
+      "distinct_frames": 4,
+      "dimensions": [
+        512,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "cfcc14a54761c7d095e39249b1a4a59c23b0d1da"
+    },
+    {
+      "id": "vil_pudgypenguins_sit_down",
+      "frames": 1,
+      "distinct_frames": 1,
+      "dimensions": [
+        128,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "23df3e42bade521e4f16e71e48be3d70f0d483ab"
+    },
+    {
+      "id": "vil_pudgypenguins_sleep",
+      "frames": 2,
+      "distinct_frames": 2,
+      "dimensions": [
+        256,
+        128
+      ],
+      "native_bounds_checked": true,
+      "lowest_opaque_row": 119,
+      "hard_alpha": true,
+      "blob_sha": "cbe34110dd355c0e1c77a9a72a44c9a6cf0b8416"
+    }
+  ],
+  "limitations": "Town Frosty (pudgypenguins, T02 by species; owner sequence calls all five T01): original blue-gray penguin with rose scarf, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; true rear, profile beak, alternating waddle and flipper wave. Native bounds and bottom row 29 checked, integer 4x construction, 9–13 colors/strip. Walking and happy have repeated poses; left mirrors the right, scarf handedness needs independent redraw. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority followed."
+}

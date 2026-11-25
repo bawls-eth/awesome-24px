@@ -698,3 +698,7 @@ wildlife, then ground, buildings, icons) are RAISED TO PRIORITY 1, ahead of the 
 T01 villagers (all five: Mocha, Frosty, Buster, Lily, Spike; true front/back/side views, original designs, not avatar-collection look-alikes),
 then the common wildlife. Keep the Glacier Shellback redo (see the cycle 6 UPDATE) as the only B-03 item still in front of them.
 Rules unchanged: original art only, ART-HANDOFF.md formats, push to `codex/<topic>` branches only, audit before asking for a merge.
+
+
+## Codex Town Frosty submitted
+Town Frosty (pudgypenguins, T02 by species; owner sequence calls all five T01): original blue-gray penguin with rose scarf, 13 strips/39 frames, 32 native /128 export, all four directions, sit, sleep and happy/sad/wave. Existing save key retained; true rear, profile beak, alternating waddle and flipper wave. Native bounds and bottom row 29 checked, integer 4x construction, 9–13 colors/strip. Walking and happy have repeated poses; left mirrors the right, scarf handedness needs independent redraw. Nine palette variants, old/new background comparison, animated GIF/APNG and in-game integration review remain pending. No independent PNG decode/hash comparison or repository audit run. No code changes. New owner priority followed.
