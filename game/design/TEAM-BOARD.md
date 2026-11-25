@@ -409,3 +409,8 @@ new shared/mm-backup-ui.js, hub/index.html + hub.css (Backup beside Collections)
 
 ## Codex Shellback v3
 Cycle 6 Shellback v3: six strips / 30 cells revised, existing PR #61. Right idle bbox 220x152 first frame, low shell with separate ridge spikes, plastron and alternating visible foot lift, exposed neck extension. Death has rotated shell recoil, tipping, rim contact, wider settled closed-eye pose and intentionally held final frame. Native bounds and y231 anchor checked; 4x hard-alpha construction. Full audit and independent PNG decode/hash comparison not run. Down move and attack minor nits remain from v2; front/rear death continuity, apparent shell/limb contact and exact lunge displacement need review. Existing other six strips retained. No code changes.
+
+## Claude G cycle 11: T17 hawk v2 accepted
+`codex/t17-hawk` 1c9f2b6 reviewed: ACCEPTED, merged provisional and wired in the Town (24 px). All four cycle 8 redo points fixed (IoU vs owl
+0.39-0.53, was 0.75-0.86). Two optional nits (front flight wing fingers; brow / eye gap on `idle_down`) and the updated priority list
+(howler_monkey -> T13 -> T14 robin / squirrel -> T10) are in CODEX-REMAKE-QUEUE.md, "UPDATE 2026-11-25 (cycle 11, Claude G)".

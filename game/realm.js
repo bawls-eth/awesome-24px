@@ -1365,7 +1365,7 @@ class RealmArena {
       x += step;
     }
     if (more) {
-      g.font = 'bold 9px system-ui, sans-serif'; g.textAlign = 'left';
+      g.font = 'bold 9px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'left';
       const t = `+${e._pipMore}`; g.fillStyle = '#000'; g.fillText(t, x + 1, y + RM_PIP_PX + 1); g.fillStyle = '#fff'; g.fillText(t, x, y + RM_PIP_PX);
     }
   }
@@ -5112,7 +5112,7 @@ class RealmArena {
   }
   _statsDropHtml() {
     const on = this._statsOpen();
-    return `<div class="rm-bp-statsdrop" style="margin:4px 0;max-width:100%"><button type="button" id="realm-bp-stats-toggle" class="eq" aria-expanded="${on ? 'true' : 'false'}" aria-controls="realm-bp-stats-box" style="min-height:44px;min-width:44px;width:100%;text-align:left;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer"><span class="ar" aria-hidden="true">${on ? '▾' : '▸'}</span> 📊 Stats</button>`
+    return `<div class="rm-bp-statsdrop" style="margin:4px 0;max-width:100%"><button type="button" id="realm-bp-stats-toggle" class="eq" aria-expanded="${on ? 'true' : 'false'}" aria-controls="realm-bp-stats-box" style="min-height:44px;min-width:44px;width:100%;text-align:left;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font:700 13px var(--px-font,monospace);cursor:pointer"><span class="ar" aria-hidden="true">${on ? '▾' : '▸'}</span> 📊 Stats</button>`
       + `<div id="realm-bp-stats-box" role="region" aria-label="Stats"${on ? '' : ' hidden'} style="max-height:min(45vh,360px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin-top:4px;padding-right:2px;box-sizing:border-box;max-width:100%">${on ? this._statsBoxHtml() : ''}</div></div>`;
   }
   _statsBoxHtml() {
@@ -5171,7 +5171,7 @@ class RealmArena {
     const wrap = document.createElement('div'); wrap.className = 'rm-relic-book'; wrap.style.cssText = 'margin:8px 0 4px;max-width:100%';
     const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'realm-bp-relic-toggle'; btn.className = 'eq';
     btn.setAttribute('aria-expanded', open ? 'true' : 'false'); btn.setAttribute('aria-controls', 'realm-bp-relic-box');
-    btn.style.cssText = 'min-height:44px;min-width:44px;width:100%;text-align:left;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer';
+    btn.style.cssText = 'min-height:44px;min-width:44px;width:100%;text-align:left;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font:700 13px var(--px-font,monospace);cursor:pointer';
     btn.textContent = (open ? '▾' : '▸') + ' 📖 Relic book · ' + rb.text;
     const box = document.createElement('div'); box.id = 'realm-bp-relic-box'; box.setAttribute('role', 'region'); box.setAttribute('aria-label', 'Relic book'); box.hidden = !open;
     box.style.cssText = 'margin-top:4px;font-size:12px;line-height:1.35;box-sizing:border-box;max-width:100%';
@@ -5202,7 +5202,7 @@ class RealmArena {
     let el = document.getElementById('realm-chase-toast');
     if (!el) {
       el = document.createElement('div'); el.id = 'realm-chase-toast'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
-      el.style.cssText = 'position:absolute;left:50%;top:12%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:6px;max-width:calc(100% - 32px);box-sizing:border-box;padding:4px 4px 4px 12px;border-radius:12px;background:rgba(20,24,32,.88);border:2px solid rgba(255,210,90,.6);color:#ffe9a8;font:600 13px system-ui,sans-serif';
+      el.style.cssText = 'position:absolute;left:50%;top:12%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:6px;max-width:calc(100% - 32px);box-sizing:border-box;padding:4px 4px 4px 12px;border-radius:12px;background:rgba(20,24,32,.88);border:2px solid rgba(255,210,90,.6);color:#ffe9a8;font:600 13px var(--px-font,monospace)';
       const t = document.createElement('span'); t.className = 'txt'; t.style.overflowWrap = 'anywhere';
       const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '✖'; x.setAttribute('aria-label', 'Dismiss');
       x.style.cssText = 'min-width:44px;min-height:44px;border:0;background:transparent;color:#ffe9a8;font-size:14px;cursor:pointer';
@@ -5391,7 +5391,7 @@ class RealmArena {
         g.save(); g.translate(q.x, q.y); g.globalAlpha = q.down ? 0.45 : 1;
         g.drawImage(this.sprites.playerFallback, -16, -20, 32, 32); g.restore(); g.globalAlpha = 1;
         g.strokeStyle = `rgba(${col},0.85)`; g.lineWidth = 2; g.beginPath(); g.arc(q.x, q.y - 4, 19, 0, Math.PI * 2); g.stroke();
-        g.font = 'bold 11px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.name, q.x + 1, q.y - 27); g.fillStyle = hex; g.fillText(q.name, q.x, q.y - 28);
+        g.font = 'bold 11px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.name, q.x + 1, q.y - 27); g.fillStyle = hex; g.fillText(q.name, q.x, q.y - 28);
         if (q.down && !tm.isPvp) { g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + q.revive * Math.PI * 2); g.stroke(); g.strokeStyle = 'rgba(126,231,135,0.35)'; g.lineWidth = 1; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, 0, Math.PI * 2); g.stroke(); }
       }
     }

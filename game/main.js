@@ -7056,7 +7056,7 @@ class TownScene extends Phaser.Scene {
     const [tx, ty] = target;
     const dx = tx - spec.px;
     const dist = Math.hypot(dx, ty - spec.py);
-    if (Math.abs(dx) > 2) sprite.setFlipX((dx < 0) !== FF_FACES_LEFT.has(spec.id));
+    if (Math.abs(dx) > 2) sprite.setFlipX((dx < 0) !== (!spec.strip && FF_FACES_LEFT.has(spec.id))); // cycle 11: code / strip art always faces right
     if (spec.strip) {
       sprite.ffDir = MMTownFauna.pick(dx, ty - spec.py);
       spec.walking = true;

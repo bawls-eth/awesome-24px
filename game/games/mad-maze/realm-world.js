@@ -534,7 +534,7 @@
       const pa = wArt['portal_' + q.biome];
       if (pa) { drawArt(g, pa, frameOf(pa, tt, reduced), q.x, q.y + 23); artDraws.portal++; }
       else drawPortalCode(g, q, tt, reduced);
-      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = q.col; g.fillText(q.label, q.x, q.y - 38);
+      g.font = 'bold 12px ui-monospace, Menlo, Consolas, monospace'; /* cyc11 art: mono like the portal labels */ g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = q.col; g.fillText(q.label, q.x, q.y - 38);
     }
     function drawPortalCode(g, q, tt, reduced) {
       g.save(); g.translate(q.x, q.y);
@@ -2024,12 +2024,12 @@
     let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
     const todayUtc = questDate;
     const nxCss = document.createElement('style');
-    nxCss.textContent = '#rw-nexus-go{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(290px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;padding:0 18px;border-radius:24px;border:2px solid #a98bff;background:rgba(30,20,60,.92);color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap}#rw-nexus-go.hidden{display:none}'
+    nxCss.textContent = '#rw-nexus-go{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(290px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;padding:0 18px;border-radius:24px;border:2px solid #a98bff;background:rgba(30,20,60,.92);color:#fff;font:700 15px var(--px-font,monospace);white-space:nowrap}#rw-nexus-go.hidden{display:none}'
       // PLAYTEST-REVIEW-3 #3: the pill shares z-index 3 with the backpack and comes later in the DOM: never over an open Realm panel or dialog
       + 'body:has(#realm-backpack:not(.hidden),#realm-board:not(.hidden),#realm-shop:not(.hidden),#realm-hero:not(.hidden),#realm-pause:not(.hidden),#realm-death:not(.hidden),#mm-settings:not(.hidden),#mm-summary:not(.hidden)) #rw-nexus-go{display:none}'
-      + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
+      + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 var(--px-font,monospace);padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
       + '#rw-nexus .nx-head{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}#rw-nexus h2{margin:0;font-size:18px;flex:1;min-width:120px}'
-      + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
+      + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px var(--px-font,monospace);cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
       + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;flex:0 0 auto;width:min(100%,max(320px,calc((100vh - 230px)*4/3)));max-width:760px;aspect-ratio:4/3;margin:0 auto;border:4px solid #2a2150;border-radius:0;box-shadow:0 0 0 2px #7a63c9,4px 4px 0 2px #000;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
       + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
       + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
@@ -2044,7 +2044,7 @@
       + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
       + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
     // ID-04 notebook panel: the same .nx-board card as the quest board (EIGHTBIT-STYLE: pixel border, no blur), one list per category
-    nxCss.textContent += '#rw-nx-more{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:81;pointer-events:none;padding:4px 12px;background:#ffe27a;color:#120e1f;border:2px solid #000;box-shadow:2px 2px 0 #000;font:700 13px system-ui,sans-serif;white-space:nowrap}#rw-nx-more.hidden{display:none}'; // cyc5-ui (b04-r3-01) scroll cue
+    nxCss.textContent += '#rw-nx-more{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:81;pointer-events:none;padding:4px 12px;background:#ffe27a;color:#120e1f;border:2px solid #000;box-shadow:2px 2px 0 #000;font:700 13px var(--px-font,monospace);white-space:nowrap}#rw-nx-more.hidden{display:none}'; // cyc5-ui (b04-r3-01) scroll cue
     nxCss.textContent += '#rw-nexus .nx-notebook{background:#221d3a;border-color:#7a63c9}#rw-nexus .nx-nb-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-nb-head h3{margin:0;font-size:16px}'
       + '#rw-nexus .nx-nb-note{margin:4px 0 8px;font-size:13px;color:#c9bff0}#rw-nexus .nx-nb-cat{margin:10px 0 4px;font-size:13px;color:#ffe27a}#rw-nexus .nx-nb-list{list-style:none;margin:0;padding:0}'
       + '#rw-nexus .nx-nb-list li{padding:6px 0;border-top:1px solid #3b3166;font-size:max(13px,1em);overflow-wrap:anywhere}#rw-nexus .nx-nb-list li:first-child{border-top:0}#rw-nexus .nx-nb-list b{color:#fff}#rw-nexus .nx-nb-list em{color:#8fe9ff;font-style:normal;margin-left:6px}#rw-nexus .nx-nb-list span{display:block;color:#d9d1f5}'
@@ -2706,7 +2706,7 @@
       const a = wArt.portal_nexus; const q = nxSite;
       if (a) { drawArt(g, a, frameOf(a, tt, reduced), q.x, q.y + 23); artDraws.portal++; }
       else drawPortalCode(g, { x: q.x, y: q.y, col: '#ffd45a' }, tt, reduced);
-      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('Nexus', q.x + 1, q.y - 37); g.fillStyle = '#ffd45a'; g.fillText('Nexus', q.x, q.y - 38);
+      g.font = 'bold 12px ui-monospace, Menlo, Consolas, monospace'; /* cyc11 art: mono like the portal labels */ g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('Nexus', q.x + 1, q.y - 37); g.fillStyle = '#ffd45a'; g.fillText('Nexus', q.x, q.y - 38);
     }
 
     // ---------- boss keys and the boss portal (NEXT-SLICES BK2, MMPortals N3 rules) ----------
@@ -2723,7 +2723,7 @@
     const keyDrops = []; let keyGot = 0; let lairNear = false; let keyNear = null; let lairTxt = ''; let lastLair = null; let lairT = 0;
     const lairBtn = document.createElement('button'); lairBtn.id = 'rw-lair'; lairBtn.type = 'button'; lairBtn.className = 'hidden'; ov.appendChild(lairBtn);
     const lairCss = document.createElement('style');
-    lairCss.textContent = '#rw-lair{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;max-width:92vw;padding:0 18px;border-radius:24px;border:2px solid #ffd45a;background:#7a1f4a;color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap;pointer-events:auto;touch-action:manipulation;box-shadow:0 0 12px rgba(255,95,162,.6)}#rw-lair.hidden{display:none}'
+    lairCss.textContent = '#rw-lair{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;max-width:92vw;padding:0 18px;border-radius:24px;border:2px solid #ffd45a;background:#7a1f4a;color:#fff;font:700 15px var(--px-font,monospace);white-space:nowrap;pointer-events:auto;touch-action:manipulation;box-shadow:0 0 12px rgba(255,95,162,.6)}#rw-lair.hidden{display:none}'
       // PLAYTEST-REVIEW-2 #14: on a phone the banner ("The Realm · island #N", zone toasts) stays below the zone line and the minimap (never clipped under them)
       + '@media (max-width:560px){body.world-mode #realm-banner{top:max(34%,calc(250px + env(safe-area-inset-top,0px)));max-width:calc(100vw - 32px);box-sizing:border-box}}';
     document.head.appendChild(lairCss);
@@ -2818,7 +2818,7 @@
       const a = wArt.portal_boss;
       if (a) { drawArt(g, a, frameOf(a, tt, reduced), q.x, q.y + 23); artDraws.portal++; } else drawPortalCode(g, { x: q.x, y: q.y, col: '#ff5fa2' }, tt, reduced);
       const label = `Boss lair · ${fmtT(q.leftMs / 1000)}`;
-      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, q.x + 1, q.y - 37); g.fillStyle = '#ff8ac0'; g.fillText(label, q.x, q.y - 38);
+      g.font = 'bold 12px ui-monospace, Menlo, Consolas, monospace'; /* cyc11 art: mono like the portal labels */ g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, q.x + 1, q.y - 37); g.fillStyle = '#ff8ac0'; g.fillText(label, q.x, q.y - 38);
     }
     function drawKeys(g, cam) {
       if (!keyDrops.length) return;
@@ -3221,7 +3221,7 @@
           const b = world.bossSites[i]; const bx = (b.x + 0.5) * TILE; const by = (b.y + 0.5) * TILE;
           if (bx < vx0 || bx > vx1 || by < vy0 || by > vy1 || bossLive[i] || !bossReadyNow[i]) continue;
           g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
-          g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
+          g.font = 'bold 12px ui-monospace, Menlo, Consolas, monospace'; /* cyc11 art: mono like the portal labels */ g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
         }
         if (nxSite && NX_ON && nxSite.x > vx0 && nxSite.x < vx1 && nxSite.y > vy0 && nxSite.y < vy1) drawNexusPortal(g, tt, reduced);
         const pad = wArt.spawn_pad; const padX = (world.spawnPoint.x + 0.5) * TILE; const padY = (world.spawnPoint.y + 0.5) * TILE;
@@ -3237,7 +3237,7 @@
           if (ba) { drawArt(g, ba, frameOf(ba, tt, reduced), c.x, c.y + 6); artDraws.beacon++; }
           else drawBeacon(g, c.x, c.y - 30 + (reduced ? 0 : Math.sin(tt * 2) * 4), 12, col, tt, reduced);
           const label = `${evTitle(st)} · ${st.phase === 'active' ? fmtT(st.ev.endsAt - eventClock()) + ' left' : 'in ' + fmtT(st.ev.startsAt - eventClock())}`;
-          g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
+          g.font = 'bold 12px ui-monospace, Menlo, Consolas, monospace'; /* cyc11 art: mono like the portal labels */ g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
       },
       drawOver(g, cam) { drawPicks(g, cam); drawKeys(g, cam); drawSlams(g); if (RUSH_ON) rushLayerDraw(g); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
