@@ -2244,6 +2244,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc11-art-town-fauna.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc7-art-realm-aimed-hue.test.js": {
     "class": "browser",
     "tier": "full"

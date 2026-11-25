@@ -15,6 +15,8 @@
     // Cycle 10 art (G): the owl front (down strips) halves with tie = 'rare' (see halve): eye rings / pupils / beak survive instead of
     // merging with the facial-disc rim into one dark band. Its profile keeps the default rule (cleaner wing there).
     owl: { batch: 't17-owl', cell: 48, fps: { idle: 2, move: 8 }, rareTie: 'down' },
+    // Cycle 11 art (G): Codex T17 hawk v2 (1c9f2b6, reviewed + merged cycle 11): rufous / cream raptor, airborne flight frames.
+    hawk: { batch: 't17-hawk', cell: 48, fps: { idle: 2, move: 8 } },
     // code-drawn (no PNG): baked 1:1, cell = map size (robin 16 = its old W-06 size; squirrel 20, was 16 and read as a speck)
     bird: { code: true, cell: 16, fps: { idle: 2, move: 8 } },
     squirrel: { code: true, cell: 20, fps: { idle: 2, move: 6 } },
@@ -23,6 +25,12 @@
     honeybee: { code: true, cell: 14, fps: { idle: 6, move: 12 } },
     ladybug: { code: true, cell: 14, fps: { idle: 3, move: 12 } },
     butterfly: { code: true, cell: 16, fps: { idle: 2, move: 10 } },
+    // Cycle 11 art (G): the last three in-village pixelized-SVG specks. Hummingbird 14 px (hover blur wings, ruby throat, needle
+    // bill), garden snail 14 px (spiral shell, eye stalks; faces RIGHT like every code map, main.js skips FF_FACES_LEFT for strips),
+    // green darner 16 px (green thorax, blue banded abdomen, two glassy wing pairs: flat / up / down).
+    hummingbird: { code: true, cell: 14, fps: { idle: 8, move: 12 } },
+    snail: { code: true, cell: 14, fps: { idle: 1, move: 3 } },
+    dragonfly: { code: true, cell: 16, fps: { idle: 2, move: 14 } },
   };
   // Cycle 9 art (G, original code pixel art): in-village species redrawn at the hero's density (one char = one pixel, '.' clear;
   // light top-left, dark colour-matched rim). Right view only: left = flipX, the down / caught poses reuse the profile frames.
@@ -35,6 +43,15 @@
       move_right: [
         ['................', '....oooo........', '...oBhhBo.ooo...', '....obBBooBhBo..', '.....obBbBhBbkoy', '......obBbbbbo..', '..o..orRRbbbo...', '.oboorRRrbbo....', 'obbBbrrRrro.....', '.obbbbrrrwo.....', '..oobbwwwo......', '....ooooo.......', '................', '................', '................', '................'],
         ['................', '................', '................', '..........ooo...', '.........oBhBo..', '........oBhBbkoy', '..o....obBbbbo..', '.obo..orRRbbo...', 'obbBoorRRrbo....', '.obbbWWWWbro....', '..oobWBBhWwo....', '....oWBhWwo.....', '.....oWWoo......', '......oo........', '................', '................'],
+      ],
+      // Cycle 11 art (G): true front view (was the profile reused): two eyes, centred beak, red breast, white belly, legs apart.
+      idle_down: [
+        ['................', '................', '................', '......oooo......', '.....obBBbo.....', '....obhBBhbo....', '....obkBBkbo....', '....orRyyRro....', '...obrRRRRrbo...', '...obrRhRRrbo...', '...obbrrrrbbo...', '....obwwwwbo....', '.....owwwwo.....', '......oooo......', '......l..l......', '.....ll..ll.....'],
+        ['................', '................', '................', '................', '......oooo......', '.....obBBbo.....', '....obhBBhbo....', '....obkBBkbo....', '...oorRyyRroo...', '...obrRhRRrbo...', '...obbrrrrbbo...', '....obwwwwbo....', '.....owwwwo.....', '......oooo......', '......l..l......', '.....ll..ll.....'],
+      ],
+      move_down: [
+        ['................', '................', '......oooo......', '.....obBBbo.....', '.oo.obhBBhbo.oo.', 'oBWoobkBBkbooWBo', 'oWBWorRyyRroWBWo', '.oWbbrRRRRrbbWo.', '..oobrRhRRrboo..', '...obbrrrrbbo...', '....obwwwwbo....', '.....owwwwo.....', '......oooo......', '.......ll.......', '................', '................'],
+        ['................', '................', '................', '......oooo......', '.....obBBbo.....', '....obhBBhbo....', '....obkBBkbo....', '...oorRyyRroo...', '..oWbrRRRRrbWo..', '.oWBbrRhRRrbBWo.', '.oBWobrrrrboWBo.', '..oo.obwwbo.oo..', '.....owwwwo.....', '......oooo......', '.......ll.......', '................'],
       ],
     },
     squirrel: { pal: {'o': '#2e2a33', 'g': '#6f6c78', 'G': '#8d8a96', 'h': '#b4b1bc', 'c': '#e6dccb', 'k': '#141218', 'n': '#5a4a48', 't': '#7c7986', 'T': '#a6a3b0', 'p': '#c99a9a'},
@@ -77,6 +94,41 @@
       move_right: [
         ['................', '.....a....a.....', '......a..a......', '.oooo..kk..oooo.', 'oYhOOo.kk.oOOhYo', 'oYOOOOokkoOOOOYo', 'owOoOOokkoOOoOwo', 'oOOOoOokkoOoOOOo', '.oOOOOokkoOOOOo.', '..ooooOkkOoooo..', '..oOOOokkoOOOo..', '.owOoOokkoOoOwo.', '.oOOOOokkoOOOOo.', '..owOoo..ooOwo..', '...ooo....ooo...', '................'],
         ['................', '................', '......a..a......', '.......aa.......', '......okko......', '.....oYkkYo.....', '.....oOkkOo.....', '....oOOkkOOo....', '....owOkkOwo....', '.....oOkkOo.....', '.....ookkoo.....', '.....oOkkOo.....', '.....owkkwo.....', '......okko......', '.......kk.......', '................'],
+      ],
+    },
+    // Cycle 11 art (G): ruby-throated hummingbird, profile hovering (body tilted up, wings a pale blur above / behind).
+    hummingbird: { pal: {'o': '#1e2a22', 'g': '#3f8a4e', 'G': '#7cc86a', 'w': '#eef0e4', 'r': '#c8203a', 'R': '#f05a72', 'k': '#121014', 'b': '#2a2426', 't': '#2c4a36', 'W': '#e2f0f6', 'V': '#9cbccc'},
+      idle_right: [
+        ['..............', '...VV.........', '..VWWV........', '..VWWWV.oo....', '...VWWVoGgo...', '....VVogGkobbb', '......oggrro..', '.....oggrRro..', '....oggwwro...', '...oggwwwo....', '..otgwwwo.....', '.ottoooo......', '.oto..........', '..............'],
+        ['..............', '..............', '..............', '........oo....', '.......oGgo...', '......ogGkobbb', '..VVV.oggrro..', '.VWWWoggrRro..', '..VVoggwwro...', '...oggwwwo....', '..otgwwwo.....', '.ottoooo......', '.oto..........', '..............'],
+      ],
+      move_right: [
+        ['..............', '..VV..........', '.VWWV.........', '.VWWWV........', '..VWWWVoooo...', '...VVogGGgo...', '....oggGgkobbb', '...oggrrRro...', '..otgwwrro....', '.ottwwwwo.....', 'otto.ooo......', 'oo............', '..............', '..............'],
+        ['..............', '..............', '..............', '..............', '.......oooo...', '.....oogGGgo..', '.VVVVogggGkobb', 'VWWWWoggrrRro.', '.VVVotgwwrro..', '..ottwwwwwo...', '.otto.oooo....', '.oo...........', '..............', '..............'],
+      ],
+    },
+    // Cycle 11 art (G): garden snail, profile facing right (spiral shell, cream foot, two eye stalks; the stalks dip in idle f2,
+    // the foot stretches in move f2).
+    snail: { pal: {'o': '#2a2024', 'S': '#b67a4a', 'h': '#e6b070', 'd': '#6a4030', 'f': '#a49c86', 'F': '#d2cab0', 'k': '#141218'},
+      idle_right: [
+        ['..............', '..............', '..............', '....oooo...k.k', '...oShhSo..f.f', '..oShSSSSo.ff.', '..oSSddSdooFfo', '..oSdSdSdooFfo', '..oSdddSdoFfo.', '...oSSSdofFfo.', '.ooooooooFFFfo', 'ofFFFFFFFFFffo', '.oooooooooooo.', '..............'],
+        ['..............', '..............', '..............', '....oooo......', '...oShhSo..k.k', '..oShSSSSo.ff.', '..oSSddSdooFfo', '..oSdSdSdooFfo', '..oSdddSdoFfo.', '...oSSSdofFfo.', '.ooooooooFFFfo', 'ofFFFFFFFFFffo', '.oooooooooooo.', '..............'],
+      ],
+      move_right: [
+        ['..............', '..............', '..............', '....oooo...k.k', '...oShhSo..f.f', '..oShSSSSo.ff.', '..oSSddSdooFfo', '..oSdSdSdooFfo', '..oSdddSdoFfo.', '...oSSSdofFfo.', '.ooooooooFFFfo', 'ofFFFFFFFFFffo', '.oooooooooooo.', '..............'],
+        ['..............', '..............', '..............', '.....oooo...kk', '....oShhSo..ff', '...oShSSSSo.f.', '...oSSddSdooFo', '...oSdSdSdoFFo', '...oSdddSdoFfo', '....oSSSdofFfo', '..ooooooooFFfo', '.ofFFFFFFFFffo', '..ooooooooooo.', '..............'],
+      ],
+    },
+    // Cycle 11 art (G): common green darner, profile facing right: big blue-green eye, green thorax, blue banded abdomen, two glassy
+    // wing pairs. Perched wings flat (idle f1) / raised (idle f2); flight beats up / down.
+    dragonfly: { pal: {'o': '#14202a', 'g': '#4aa04a', 'G': '#8ad06a', 'e': '#2a7ab0', 'E': '#7ad0f0', 'a': '#2a5aa8', 'A': '#5a9ae0', 'W': '#e6f4fa', 'V': '#93b4c4', 'l': '#2a2430'},
+      idle_right: [
+        ['................', '................', '................', '................', '.VVVVVV.VVVVVV..', 'VWWWWWWVWWWWWWV.', '.VVVVVVVVoooooo.', '.ooooooooGgGoEEo', 'oAaAaAaAgggoeeEo', '.ooooooooggloeo.', '.........l.l.o..', '................', '................', '................', '................', '................'],
+        ['................', '................', '...VVVV.VVVV....', '..VWWWWVWWWWV...', '...VWWWVWWWV....', '.....VVVVVV.....', '.........oooooo.', '.ooooooooGgGoEEo', 'oAaAaAaAgggoeeEo', '.ooooooooggloeo.', '.........l.l.o..', '................', '................', '................', '................', '................'],
+      ],
+      move_right: [
+        ['................', '................', '...VVVV.VVVV....', '..VWWWWVWWWWV...', '...VWWWVWWWV....', '.....VVVVVV.....', '.........oooooo.', '.ooooooooGgGoEEo', 'oAaAaAaAgggoeeEo', '.ooooooooggooeo.', '.............o..', '................', '................', '................', '................', '................'],
+        ['................', '................', '................', '................', '................', '................', '.........oooooo.', '.ooooooooGgGoEEo', 'oAaAaAaAgggoeeEo', '.ooooooVVVVoVeo.', '....VVVWWWWVWVV.', '...VWWWWVVWWWWV.', '....VVVV..VVVV..', '................', '................', '................'],
       ],
     },
   };
@@ -141,26 +193,31 @@
   function bakeCode(scene, st, id) {
     const spec = SPECS[id], m = CODE[id], n = spec.cell;
     const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-    const list = [['idle', m.idle_right], ['move', m.move_right]];
-    const total = list.reduce((a, l) => a + l[1].length, 0);
+    // Cycle 11: a map may carry its own idle_down / move_down (true front view, e.g. the robin); otherwise down reuses the profile.
+    const list = [['idle', 'right', m.idle_right], ['move', 'right', m.move_right]];
+    if (m.idle_down) list.push(['idle', 'down', m.idle_down]);
+    if (m.move_down) list.push(['move', 'down', m.move_down]);
+    const total = list.reduce((a, l) => a + l[2].length, 0);
     const cv = document.createElement('canvas'); cv.width = total * n; cv.height = n;
     const cx = cv.getContext('2d');
     const slots = []; let col = 0;
-    list.forEach(([action, frames]) => frames.forEach((rows, f) => {
+    list.forEach(([action, dir, frames]) => frames.forEach((rows, f) => {
       const data = new Uint8ClampedArray(n * n * 4);
       rows.forEach((row, y) => { for (let x = 0; x < n; x++) { const c = row[x]; if (c === '.' || !m.pal[c]) continue; const v = rgb(m.pal[c]), d = (y * n + x) * 4; data[d] = v[0]; data[d + 1] = v[1]; data[d + 2] = v[2]; data[d + 3] = 255; } });
       cx.putImageData(new ImageData(data, n, n), col * n, 0);
-      slots.push({ action, f, col }); col++;
+      slots.push({ action, dir, f, col }); col++;
     }));
     const key = `fft_${id}`;
     if (scene.textures.exists(key)) scene.textures.remove(key);
     const tex = scene.textures.addCanvas(key, cv);
-    slots.forEach((sl) => ['right', 'down'].forEach((dir) => tex.add(`${sl.action}_${dir}_${sl.f}`, 0, sl.col * n, 0, n, n)));
-    ['right', 'down'].forEach((dir) => tex.add(`caught_${dir}_0`, 0, 0, 0, n, n));
+    const own = (action, dir) => slots.filter((sl) => sl.action === action && sl.dir === dir);
+    const src = (action, dir) => (own(action, dir).length ? own(action, dir) : own(action, 'right'));
+    ['idle', 'move'].forEach((action) => ['right', 'down'].forEach((dir) => src(action, dir).forEach((sl) => tex.add(`${action}_${dir}_${sl.f}`, 0, sl.col * n, 0, n, n))));
+    ['right', 'down'].forEach((dir) => tex.add(`caught_${dir}_0`, 0, src('idle', dir)[0].col * n, 0, n, n));
     ['idle', 'move'].forEach((action) => ['right', 'down'].forEach((dir) => {
       const ak = `${key}_${action}_${dir}`;
       if (scene.anims.exists(ak)) return;
-      const frames = slots.filter((sl) => sl.action === action).map((sl) => ({ key, frame: `${action}_${dir}_${sl.f}` }));
+      const frames = src(action, dir).map((sl) => ({ key, frame: `${action}_${dir}_${sl.f}` }));
       scene.anims.create({ key: ak, frames, frameRate: spec.fps[action], repeat: -1 });
     }));
     // journal: idle f1 at 6x (crisp in the 160 px card)
