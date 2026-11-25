@@ -20,3 +20,6 @@ Claude merges your branch into the dev branch, makes the game load it (the loade
 
 ## First thing to do (Codex)
 Find where you saved your earlier image work (you were loading assets for the game), list it in `TEAM-BOARD.md`, and commit it to `codex/assets-inventory` so Claude can see what exists before B2 starts.
+
+## W-06 Frostfox
+W-06 Frostfox in-place b40b redraw: 14 existing strips / 68 cells, 192x192, original IDs, timing and anchor (96,171). First idle silhouette 40 native px (160 inclusive exported pixels, top row 12 vs nominal 11); standing bob 39–41, lowered sleep and death. New icy blue fur, pointed ears, white tail tip, true front/rear/profile. Original polygon geometry fitted to native pixel grid then integer 4x export; measured height includes tail. Review tail continuity, silhouette and fit at game scale; rear pose may read as multiple tail shapes and should be checked. Sleep repeats one pose; final death frames differ. All native bounds, hard alpha and exact Git blob hashes checked; individual encoded PNG decoding and full repo audit not run. Preview is a 2x native contact sheet; b04 comparison is Markdown not composite, hero comparison missing. Same INDEX batch, no duplicate registered IDs. No code or tests changed.
