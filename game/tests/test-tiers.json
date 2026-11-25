@@ -2361,5 +2361,9 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "cyc7-s-visit-days.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
