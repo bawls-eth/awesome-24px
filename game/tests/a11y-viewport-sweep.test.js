@@ -24,6 +24,11 @@ const VIEWPORTS = [
   // cyc7-ui: the narrowest phone width we support (also 200% zoom on a 390 phone). Cycle 6 found 36 text-size offenders here.
   { id: '195x422', w: 195, h: 422, touch: true }
 ];
+// cyc10-ui: 160x284 (a 320 px phone at 200% zoom) is OPT-IN with EXTRA_VPS=160x284. Measured on cycle 10: +33 s per sweep (16 page views,
+// 195x422 alone took 36 s), but it found 4 offenders that are not in the allow-list (Isles map button, Festival Bugs 193 px sideways scroll,
+// Angler no visible h1, Echo board tap size); the allow-list may only shrink, so it joins the default list once those 4 are fixed.
+const EXTRA_VIEWPORTS = [{ id: '160x284', w: 160, h: 284, touch: true }];
+EXTRA_VIEWPORTS.filter((v) => new Set((process.env.EXTRA_VPS || '').split(',')).has(v.id)).forEach((v) => VIEWPORTS.push(v));
 const PROFILE = { v: 1, heroes: [{ id: 'h1', name: 'Fern', cls: 'druid', level: 7, xp: 10, items: [] }], stash: [], fame: 0, mode: 'classic', hall: [] };
 const SEED = {
   'pixeltown-mm-v1': JSON.stringify(PROFILE), 'pixeltown-mm-active-v1': JSON.stringify({ v: 1, heroId: 'h1' }),
