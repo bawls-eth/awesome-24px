@@ -302,3 +302,15 @@ The one-line change: `game/games/mad-maze/realm-world.js` line 3054, `Z.zoneInfo
 
 ## S queue for cycle 9 (D, cycle 8)
 Approved and size S: ID-09 (forgiving Town day count, spec above). ID-51 inland follow-up (spec above, one line + test). ID-18 is approved but size M. Proposed S ideas waiting for an L/U review: ID-53, ID-55.
+
+## Cycle 9 additions (D; all `proposed`; generic web queries only)
+
+| ID | Idea | Size | Risk | Status |
+|---|---|---|---|---|
+| ID-56 | Shop "saving for" pin: tapping a star on a shop row pins ONE item; the Realm info line and the shop header show "Saving for Common Spark Wand: 6 more shards" (about N Shore kills). No timer, no push, unpin any time, device pref only | S | low | proposed |
+| ID-57 | Bullet shape option (device pref, off by default): enemy bolts differ by SHAPE as well as colour (aimed = diamond, ring = round, spiral = small triangle), so colour alone is never the only cue | M | medium | proposed |
+| ID-58 | "Neighbors are asleep" hint on the Town wave bounty: the row reads "Say hi to 2 neighbors (they are asleep until 6 am)" between 23:00 and 06:00 local, so a hello that cannot count is explained, not silent | S | low | proposed |
+
+- ID-56: UX guidance says a refused or unavailable buy must say why and how far away it is ([Baymard: button design, disabled state with a reason](https://baymard.com/learn/button-design), [Smashing: usability pitfalls of disabled buttons](https://shop.smashingmagazine.com/2021/08/frustrating-design-patterns-disabled-buttons/)). Cycle 6 added the "need N more" line; this adds a soft, player-chosen goal, in the cozy-design style of low-pressure goals ([Motivation Through Coziness](https://mediacommons.org/imr/content/motivation-through-coziness)). [M9] the cheapest offer is 24 shards = about 34 Shore kills = about 1.2-2 min of play (bot 17-29 kills per min), so the goal is always near.
+- ID-57: shmup developers add shape-based colour modes for bolt readability, and players who need them often never find a colour setting ([RGBullet Hell: Color Mode devlog](https://jzucc12.itch.io/rgbullet-hell/devlog/356735/color-mode), [PC Gamer: shmup that prioritizes accessibility](https://pcgamer.com/risk-system-is-a-shmup-that-prioritizes-accessibility-while-still-being-a-challenge)). Needs G to draw the three shapes and U to put the toggle in Settings next to Assist.
+- ID-58: [M9] at 02:00 local a real hello leaves the wave counter at 0 (villagers sleep 23:00-05:59); nothing is lost but nothing says why. Low-pressure design wants the reason shown, never a nag ([Medium: Designing for Coziness](https://medium.com/kitfox-games/designing-for-coziness-d33d2519a59e)).
