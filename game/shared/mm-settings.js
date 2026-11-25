@@ -80,6 +80,9 @@
       get: (s) => flag(s, 'mm-aim-toggle', false), set: (s, on) => setFlag(s, 'mm-aim-toggle', on) },
     { id: 'aim-assist', group: 'play', label: 'Aim assist', hint: 'Touch shots lean to targets.', type: 'toggle',
       get: (s) => flag(s, 'mm-aim-assist', true), set: (s, on) => setFlag(s, 'mm-aim-assist', on) },
+    // cyc11-S ID-54 (U cycle 10 spec): touch devices only; ignored at <= 300 px wide (MMMoveFloat.MIN_W), where the fixed stick is clearer
+    { id: 'move-float', group: 'play', label: 'Move from anywhere', hint: 'The left stick starts where your thumb lands.', type: 'toggle', touchOnly: true,
+      get: (s) => flag(s, 'mm-move-float', false), set: (s, on) => setFlag(s, 'mm-move-float', on) },
     { id: 'bullet-shapes', group: 'play', label: 'Bullet shapes', hint: 'Shapes as well as colours.', type: 'toggle',
       get: (s) => flag(s, 'mm-bullet-shapes', false), set: (s, on) => setFlag(s, 'mm-bullet-shapes', on) },
     // ID-06 (cycle 4): 'steps' = a labelled radio group of 44 px steps with the value in the visible label text.
@@ -116,6 +119,13 @@
     ['Restart', 'R']
   ];
   const item = (id) => ITEMS.find((x) => x.id === id) || null;
+  // touch-only rows (ID-54): a coarse pointer, a touch-capable window, or the page's own touch-device body class
+  function touchUi(doc) {
+    try {
+      if (doc && doc.body && doc.body.classList.contains('touch-device')) return true;
+      return !!(win && ((win.matchMedia && win.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in win));
+    } catch (e) { return false; }
+  }
   function read(storage) {
     const o = {};
     ITEMS.forEach((it) => { o[it.id] = it.get(storage); });
@@ -240,7 +250,7 @@
       sec.setAttribute('aria-labelledby', h.id);
       sec.appendChild(h);
       if (town && g.id === 'play') sec.appendChild(el('p', 'mmset-hint mmset-gnote', 'Only used in the Realm arena (Realm Gate). Nothing here changes the Town.'));
-      ITEMS.filter((it) => it.group === g.id).forEach((it) => {
+      ITEMS.filter((it) => it.group === g.id && (!it.touchOnly || touchUi(doc))).forEach((it) => {
         if (it.type === 'steps') {
           if (it.id === 'assist-dmg') {
             const sh = el('h4', 'mmset-sub', 'Assist');

@@ -72,6 +72,7 @@ Backup: yes = exported by `MMBackup` (shared/mm-backup.js KNOWN), **NO** = not e
 | `mm-auto-fire` | mm-settings.js, realm.js, isles.js | `'1'` / `'0'` | none | flag | pref | yes |
 | `mm-aim-toggle` | mm-settings.js, isles.js | `'1'` / `'0'` | none | flag | pref | yes |
 | `mm-bullet-shapes` | mm-settings.js | `'1'` / `'0'` | none | flag | pref | yes |
+| `mm-move-float` | mm-settings.js, mm-move-float.js (cyc11 ID-54) | `'1'` / `'0'` | none | flag | pref | yes |
 | `mm-nav-dest-text` | mm-nav.js | small UI flag | none | mm-nav.js | ui | no (UI flag) |
 | `arcane-frontier-save-v1` | games/arcane-frontier/js (separate prototype) | its own save | 1 | arcane-frontier | progress | n/a (separate game) |
 
