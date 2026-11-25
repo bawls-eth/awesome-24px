@@ -1,0 +1,9 @@
+# W-06 Pebble Tortle
+
+| b04 | Redraw |
+|---|---|
+| ![Puffcap](../b04-mad-maze-enemies/enemies/puffcap/puffcap_idle_down.png) | ![Tortle](../b36-meadow-creatures/enemies/pebble_tortle/pebble_tortle_idle_down.png) |
+
+![Preview](preview.png)
+
+W-06 Pebble Tortle redraw in-place in b36: 14 existing IDs / 68 frames, 192x192, original timing and anchor (96,173). Original dome shell with shaded stone plates, true back/profile, lowered death and sleep, native standing heights 33–35 px (first idle 34), 4x blocks vertically offset +2 pixels to keep exact anchor; nominal top row 38 rather than 37 because height is inclusive. Native geometry rasterized then fitted vertically before integer 4x export. All PNG blob hashes verified; independent PNG decoding and full audit not run. Idle/sleep contain repeat poses; compare to puffcap via REVIEW.md; b04 composite not supplied. In-place replacement keeps same INDEX batch, no duplicate IDs. No code changes.

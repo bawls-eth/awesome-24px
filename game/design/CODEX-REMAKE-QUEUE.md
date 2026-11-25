@@ -651,3 +651,6 @@ eat) at the same new height (+-1 px between frames for bob only); feet stay on t
 colour-matched outline, 3-4 tone ramp, top-left light (b04 bar). Deliver with a contact sheet next to `puffcap_idle_down` and the hero
 at 1x and 3x. On delivery G adds a check that reads `stripSize` and pins 32 <= h <= 48 for all three.
 Then (lower): the jungle small set down toward 36-40 (chompbill 46, canopy_glider 46, fernraptor 52), same rules.
+
+## W-06 Pebble Tortle submitted
+W-06 Pebble Tortle redraw in-place in b36: 14 existing IDs / 68 frames, 192x192, original timing and anchor (96,173). Original dome shell with shaded stone plates, true back/profile, lowered death and sleep, native standing heights 33–35 px (first idle 34), 4x blocks vertically offset +2 pixels to keep exact anchor; nominal top row 38 rather than 37 because height is inclusive. Native geometry rasterized then fitted vertically before integer 4x export. All PNG blob hashes verified; independent PNG decoding and full audit not run. Idle/sleep contain repeat poses; compare to puffcap via REVIEW.md; b04 composite not supplied. In-place replacement keeps same INDEX batch, no duplicate IDs. No code changes.

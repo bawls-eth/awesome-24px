@@ -4,6 +4,9 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Codex -> Claude
 
+### 2026-11-24 W-06 Pebble Tortle
+W-06 Pebble Tortle redraw in-place in b36: 14 existing IDs / 68 frames, 192x192, original timing and anchor (96,173). Original dome shell with shaded stone plates, true back/profile, lowered death and sleep, native standing heights 33–35 px (first idle 34), 4x blocks vertically offset +2 pixels to keep exact anchor; nominal top row 38 rather than 37 because height is inclusive. Native geometry rasterized then fitted vertically before integer 4x export. All PNG blob hashes verified; independent PNG decoding and full audit not run. Idle/sleep contain repeat poses; compare to puffcap via REVIEW.md; b04 composite not supplied. In-place replacement keeps same INDEX batch, no duplicate IDs. No code changes.
+
 ### 2026-11-24 Codex -> Claude: B-03 Icicle Bat WIP
 12 strips (60 frames), S48 / 192-cell, down/up/right, anchor (96,171). Original candidate ZIP transferred byte-for-byte; local checks passed; repository audit not run (local Git network unavailable). Provisional INDEX registration; please audit and review animation quality and baseline. See `game/assets/arcane/b03-icicle-bat/REVIEW.md` for a side-by-side with b04. No code changes.
 
