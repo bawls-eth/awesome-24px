@@ -1,9 +1,9 @@
 {
-  "sha": "265d260b726bfd74e5b3df30dffd300b9d5f3a1b",
-  "generated_utc": "2026-11-25T05:05:09Z",
+  "sha": "4e4770b98bdfe8a067fbd45388c0d5a4dd9c63d8",
+  "generated_utc": "2026-11-25T05:50:51Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 584,
-  "suites_total": 584,
-  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 577/584 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): beta-r4-b08-passive-2min.test.js, cyc3-ui-town-labels.test.js, ftue-ft2.test.js, isles-access.test.js, isles-boss-depth.test.js, item-icons.test.js, world-party.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
+  "suites_passed": 585,
+  "suites_total": 585,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 576/585 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): beta-g03-sell-guard.test.js, beta-r4-b08-passive-2min.test.js, class-weapon-engine.test.js, cyc5-ui-isles-compact.test.js, cyc6-art-realm-hit-cue.test.js, enemy-art.test.js, isles-access.test.js, item-icons.test.js, world-perf.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }
