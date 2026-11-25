@@ -752,6 +752,17 @@
       "source": "codex",
       "branch": "codex/b03-icicle-bat",
       "note": "WIP, audit not run; B-03 Tundra S48, 12 animation strips. Claude review required."
+    },
+    {
+      "id": "t02-buster",
+      "label": "Town Buster / doge",
+      "path": "assets/arcane/t02-buster",
+      "manifest": "assets/arcane/t02-buster/manifest.json",
+      "files": 13,
+      "status": "provisional",
+      "source": "codex",
+      "branch": "codex/t02-buster",
+      "note": "Base 39 frames; palette variants pending; WIP audit not run"
     }
   ]
 }

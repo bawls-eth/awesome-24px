@@ -698,3 +698,7 @@ wildlife, then ground, buildings, icons) are RAISED TO PRIORITY 1, ahead of the 
 T01 villagers (all five: Mocha, Frosty, Buster, Lily, Spike; true front/back/side views, original designs, not avatar-collection look-alikes),
 then the common wildlife. Keep the Glacier Shellback redo (see the cycle 6 UPDATE) as the only B-03 item still in front of them.
 Rules unchanged: original art only, ART-HANDOFF.md formats, push to `codex/<topic>` branches only, audit before asking for a merge.
+
+
+## Codex Town Buster submitted
+Town Buster (doge): original shiba with curled tail, blue sports vest, cream muzzle, four directions and emotes; 13 strips/39 cells, 32 native/128 output, eye line approx 11 and feet row 29. Native bounds checked; 4x hard-alpha construction. Walk passing poses repeat and profile left mirrored; asymmetric vest detail, nine recolors, old/new multi-background comparison, GIF/APNG, full audit, independent PNG decode/hash comparison and gameplay review remain pending. No code/tests/Firebase changes.
