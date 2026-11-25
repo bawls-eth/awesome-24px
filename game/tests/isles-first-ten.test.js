@@ -344,6 +344,8 @@ const fresh = async (page) => page.waitForFunction(() => !!(window.__isles && wi
       if (!row || !row.open) { await page.tap('#panel-close').catch(() => {}); return { ok: false, why: row ? 'locked: ' + row.text : 'not on the sea chart' }; }
       await Promise.all([page.waitForNavigation({ timeout: 10000 }), page.tap('#panel-body button.dest[data-isle="' + id + '"]')]);
       await fresh(page);
+      // the Mars lift-off (2.5 s) navigates late, and the Back-guard's history pop can resolve waitForNavigation first: wait for the isle itself
+      for (let t = 0; t < 12 && (await isleNow().catch(() => null)) !== id; t++) { await page.waitForTimeout(500); await fresh(page).catch(() => {}); }
       return { ok: (await isleNow()) === id, text: row.text };
     };
     // the real Craft panel: open it with the Craft button, tap the recipe's Craft button
