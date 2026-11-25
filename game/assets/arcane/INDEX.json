@@ -544,7 +544,14 @@
       "files": 98,
       "status": "provisional",
       "ingested_utc": "2026-11-22T02:05:00Z",
-      "source": "codex"
+      "source": "codex",
+      "revisions": [
+        {
+          "branch": "codex/w06-puffwool",
+          "status": "provisional",
+          "note": "Puffwool W-06 38 native px, WIP audit not run"
+        }
+      ]
     },
     {
       "id": "b31af",

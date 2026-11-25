@@ -651,3 +651,6 @@ eat) at the same new height (+-1 px between frames for bob only); feet stay on t
 colour-matched outline, 3-4 tone ramp, top-left light (b04 bar). Deliver with a contact sheet next to `puffcap_idle_down` and the hero
 at 1x and 3x. On delivery G adds a check that reads `stripSize` and pins 32 <= h <= 48 for all three.
 Then (lower): the jungle small set down toward 36-40 (chompbill 46, canopy_glider 46, fernraptor 52), same rules.
+
+## W-06 Puffwool submitted
+W-06 Puffwool in-place b36 redraw: 14 existing strips / 68 cells, 192x192, unchanged timing/IDs and anchor (96,169). First standing idle 38 native px, standing bob 37–39. Individually shaded cream wool clumps, warm face, hooves, true rear/profile, lowered sleep and death. Original geometry fitted to native grid before integer 4x export; vertical offset -2 physical pixels to honor baseline, top row 18 (inclusive 152px), not nominal 17. Attack profile width capped at 44 native px; all bounds and exact Git blob hashes checked. Idle and sleep repeat one pose; individual encoded PNG decode and full repository audit not run. Preview inspected; composite comparison via Markdown only. Same INDEX batch, no duplicate registered IDs. No code changes.

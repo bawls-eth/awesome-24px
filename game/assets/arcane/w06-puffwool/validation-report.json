@@ -1,0 +1,272 @@
+{
+  "status": "WIP, audit not run",
+  "total_strips": 14,
+  "total_frames": 68,
+  "checks": [
+    {
+      "id": "puffwool_idle_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        38,
+        37,
+        38,
+        39
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "5dcb995157b1254afcb1d0d021f6576158941128",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_move_down",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        38,
+        37,
+        38,
+        39,
+        38,
+        37
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "3408647267fc78fbc9296679363b5b56ed31af16",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_attack_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        38,
+        39,
+        37,
+        38,
+        39
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "e904defa742d64de59998f62ed677c5e67405eae",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_death_down",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        38,
+        39,
+        40,
+        22,
+        23
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "b6bc9d09b10b9b118b677eb81998313c0196dba7",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_idle_up",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        38,
+        37,
+        38,
+        39
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "2c130c06ba69505fa45951be2fe525890595cef5",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_move_up",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        38,
+        37,
+        38,
+        39,
+        38,
+        37
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "08e2464de4bee7ce7bce45010a41e03a02dccd74",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_attack_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        38,
+        39,
+        37,
+        38,
+        39
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "5eb5f5e993219705cb56a0d46fd916c47414c48f",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_death_up",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        38,
+        39,
+        40,
+        22,
+        23
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "147ee3a5a955a2ab9d8566020ab2ee60c4a94265",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_idle_right",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        38,
+        37,
+        38,
+        39
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "f3e2dd0a4e5a48cc60971303e1bcb7cb2bc0414b",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_move_right",
+      "dimensions": [
+        1152,
+        192
+      ],
+      "native_heights": [
+        38,
+        37,
+        38,
+        39,
+        38,
+        37
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 6,
+      "hard_alpha": true,
+      "git_blob_sha": "755153806c43aba3c2cd7d751c091447ecbd611a",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_attack_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        38,
+        39,
+        37,
+        38,
+        39
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "14d3062f34d20765cc283ed0c8b81db238b99a30",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_death_right",
+      "dimensions": [
+        960,
+        192
+      ],
+      "native_heights": [
+        38,
+        39,
+        40,
+        22,
+        23
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 5,
+      "hard_alpha": true,
+      "git_blob_sha": "8ebb2ed31687fda64275fbddce1e5c705a4cd857",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_sleep_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        27,
+        26,
+        27,
+        28
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 3,
+      "hard_alpha": true,
+      "git_blob_sha": "aa35ef7c3424916b6bb75c321df100ed8c12d961",
+      "git_blob_sha_verified": true
+    },
+    {
+      "id": "puffwool_eat_down",
+      "dimensions": [
+        768,
+        192
+      ],
+      "native_heights": [
+        38,
+        39,
+        38,
+        37
+      ],
+      "lowest_opaque_row": 169,
+      "distinct_frames": 4,
+      "hard_alpha": true,
+      "git_blob_sha": "73e0c7d3b82e6a1de1d7b850cb5fd44b11960806",
+      "git_blob_sha_verified": true
+    }
+  ],
+  "limitations": "W-06 Puffwool in-place b36 redraw: 14 existing strips / 68 cells, 192x192, unchanged timing/IDs and anchor (96,169). First standing idle 38 native px, standing bob 37–39. Individually shaded cream wool clumps, warm face, hooves, true rear/profile, lowered sleep and death. Original geometry fitted to native grid before integer 4x export; vertical offset -2 physical pixels to honor baseline, top row 18 (inclusive 152px), not nominal 17. Attack profile width capped at 44 native px; all bounds and exact Git blob hashes checked. Idle and sleep repeat one pose; individual encoded PNG decode and full repository audit not run. Preview inspected; composite comparison via Markdown only. Same INDEX batch, no duplicate registered IDs. No code changes."
+}
