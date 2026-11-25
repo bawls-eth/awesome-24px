@@ -1,9 +1,9 @@
 {
-  "sha": "f4223a94a75b8c4c17cbc83e18c4a5a759d0eac2",
-  "generated_utc": "2026-11-25T14:45:53Z",
+  "sha": "473bf4499109677171cd4514bf9aedf7c2ff7c43",
+  "generated_utc": "2026-11-25T18:25:57Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 613,
-  "suites_total": 613,
-  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 602/613 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): beta-r4-b08-passive-2min.test.js, cyc5-ui-isles-compact.test.js, cyc6-art-realm-hit-cue.test.js, cyc9-lead-pool-shapes.test.js, isles-access.test.js, mad-maze-dungeon.test.js, realm-access2.test.js, realm-team.test.js, world-gradient.test.js, world-page.test.js, world-perf.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
+  "suites_passed": 621,
+  "suites_total": 621,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 612/621 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): a11y-viewport-sweep.test.js, arena-world-hooks.test.js, beta-r4-b08-passive-2min.test.js, beta-s02-town-two-tabs.test.js, cyc10-s-jit-hint.test.js, first-ten-minutes.test.js, gear-dungeon-drops.test.js, isles-access.test.js, world-perf.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }
