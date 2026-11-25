@@ -26,7 +26,7 @@ async function sample(browser, q, block) {
     const by = (id) => s.ffSpecimens.filter((p) => p.id === id);
     const desc = (id) => by(id).map((p) => ({ type: p.sprite.type, tex: p.sprite.texture.key, w: Math.round(p.sprite.displayWidth), strip: !!p.strip }));
     const out = { st: st ? { on: st.on, ids: st.ids.slice(), cells: Object.assign({}, st.cells), ms: st.ms } : null,
-      deer: desc('deer'), fox: desc('fox'), owl: desc('owl'), bird: desc('bird'), squirrel: desc('squirrel'), frog: desc('frog'), butterfly: desc('butterfly') };
+      deer: desc('deer'), fox: desc('fox'), owl: desc('owl'), bird: desc('bird'), squirrel: desc('squirrel'), frog: desc('frog'), snail: desc('snail') };
     // anims: idle 2 f, move 4 f, right + down, per species
     out.anims = {};
     ['deer', 'fox', 'owl'].forEach((id) => ['idle_right', 'idle_down', 'move_right', 'move_down'].forEach((a) => {
@@ -87,8 +87,9 @@ async function sample(browser, q, block) {
     && on.st.cells.deer === 32 && on.st.cells.fox === 24 && on.st.cells.owl === 24, JSON.stringify(on.st));
   check('every deer / fox / owl specimen is an animated Sprite on its fft_ texture at the cell size', allStrip(on.deer, 'deer') && allStrip(on.fox, 'fox') && allStrip(on.owl, 'owl')
     && on.deer.every((p) => p.w === 32) && on.fox.every((p) => p.w === 24), JSON.stringify([on.deer[0], on.fox[0], on.owl[0]]));
-  check('other species are untouched SVG Images (frog, butterfly)', on.frog.length > 0 && on.frog.every((p) => p.type === 'Image' && !p.strip && /^ff(px)?_frog$/.test(p.tex))
-    && on.butterfly.length > 0 && on.butterfly.every((p) => p.type === 'Image' && !p.strip), JSON.stringify([on.frog[0], on.butterfly[0]]));
+  // Cycle 10: the butterfly became code art (cyc10-art-town-insects-museum.test.js checks it), so the snail is the second control.
+  check('other species are untouched SVG Images (frog, snail)', on.frog.length > 0 && on.frog.every((p) => p.type === 'Image' && !p.strip && /^ff(px)?_frog$/.test(p.tex))
+    && on.snail.length > 0 && on.snail.every((p) => p.type === 'Image' && !p.strip && /^ff(px)?_snail$/.test(p.tex)), JSON.stringify([on.frog[0], on.snail[0]]));
   check('code-drawn robin (16 px) and squirrel (20 px, was 16) are animated Sprites, incl. the in-village ones',
     on.st && on.st.cells.bird === 16 && on.st.cells.squirrel === 20 && allStrip(on.bird, 'bird') && allStrip(on.squirrel, 'squirrel')
     && on.bird.every((p) => p.w === 16) && on.squirrel.every((p) => p.w === 20) && on.bird.length >= 7 && on.squirrel.length >= 7, JSON.stringify([on.st && on.st.cells, on.bird.length, on.squirrel[0]]));

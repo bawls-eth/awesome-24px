@@ -12,10 +12,17 @@
   const SPECS = {
     deer: { batch: 't17-deer', cell: 64, fps: { idle: 2, move: 8 } },
     fox: { batch: 't17-fox', cell: 48, fps: { idle: 2, move: 8 } },
-    owl: { batch: 't17-owl', cell: 48, fps: { idle: 2, move: 8 } },
+    // Cycle 10 art (G): the owl front (down strips) halves with tie = 'rare' (see halve): eye rings / pupils / beak survive instead of
+    // merging with the facial-disc rim into one dark band. Its profile keeps the default rule (cleaner wing there).
+    owl: { batch: 't17-owl', cell: 48, fps: { idle: 2, move: 8 }, rareTie: 'down' },
     // code-drawn (no PNG): baked 1:1, cell = map size (robin 16 = its old W-06 size; squirrel 20, was 16 and read as a speck)
     bird: { code: true, cell: 16, fps: { idle: 2, move: 8 } },
     squirrel: { code: true, cell: 20, fps: { idle: 2, move: 6 } },
+    // Cycle 10 art (G): the three in-village insects were 14 px pixelized-SVG specks. Code art at the hero's density: bee and ladybug
+    // 14 px side / top views (head right), monarch 16 px top view (symmetric, so flipX is harmless). Wings beat in the move frames.
+    honeybee: { code: true, cell: 14, fps: { idle: 6, move: 12 } },
+    ladybug: { code: true, cell: 14, fps: { idle: 3, move: 12 } },
+    butterfly: { code: true, cell: 16, fps: { idle: 2, move: 10 } },
   };
   // Cycle 9 art (G, original code pixel art): in-village species redrawn at the hero's density (one char = one pixel, '.' clear;
   // light top-left, dark colour-matched rim). Right view only: left = flipX, the down / caught poses reuse the profile frames.
@@ -38,6 +45,38 @@
       move_right: [
         ['....................', '....................', '....................', '....................', '..ooooo.............', '.oTThTTo............', 'oThhTTTTo.....oo....', 'oThTTTTTTo...oGo....', 'otTTooottTo.oGGGo...', '.ooo...otTToGhGGko..', '........otTTGGGGGno.', '.......ottTggGGcGoo.', '.......ottgggGccGo..', '........ooggggcGGo..', '.......ogo.oogggo...', '......ogo....ogo....', '......oo.....oco....', '.............oo.....', '....................', '....................'],
         ['....................', '....................', '....................', '....................', '....................', '...ooooo............', '..oTThTTo...........', '.oThhTTTTo....oo....', '.oThTTTTTTo..oGo....', '.otTToootTToooGGGo..', '..ooo...otTTGhGGGko.', '.........ottGGGGGGno', '.........ogggggGcGoo', '........ogggggGcco..', '.......ogo.oooocGo..', '.......oco.....ogo..', '.......oo.......oo..', '....................', '....................', '....................'],
+      ],
+    },
+    // Cycle 10 art (G): honeybee (banded abdomen, amber thorax, glassy wings up / swept back), seven-spot ladybird (top view,
+    // spots, white-cheeked head; flight frames lift the hind wings), monarch (orange, black veins, white rim dots; open / mid / closed).
+    honeybee: { pal: {'o': '#2a2016', 'y': '#e8b52a', 'Y': '#fbe27a', 'k': '#1e1a20', 'h': '#b77a26', 'H': '#d99a3a', 'w': '#e6f4fa', 'W': '#8fb8cc', 'e': '#f4f0e8', 's': '#4a3a2a', 'l': '#3a2e24'},
+      idle_right: [
+        ['..............', '..............', '......WW.WW...', '.....WwwWwwW..', '.....WwwWwwW..', '......WwWwW...', '...ooooooWoo..', '..oYkYYkoHHoo.', '.oyykyykoHhkko', 'soyykyykohhkek', '.oyykyykohhkko', '..oooooooolko.', '....l.l.l.....', '..............'],
+        ['..............', '..............', '..............', '....WWW.WWW...', '...WwwwWwwwW..', '....WWWoWWW...', '...ooooooooo..', '..oYkYYkoHHoo.', '.oyykyykoHhkko', 'soyykyykohhkek', '.oyykyykohhkko', '..oooooooolko.', '....l.l.l.....', '..............'],
+      ],
+      move_right: [
+        ['..............', '......WW.WW...', '.....WwwWwwW..', '.....WwwWwwW..', '......WwWwW...', '...ooooooWoo..', '..oYkYYkoHHoo.', '.oyykyykoHhkko', 'soyykyykohhkek', '.oyykyykohhkko', '..oooooooolko.', '...l.l.l......', '..............', '..............'],
+        ['..............', '..............', '..............', '.WWWW.WWW.....', 'WwwwwWwwwW....', '.WWWWooooooo..', '..oYkYYkoHHoo.', '.oyykyykoHhkko', 'soyykyykohhkek', '.oyykyykohhkko', '..oooooooolko.', '...l.l.l......', '..............', '..............'],
+      ],
+    },
+    ladybug: { pal: {'o': '#2a0e12', 'R': '#d8322a', 'r': '#a81e22', 'h': '#f47a5e', 'k': '#16121a', 'w': '#f4efe6', 'l': '#2a2430', 'W': '#cfe2ea', 'V': '#93b4c4'},
+      idle_right: [
+        ['..............', '..............', '...l....l.....', '....ooooo.....', '..ooRhRRRoo...', '.oRhhRkkRRokl.', '.oRkkRkkRRokkk', 'loRRRRRRRRokwk', '.oRkkRRkkRokkk', '.orrRrkkrRokl.', '..oorrrrroo...', '....ooooo.....', '...l....l.....', '..............'],
+        ['..............', '..............', '....l....l....', '....ooooo.....', '..ooRhRRRoo...', 'loRhhRkkRRok..', '.oRkkRkkRRokkl', '.oRRRRRRRRokwk', '.oRkkRRkkRokkl', 'lorrRrkkrRok..', '..oorrrrroo...', '....ooooo.....', '....l....l....', '..............'],
+      ],
+      move_right: [
+        ['.VV.....VV....', 'VWWV...VWWV...', '.VWWV.VWWV....', '....ooooo.....', '..ooRhRRRoo...', '.oRhhRkkRRok..', '.oRkkRkkRRokkk', '.oRRRRRRRRokwk', '.oRkkRRkkRokkk', '.orrRrkkrRok..', '..oorrrrroo...', '....ooooo.....', '..............', '..............'],
+        ['..............', '..............', 'VWWWV..VWWWV..', '....ooooo.....', '..ooRhRRRoo...', '.oRhhRkkRRok..', '.oRkkRkkRRokkk', '.oRRRRRRRRokwk', '.oRkkRRkkRokkk', '.orrRrkkrRok..', '..oorrrrroo...', '....ooooo.....', '..............', '..............'],
+      ],
+    },
+    butterfly: { pal: {'o': '#1c1a22', 'O': '#e07a1e', 'Y': '#f6ad44', 'w': '#f4efe6', 'k': '#2e2834', 'a': '#3c3442', 'h': '#fbd38a'},
+      idle_right: [
+        ['................', '.....a....a.....', '......a..a......', '.oooo..kk..oooo.', 'oYhOOo.kk.oOOhYo', 'oYOOOOokkoOOOOYo', 'owOoOOokkoOOoOwo', 'oOOOoOokkoOoOOOo', '.oOOOOokkoOOOOo.', '..ooooOkkOoooo..', '..oOOOokkoOOOo..', '.owOoOokkoOoOwo.', '.oOOOOokkoOOOOo.', '..owOoo..ooOwo..', '...ooo....ooo...', '................'],
+        ['................', '................', '.....a....a.....', '......a..a......', '..ooo..kk..ooo..', '.oYhOo.kk.oOhYo.', '.oYOOOokkoOOOYo.', '.owOoOokkoOoOwo.', '..oOOOokkoOOOo..', '...oooOkkOooo...', '...oOOokkoOOo...', '..owOOokkoOOwo..', '...oOOokkoOOo...', '....ooo..ooo....', '................', '................'],
+      ],
+      move_right: [
+        ['................', '.....a....a.....', '......a..a......', '.oooo..kk..oooo.', 'oYhOOo.kk.oOOhYo', 'oYOOOOokkoOOOOYo', 'owOoOOokkoOOoOwo', 'oOOOoOokkoOoOOOo', '.oOOOOokkoOOOOo.', '..ooooOkkOoooo..', '..oOOOokkoOOOo..', '.owOoOokkoOoOwo.', '.oOOOOokkoOOOOo.', '..owOoo..ooOwo..', '...ooo....ooo...', '................'],
+        ['................', '................', '......a..a......', '.......aa.......', '......okko......', '.....oYkkYo.....', '.....oOkkOo.....', '....oOOkkOOo....', '....owOkkOwo....', '.....oOkkOo.....', '.....ookkoo.....', '.....oOkkOo.....', '.....owkkwo.....', '......okko......', '.......kk.......', '................'],
       ],
     },
   };
@@ -65,9 +104,13 @@
     return { w: nw, h: nh, data: out };
   }
 
-  // native RGBA -> half size, 2x2 mode filter (see the header).
-  function halve(n) {
+  // native RGBA -> half size, 2x2 mode filter (see the header). tie 'rare' (cycle 10): a 2-2 tie keeps the colour that is RARER in the
+  // whole frame (a feature colour: eye ring, pupil, beak) rather than the darker one (usually the common outline), then darker.
+  function halve(n, tie) {
     const hw = n.w >> 1, hh = n.h >> 1, out = new Uint8ClampedArray(hw * hh * 4), p = n.data;
+    const freq = new Map();
+    if (tie === 'rare') for (let i = 0; i < p.length; i += 4) if (p[i + 3]) { const k = (p[i] << 16) | (p[i + 1] << 8) | p[i + 2]; freq.set(k, (freq.get(k) || 0) + 1); }
+    const fq = (c) => freq.get((c[0] << 16) | (c[1] << 8) | c[2]) || 0;
     for (let y = 0; y < hh; y++) for (let x = 0; x < hw; x++) {
       const cols = [];
       for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
@@ -80,7 +123,10 @@
       let best = cols[0];
       cols.forEach((c) => {
         const k = count(c), kb = count(best);
-        if (k > kb || (k === kb && lum(c[0], c[1], c[2]) < lum(best[0], best[1], best[2]))) best = c;
+        if (k > kb) { best = c; return; }
+        if (k !== kb) return;
+        if (tie === 'rare' && fq(c) !== fq(best)) { if (fq(c) < fq(best)) best = c; return; }
+        if (lum(c[0], c[1], c[2]) < lum(best[0], best[1], best[2])) best = c;
       });
       if (cols.length === 4) {
         const dark = cols.reduce((a, c) => (lum(c[0], c[1], c[2]) < lum(a[0], a[1], a[2]) ? c : a), cols[0]);
@@ -121,6 +167,10 @@
     const c2 = document.createElement('canvas'); c2.width = n * 6; c2.height = n * 6;
     const g2 = c2.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(cv, 0, 0, n, n, 0, 0, n * 6, n * 6);
     st.caughtUrl[id] = c2.toDataURL('image/png');
+    // Museum grid (cycle 10): the same pose at the largest integer zoom that fits 56 px (bee / ladybug 4x, robin / monarch 3x)
+    const z = Math.max(1, Math.floor(56 / n)), c3 = document.createElement('canvas'); c3.width = n * z; c3.height = n * z;
+    const g3 = c3.getContext('2d'); g3.imageSmoothingEnabled = false; g3.drawImage(cv, 0, 0, n, n, 0, 0, n * z, n * z);
+    st.thumbUrl[id] = c3.toDataURL('image/png');
     st.ids.push(id); st.cells[id] = n;
   }
 
@@ -137,7 +187,7 @@
     },
     // Phaser create: one canvas texture + anims per species whose 6 strips all loaded. Returns the wired ids.
     bake(scene) {
-      const st = scene.ffStrips = { on: enabled(), ids: [], cells: {}, ms: 0, caughtUrl: {} };
+      const st = scene.ffStrips = { on: enabled(), ids: [], cells: {}, ms: 0, caughtUrl: {}, thumbUrl: {} };
       if (!st.on) return st;
       const t0 = performance.now();
       Object.keys(SPECS).forEach((id) => {
@@ -161,7 +211,7 @@
                 const so = (y * p.n.w + f * cell.w) * 4;
                 cell.data.set(p.n.data.subarray(so, so + cell.w * 4), y * cell.w * 4);
               }
-              const h2 = halve(cell);
+              const h2 = halve(cell, SPECS[id].rareTie === p.s.dir ? 'rare' : undefined);
               cx.putImageData(new ImageData(h2.data, h2.w, h2.h), col * half, 0);
               slots.push({ name: `${p.s.action}_${p.s.dir}_${f}`, col });
               col++;
@@ -174,6 +224,7 @@
               t.getContext('2d').putImageData(new ImageData(p.n.data, p.n.w, p.n.h), 0, 0);
               const g2 = c2.getContext('2d'); g2.imageSmoothingEnabled = false; g2.drawImage(t, 0, 0, c2.width, c2.height);
               st.caughtUrl[id] = c2.toDataURL('image/png');
+              st.thumbUrl[id] = t.toDataURL('image/png'); // Museum grid (cycle 10): the same caught pose, native 1x (48 / 64 px)
             }
           });
           const key = `fft_${id}`;

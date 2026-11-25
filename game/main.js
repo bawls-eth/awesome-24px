@@ -5218,7 +5218,12 @@ class TownScene extends Phaser.Scene {
       listEl.innerHTML = items.map((item) => {
         const unlocked = discovered.has(item.id);
         if (unlocked) have++;
-        const img = `<span class="museum-art"><img src="assets/flora-fauna/svg/${encodeURIComponent(item.id)}.svg" alt="" loading="lazy" decoding="async"></span>`;
+        // Cycle 10 art (G): a species drawn from strips / code art shows that same caught pose in the grid (integer-zoom PNG, pixelated);
+        // every other species (and ?ffstrips=0) keeps its SVG. Locked cards still turn it into a silhouette via CSS.
+        const thumb = this.ffStrips && this.ffStrips.thumbUrl && this.ffStrips.thumbUrl[item.id];
+        const img = thumb
+          ? `<span class="museum-art"><img class="ff-strip-thumb" src="${thumb}" alt="" decoding="async"></span>`
+          : `<span class="museum-art"><img src="assets/flora-fauna/svg/${encodeURIComponent(item.id)}.svg" alt="" loading="lazy" decoding="async"></span>`;
         if (!unlocked) {
           return `<li class="museum-specimen locked">${img}<span class="museum-lock" aria-hidden="true">🔒</span><span class="museum-name">???</span></li>`;
         }
