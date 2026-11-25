@@ -691,3 +691,10 @@ Code this cycle (no Codex ask): Realm hit flash is now a warm palette red edge e
 core (`?hitfx=0` = old); Isles tundra water next to ice gets a code ice ledge (`?icehole=0`). R05 PNG tundra tiles are still welcome but
 drop further in priority; the jungle small-creature W-06 heights (chompbill 46, canopy_glider 46, fernraptor 52 -> 36-40) still need a
 redraw (not solvable in code: non-integer scale).
+
+## OWNER PRIORITY UPDATE 2026-11-25: Town animals first
+Owner (live chat): "All animal crossing animals need rework - add those to Codex." The Town batches T01-T36 above (villagers first, then common
+wildlife, then ground, buildings, icons) are RAISED TO PRIORITY 1, ahead of the remaining B-03 Tundra items and everything R06+. Order stays:
+T01 villagers (all five: Mocha, Frosty, Buster, Lily, Spike; true front/back/side views, original designs, not avatar-collection look-alikes),
+then the common wildlife. Keep the Glacier Shellback redo (see the cycle 6 UPDATE) as the only B-03 item still in front of them.
+Rules unchanged: original art only, ART-HANDOFF.md formats, push to `codex/<topic>` branches only, audit before asking for a merge.
