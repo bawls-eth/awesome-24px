@@ -6,7 +6,7 @@
 //   - once per species per profile: additive Town-save key `animalHello` (array of 30-bit words over the FF_ASSETS fauna order),
 //     unknown bits / extra words kept, every other saved field unchanged; after a reload the same species is not greeted again;
 //   - reduced motion: the heart does not bob or fade (fixed offset over the animal, alpha 1) and still disappears after 1.2 s;
-//   - no line while a panel (the Museum) is open, the heart still shows.
+//   - no line while a panel (the Museum) is open, or while a new player's Realm Gate chip still guides (first-minute rule); the heart still shows.
 // OFFLINE: helpers.offlineStub, literal db.attempts() === 0. Never chats, never writes Firebase.
 // Run: BASE=http://localhost:9135/game/index.html NODE_PATH=$(npm root -g) node game/tests/cyc13-s-animal-hello.test.js  (SHOTS=<dir>)
 const { chromium } = require('playwright');
@@ -18,9 +18,13 @@ const VERSION = 'v34-aquarium'; // GAME_VERSION: seen, so the What's-new banner 
 const W0 = (2 ** 30 - 1) - 3, W1 = 2 ** 27 - 1, W2 = 5;
 const OLD = { name: 'ADMINah', species: 'cat', frame: 0, lastSeenVersion: VERSION, animalHello: [W0, W1, W2], futureKey: { keep: 1 }, resources: { wood: 3 } };
 
-const seed = (ctx, obj) => ctx.addInitScript((o) => {
-  if (!localStorage.getItem('__cyc13ah')) { localStorage.setItem('pixeltown-save-v1', JSON.stringify(o)); localStorage.setItem('__cyc13ah', '1'); }
-}, obj);
+// gate: true = the Realm Gate chip was already dismissed (so the toast line is free); false = a brand-new player's chip still guides.
+const seed = (ctx, obj, gate = true) => ctx.addInitScript(([o, g]) => {
+  if (!localStorage.getItem('__cyc13ah')) {
+    localStorage.setItem('pixeltown-save-v1', JSON.stringify(o)); localStorage.setItem('__cyc13ah', '1');
+    if (g) localStorage.setItem('pixeltown-gate-pointer-v1', JSON.stringify({ v: 1, dismissed: true, reached: false }));
+  }
+}, [obj, gate]);
 async function open(ctx, page) {
   const errors = [];
   page = page || await ctx.newPage();
@@ -123,12 +127,14 @@ const state = (page) => page.evaluate(() => {
   {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: 'no-preference' });
     const db = await offlineStub(ctx);
-    await seed(ctx, OLD);
+    await seed(ctx, OLD, false);
     const { page, errors } = await open(ctx);
     await walkTo(page, 'fox');
     const dys = [];
     for (let i = 0; i < 5; i++) { const h = (await state(page)).hearts[0]; if (h) dys.push(h.dy); await page.waitForTimeout(60); }
     check('[motion] the heart bobs when motion is allowed (its offset changes)', new Set(dys).size > 1, JSON.stringify(dys));
+    const g = await page.evaluate(() => { const e = document.getElementById('gate-pointer'); const s2 = window.__g.scene.getScene('Town'); return { chip: !!e && !e.classList.contains('hidden') && getComputedStyle(e).display !== 'none', lines: s2.animalHelloLines || 0, log: (s2.animalHelloLog || []).slice() }; });
+    check('[motion] a new player whose Realm Gate chip still shows: heart yes, no toast line, the chip stays up', g.log.indexOf('fox') >= 0 && g.lines === 0 && g.chip, JSON.stringify(g));
     check('[motion] no page errors, 0 database attempts', errors.length === 0 && db.attempts() === 0, JSON.stringify([errors, db.attempts()]));
     await ctx.close();
   }

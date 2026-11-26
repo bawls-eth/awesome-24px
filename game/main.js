@@ -7404,13 +7404,15 @@ class TownScene extends Phaser.Scene {
     }
   }
 
-  // The one line: only when #achievement-toast is free (no achievement / note showing, What's-new and welcome-back down), at most once
+  // The one line: only when #achievement-toast is free (no achievement / note showing, What's-new, welcome-back and the gate chip down), at most once
   // per 30 s, and never while a panel, shop, the Museum, the map, the nav sheet or the bag is open. Otherwise skipped (the heart still shows).
   animalHelloLine(spec) {
     const now = Date.now();
     if (this._animalHelloLineAt && now - this._animalHelloLineAt < ANIMAL_HELLO_LINE_GAP_MS) return false;
     const up = (id) => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden') && getComputedStyle(e).display !== 'none'; };
     if (up('achievement-toast') || up('whats-new-banner') || up('town-welcome')) return false;
+    // First-minute rule: while the Realm Gate chip guides a new player it is the one line of guidance (and it hides while the toast is up).
+    if (up('gate-pointer') || this._quietLines) return false;
     const bag = document.getElementById('inventory-panel');
     if (!this.canAct() || (bag && bag.classList.contains('bag-open')) || this.buildMode) return false;
     const toast = document.getElementById('achievement-toast');
