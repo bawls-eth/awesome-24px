@@ -78,7 +78,7 @@ const state = (page) => page.evaluate(() => {
     check(`[${tag}] no hello at spawn (every other species already greeted in the seed)`, s.log.length === 0, JSON.stringify(s.log));
     await walkTo(page, 'fox');
     s = await state(page);
-    check(`[${tag}] near the fox: greeted once, a heart above it (placeholder texture)`, s.log.join() === 'fox' && s.hearts.length === 1 && s.hearts[0].key === 'animal-hello-heart' && s.hearts[0].above && s.hearts[0].vis && s.hearts[0].inView, JSON.stringify([s.log, s.hearts]));
+    check(`[${tag}] near the fox: greeted once, a heart above it (G's baked heart; the code-drawn placeholder only if it is missing)`, s.log.join() === 'fox' && s.hearts.length === 1 && (s.hearts[0].key === 'fft_heart' || s.hearts[0].key === 'animal-hello-heart') && s.hearts[0].above && s.hearts[0].vis && s.hearts[0].inView, JSON.stringify([s.log, s.hearts]));
     check(`[${tag}] one line in the polite toast, species name`, s.toast === 'A Red Fox noticed you 💛' && s.live === 'polite' && s.lines === 1, JSON.stringify([s.toast, s.lines]));
     check(`[${tag}] the line is inside the screen, no sideways scroll`, s.rect.l >= 0 && s.rect.t >= 0 && s.rect.r <= s.vw && s.rect.b <= s.vh && s.sw <= s.vw, JSON.stringify([s.rect, s.vw, s.vh, s.sw]));
     check(`[${tag}] the line covers none of A, C, the bag bar, the joystick`, s.overlaps.length === 0, s.overlaps.join(','));
