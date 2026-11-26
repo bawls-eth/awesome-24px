@@ -3321,3 +3321,9 @@ body:has(#museum-overlay:not(.hidden)) #mm-nav-btn { display: none; }
 #museum-overlay .museum-tabs.cue-r::after { order: 99; right: 0; margin-left: -30px; /* -24 px - the 6 px flex gap: the cue adds no scroll width */ background: linear-gradient(to right, rgba(35, 44, 58, 0), #232c3a 60%); }
 #museum-overlay .museum-tabs.cue-l::before { content: '\2039'; order: -1; left: 0; margin-right: -30px; justify-content: flex-start; background: linear-gradient(to left, rgba(35, 44, 58, 0), #232c3a 60%); }
 /* end cyc13-ui */
+
+/* cyc14-ui (cycle 13 open, U decision): the compass was hidden only while the Museum is open; under the other 15 modal Town dialogs it
+   stayed displayed but covered by the backdrop (a focusable-looking control that cannot be reached, and the sweep's Menu rule accepts
+   "hidden", not "covered"). Every modal Town dialog has its own 44 px ✕ and Esc, so the compass is hidden while ANY of them is open, the
+   same rule as the Museum. The "Where to?" sheet is not one of these (it is the compass's own sheet). */
+body:has([id$="-overlay"][role="dialog"][aria-modal="true"]:not(.hidden):not([hidden])) #mm-nav-btn { display: none; }

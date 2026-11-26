@@ -483,11 +483,30 @@ Counter-proposal for D (re-propose as a new ID if wanted, only after ID-59 ships
 
 | ID | Idea | Owner | Size | Status |
 |---|---|---|---|---|
-| ID-68 | First-level floor on the Shore: if the hero has not levelled by 15 s of play, the next kill grants just enough XP to level once (once per profile, in memory plus the existing first-kill bitmask style key, no new key if the `zk` mask can carry it). Level 2 is the first "I am getting stronger" beat and it should not depend on the seed | S | low | proposed |
-| ID-69 | Isles tame-then-fight bridge: after the first tame on an isle, one line in the existing hint chip names the nearest hostile ("Fernraptor is guarding the clearing") so the first hit lands sooner. Pure text on the existing hint, nothing new on screen | S | low | proposed |
-| ID-70 | Isles low-HP breather: the first time a hero drops under 20% HP on an isle in a visit, hostiles within 120 px lose aggro for 2 s and one DOM line says "Catch your breath"; once per visit, never in the boss room | S | medium | proposed |
+| ID-68 | First-level floor on the Shore: if the hero has not levelled by 15 s of play, the next kill grants just enough XP to level once (once per profile, in memory plus the existing first-kill bitmask style key, no new key if the `zk` mask can carry it). Level 2 is the first "I am getting stronger" beat and it should not depend on the seed | S | low | approved with conditions (U cycle 14, below) |
+| ID-69 | Isles tame-then-fight bridge: after the first tame on an isle, one line in the existing hint chip names the nearest hostile ("Fernraptor is guarding the clearing") so the first hit lands sooner. Pure text on the existing hint, nothing new on screen | S | low | approved with conditions (U cycle 14, below) |
+| ID-70 | Isles low-HP breather: the first time a hero drops under 20% HP on an isle in a visit, hostiles within 120 px lose aggro for 2 s and one DOM line says "Catch your breath"; once per visit, never in the boss room | S | medium | UI approved, reduced (U cycle 14: the line goes in the existing hint, no new DOM line); build waits for L's leash check |
 
 - ID-68: in the six Shore first-ten runs the first level-up came at 6.8, 10.0, 10.5, 14.3, 18.6 and 29.7 s (a 4.4x spread; seed `world-shore-e` also had the longest reward gap, 36.2 s, against 15-22 s for the others). The other first rewards (kill 2.7-3.5 s, XP 0.3-0.6 s, pickup) are all under 4 s, so level-up is the one early beat that varies. A floor only touches the first level, so it cannot change late XP; test: seed e now levels by 15 s, and level 5+ XP is byte-identical.
 - ID-69: the Isles bots tame within 38-110 s (median about 50 s) but first hit comes at 55-141 s on most isles and 338.5 s on `isles2-reef-b`, with the first drop at 188.8 s on `isles2-jungle-a`. The gap between the first tame and the first drop is the longest unexplained stretch of the Isles first ten; the bot hint sampling shows 100% action coverage, so the hint chip is the right place for it. Needs a check that the line does not repeat (once per isle per profile).
 - ID-70: the Isles bots' lowest HP was 2 to 7 on jungle-b, tundra-a/b, mars-b and 0 (a death) on `isles2-reef-a`, so a no-input-skill bot gets to a few HP regularly, and one visit ended in a death in the first ten minutes. A short breather is the Isles counterpart of the Shore rest (ID-51) and does not heal, so it cannot be farmed; it needs L to check it against the wanderer leash and S to place the line away from the Isles action column at 160x284.
 - Review of ID-62..64 build readiness (D, cycle 13): see `design/beta/cycle13-design.md` item 3.
+- **U review of ID-68..70 (cycle 14).** General rules as in cycles 11/13 (12 px text floor, no new element over the stick / pad / A-C /
+  bag bar / Menu, static under reduced motion, no sound, 0 DB attempts, additive keys only, a11y sweep 0 offenders at 195x422 and 160x284).
+  - **ID-68 APPROVED with conditions (S).** No new UI: the existing level-up toast and XP bar carry it. No new save key: a hero at Lv 1 is
+    the only one it can apply to, so the hero's own `level` already records "used" (once per hero, which is the same thing for a first
+    hero). The floor grants XP through the normal kill path (the same toast, the same XP text; the bar must not jump past the level). An
+    off switch `?lvfloor=0` for tests that pin early XP numbers; L lists which pinned tests move before the merge (first-ten bots,
+    ftue-*). Test: the slow seed `world-shore-e` levels by the first kill after 15 s; Lv 2+ XP totals are byte-identical with and without.
+  - **ID-69 APPROVED with conditions (S).** Text only, through the Isles hint's own path (`fitHint`), so at < 300 px it gets the cycle 13
+    show-then-tuck (6 s, then tucked) and `role=status` announces it. At most 40 characters ("Fernraptor guards the clearing" style; the
+    cycle 13 hint at 160 px fits about 2 lines of ~21 characters at 12 px); if a hostile name makes it longer, drop the place ("A Fernraptor
+    is near"). Once per isle per visit in memory; if "once per profile" is wanted it is one additive Isles-save key listed in SAVE-KEYS.md.
+    It never replaces a boss / air / danger hint that is up (those win). Test: after a seeded first tame the line shows once, at 160x284
+    and 195x422 it is fully on screen, above the HUD and on no button (the cyc13-ui hint checks), and a second tame does not repeat it.
+  - **ID-70 UI APPROVED, reduced; build waits for L (S after L).** No new DOM line: cycle 13 measured no free strip on the Isles HUD at
+    160x284 / 195x422, so "Catch your breath" goes through the same hint path as ID-69 (shown, then tucked at < 300 px). No red flash,
+    no shake, no countdown; under reduced motion nothing animates. L checks the 2 s aggro drop against the wanderer leash (hostiles must
+    not walk off and reset) before S builds. Test: seeded HP drop under 20% shows the line once per visit, never in the boss room, and
+    hostiles within 120 px deal no damage for 2 s, then fight again.
+- Housekeeping (U cycle 14): ID-65 has two rows in the cycle 12 table (one L-approved, one U-approved); both say approved, same idea.

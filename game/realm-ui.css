@@ -422,3 +422,17 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
   html body.world-mode.rw-has-more.touch-device.rw-more-open #realm-overlay #realm-leave-btn { position: fixed; left: calc(108px + var(--sl)); top: calc(162px + var(--st)); }
   html body.world-mode.rw-has-more.touch-device.rw-more-open a#mm-daily-btn { position: fixed; left: calc(60px + env(safe-area-inset-left, 0px)); right: auto; bottom: auto; top: calc(210px + env(safe-area-inset-top, 0px)); width: 92px; padding: 0 4px; } /* a child of body: the --sl / --st variables of #realm-overlay do not reach it */
 }
+
+/* cyc14-ui (cycle 13 open: "Realm 160x284 zone line cut to 48 px"): in the folded <= 190 px layout the zone line shared ONE 17 px row of the
+   48 px left column with the arrow and the danger icon, so the zone name got 17 px and read "S…" in every zone. The column under the
+   mini-map is 54 px tall (y 158 to the move stick at 212): the Lv / shards lines go from 16 to 14 px (12 px text, unchanged) and the zone
+   line becomes two 13 px rows: row 1 the arrow and the danger icon, row 2 the zone name on its own, 51 px wide (the column plus the gap
+   before the pad). Nothing moves onto a control; the Resting chip rule (it stands in for the strip) is unchanged. */
+@media (max-width: 190px) and (orientation: portrait) {
+  html body.world-mode.rw-has-more.touch-device #realm-overlay #realm-info { height: 28px; line-height: 14px; }
+  html body.world-mode.rw-has-more.touch-device #rw-zone, html body.world-mode.rw-has-more.touch-device #rw-minimap.big + #rw-zone {
+    top: calc(186px + var(--st)); left: calc(8px + var(--sl)); width: 51px; max-width: 51px !important; height: 26px; box-sizing: border-box;
+    display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 0 4px; line-height: 13px; }
+  html body.world-mode.rw-has-more.touch-device #rw-zone > * { line-height: 13px; }
+  html body.world-mode.rw-has-more.touch-device #rw-zone .rw-zname { order: 5; flex: 0 0 100%; max-width: 100%; letter-spacing: -0.3px; }
+}
