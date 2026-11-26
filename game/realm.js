@@ -159,6 +159,18 @@ function rmFlag(name) {
   } catch (e) { return null; }
 }
 function rmFlagOff(name) { return rmFlag(name) === '0'; }
+// ID-56 (cycle 12 S, spec U cycle 11 in design/IDEAS.md): the shop "saving for" pin. Device pref `mm-shop-pin` = {"v":1,"id":"<item>:<rarity>"}
+// in localStorage, never in pixeltown-save-v1. Missing, unreadable or malformed = no pin. Shared by the Town Realm and the Mad Maze page.
+const RM_PIN_KEY = 'mm-shop-pin';
+function rmShopPinGet() {
+  try {
+    const o = JSON.parse(localStorage.getItem(RM_PIN_KEY) || 'null');
+    return o && typeof o === 'object' && o.v === 1 && typeof o.id === 'string' && /^[A-Za-z0-9_-]{1,40}:\d{1,2}$/.test(o.id) ? o.id : null;
+  } catch (e) { return null; }
+}
+function rmShopPinSet(id) {
+  try { if (id) localStorage.setItem(RM_PIN_KEY, JSON.stringify({ v: 1, id })); else localStorage.removeItem(RM_PIN_KEY); } catch (e) { /* storage blocked: the pin lasts this visit only */ }
+}
 // This file's folder (for shared modules and UI art), from the <script> tag that loaded it; '' when unknown (no art, no loader).
 const RM_DIR = (function () { try { const s = typeof document !== 'undefined' && document.currentScript && document.currentScript.src; return s ? String(s).replace(/[?#].*$/, '').replace(/[^/]*$/, '') : ''; } catch (e) { return ''; } })();
 // Shared modules the arena layers need (FO2 mm-focus, TG3 mm-access + mm-telegraph; mm-telegraph reads MMAccess, so it loads last): a page that does not list one gets it here (ordered, async=false). Every use checks
@@ -3614,6 +3626,7 @@ class RealmArena {
     const price = RM_RARITIES[r].sell * RM_SHOP_MULT;
     if (sv.shards < price || sv.items.length >= RM_BACKPACK) return false;
     sv.shards -= price; sv.items.push(rmTagged({ n: sv.nextUid++, id, r }));
+    if (rmShopPinGet() === `${id}:${r}`) { rmShopPinSet(null); this._pinKey = ''; } // ID-56: the goal is bought, the pin clears silently
     this.displayShards = sv.shards;
     this._snd('pickup');
     this._itemText2(this.player.x, this.player.y - 24, id, r, RM_ITEM_BY_ID[id].name, RM_ITEM_BY_ID[id].icon, RM_RARITIES[r].color);
@@ -3633,6 +3646,7 @@ class RealmArena {
     ov.appendChild(wrap);
     wrap.querySelector('#realm-shop-close').addEventListener('click', () => this.setShop(false));
     wrap.querySelector('#realm-shop-body').addEventListener('click', (e) => {
+      const pb = e.target.closest('button[data-pin]'); if (pb) { this._togglePin(pb.dataset.pin); return; }
       const btn = e.target.closest('button[data-buy]'); if (!btn) return;
       this._shopTap(btn.dataset.buy, Number(btn.dataset.r));
     });
@@ -3663,15 +3677,35 @@ class RealmArena {
     return ok;
   }
 
+  // ID-56: the pinned offer, checked against today's stock. A pin that is no longer in stock clears itself, silently.
+  // -> null or { id, def, rar, price, need } (need 0 = ready to buy).
+  _shopPin(clear) {
+    const pid = rmShopPinGet(); if (!pid) return null;
+    const o = this.shopStock().find((x) => `${x.id}:${x.r}` === pid);
+    if (!o) { if (clear) rmShopPinSet(null); return null; } // cleared only when the shop itself is drawn without it (the HUD just shows nothing)
+    return { id: pid, def: RM_ITEM_BY_ID[o.id], rar: RM_RARITIES[o.r], price: o.price, need: Math.max(0, o.price - this.save.shards) };
+  }
+
+  _togglePin(pid) {
+    rmShopPinSet(rmShopPinGet() === pid ? null : pid); // one pin: another star moves it, the lit star clears it
+    this._pinKey = ''; this.renderShop(); this._syncHud();
+    const again = document.querySelector(`#realm-shop-body button[data-pin="${pid}"]`);
+    if (again) { try { again.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+  }
+
   renderShop() {
     const root = document.getElementById('realm-shop-body'); if (!root) return;
     const sv = this.save; const full = sv.items.length >= RM_BACKPACK;
     const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-    let html = `<div class="realm-bp-count rm-shop-top">You have ${sv.shards} 💎 · ${sv.items.length} / ${RM_BACKPACK} items${full ? ' · backpack full' : ''}<div id="realm-shop-msg" role="status" aria-live="polite">${esc(this._shopMsg || '')}</div></div><ul id="realm-bp-list" class="rm-shop-list">`;
+    const pin = this._shopPin(true);
+    const goal = pin ? `<div class="rm-pin-goal">★ ${pin.need > 0 ? `Saving for ${esc(pin.rar.name)} ${esc(pin.def.name)}: ${pin.need} more 💎` : `${esc(pin.rar.name)} ${esc(pin.def.name)}: ready to buy`}</div>` : '';
+    let html = `<div class="realm-bp-count rm-shop-top">You have ${sv.shards} 💎 · ${sv.items.length} / ${RM_BACKPACK} items${full ? ' · backpack full' : ''}${goal}<div id="realm-shop-msg" role="status" aria-live="polite">${esc(this._shopMsg || '')}</div></div><ul id="realm-bp-list" class="rm-shop-list">`;
     this.shopStock().forEach((o) => {
+      const pid = `${o.id}:${o.r}`; const on = !!pin && pin.id === pid;
       const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
       const why = full ? 'backpack full' : can ? '' : `need ${o.price - sv.shards} more shards`; // not `disabled`: a dead button swallows the tap, this one answers it
-      html += `<li><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq${can ? '' : ' off'}" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' aria-disabled="true"'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards${why ? ` (${why})` : ''}">Buy ${o.price}💎</button></li>`;
+      const star = `<button type="button" class="rm-pin" data-pin="${pid}" aria-pressed="${on}" aria-label="${on ? 'Stop saving for' : 'Save for'} ${rar.name} ${def.name}">${on ? '★' : '☆'}</button>`;
+      html += `<li${on ? ' class="rm-pinned"' : ''}><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span>${star}<button type="button" class="eq${can ? '' : ' off'}" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' aria-disabled="true"'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards${why ? ` (${why})` : ''}">Buy ${o.price}💎</button></li>`;
     });
     let foot = '';
     if (this._worldCopy()) { const nr = RM_SHOP_UNLOCK_LV.findIndex((l, r) => sv.level < l && sv.bestWave < RM_SHOP_UNLOCK[r]); if (nr > 0) foot = `Reach level ${RM_SHOP_UNLOCK_LV[nr]} to unlock ${RM_RARITIES[nr].name} gear.`; } else {
@@ -5482,7 +5516,32 @@ class RealmArena {
   _syncShards() {
     const shards = document.getElementById('realm-shards');
     if (shards) { const t = `💎 ${Math.floor(this.displayShards)}`; if (shards.textContent !== t) shards.textContent = t; }
+    if (shards) this._syncPinHud(shards);
     return shards;
+  }
+
+  // ID-56 HUD: > 300 px wide, `#realm-pin` after the shards reads " · ★ 6 💎 to go" (" · ★ ready"), dropping " to go" when #realm-info
+  // would overflow its one line. <= 300 px (75 px HUD box, measured by U): no text; the shard count turns yellow and #realm-info gets an
+  // aria-label. Recomputed only when the pin, the shards, the width or the stock inputs change (this runs on the shard tick).
+  _syncPinHud(shards) {
+    const pid = rmShopPinGet(); const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const key = `${pid}|${this.save.shards}|${vw}|${this.save.level}|${this.save.bestWave}|${this.heroClass ? this.heroClass() : ''}`;
+    if (key === this._pinKey) return; this._pinKey = key;
+    const pin = pid ? this._shopPin() : null;
+    const info = document.getElementById('realm-info');
+    let el = document.getElementById('realm-pin');
+    const narrow = vw <= 300;
+    shards.classList.toggle('rm-pin-on', !!pin);
+    if (!pin || narrow) { if (el) el.remove(); }
+    else {
+      if (!el) { el = document.createElement('span'); el.id = 'realm-pin'; shards.insertAdjacentElement('afterend', el); }
+      el.textContent = pin.need > 0 ? ` · ★ ${pin.need} 💎 to go` : ' · ★ ready';
+      if (info && pin.need > 0 && info.scrollWidth > info.clientWidth + 1) el.textContent = ` · ★ ${pin.need} 💎`;
+    }
+    if (info) {
+      if (pin && narrow) info.setAttribute('aria-label', `${info.textContent.trim()} · ${Math.min(this.save.shards, pin.price)} of ${pin.price} shards saved for ${pin.def.name}`);
+      else info.removeAttribute('aria-label');
+    }
   }
 
   _syncHud(force) {

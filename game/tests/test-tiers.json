@@ -2552,5 +2552,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 420
+  },
+  "cyc12-s-shop-pin.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 600
   }
 }
