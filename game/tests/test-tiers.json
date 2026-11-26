@@ -2552,6 +2552,11 @@
     "tier": "full",
     "timeoutSec": 600
   },
+  "cyc13-design-refused-saves.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
   "cyc12-design-town-shops.test.js": {
     "class": "browser",
     "tier": "full",

@@ -261,6 +261,16 @@ let SAVE_PENDING = null;
 // kept in SAVE_PENDING, so it overrode (live read) and then overwrote (flush) what ANOTHER tab stored in the meantime, and the day's cap
 // could slip. Now only the count of OWN unsaved bundles is kept, and it is added on top of whatever storage holds when it is written.
 let TURNIP_UNSAVED = null;
+// Cycle 13 D: set while a saveResources was refused. A pending whole-key (home slots) can land under ANY later write while the
+// crafted-goods decrement is still only in memory; a reload in that gap showed a plank both placed and in stock. Every write that
+// lands now also flushes the refused resources right after (one synchronous step, no await between the two setItem calls).
+// The star wallet (saveStars) and the museum (saveFossils) are the same kind of merged writer, so a refused one is flushed the same way.
+let RES_FLUSH = null, STARS_FLUSH = null, FOSS_FLUSH = null, RES_FLUSHING = false;
+function flushResAfterWrite() {
+  if (RES_FLUSHING || (!RES_FLUSH && !STARS_FLUSH && !FOSS_FLUSH)) return;
+  RES_FLUSHING = true;
+  try { if (RES_FLUSH) RES_FLUSH(); if (STARS_FLUSH) STARS_FLUSH(); if (FOSS_FLUSH) FOSS_FLUSH(); } catch (e) { /* stays pending */ } finally { RES_FLUSHING = false; }
+}
 // SAVE_PENDING plus the turnip count rebuilt on the stored value (stored may be any object loadSave gave).
 function pendingOn(stored) {
   if (!TURNIP_UNSAVED) return SAVE_PENDING || {};
@@ -277,6 +287,7 @@ function writeSave(partial) {
     const stored = loadSave();
     localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...pendingOn(stored), ...partial }));
     SAVE_PENDING = null; TURNIP_UNSAVED = null; SAVE_OK = true;
+    flushResAfterWrite();
     return true;
   } catch (e) {
     SAVE_PENDING = { ...(SAVE_PENDING || {}), ...partial }; SAVE_OK = false; // kept for this visit; the next write that lands carries it
@@ -298,6 +309,7 @@ function writeSaveMerged(fn) {
     localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...pendingOn(stored), ...partial }));
     SAVE_PENDING = null; TURNIP_UNSAVED = null; SAVE_OK = true;
   } catch (e) { SAVE_OK = false; return null; }
+  flushResAfterWrite();
   return partial;
 }
 
@@ -2211,8 +2223,9 @@ class TownScene extends Phaser.Scene {
   saveStars() {
     if (!this.starsPersist()) return;
     const base = Number(this._starsBase) || 0;
+    STARS_FLUSH = null; // set again below when this write is refused
     const p = writeSaveMerged((stored) => ({ stars: cleanCount(cleanCount(stored.stars) + ((Number(this.localScore) || 0) - base)) }));
-    if (!p) return;
+    if (!p) { STARS_FLUSH = () => this.saveStars(); return; }
     this.localScore = p.stars;
     this._starsBase = p.stars;
   }
@@ -2949,6 +2962,7 @@ class TownScene extends Phaser.Scene {
   saveResources() {
     if (!this._saveBase) this.snapshotResourceBase();
     const b = this._saveBase;
+    RES_FLUSH = null; // set again below when this write is refused
     const p = writeSaveMerged((stored) => ({
       resources: townMergeCounts(stored.resources, this.resources, b.resources),
       crafted: townMergeCounts(stored.crafted, this.craftedGoods, b.crafted),
@@ -2956,7 +2970,7 @@ class TownScene extends Phaser.Scene {
       caveSeed: this.caveSeed,
       cavePick: this.cavePick,
     }));
-    if (!p) return;
+    if (!p) { RES_FLUSH = () => this.saveResources(); return; }
     // Adopt what was written IN PLACE (the cave holds references to these objects), so another tab's gains show here too.
     let changed = false;
     [['resources', this.resources], ['crafted', this.craftedGoods], ['caveInv', this.caveInv]].forEach(([key, mine]) => {
@@ -3207,6 +3221,8 @@ class TownScene extends Phaser.Scene {
     resultEl.className = win ? 'win' : 'lose';
     this.updatePolyrollScoreLabel();
     this.incrementStat('polyrollPlays');
+    // Cycle 13 D: a refused save used to leave the result looking final; the stars come back after a reload.
+    if (!SAVE_OK && this.starsPersist()) resultEl.textContent += ' Not saved yet: browser storage is full or blocked, so your stars are kept for this visit until a save works.';
   }
 
   setupPolyroll() {
@@ -4527,13 +4543,14 @@ class TownScene extends Phaser.Scene {
 
   saveFossils() {
     // Beta S-02: museum donations are sets (union with storage); the fossil bag is this tab's (the listener keeps it fresh).
+    FOSS_FLUSH = null; // set again below when this write is refused
     const p = writeSaveMerged((stored) => ({
       fossilsHeld: this.fossilsHeld,
       museumCollection: townUnion(stored.museumCollection, [...this.museumCollection]),
       museumFauna: townUnion(stored.museumFauna, [...this.museumFauna]),
       museumFlora: townUnion(stored.museumFlora, [...this.museumFlora]),
     }));
-    if (!p) return;
+    if (!p) { FOSS_FLUSH = () => this.saveFossils(); return; }
     p.museumCollection.forEach((id) => this.museumCollection.add(id));
     p.museumFauna.forEach((id) => this.museumFauna.add(id));
     p.museumFlora.forEach((id) => this.museumFlora.add(id));
@@ -4609,6 +4626,7 @@ class TownScene extends Phaser.Scene {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, `donated ${donated} (already had those species)`);
     }
     this.checkAchievements();
+    this.unsavedNote('Donated'); // cycle 13 D: a refused save used to be silent (the fossils come back after a reload)
   }
 
   findNearestTree() {
@@ -8274,7 +8292,7 @@ class TownScene extends Phaser.Scene {
 
   // Today's claimed ids from the save; anything malformed or from another day is empty.
   claimedLetters() {
-    const rec = loadSave().mail;
+    const rec = loadSaveLive().mail; // cycle 13 D: a refused claim is in SAVE_PENDING; reading storage only let every letter be collected again
     const day = this.questDayBucket();
     if (!rec || typeof rec !== 'object' || rec.day !== day || !Array.isArray(rec.claimed)) return new Set();
     return new Set(rec.claimed.filter((x) => typeof x === 'string'));
@@ -8377,7 +8395,7 @@ class TownScene extends Phaser.Scene {
     const letter = this.lettersForDay(day, this.mailTiers()).find((l) => l.id === id);
     if (!letter) return false;
     claimed.add(id);
-    const prev = loadSave().mail;
+    const prev = loadSaveLive().mail;
     const lifetime = prev && typeof prev === 'object' ? cleanCount(prev.lifetime) : 0;
     // Save the claim BEFORE paying out so a crash/reload can never double-pay.
     writeSave({ mail: { day, claimed: [...claimed], lifetime: lifetime + 1 } });
@@ -8393,7 +8411,7 @@ class TownScene extends Phaser.Scene {
     this.incrementStat('lettersRead');
     if (letter.tier >= 3) this.incrementStat('bestFriendLetters');
     const note = document.getElementById('mailbox-note');
-    if (note) note.textContent = `Thanks, ${letter.from}! You got ${this.attachLabel(a)}.`;
+    if (note) note.textContent = `Thanks, ${letter.from}! You got ${this.attachLabel(a)}.` + (SAVE_OK ? '' : ' Not saved yet: browser storage is full or blocked, so it is kept for this visit until a save works.');
     this.renderMailbox();
     this.refreshMailboxLabel();
     return true;
@@ -9315,6 +9333,7 @@ class TownScene extends Phaser.Scene {
     if (result.success) {
       this.awardPoint(SCAVENGER_REWARD, `found it! +${SCAVENGER_REWARD}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
       this.incrementStat('scavengerHuntsWon');
+      this.unsavedNote('Found it'); // cycle 13 D
     } else {
       const who = (result.claim && result.claim.name) || 'someone';
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, `already found by ${who}`);
