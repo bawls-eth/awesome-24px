@@ -2341,6 +2341,7 @@ class TownScene extends Phaser.Scene {
     const cam = this.cameras && this.cameras.main;
     if (o && cam && (o.cameraFilter & cam.id)) o.cameraFilter &= ~cam.id;
     if (o && o._cs) o._cs = 0; // cycle 4: its remembered box is stale, the next pass measures it again
+    if (o && o._cf) o._cf = 0; // cycle 13: and it is no longer "moving far away"
     return o;
   }
 
@@ -2374,8 +2375,16 @@ class TownScene extends Phaser.Scene {
       if (o.scrollFactorX !== 1 || o.scrollFactorY !== 1 || o.type === 'Container' || o.type === 'Graphics' || o.type === 'Particles' || o.type === 'ParticleEmitter') continue;
       // Hidden objects draw nothing anyway; never leave them culled. A pooled object (sparkle star, firefly) is moved and shown
       // between two cull passes: with a stale cull bit from its old spot it would stay undrawn for up to 3 frames in view.
-      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; if (o._cs) o._cs = 0; continue; }
+      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; if (o._cs) o._cs = 0; if (o._cf) o._cf = 0; continue; }
       let l, t, r2, b;
+      // cycle 13 (L, stamp fix): an image, shape or label that MOVES (a critter's shadow, an NPC's name: its box never settles) was
+      // measured on every pass even while it was culled, 320 px or more beyond the view: about 12 of the ~100 non-sprite measures of a
+      // pass, for things nobody can see. One that was just measured and found beyond the cull line is marked (_cf) and its box is read
+      // again on the 8th pass, the same wait a settled object that starts to move already has (it would have to cross the 320 px margin
+      // in 32 frames, 600 px/s, to be missed). Only while its cull bit is still set: uncull(), hiding it or a forced pass wake it at
+      // once. In view, or on its way out, it is measured on every pass as before. Sprites never take this path.
+      if (!full && o._cf === 1 && pass - o._cv < 8 && (o.cameraFilter & bit)) { culled++; continue; }
+      let mv = false;
       // cycle 9 (L): an object that only sways around its home spot (shore foam, wave crests: 235 images on shared yoyo tweens) never
       // "settled", so 120 of them were measured on every pass, in view or far out at sea. It declares its reach (o._cpad, px) and its
       // box grown by that reach is pinned (_cs 4) on its first measure. While the pinned box is outside the cull line the true box
@@ -2411,8 +2420,10 @@ class TownScene extends Phaser.Scene {
         }
         else if (l === o._cl && t === o._ct && r2 === o._cr && b === o._cb) { if (o._cs < 3) { o._cs = (o._cs | 0) + 1; o._cv = o._cs === 3 ? pass - (i & 7) : pass; } else o._cv = pass; }
         else { o._cl = l; o._ct = t; o._cr = r2; o._cb = b; o._cs = 0; o._cv = pass; }
+        mv = o._cs < 3; // measured and not settled, not pinned (_cs 4)
       }
       const out = r2 < x0 || l > x1 || b < y0 || t > y1;
+      if (mv && out) { if (o._cf !== 1) o._cf = 1; } else if (o._cf) o._cf = 0;
       if (out) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; } else if (o.cameraFilter & bit) o.cameraFilter &= ~bit;
     }
     this._cullMeasured = measured; // test hook: objects measured (not taken from the remembered box) on the last pass

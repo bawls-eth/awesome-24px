@@ -113,3 +113,29 @@ New tests registered in `test-tiers.json`: `cyc13-lead-realm-160` (browser, full
 3. Give the Realm Menu (pause) the bag, board, settings and Daily entries; then the More tray could be dropped and phones up to 260 px
    could lose four always-on HUD buttons too.
 4. A `best` marker next to the stat definitions (instead of the `TOWN_BEST_STATS` list) so a new "best" stat cannot be added as a counter.
+
+## Stamp fix (after the merge): Town cull pass over its pin
+
+Branch `cyc13-lead-cull`, cut from the dev tip `0d0e25c`. `cyc9-lead-town-cull-pin` [1] measured 223 of 978 objects per pass (cap 215,
+22%) after G's 17 new strip Sprites. No threshold and no existing cull test was changed.
+
+- Per-type breakdown of one pass, standing still (average of ~50 passes): 119 walking Sprites, 37 settled images far away on their
+  8th-pass re-read, 17 pinned foam / wave images on theirs, 16 settled things in view, and **about 12 moving non-sprites that were
+  culled far outside the view** (8 critter shadows, 3 name labels, 1 circle), read on every pass although nobody can see them.
+- The pin test also requires `measured >= sprites` (167), so the Sprites cannot be the saving: any rule that stops measuring walking
+  Sprites (pinning critters, reusing an idle animal's box without counting it) fails that check. The saving has to come from the
+  non-sprite side.
+- Change (`main.js` `cullOffscreen`, 12 lines): a non-sprite object that was just measured, has not settled, and is beyond the cull
+  line (view + 320 px) is marked `_cf`; while its cull bit is still set its box is read again on the 8th pass, the same wait a settled
+  object that starts to move already has. `uncull()`, hiding it or a forced pass clear the mark; in view it is measured on every pass
+  as before; Sprites never take this path.
+- Result: 207.8 to 211.9 measured per pass in three runs (was 221.8 to 224.3), cap 215.2.
+
+| Check | Before | After |
+|---|---|---|
+| `cyc13-lead-town-cull-far.test.js` (new pin test, registered browser / full) | 4 FAILED on the old `main.js` | ALL PASSED |
+| `cyc9-lead-town-cull-pin`, `cyc10-lead-town-cull-sprites`, `cyc12-lead-town-still-statues`, `cyc4-town-cull-alloc`, `town-bugbash` (unchanged), each run once | 223 of 978 on the pin (coordinator stamp) | ALL PASSED (each); the pin, statues and alloc tests each printed 212 measured per pass |
+
+Limits: the margin under the cap is 3 to 7 objects, so the next batch of walking Sprites will hit the pin again. A moving
+label or shadow that is teleported into view without `uncull()` can now be undrawn for up to 32 frames (it was 4); settled labels
+already behave that way, and the game's pooled objects go through `uncull()`. `main.js` cache version bumped to `c13j`.
