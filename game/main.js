@@ -904,6 +904,8 @@ function animalHelloSet(mask, idx) {
 // return a Phaser display object centred on (x, y). Placeholder: a code-drawn 7 x 6 pixel heart (original art), drawn at 3x, crisp.
 const ANIMAL_HELLO_HEART_ROWS = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
 function makeAnimalHelloHeart(scene, x, y) {
+  // cycle 13 integration: G's baked heart (mm-town-fauna.js bake, frame heart_1 = the full heart) when it exists; the code-drawn placeholder below stays as the fallback.
+  if (scene.textures.exists('fft_heart')) return scene.add.image(x, y, 'fft_heart', 'heart_1').setScale(3).setOrigin(0.5, 1);
   const key = 'animal-hello-heart';
   if (!scene.textures.exists(key)) {
     const cv = document.createElement('canvas'); cv.width = 7; cv.height = 6;
