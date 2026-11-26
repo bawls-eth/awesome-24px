@@ -29,7 +29,7 @@
     ]
   },
   "t13_cycle12_nits_1_2_4": {
-    "status": "WIP",
+    "status": "superseded_by_owner_redo_v3",
     "strips": 9,
     "total_frames": 34,
     "changed_frames": 17,
@@ -126,5 +126,118 @@
     "repository_audit": "not run",
     "repository_tests": "not run",
     "visual_review": "preview-movement-v2.png; broad yellow snake stripe and subtle profile movement need game review"
+  },
+  "t13_owner_redo_v3": {
+    "status": "WIP",
+    "strips": 9,
+    "total_frames": 34,
+    "redrawn_frames": 34,
+    "source_grid_no_edge_contact": true,
+    "original_species_palette_only": true,
+    "distinct_native": true,
+    "distinct_default_mode_bake": true,
+    "bake": "reproduction of default 2x2 mode filter; not live game",
+    "files": [
+      {
+        "id": "ff_frog_move",
+        "frames": 4,
+        "colors": 6,
+        "adjacent_bake_changed_pixels": [
+          62,
+          76,
+          93,
+          30
+        ]
+      },
+      {
+        "id": "ff_frog_move_down",
+        "frames": 4,
+        "colors": 6,
+        "adjacent_bake_changed_pixels": [
+          75,
+          75,
+          91,
+          25
+        ]
+      },
+      {
+        "id": "ff_trout_move",
+        "frames": 4,
+        "colors": 7,
+        "adjacent_bake_changed_pixels": [
+          16,
+          18,
+          21,
+          22
+        ]
+      },
+      {
+        "id": "ff_trout_move_down",
+        "frames": 4,
+        "colors": 7,
+        "adjacent_bake_changed_pixels": [
+          26,
+          43,
+          20,
+          16
+        ]
+      },
+      {
+        "id": "ff_catfish_move",
+        "frames": 4,
+        "colors": 6,
+        "adjacent_bake_changed_pixels": [
+          17,
+          18,
+          19,
+          19
+        ]
+      },
+      {
+        "id": "ff_catfish_move_down",
+        "frames": 4,
+        "colors": 6,
+        "adjacent_bake_changed_pixels": [
+          30,
+          43,
+          18,
+          17
+        ]
+      },
+      {
+        "id": "ff_snake_move",
+        "frames": 4,
+        "colors": 6,
+        "adjacent_bake_changed_pixels": [
+          49,
+          33,
+          66,
+          48
+        ]
+      },
+      {
+        "id": "ff_snake_move_down",
+        "frames": 4,
+        "colors": 6,
+        "adjacent_bake_changed_pixels": [
+          53,
+          70,
+          52,
+          67
+        ]
+      },
+      {
+        "id": "ff_snake_idle_down",
+        "frames": 2,
+        "colors": 6,
+        "adjacent_bake_changed_pixels": [
+          53,
+          53
+        ]
+      }
+    ],
+    "repository_audit": "not run",
+    "repository_tests": "not run",
+    "visual_review": "preview-movement-v3.png; native 2x, 16px bake 2x and 1x. Retained old idle/caught transitions require visual check."
   }
 }
