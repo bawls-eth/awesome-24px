@@ -121,6 +121,20 @@ const chipState = (page, id) => page.evaluate((cid) => {
       const n2 = await page.evaluate(() => ({ open: !document.getElementById('save-warn-note').classList.contains('hidden'), chip: !document.getElementById('save-warn').hidden }));
       check(`[65T ${tag}] Esc closes the note; the chip stays (storage still refuses)`, !n2.open && n2.chip, JSON.stringify(n2));
     }
+    {
+      // U review: the note is never covered (corner Menu / compass included): 5 points of its box hit the note itself
+      await page.evaluate(() => document.getElementById('save-warn').click());
+      await page.waitForTimeout(250);
+      const nc = await page.evaluate(() => {
+        const n = document.getElementById('save-warn-note'); const r = n.getBoundingClientRect();
+        const pts = [[0.05, 0.1], [0.95, 0.1], [0.05, 0.9], [0.95, 0.9], [0.5, 0.5]].map(([fx, fy]) => { const e = document.elementFromPoint(r.left + fx * r.width, r.top + fy * r.height); return !!e && n.contains(e); });
+        return { open: !n.classList.contains('hidden'), pts, inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, r: [r.left, r.top, r.right, r.bottom] };
+      });
+      check(`[65T ${tag}] the open note is inside the screen and nothing covers it (5 points hit the note)`, nc.open && nc.inside && nc.pts.every(Boolean), JSON.stringify(nc));
+      if (SHOTS && vp.width < 1280) await page.screenshot({ path: `${SHOTS}/cyc14-systems-savewarn-note-${tag}.jpg`, type: 'jpeg', quality: 75 });
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(150);
+    }
     await page.evaluate(() => { window.__quota = false; window.__g.scene.getScene('Town').incrementStat('ADMINcsTest'); });
     await page.waitForTimeout(600);
     c = await chipState(page, 'save-warn');
@@ -308,7 +322,7 @@ const chipState = (page, id) => page.evaluate((cid) => {
     const r = t.getBoundingClientRect(); const ov = [];
     if (vis(t)) ['interact-btn', 'mobile-chat-btn', 'inventory-panel', 'joystick'].forEach((id) => { const o = document.getElementById(id); if (!vis(o)) return; const q = o.getBoundingClientRect(); if (q.left < r.right - 0.5 && q.right > r.left + 0.5 && q.top < r.bottom - 0.5 && q.bottom > r.top + 0.5) ov.push(id); });
     let deal = null; try { deal = s.todaysDeal().key; } catch (e) { deal = null; }
-    return { bubble: b ? { id: b.spec.id, key: b.img.texture.key, above: b.img.y < b.spec.sprite.y, vis: b.img.visible, inView: s.cameras.main.worldView.contains(b.img.x, b.img.y - 10) } : null, count: s.treatBubbles || 0,
+    return { bubble: b ? { id: b.spec.id, key: b.img.texture.key, above: b.img.y < b.spec.sprite.y, side: b.side || 0, vis: b.img.visible, inView: s.cameras.main.worldView.contains(b.img.x, b.img.y - 10) } : null, count: s.treatBubbles || 0,
       flowers: s.resources.flowers || 0, fruit: s.resources.fruit || 0, hearts: (s.animalHelloHearts || []).map((h) => h.spec.id), given: (s.treatGiven || []).slice(), toast: vis(t) ? t.textContent : '', ov, deal,
       inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight };
   });
@@ -320,8 +334,16 @@ const chipState = (page, id) => page.evaluate((cid) => {
     const { page, errors } = await openTown(ctx);
     const got = await nearFox(page);
     let t = await treat(page);
-    check(`[62 ${tag}] a liked fox near the hero shows ONE treat bubble above it`, got && t.bubble && t.bubble.id === 'fox' && t.bubble.above && t.bubble.vis && t.bubble.inView && t.count === 1 && /^treat-bubble-/.test(t.bubble.key), JSON.stringify(t));
+    check(`[62 ${tag}] a liked fox near the hero shows ONE treat bubble next to it (above, or the first clear side when the HUD covers above)`, got && t.bubble && t.bubble.id === 'fox' && (t.bubble.above || t.bubble.side > 0) && t.bubble.vis && t.bubble.inView && t.count === 1 && /^treat-bubble-/.test(t.bubble.key), JSON.stringify(t));
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/cyc14-systems-treat-bubble-${tag}.jpg`, type: 'jpeg', quality: 75 });
+    // U review: the bubble never sits under a HUD element (the 195 px bag bar): its 5 screen points hit the game canvas
+    const clr = await page.evaluate(() => {
+      const s = window.__g.scene.getScene('Town'); const b = s.treatBubble; if (!b) return null;
+      const cam = s.cameras.main, cv = s.game.canvas, cr = cv.getBoundingClientRect(), zx = cr.width / cam.width, zy = cr.height / cam.height;
+      const k = b.img.getBounds();
+      return [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9], [0.5, 0.5]].map(([fx, fy]) => { const px = cr.left + (k.x + fx * k.width - cam.worldView.x) * cam.zoom * zx, py = cr.top + (k.y + fy * k.height - cam.worldView.y) * cam.zoom * zy; const e = document.elementFromPoint(px, py); return { ok: !!e && e.tagName === 'CANVAS', id: e && (e.id || e.tagName) }; }).concat([{ side: b.side }]);
+    });
+    check(`[62 ${tag}] the bubble is clear of every HUD element (5 points on the canvas)`, !!clr && clr.slice(0, 5).every((p) => p.ok), JSON.stringify(clr));
     const expect = t.deal === 'flowers' ? 'fruit' : 'flowers';
     await pressE(page, vp);
     await page.waitForTimeout(150);

@@ -51,11 +51,25 @@ Specs: U cycle 13 (`design/beta/cycle13-ui.md` section 4) and L conditions (`des
   - Once shown, `islesTameSeen: 1` is written (additive). It is listed in `SAVE-KEYS.md`.
 - No turning, no companion sprite.
 
+### Follow-up after the review (U notes from the coordinator, second commit)
+1. **ID-65 note:**
+   - It now opens just under the corner Menu (top = Menu bottom + 4 px) at z-index 9050, which is above the Menu (9000) and below the nav sheet (9100).
+   - It has a fixed `width: min(92vw, 420px)` and scrolls inside itself (`max-height: calc(100vh - 72px)`).
+   - Before this, at 195x422 the shrink-to-fit note was only 124 px wide and 408 px tall and ran off the bottom. At 160x284 two of its points were covered.
+   - New check in [65T] at all 4 sizes: the open note is inside the screen and 5 points of its box hit the note.
+   - Before the fix (the first commit, served on port 9116): FAIL at 195x422 and 160x284. After: PASS at 1280x720, 390x844, 195x422 and 160x284.
+2. **ID-62 bubble:**
+   - New `treatBubbleSide()` in my own code; `makeAnimalHelloHeart` is not touched. Every 120 ms it tests 5 screen points of the bubble with `elementFromPoint`. When the DOM covers one, the bubble moves to the first clear side: above (default), below, right, left.
+   - New check in [62]: the bubble's 5 points land on the game canvas.
+   - Before: FAIL at 195x422 (the bag bar `#inventory-panel` covered 3 of the 5 points). After: PASS at 1280x720 and 195x422; at 195 the bubble now sits to the right of the fox (screenshot `img/cyc14-systems-treat-bubble-195x422.jpg`).
+3. ID-66 short labels: approved by U, kept as they are.
+4. Heart scale (G): left alone, as asked.
+
 ## Checks actually run (all through /tmp/bt.sh, port 9105)
 
 | Item | Check | Result |
 |---|---|---|
-| all | `cyc14-s-systems.test.js` full run on the branch | **ALL PASSED, 119 checks** |
+| all | `cyc14-s-systems.test.js` full run on the first commit | **ALL PASSED, 119 checks**; after the review fixes: [65T]+[62] ALL PASSED (61 checks), [65R]+[66]+[63] re-run ALL PASSED (61 checks); 122 checks in all |
 | all | the same test against the base commit (git archive of 445fd49 served on port 9115), per section | fails before: [65T] chip missing (FAIL from the first check); [65R] FAIL then a crash (no chip element); [66] FAIL (no steps); [62] FAIL (no bubble); [63] 2 FAIL (no line, no bit) |
 | ID-65 Town | 1280x720, 390x844, 195x422, 160x284 | chip visible, >= 44 px, 12 px text, under the Menu, 0 overlaps with the sweep OVERLAP rule; at 1280 it stays after 10 s and after the workbench closes; tap = note + 1 retry; Esc closes the note only; gone after the stub is lifted and one change is made; no new key; 0 DB attempts |
 | ID-65 Realm | Realm World at 1280x720, 390x844, 195x422 | chip shows on `saveOk === false`, 0 overlaps, left of the info line (> 300 px) or under Leave (195); tap = note + retry; Esc closes the note only (no panel opens); gone after a landed write; 0 DB attempts |

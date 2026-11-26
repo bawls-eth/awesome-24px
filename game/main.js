@@ -4042,6 +4042,9 @@ class TownScene extends Phaser.Scene {
     chip.addEventListener('click', () => {
       this.saveWarnRetries = (this.saveWarnRetries || 0) + 1;
       writeSave({}); // one retry: a landed write clears SAVE_OK and flushes what was pending
+      // cyc14 S (U review): never under the corner Menu / compass: the note sits just below it (and above it in z)
+      const nav = document.getElementById('mm-nav-btn'), nr = nav && nav.getBoundingClientRect();
+      note.style.top = (nr && nr.height > 0 ? Math.round(nr.bottom + 4) : 16) + 'px';
       note.classList.remove('hidden');
       if (x) x.focus();
       this.updateSaveWarn(Infinity);
@@ -7692,7 +7695,32 @@ class TownScene extends Phaser.Scene {
   followTreatBubble() {
     const b = this.treatBubble, s = b.spec.sprite;
     if (!s || !s.scene) { this.clearTreatBubble(false); return; }
-    b.img.setPosition(Math.round(s.x + 10), Math.round(s.y - s.displayHeight / 2 - 2));
+    // cyc14 S (U review): the bubble must not sit under a HUD element (the 195 px bag bar, the stick ...). Every 120 ms its screen box is
+    // tested at 5 points; when one is covered by the DOM it moves to the first clear side of the animal: above (default), below, right, left.
+    const now = this.time.now;
+    if (b.side === undefined || now - (b.sideAt || 0) >= 120) { b.sideAt = now; b.side = this.treatBubbleSide(b, s); }
+    const hw = s.displayWidth / 2, hh = s.displayHeight / 2, W = b.img.displayWidth, H = b.img.displayHeight;
+    const pos = [[s.x + 10 - 0.1 * W, s.y - hh - 2 - H], [s.x - W / 2, s.y + hh + 2], [s.x + hw + 2, s.y - H / 2], [s.x - hw - 2 - W, s.y - H / 2]][b.side || 0];
+    // pos = top-left of the bubble; the image origin is (0.1, 1)
+    b.img.setPosition(Math.round(pos[0] + 0.1 * W), Math.round(pos[1] + H));
+  }
+
+  // 0 above, 1 below, 2 right, 3 left: the first side whose 5 test points (corners + centre) are not under a DOM element.
+  treatBubbleSide(b, s) {
+    const cam = this.cameras.main, canvas = this.game.canvas;
+    if (!cam || !canvas) return 0;
+    const cr = canvas.getBoundingClientRect(), zx = cr.width / (cam.width || cr.width), zy = cr.height / (cam.height || cr.height);
+    const hw = s.displayWidth / 2, hh = s.displayHeight / 2, W = b.img.displayWidth, H = b.img.displayHeight;
+    const boxes = [[s.x + 10 - 0.1 * W, s.y - hh - 2 - H], [s.x - W / 2, s.y + hh + 2], [s.x + hw + 2, s.y - H / 2], [s.x - hw - 2 - W, s.y - H / 2]];
+    const toScr = (x, y) => [cr.left + (x - cam.worldView.x) * cam.zoom * zx, cr.top + (y - cam.worldView.y) * cam.zoom * zy];
+    const clear = ([x, y]) => [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9], [0.5, 0.5]].every(([fx, fy]) => {
+      const [px, py] = toScr(x + fx * W, y + fy * H);
+      if (px < 0 || py < 0 || px >= innerWidth || py >= innerHeight) return false;
+      const e = document.elementFromPoint(px, py);
+      return !e || e === canvas || e.tagName === 'CANVAS' || e.id === 'game-container';
+    });
+    const i = boxes.findIndex(clear);
+    return i < 0 ? 0 : i;
   }
 
   // fade: a short fade out (never with reduced motion: then it just goes)
