@@ -27,5 +27,104 @@
       "trout half-bake tail",
       "snake front belly"
     ]
+  },
+  "t13_cycle12_nits_1_2_4": {
+    "status": "WIP",
+    "strips": 9,
+    "total_frames": 34,
+    "changed_frames": 17,
+    "exact_4x_grid": true,
+    "hard_alpha": true,
+    "no_edge_contact": true,
+    "roundtrip": true,
+    "original_palette_only": true,
+    "distinct_native": true,
+    "distinct_default_mode_bake": true,
+    "bake": "reproduction of default 2x2 mode filter; not live game",
+    "files": [
+      {
+        "id": "ff_frog_move",
+        "frames": 4,
+        "colors": 6,
+        "changed_frames": [
+          4
+        ]
+      },
+      {
+        "id": "ff_frog_move_down",
+        "frames": 4,
+        "colors": 6,
+        "changed_frames": [
+          4
+        ]
+      },
+      {
+        "id": "ff_snake_move",
+        "frames": 4,
+        "colors": 5,
+        "changed_frames": [
+          4
+        ]
+      },
+      {
+        "id": "ff_snake_move_down",
+        "frames": 4,
+        "colors": 5,
+        "changed_frames": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "id": "ff_snake_idle_down",
+        "frames": 2,
+        "colors": 5,
+        "changed_frames": [
+          1,
+          2
+        ]
+      },
+      {
+        "id": "ff_trout_move",
+        "frames": 4,
+        "colors": 7,
+        "changed_frames": [
+          4
+        ]
+      },
+      {
+        "id": "ff_trout_move_down",
+        "frames": 4,
+        "colors": 6,
+        "changed_frames": [
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "id": "ff_catfish_move",
+        "frames": 4,
+        "colors": 6,
+        "changed_frames": [
+          4
+        ]
+      },
+      {
+        "id": "ff_catfish_move_down",
+        "frames": 4,
+        "colors": 5,
+        "changed_frames": [
+          2,
+          3,
+          4
+        ]
+      }
+    ],
+    "repository_audit": "not run",
+    "repository_tests": "not run",
+    "visual_review": "preview-movement-v2.png; broad yellow snake stripe and subtle profile movement need game review"
   }
 }
