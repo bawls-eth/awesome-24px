@@ -416,6 +416,12 @@ html, body {
 }
 
 #achievement-toast.hidden { display: none; }
+/* Cycle 13 S, ID-59 animal hello line: at <= 300 px the bag bar sits at y 124 under the people panel, and the toast at y 70
+   (two or three lines) covered it. The short hello line uses the 64 px gap between them instead: full width, one or two compact lines.
+   Only while main.js animalHelloLine owns the toast (class toast-hello; every other toast writer removes it). */
+@media (max-width: 300px) {
+  #achievement-toast.toast-hello { top: calc(64px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); transform: none; max-width: none; font-size: 12px; line-height: 1.25; padding: 4px 8px; }
+}
 
 #whats-new-text { white-space: pre-line; line-height: 1.5; }
 
