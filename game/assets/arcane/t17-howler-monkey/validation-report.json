@@ -1,0 +1,16 @@
+{
+  "status": "WIP",
+  "repository_audit": "not run",
+  "repository_tests": "not run",
+  "local_checks": {
+    "strips": 6,
+    "frames": 14,
+    "hard_alpha": true,
+    "exact_4x_grid": true,
+    "distinct_within_strip": true,
+    "no_edge_contact": true,
+    "anchor_bottom": 183,
+    "git_blob_sha1_match": true
+  },
+  "visual_review": "3x native contact sheet inspected; exact game bake pending"
+}
