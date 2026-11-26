@@ -389,6 +389,11 @@ async function keyboardPass(p, page, vpId) {
       try {
         const res = await run.p.evaluate(AUDIT);
         res.offenders.forEach((o) => record(pg, o.check, o.key, o.detail, vp.id));
+        // cyc12-ui: at 160x284 (a 320 px phone at 200% zoom) also controls covering each other, as the text-200 pass does at 195 px.
+        // The Menu check alone let the Isles action column sit on the HUD / Pack and the stick sit under Attack (cycle 11 L note).
+        // Realm World is parked (8 Realm HUD overlaps at 160x284 when this was added: ability buttons under the board / menu buttons,
+        // gear / daily / leave / minimap row); OVERLAP160_ALL=1 includes it. Remove the park once the Realm HUD is fixed at 160 px.
+        if (vp.id === '160x284' && (pg.id !== 'realm-world' || process.env.OVERLAP160_ALL === '1')) (await run.p.evaluate(OVERLAP)).forEach((o) => record(pg, 'overlap', o.key, o.detail, vp.id));
         run.errors.forEach((er) => record(pg, 'console-error', er.replace(/\s+/g, ' ').slice(0, 90), er.slice(0, 200), vp.id));
         check(L + ' no database request attempted', run.db.attempts() === 0, String(run.db.attempts()));
         if (vp.id === '1920x1080' || vp.id === '390x844') await keyboardPass(run.p, pg, vp.id);

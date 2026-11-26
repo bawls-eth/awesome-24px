@@ -160,7 +160,9 @@ const BROKEN_SMALL = (root) => { // words split across lines + text under 12 px 
     });
     check(tag + ': the stuck tab bar is flush with the card top edge, nothing scrolled shows above it (old code: 20 px strip)', Math.abs(m.barTop - m.edge) <= 1 && m.topIsBar, JSON.stringify(m));
     check(tag + ': a specimen card scrolled into view (block start) lands fully below the bar', m.itemTop >= m.barBottom - 0.5, JSON.stringify(m));
-    if (w < 300) check(tag + ': the bar is 40 px tall or less (was 45)', m.barH <= 40, JSON.stringify(m));
+    // cycle 12 U raised the tabs to the 44 px target (owner item "Museum tabs to 44 px"), so the bar is 44 + 2 x 4 px padding at 195 px;
+    // it must still be no taller than that (the cycle-10 bar was 45 px with 29 px tabs)
+    if (w < 300) check(tag + ': the bar is 52 px tall or less with 44 px tabs (cycle 11: <= 40 px with 29 px tabs; cycle 12 raised the tabs)', m.barH <= 52, JSON.stringify(m));
     await page.evaluate(() => { const c = document.querySelector('#museum-overlay .museum-card'); const it = document.querySelectorAll('#museum-wildfauna-list > li')[1]; if (it) c.scrollTop = it.offsetTop - 60; });
     await page.waitForTimeout(150);
     await SHOT(page, `museum-${w}x${h}`);

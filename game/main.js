@@ -5229,6 +5229,14 @@ class TownScene extends Phaser.Scene {
       wing.classList.toggle('hidden', wing.dataset.wing !== this.museumWing);
     });
     overlay.querySelector('.museum-card').scrollTop = 0;
+    // cyc12-ui: on phones the tab bar is one scrolling row; keep the active wing's tab in view (it could sit scrolled off the right end)
+    const bar = overlay.querySelector('.museum-tabs');
+    const on = bar && bar.querySelector('.museum-tab.active');
+    if (on && bar.scrollWidth > bar.clientWidth) {
+      const l = on.getBoundingClientRect().left - bar.getBoundingClientRect().left + bar.scrollLeft, r = l + on.offsetWidth;
+      if (l < bar.scrollLeft || on.offsetWidth > bar.clientWidth - 16) bar.scrollLeft = l - 8; // a tab wider than the bar shows its start
+      else if (r > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = r - bar.clientWidth + 8;
+    }
   }
 
   hideMuseumDetail() {
