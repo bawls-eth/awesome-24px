@@ -101,7 +101,7 @@ async function open(browser, opts, reduced) {
     let bad = 0, hits = 0; const N = 5000;
     for (let k = 0; k < N; k++) {
       const x = rnd() * r.W, y = rnd() * r.H; let want = -1;
-      for (let j = 0; j < r.enemies.length; j++) { const e = r.enemies[j]; if (!e.active) continue; const rr = RM_ENEMIES[e.type].r + 5; if ((x - e.x) ** 2 + (y - e.y) ** 2 < rr * rr) { want = j; break; } }
+      for (let j = 0; j < r.enemies.length; j++) { const e = r.enemies[j]; if (!e.active) continue; const rr = RM_ENEMIES[e.type].r * 1.3 + 2; if ((x - e.x) ** 2 + (y - e.y) ** 2 < rr * rr) { want = j; break; } }
       const got = r._boltHitIndex(x, y); if (got !== want) bad++; if (want >= 0) hits++;
     }
     return { bad, hits, N };

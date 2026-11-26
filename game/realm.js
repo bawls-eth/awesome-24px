@@ -785,7 +785,7 @@ class RealmArena {
     this._spawnN = 0; this._hashN = -1; this._hq = { x: 0, y: 0, best: -1 };
     this._hitCb = (id) => { // exact circle test; the lowest pool index wins, like the old linear scan
       const e = this.enemies[id]; if (!e.active || (this._hq.best >= 0 && id > this._hq.best)) return;
-      const r = this._er(e) + 5; const dx = this._hq.x - e.x; const dy = this._hq.y - e.y;
+      const r = this._hitR(e); const dx = this._hq.x - e.x; const dy = this._hq.y - e.y;
       if (dx * dx + dy * dy < r * r) this._hq.best = id;
     };
     this._padPrev = [false, false, false, false]; this._aimTargets = [];
@@ -897,7 +897,7 @@ class RealmArena {
   _boltHitIndex(x, y) {
     const h = this._hash;
     if (!h) { // fallback without the module
-      for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (!e.active) continue; const r = this._er(e) + 5; if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < r * r) return j; }
+      for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (!e.active) continue; const r = this._hitR(e); if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < r * r) return j; }
       return -1;
     }
     if (this._hashN !== this._spawnN) this._buildHash();
@@ -908,7 +908,7 @@ class RealmArena {
 
   _buildHash() {
     const h = this._hash; h.clear();
-    for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (e.active) h.insert(j, e.x, e.y, this._er(e) + 5); }
+    for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (e.active) h.insert(j, e.x, e.y, this._hitR(e)); }
     this._hashN = this._spawnN;
   }
 
@@ -2409,6 +2409,8 @@ class RealmArena {
 
   // B7: an enemy's hit radius: its own e.rad (a big creature) or its type's.
   _er(e) { return e.rad > 0 ? e.rad : RM_ENEMIES[e.type].r; }
+  // Radius a player bolt hits at: the art is drawn 2.8 x _er wide (half 1.4 x), so the old _er + 5 left the outer body of big enemies un-hittable.
+  _hitR(e) { return this._er(e) * 1.3 + 2; }
   // B7 public helper: damage one live enemy from outside the arena (a companion, a world effect). Clamped to 1e6; returns the damage passed on.
   damageEnemy(e, dmg, src) {
     if (!e || !e.active || this.enemies.indexOf(e) < 0) return 0;
