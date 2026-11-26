@@ -129,7 +129,7 @@ async function museum(browser) {
     });
     check(tag + ': every wing tab is >= 44 px tall (was 29)', m.tabs.every((t) => t.h >= 44), JSON.stringify(m.tabs.map((t) => t.h)));
     check(tag + ': after scrolling the card, the close button is on screen and on top (old code: y -366 / -340)', m.scrolled > 100 && m.close.t >= 0 && m.close.b <= m.vh && m.close.w >= 44 && m.close.h >= 44 && m.closeOnTop, JSON.stringify(m));
-    check(tag + ': the stuck tab bar ends left of the close button, so no tab slides under it', m.bar2.r <= m.close.l + 0.5 && m.close.t >= m.bar2.t - 0.5 && m.close.b <= m.bar2.b + 0.5, JSON.stringify({ bar: m.bar2, close: m.close }));
+    check(tag + ': the close button sits in the stuck tab-bar row and is on top (the cyc12-lead-museum-panel test checks no tab is drawn under it)', m.closeOnTop && m.close.t >= m.bar2.t - 0.5 && m.close.t < m.bar2.b, JSON.stringify({ bar: m.bar2, close: m.close }));
     check(tag + ': the active wing tab (Wild Fauna) is scrolled into view in the tab bar (its start, when it is wider than the bar)', m.active.l >= m.barR.l - 0.5 && (m.active.r <= m.barR.r + 0.5 || m.active.w > m.barR.w - 24), JSON.stringify({ active: m.active, bar: m.barR }));
     check(tag + ': the corner Menu shows before, and does not draw over the open Museum', navBefore && !m.navShows, JSON.stringify({ navBefore, navShows: m.navShows }));
     await SHOT(page, `museum-${w}x${h}`);
