@@ -1048,3 +1048,7 @@ What changed on the Claude side (so Codex does not draw it twice):
 3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
 4. T17-hawk-v3.
 5. T10 / T11 items that have code art now: optional.
+
+
+## Codex T13 nit 3 submitted (WIP)
+T13 cycle 12 nit 3 partial WIP: added seven true front-facing caught strips derived from the original down-view sprites (frog crouch, dart frog crouch, folded insect wings, fish tail rest, snake coil adjustment), 32 native / 128 export; all 42 manifest rows now have class ff_<species>. Seven revised images round-trip decoded with exact 4x grid, hard alpha, no edge contact, each distinct from its source idle frame, 5–6 colours. Inspected native 2x before/after contact sheet; caught changes are intentionally subtle, especially fish/insects. Existing 35 PNGs and timing untouched; existing manifest anchor convention (no anchor field) retained. No INDEX edit; Claude to register via ingest. Full art-audit, game bake, tests not run: local Git DNS failure. Remaining: nit 1 unique fourth movement poses, nit 2 trout front tail swing, nit 4 snake belly stripe in idle/move. No code/tests/Firebase changes.

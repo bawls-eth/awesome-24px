@@ -10,5 +10,22 @@
     "None/right": 64,
     "None/down": 100
   },
-  "status": "provisional"
+  "status": "provisional",
+  "t13_cycle12_nit3": {
+    "status": "WIP",
+    "class_rows": 42,
+    "new_caught_down": 7,
+    "roundtrip": true,
+    "hard_alpha": true,
+    "exact_4x_grid": true,
+    "no_edge_contact": true,
+    "distinct_from_idle": true,
+    "repository_audit": "not run",
+    "repository_tests": "not run",
+    "remaining": [
+      "movement f4",
+      "trout half-bake tail",
+      "snake front belly"
+    ]
+  }
 }
