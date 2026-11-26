@@ -1048,3 +1048,7 @@ What changed on the Claude side (so Codex does not draw it twice):
 3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
 4. T17-hawk-v3.
 5. T10 / T11 items that have code art now: optional.
+
+
+## Codex t11-daddy-longlegs submitted (WIP)
+codex/t11-daddy-longlegs: six strips, 14 frames, 32 native / 128 export, separate right and down views, class ff_daddy_longlegs. Single rounded harvestman body, eight articulated arching legs, dark near/soft far legs, folded caught pose. Legs are deliberately 2 native px thick to survive 2x2 filtering; near legs overlap in profile and read heavier than real harvestman legs. Cycle 15 code fallback is staged with ?ffstaged=1 due to cull budget; keep staging/performance guard, optional replacement only. Original manually posed native pixel shapes rasterized and exported at 4x nearest-neighbor (not image-model-generated); palette restricted to 8 colors. Native grid checks: no edge contact, all frames distinct per strip, all distinct after reproduction of Town default 2x2 mode bake. Preview native 2x and simulated 16px bake at 2x/1x inspected. Existing T13 fauna anchor convention (no explicit anchor; centered loader) retained; not a verified game anchor. Full repository audit/tests and live game review NOT run: local git cannot resolve github.com. No INDEX, game code, tests or Firebase modifications. Keep draft until reviewed.
