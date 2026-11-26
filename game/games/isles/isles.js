@@ -1244,9 +1244,40 @@
       toast((ent ? V.name + ' joined you!' : V.name + ' is happy. Your bond grows.') + (got ? ' +1 ' + HS.resName(V.item) + '.' : ''));
       logEvent('rare_tame');
     } else toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
+    guardArm();
     logEvent('tame');
     refreshMount();
     checkMedals();
+  }
+  // ID-69 (cycle 15 S, U conditions in design/IDEAS.md): the tame-then-fight bridge. After the FIRST tame of this isle visit, the hint
+  // names the nearest hostile ("Fern Raptor guards the beach. Go fight!", <= 40 characters; longer = "A Fern Raptor is near. Go fight!") for GUARD_S s of
+  // play, through the ordinary hint path (fitHint: show-then-tuck under 300 px, role=status). Boss / air hints win over it. Once per
+  // visit, in memory only (no save key); a second tame never repeats it, and an isle with no hostile left just spends it.
+  const GUARD_S = 12, GUARD_MAX = 40; // 12 s: the tame toast (2.2 s, the hint waits under it) + the 6 s narrow-phone show, so the cyc13 tuck applies like any hint
+  const guard = { done: false, text: '', until: -1, uid: 0, shown: 0 };
+  function guardText(c) {
+    const nm = specName(c.kind) || specName(c.sp), place = bandName(O.zoneAt(world, tileOf(c.x), tileOf(c.y)));
+    // every line carries a verb ("go"): the first-ten hint gate counts a hint without an action as a miss (hintActionPct 100)
+    const t1 = nm + ' guards the ' + place + '. Go fight!';
+    if (place !== 'open sea' && t1.length <= GUARD_MAX) return t1;
+    const t2 = (/^[aeiou]/i.test(nm) ? 'An ' : 'A ') + nm + ' is near. Go fight!';
+    if (t2.length <= GUARD_MAX) return t2;
+    const t3 = 'Go fight the ' + nm;
+    return t3.length <= GUARD_MAX ? t3 : '';
+  }
+  function guardArm() {
+    if (guard.done) return;
+    guard.done = true;
+    let best = null, bd = Infinity;
+    for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (!c.hostile || c.ko || c.calm || c.hp <= 0) continue; const d = Math.hypot(c.x - hero.x, c.y - hero.y); if (d < bd) { bd = d; best = c; } }
+    if (!best) return;
+    guard.text = guardText(best); guard.uid = best.uid; guard.until = simT + GUARD_S;
+  }
+  function guardHint() {
+    if (!guard.text || simT >= guard.until) return '';
+    if (!creatures.some((c) => c.uid === guard.uid)) { guard.until = -1; return ''; } // it is gone (killed, despawned): the line ends
+    guard.shown = 1;
+    return guard.text;
   }
   // a finished tame joins the stable (MMTames; the third of a species gives affinity instead), the party when there is room, and becomes
   // the mount when it is rideable and you have none. X6: a boss joins as an alpha (cos 'alpha', its wild level). One stable write.
@@ -3513,6 +3544,8 @@
     if (bh) return bh;
     const ah = airHint();
     if (ah) return ah;
+    const gh = guardHint(); // ID-69: after the boss / air (danger) hints, before every calm hint
+    if (gh) return gh;
     if (nearPedestal() && !bossAlive()) return document.body.classList.contains('touch') ? 'The trophy pedestal. Tap Trophies to look, or for a rematch.' : 'The trophy pedestal. Press P or Trophies to look, or for a rematch.';
     if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
@@ -3971,6 +4004,7 @@
       simT: () => simT,
       setTime: (t) => { simT = Number(t) || 0; hero.t = simT; return simT; }, // PI2: one sim time on two pages (seeded frame comparisons)
       hint: () => hintText(TAME ? feedTarget() : null),
+      guard: () => Object.assign({ left: Math.max(0, guard.until - simT) }, guard), // ID-69 test hook
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
       wallBumps: () => wallBumps, wslide: WSLIDE,
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },

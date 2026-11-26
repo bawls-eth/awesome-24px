@@ -130,6 +130,7 @@ const RM_ABILITIES = [
   { id: 'overdrive', key: 'f', icon: '🔥', name: 'Overdrive', level: 7, cd: 20 },
 ];
 function rmXpNeeded(level) { return 30 + 20 * (level - 1); }
+const RM_LV_FLOOR_S = 15; // ID-68: seconds of world play (arena clock) before the first-level floor applies
 const RM_SIG_KINDS = ['dash-volley', 'drain-orb', 'oath-shield', 'rage-slam', 'thorn-bloom', 'bone-guard', 'volley']; // class signature kinds (setHeroSignature)
 const RM_WAVE_PAUSE = 2.4; // seconds between waves (shows the banner)
 // Weapon styles (setHeroWeapon, MMWeapons/MMProjectile/MMFxDraw). Saved `wpn_<style>` ids the build does not know yet are kept as inert items.
@@ -796,6 +797,7 @@ class RealmArena {
     this._aimAssist = true; this._reduced = false;
     let hpq = ''; try { hpq = location.search || ''; } catch (e) { hpq = ''; }
     this._shoreFadeOn = !/[?&]shorefade=0(&|$)/.test(hpq); this._shoreFadeToast = false; // ID-01 (?shorefade=0: off)
+    this._lvFloorOn = !/[?&]lvfloor=0(&|$)/.test(hpq); this.lvFloorUsed = 0; // ID-68 (?lvfloor=0: off; lvFloorUsed is a test counter, never saved)
     this._hitPauseOn = !/[?&]hitpause=0(&|$)/.test(hpq); this._hitPauseAt = -1; this.hitPausedFrames = 0; // ID-14
     // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
     this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
@@ -3408,7 +3410,15 @@ class RealmArena {
     // ID-01 Shore XP fade: only for a world kill in zone 0 (MMZones.shoreFade by the level being gained); rounded after, never below 1 XP
     const fade = this._shoreFadeOn && e.zone === 0 && typeof MMZones !== 'undefined' && MMZones.shoreFade ? MMZones.shoreFade(this.save.level, 0) : 1;
     const xpRaw = RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp;
-    this._gainXp(fade < 1 ? Math.max(1, Math.round(xpRaw * fade)) : Math.round(xpRaw));
+    let xpGain = fade < 1 ? Math.max(1, Math.round(xpRaw * fade)) : Math.round(xpRaw);
+    // ID-68 first-level floor: a Lv 1 hero still not levelled after 15 s of world play gets, from the next Shore kill, just enough XP to
+    // reach Lv 2 (never more: the bar lands on the level, no overflow). Through this same kill path (same +xp text, same level-up banner).
+    // Lv 1 is the only level it can touch, so the hero's own level is the "used" record: no new save key. ?lvfloor=0 turns it off.
+    if (this._lvFloorOn && this.mode === 'world' && !this.dungeon && !this.team && e.zone === 0 && this.save.level === 1 && this.clock >= RM_LV_FLOOR_S) {
+      const need = rmXpNeeded(1) - this.save.xp;
+      if (need > xpGain) { xpGain = need; this.lvFloorUsed += 1; }
+    }
+    this._gainXp(xpGain);
     if (fade < 1 && !this._shoreFadeToast) { this._shoreFadeToast = true; this._notice('The Midlands has better prey', '#ffe27a'); } // once per session, no number
     if (this.mode !== 'world' && this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity()); // a world rolls its own zone drops (onEnemyKilled)
     this.shake = Math.max(this.shake, 3);
