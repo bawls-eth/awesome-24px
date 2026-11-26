@@ -10,7 +10,7 @@
 // OFFLINE: helpers.offlineStub through twoTabs, literal db.attempts() === 0. Never chats, never writes to Firebase.
 // Run: BASE=http://localhost:9131/game/index.html NODE_PATH=$(npm root -g) node game/tests/cyc13-lead-best-stats.test.js
 const { chromium } = require('playwright');
-const { check, done, joinOffline, twoTabs } = require('./helpers');
+const { check, done, joinOffline, twoTabs, offlineStub } = require('./helpers');
 const KEY = 'pixeltown-save-v1';
 const QUOTA_INIT = () => {
   const orig = Storage.prototype.setItem;
@@ -30,6 +30,7 @@ const setStats = (page, o) => page.evaluate((v) => { const s = window.__g.scene.
   await ctx.addInitScript(QUOTA_INIT);
   const SEED = { name: 'ADMINbest', species: 'cat', frame: 0, resources: { wood: 1 }, lifetimeStats: { bestSellStreak: 2, homeCozyBest: 3, fishSpecies: 1, sparkles: 10 }, achievementsUnlocked: [] };
   await ctx.addInitScript((o) => { if (!sessionStorage.getItem('__seeded') && !localStorage.getItem('pixeltown-save-v1')) localStorage.setItem('pixeltown-save-v1', JSON.stringify(o)); sessionStorage.setItem('__seeded', '1'); }, SEED);
+  const db0 = await offlineStub(ctx); // the database is blocked for the whole context before any page exists (twoTabs stubs it again)
   const { db, a, b, errors } = await twoTabs(ctx);
   await joinOffline(a, 'ADMINbest');
   await joinOffline(b, 'ADMINbest');
@@ -78,7 +79,7 @@ const setStats = (page, o) => page.evaluate((v) => { const s = window.__g.scene.
   check('with nothing pending, a lower stored best is adopted as is (1)', sa.mine.homeCozyBest === 1, 'got ' + sa.mine.homeCozyBest);
 
   check('no page errors in either tab', errors.a.filter((e) => /pageerror/.test(e)).length === 0 && errors.b.filter((e) => /pageerror/.test(e)).length === 0, JSON.stringify(errors).slice(0, 300));
-  check('no database request attempted', db.attempts() === 0, String(db.attempts()));
+  check('no database request attempted', db.attempts() === 0 && db0.attempts() === 0, String(db.attempts() + '/' + db0.attempts()));
   await browser.close();
   done();
 })();

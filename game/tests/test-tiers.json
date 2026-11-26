@@ -2603,7 +2603,7 @@
   },
   "cyc13-s-backup-shop-pin.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   },
   "cyc13-lead-realm-160.test.js": {
     "class": "browser",

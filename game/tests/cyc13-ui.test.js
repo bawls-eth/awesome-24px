@@ -68,6 +68,7 @@ async function museumDesktop(browser) {
   await page.mouse.click(m.X.l + m.X.w / 2, m.X.t + m.X.h / 2); await page.waitForTimeout(250);
   const closed = await page.evaluate(() => document.getElementById('museum-overlay').classList.contains('hidden') && window.__g.scene.getScene('Town').museumOpen === false);
   check(tag + ': a real click on the ✕ at the end of the list closes the Museum', closed, String(closed));
+  check(tag + ': no database request from the Town page', db.attempts() === 0, String(db.attempts()));
   attempts += db.attempts(); await ctx.close();
 }
 
