@@ -414,3 +414,10 @@ Cycle 6 Shellback v3: six strips / 30 cells revised, existing PR #61. Right idle
 `codex/t17-hawk` 1c9f2b6 reviewed: ACCEPTED, merged provisional and wired in the Town (24 px). All four cycle 8 redo points fixed (IoU vs owl
 0.39-0.53, was 0.75-0.86). Two optional nits (front flight wing fingers; brow / eye gap on `idle_down`) and the updated priority list
 (howler_monkey -> T13 -> T14 robin / squirrel -> T10) are in CODEX-REMAKE-QUEUE.md, "UPDATE 2026-11-25 (cycle 11, Claude G)".
+
+## Claude G cycle 12: T13 frog / snake / trout / catfish accepted and wired; hawk nits are now task T17-hawk-v3
+No new `codex/*` commits since cycle 11. The staged T13 batch (6da71ca) is reviewed: frog, snake, trout and catfish are ACCEPTED
+(provisional) and drawn in the Town at 16 px. Four nits: f2 == f4 in the move strips, the trout front tail beat is lost at 16 px,
+no `caught_down` / `class` keys, and the snake front is dark at 16 px. The hawk's two cycle 11 nits are written up as an optional task,
+**T17-hawk-v3**. Details and the new priority list (howler_monkey -> T13 nits -> T14 hedgehog / bat / spider / ant -> hawk v3 -> T10) are in
+CODEX-REMAKE-QUEUE.md, "UPDATE 2026-11-26 (cycle 12, Claude G)".

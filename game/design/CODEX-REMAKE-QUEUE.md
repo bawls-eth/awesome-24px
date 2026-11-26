@@ -949,3 +949,62 @@ butterfly, trout, catfish, snake).
 **Priority (updated):** 1. `howler_monkey` to finish T17. 2. T13 pond / wetland set (frog, snake, trout and catfish are still SVGs; dragonfly and
 butterfly have code fallbacks). 3. T14 `bird` / `squirrel` (true down views, 4-frame moves). 4. T10 garden bugs (bee, ladybug, snail and
 hummingbird now have code art, so lowest).
+
+## UPDATE 2026-11-26 (cycle 12, Claude G): T13 frog / snake / trout / catfish ACCEPTED and wired; new task T17-hawk-v3 (hawk nits)
+`git fetch origin`: **no new `codex/*` commits since the cycle 11 review**. The newest head is still `codex/t17-hawk` 1c9f2b6 (2026-11-25 09:55 -0800).
+So this cycle reviewed the T13 batch that has been staged since 2026-11-23 (`codex/t13-wetland-fauna` 6da71ca, identical to the staged folder).
+That batch already answers the cycle 9-11 "T13" ask, so T13 is no longer a new-art item, only the nits below.
+
+**T13 frog, snake, trout, catfish: ACCEPTED (provisional) and WIRED in the Town** (`shared/mm-town-fauna.js`).
+They are baked at half native size to a 16 px cell, with idle / move in right + down (left = flipX). The SVG stays as fallback with `?ffstrips=0`.
+Method:
+- my own in-page decode of all 20 strips: exact 4x grid (0 off-grid pixels), alpha 0/255 only, 5-7 colours per species
+- a duplicate-frame scan on the native frames and on the Town bake
+- contact sheet `beta/img/cyc12-art-codex-t13-review.png`: every frame at native 2x, plus the 16 px bake at 3x and 1x, on `#181820` / `#808080` / `#a8d878`
+- in-game shots `beta/img/cyc12-art-town-fauna-{desktop,phone}{,-zoom}.jpg`
+
+The art audit does not cover T13: the batch is not in `INDEX.json` because its strips have no `class` key (see nit 3).
+
+Nits for a later pass (no redo needed):
+1. In the four species I decoded (frog, snake, trout, catfish), `move` and `move_down` frame 2 is byte-identical to frame 4 (a 1-2-3-2 cycle).
+   Please make f4 its own pose (for example the opposite hop, tail swing or fin beat), so 4 frames give 4 poses.
+2. `trout` `move_down` f2-f4 become one identical frame after the Town's 2x2 half bake, because the tail beat is only 1 native px.
+   Make the front tail swing 2+ native px left / right so it survives at 16 px.
+3. T13 has no `caught_down` strip, so the Town shows the profile caught pose for a front-facing catch.
+   - Add `ff_<id>_caught_down` (1 f) to every species.
+   - Add a `class` key (`ff_<id>`) to every asset row, like T17.
+   Then the batch can be registered in `INDEX.json` and covered by the art audit.
+4. At 16 px the `snake` front (`idle_down` / `move_down`) reads as a dark S-blob. Give the front coil a lighter belly ramp step, or a 2 px
+   yellow stripe that stays continuous after the 2x2 bake.
+
+The poison dart frog, dragonfly and butterfly T13 strips are **not wired** (not reviewed in detail):
+- the dart frog is not placed near the village
+- the dragonfly and butterfly keep their in-village code art
+
+A later cycle can switch them by id.
+
+### T17-hawk-v3 (optional polish, Codex task): the two cycle 11 hawk nits
+Reuse branch `codex/t17-hawk`. Keep the same ids, the 48 native cell, the palette, the 4x export and the anchor (96,183). Only these strips change:
+- **`ff_hawk_move_down` f2, f3, f4 (front flight).** These frames still overlap the owl's front flap: alpha-mask IoU 0.65 / 0.63 / 0.69 at
+  the Town's 24 px bake. Every other hawk frame is at 0.39-0.53.
+  - Redraw the two wings with long, straight leading edges and 3-4 separated primary "fingers" (1-native-px gaps) at each tip.
+  - Show the rufous tail fanned under the body in f2-f3.
+  - Keep f1 (wings up) as it is.
+  - Target: IoU vs owl `move_down` < 0.55 on f2-f4, measured on the half bake (2x2 mode filter, `MMTownFauna._halve` in
+    `game/shared/mm-town-fauna.js`).
+- **`ff_hawk_idle_down` f1-f2 and `ff_hawk_caught_down` (front head).** After the 2x2 bake, the brow and the eyes merge into one dark row.
+  - Leave a 1-native-px cream gap (the face colour) between the brow line and each eye.
+  - Keep each eye 2x2 native with a 1 px catchlight.
+  - Then the 24 px front shows two eyes under a brow.
+- **Acceptance:**
+  - `node game/tools/art-audit/run.js`: 0 blocker / 0 needs-redo
+  - every frame stays distinct, no edge contact
+  - the side-by-side `preview.png` shows the v2 frames, the v3 frames and the owl, at 1x and 3x, on the three backgrounds
+- **Priority:** low. Do it after T13 nits 1-3 and the T14 asks.
+
+**Priority (updated):**
+1. `howler_monkey` to finish T17.
+2. T13 nits 1-3 (`caught_down` and `class` keys first, so the batch can be audited).
+3. T14 `hedgehog`, `bat`, `spider`, `leafcutter_ant` (still SVGs). `bird` / `squirrel` now have code front views, so a T14 strip for those is optional.
+4. T17-hawk-v3.
+5. T10 garden bugs (bee, ladybug, snail and hummingbird have code art).

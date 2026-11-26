@@ -17,6 +17,13 @@
     owl: { batch: 't17-owl', cell: 48, fps: { idle: 2, move: 8 }, rareTie: 'down' },
     // Cycle 11 art (G): Codex T17 hawk v2 (1c9f2b6, reviewed + merged cycle 11): rufous / cream raptor, airborne flight frames.
     hawk: { batch: 't17-hawk', cell: 48, fps: { idle: 2, move: 8 } },
+    // Cycle 12 art (G): Codex T13 wetland set (6da71ca, staged since 2026-11-23, reviewed + accepted cycle 12): the four most-seen
+    // pond / meadow SVGs. 32 native baked at half size to a 16 px cell (SVG was 14-18 px). T13 ships no caught_down strip, so the
+    // front caught frame reuses the profile caught pose (noCaughtDown).
+    frog: { batch: 't13-wetland-fauna', cell: 32, fps: { idle: 2, move: 8 }, noCaughtDown: true },
+    snake: { batch: 't13-wetland-fauna', cell: 32, fps: { idle: 2, move: 8 }, noCaughtDown: true },
+    trout: { batch: 't13-wetland-fauna', cell: 32, fps: { idle: 2, move: 8 }, noCaughtDown: true },
+    catfish: { batch: 't13-wetland-fauna', cell: 32, fps: { idle: 2, move: 8 }, noCaughtDown: true },
     // code-drawn (no PNG): baked 1:1, cell = map size (robin 16 = its old W-06 size; squirrel 20, was 16 and read as a speck)
     bird: { code: true, cell: 16, fps: { idle: 2, move: 8 } },
     squirrel: { code: true, cell: 20, fps: { idle: 2, move: 6 } },
@@ -62,6 +69,17 @@
       move_right: [
         ['....................', '....................', '....................', '....................', '..ooooo.............', '.oTThTTo............', 'oThhTTTTo.....oo....', 'oThTTTTTTo...oGo....', 'otTTooottTo.oGGGo...', '.ooo...otTToGhGGko..', '........otTTGGGGGno.', '.......ottTggGGcGoo.', '.......ottgggGccGo..', '........ooggggcGGo..', '.......ogo.oogggo...', '......ogo....ogo....', '......oo.....oco....', '.............oo.....', '....................', '....................'],
         ['....................', '....................', '....................', '....................', '....................', '...ooooo............', '..oTThTTo...........', '.oThhTTTTo....oo....', '.oThTTTTTTo..oGo....', '.otTToootTToooGGGo..', '..ooo...otTTGhGGGko.', '.........ottGGGGGGno', '.........ogggggGcGoo', '........ogggggGcco..', '.......ogo.oooocGo..', '.......oco.....ogo..', '.......oo.......oo..', '....................', '....................', '....................'],
+      ],
+      // Cycle 12 art (G): true front view (was the profile reused): sitting up, two eyes, pink inner ears, cream belly, paws at the
+      // chest, the bushy tail rising behind its right shoulder. idle f2 lowers the tail and paws; move f1 swings the tail low, f2 is the
+      // hop (body lifted, hind legs apart).
+      idle_down: [
+        ['..oooo..............', '.oThhTo.............', 'oThTTTTo............', 'oTTTttTo.oo....oo...', 'otTTootToGpo..opGo..', 'otTo..otoGGGooGGGo..', 'otTo...ooGhhGGGGGo..', 'otTTo...oGkGGGGkGo..', '.otTTo..ogGcGGcGgo..', '.otTTTo.oogcnncgo...', '..otTTToTTocccco....', '..ottTTTTogGccGgo...', '...otttToGgchhcgGo..', '....otttoGgccccgGo..', '.....ooooggccccggo..', '........oggccccggo..', '.........ogccccgo...', '........oggoccoggo..', '........ohhoooohho..', '........oooo..oooo..'],
+        ['....................', '..oooo..............', '.oThhTo.............', 'oThTTTTo.oo....oo...', 'oTTTttTooGpo..opGo..', 'otTTootToGGGooGGGo..', 'otTo..otoGhhGGGGGo..', 'otTo...ooGkGGGGkGo..', 'otTTo...ogGcGGcGgo..', '.otTTo..oogcnncgo...', '.otTTTo.oTocccco....', '..otTTToTogGccGgo...', '..ottTTToGgccccgGo..', '...otttToGgchhcgGo..', '....otttoggccccggo..', '.....ooooggccccggo..', '.........ogccccgo...', '........oggoccoggo..', '........ohhoooohho..', '........oooo..oooo..'],
+      ],
+      move_down: [
+        ['....................', '....................', '....................', '..oooo...oo....oo...', '.oThhTo.oGpo..opGo..', 'oThTTTTooGGGooGGGo..', 'oTTTttTooGhhGGGGGo..', 'otTTootToGkGGGGkGo..', 'otTo..otogGcGGcGgo..', 'otTo...otogcnncgo...', 'otTTo...oTocccco....', '.otTTo..oogGccGgo...', '.otTTTo.oGgchhcgGo..', '..otTTTooGgccccgGo..', '..ottTTToggccccggo..', '...otttToggccccggo..', '....otttTogccccgo...', '.....ooooggoccoggo..', '........ohhoooohho..', '........oooo..oooo..'],
+        ['..oooo..............', '.oThhTo.............', 'oThTTTTo.oo....oo...', 'oTTTttTooGpo..opGo..', 'otTTootToGGGooGGGo..', 'otTo..otoGhhGGGGGo..', 'otTo...ooGkGGGGkGo..', 'otTTo...ogGcGGcGgo..', '.otTTo..oogcnncgo...', '.otTTTo.oTocccco....', '..otTTToTogGccGgo...', '..ottTTToGgchhcgGo..', '...otttToGgccccgGo..', '....otttoggccccggo..', '.....ooooggccccggo..', '.........ogccccgo...', '.........oggccggo...', '.........oho..oho...', '.........oo....oo...', '....................'],
       ],
     },
     // Cycle 10 art (G): honeybee (banded abdomen, amber thorax, glassy wings up / swept back), seven-spot ladybird (top view,
@@ -137,6 +155,8 @@
     { action: 'move', dir: 'right', file: 'move' }, { action: 'move', dir: 'down', file: 'move_down' },
     { action: 'caught', dir: 'right', file: 'caught' }, { action: 'caught', dir: 'down', file: 'caught_down' },
   ];
+  // Cycle 12: the strips a species must load (T13 has no caught_down; its front caught frame aliases the profile one).
+  const stripsFor = (id) => STRIPS.filter((s) => !(SPECS[id].noCaughtDown && s.file === 'caught_down'));
   const enabled = () => { try { return !/[?&]ffstrips=0(&|$)/.test(root.location.search); } catch (e) { return true; } };
   const srcKey = (id, file) => `ffsrc_${id}_${file}`;
   const url = (id, file) => `${BASE}${SPECS[id].batch}/fauna/ff_${id}_${file}.png`;
@@ -237,10 +257,11 @@
     enabled,
     ids: () => Object.keys(SPECS),
     url,
+    stripsFor,
     // Phaser preload: queue every strip as a plain image (the bake slices it).
     preload(scene) {
       if (!enabled()) return;
-      Object.keys(SPECS).filter((id) => !SPECS[id].code).forEach((id) => STRIPS.forEach((s) => scene.load.image(srcKey(id, s.file), url(id, s.file))));
+      Object.keys(SPECS).filter((id) => !SPECS[id].code).forEach((id) => stripsFor(id).forEach((s) => scene.load.image(srcKey(id, s.file), url(id, s.file))));
     },
     // Phaser create: one canvas texture + anims per species whose 6 strips all loaded. Returns the wired ids.
     bake(scene) {
@@ -250,9 +271,9 @@
       Object.keys(SPECS).forEach((id) => {
         try {
           if (SPECS[id].code) { bakeCode(scene, st, id); return; }
-          if (!STRIPS.every((s) => scene.textures.exists(srcKey(id, s.file)))) return;
+          if (!stripsFor(id).every((s) => scene.textures.exists(srcKey(id, s.file)))) return;
           const half = SPECS[id].cell >> 1;
-          const parts = STRIPS.map((s) => {
+          const parts = stripsFor(id).map((s) => {
             const n = nativeData(scene.textures.get(srcKey(id, s.file)).getSourceImage());
             return { s, n, frames: Math.round(n.w / SPECS[id].cell) };
           });
@@ -288,6 +309,7 @@
           if (scene.textures.exists(key)) scene.textures.remove(key);
           const tex = scene.textures.addCanvas(key, cv);
           slots.forEach((sl) => tex.add(sl.name, 0, sl.col * half, 0, half, half));
+          if (!slots.some((sl) => sl.name === 'caught_down_0')) { const c = slots.find((sl) => sl.name === 'caught_right_0'); if (c) tex.add('caught_down_0', 0, c.col * half, 0, half, half); }
           STRIPS.forEach((s) => {
             if (s.action === 'caught') return;
             const ak = `${key}_${s.action}_${s.dir}`;
