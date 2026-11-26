@@ -2420,7 +2420,7 @@ class TownScene extends Phaser.Scene {
           else if (pass - o._cv >= 8) o._cv = pass;
         }
         // cycle 14 (L, headroom): something ROOTED (a tree, its fruit, a plant or other specimen that never walks: 78 + 116 of the
-        // ~700 settled images) declares it (o._cfix). Its settled box was read again every 8th pass like any image that might be
+        // ~700 settled images; and an Image animal while it rests far from the camera, see refreshFloraFaunaNear) declares it (o._cfix). Its settled box was read again every 8th pass like any image that might be
         // moved, about 24 of the ~212 measures of a pass, for things that have no code path that moves them. Once such a box is the
         // same again it is kept for 64 passes instead of 8 (its "last read" stamp is set 56 passes ahead, so the test above stays
         // as it is). It still settles by 3 equal reads first, and hiding it, uncull() or a forced pass read it at once as before.
@@ -7235,6 +7235,7 @@ class TownScene extends Phaser.Scene {
     const sprite = (strip ? this.add.sprite(s.x, s.y, `fft_${a.id}`, 'idle_down_0') : this.add.image(s.x, s.y, this.floraFaunaKey(a.id)))
       .setDisplaySize(shown, shown).setDepth(fly ? s.y + 40 : s.y);
     if (strip) { sprite.ffDir = i % 2 ? 'right' : 'down'; sprite.setFlipX(i % 3 === 1); MMTownFauna.play(sprite, a.id, 'idle', sprite.ffDir); }
+    if (!strip) sprite._cfix = 0; // cull: declared up front (rooted below; a walker while it rests far from the camera, see refreshFloraFaunaNear)
     const inWater = !!s.pond && FF_IN_WATER.has(a.id);
     const spec = {
       id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean, strip,
@@ -7306,6 +7307,13 @@ class TownScene extends Phaser.Scene {
       if (spec.strip && spec.sprite.anims) { // strip animals only animate near the camera (and never with reduced motion)
         if (spec.active && spec.sprite.anims.isPaused) spec.sprite.anims.resume();
         else if (!spec.active && spec.sprite.anims.isPlaying) spec.sprite.anims.pause();
+      }
+      // cycle 14 (L): a walking / flying / swimming specimen drawn as an Image (not a strip Sprite) only moves while it is near the
+      // camera. Away from it, once its last step has ended, it is as rooted as a plant: it says so to the cull (_cfix, box kept
+      // 64 passes) and takes it back, with a fresh measure, the moment it is near again (160 px before it can be seen).
+      if (!spec.strip && !spec.idle) {
+        const rest = !inView && !spec.moving;
+        if (rest !== (spec.sprite._cfix === 1)) { spec.sprite._cfix = rest ? 1 : 0; if (!rest) this.uncull(spec.sprite); }
       }
       if (spec.idle) {
         if (spec.active && spec.idle.isPaused()) spec.idle.resume();

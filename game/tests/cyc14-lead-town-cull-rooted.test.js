@@ -8,6 +8,8 @@
 //   [2] a rooted image far outside the view is measured on at most 2 of 40 passes (before: 5) and stays culled;
 //   [3] every rooted image: its cull bit equals a fresh evaluation of the exact rule, at spawn and after three camera jumps (after
 //       ordinary passes), and none that is on screen is culled;
+//   [5] an Image animal (walks / flies / swims, not a strip Sprite) is declared only while it rests far from the camera; when the
+//       camera comes it is drawn at once and un-declared at the next specimen sweep;
 //   [4] the escape hatches still work for a rooted image: uncull() after a move draws it on the same frame; hiding and showing it
 //       reads it again on the next pass; a forced pass sees a moved one at once; moved without any of these it is drawn again
 //       within 64 passes (the declared wait).
@@ -37,17 +39,19 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
       if (s._cullPass !== last) { last = s._cullPass; passes++; measured += s._cullMeasured; }
       if (++i >= 320) {
         const L = s.sys.displayList.list; const fix = L.filter((o) => o._cfix);
-        const walkers = new Set(s.ffSpecimens.filter((x) => x.move && x.move !== 'still').map((x) => x.sprite));
+        // a walker (Image animal) may be declared only while it rests far from the camera: not active, its last step ended
+        const walkers = new Set(s.ffSpecimens.filter((x) => x.move && x.move !== 'still' && (x.active || x.moving || s.ffNear.indexOf(x) >= 0)).map((x) => x.sprite));
+        const always = new Set(s.treeGraphics.concat(Object.values(s.treeFruit).filter(Boolean), s.ffSpecimens.filter((x) => !x.move || x.move === 'still').map((x) => x.sprite)));
         res({ passes, measured: measured / Math.max(1, passes), objects: L.length, sprites: L.filter((o) => o.type === 'Sprite').length, fix: fix.length,
-          fixSprites: fix.filter((o) => o.type === 'Sprite').length, fixWalkers: fix.filter((o) => walkers.has(o)).length,
+          fixSprites: fix.filter((o) => o.type === 'Sprite').length, fixWalkers: fix.filter((o) => walkers.has(o)).length, rooted: fix.filter((o) => always.has(o)).length, resting: fix.filter((o) => !always.has(o)).length,
           trees: s.treeGraphics.filter((g) => g._cfix).length, treeCount: s.treeGraphics.length, fixSettled: fix.filter((o) => o.visible && o._cs === 3).length });
       } else requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
   }));
   console.log(`INFO Town standing still: ${info.objects} objects, ${info.measured.toFixed(1)} measured per pass (212 before), ${info.sprites} sprites, ${info.fix} rooted`);
-  check('[1] the cull ran; a pass measures under 200 objects (was 212) and still at least every sprite', info.passes >= 70 && info.measured < 200 && info.measured >= info.sprites, JSON.stringify(info));
-  check('[1] >= 180 images are declared rooted: every tree, no Sprite, no specimen that walks / flies / swims', info.fix >= 180 && info.trees === info.treeCount && info.treeCount >= 50 && info.fixSprites === 0 && info.fixWalkers === 0, JSON.stringify(info));
+  check('[1] the cull ran; a pass measures under 20.5% of the objects (was 21.7%: 212 of 978; 23.2% with the cycle 14 insects and no fix) and still at least every sprite', info.passes >= 70 && info.measured < info.objects * 0.205 && info.measured >= info.sprites, JSON.stringify(info));
+  check('[1] >= 180 images are declared rooted (every tree) and >= 40 Image animals resting far from the camera; no Sprite, no animal that is near the camera or mid-step', info.rooted >= 180 && info.resting >= 40 && info.trees === info.treeCount && info.treeCount >= 50 && info.fixSprites === 0 && info.fixWalkers === 0, JSON.stringify(info));
 
   // ---- [2] a far rooted image: how often is it measured ----
   const far = await page.evaluate(() => new Promise((res) => {
@@ -144,6 +148,25 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
     requestAnimationFrame(tick);
   }));
   check('[4] hidden, moved and shown again, a rooted image is read on the next pass', hs.found && hs.seenAfter === 1, JSON.stringify(hs));
+
+  // ---- [5] an Image animal resting far away: the camera comes to it -> it takes its declaration back and is drawn ----
+  const wake = await page.evaluate(() => new Promise((res) => {
+    const s = window.__g.scene.getScene('Town'); const cam = s.cameras.main, bit = cam.id, v = cam.worldView;
+    const spec = s.ffSpecimens.find((x) => x.move && x.move !== 'still' && !x.strip && x.sprite._cfix === 1 && x.sprite.visible && (x.sprite.cameraFilter & bit) && Math.hypot(x.sprite.x - v.centerX, x.sprite.y - v.centerY) > 1500);
+    if (!spec) return res({ found: false });
+    const o = spec.sprite; cam.stopFollow(); cam.centerOn(o.x, o.y);
+    const t0 = performance.now(); let drawnAt = -1, freeAt = -1, n = 0;
+    const tick = () => {
+      n++; const t = performance.now() - t0;
+      if (drawnAt < 0 && !(o.cameraFilter & bit)) drawnAt = n;
+      if (freeAt < 0 && o._cfix === 0) freeAt = Math.round(t);
+      if ((drawnAt >= 0 && freeAt >= 0) || t > 3000) { const out = { found: true, id: spec.id, drawnAfterFrames: drawnAt, undeclaredAfterMs: freeAt, active: spec.active, near: s.ffNear.indexOf(spec) >= 0 }; cam.startFollow(s.localBody, true, 0.15, 0.15); res(out); }
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
+  check('[5] the camera jumps onto a resting Image animal: it is drawn within 2 frames (the jump forces a pass; its kept box is right) and takes its declaration back at the next 400 ms specimen sweep', wake.found && wake.drawnAfterFrames >= 1 && wake.drawnAfterFrames <= 2 && wake.undeclaredAfterMs >= 0 && wake.undeclaredAfterMs <= 1500 && wake.near, JSON.stringify(wake));
+  await frames(page, 30);
 
   check('zero page errors', errors.length === 0, errors.join(' | '));
   check('no database traffic (literal 0)', db.attempts() === 0, String(db.attempts()));

@@ -39,11 +39,12 @@ const LONG = 'New in your journal: Scarlet Macaw (rare)!'; // the shape of isles
     const card = await box(page, '#howto'), hud = await box(page, '#hud');
     check(tag + 'the first-visit how-to card is up (compact)', !!card && await page.evaluate(() => document.getElementById('howto').classList.contains('compact')), J(card));
     for (const mode of ['game', 'journal']) {
-      // 'game': the toast the game itself raises on this first screen; 'journal': the longest journal line through the same element
-      if (mode === 'game') await page.evaluate(() => { try { window.__isles.feed(); } catch (e) { /* toast only */ } });
-      else await page.evaluate((txt) => { const t = document.getElementById('toast'); t.textContent = txt; t.classList.add('on'); }, LONG);
-      await page.waitForTimeout(300);
-      const t = await box(page, '#toast'); const txt = await page.evaluate(() => document.getElementById('toast').textContent);
+      // 'game': the text the game itself put in the toast on this first screen (the medal line); 'journal': the longest journal line.
+      // The game's own timer takes .on away at any moment, so the toast is shown and measured in ONE step through the same element
+      // and the same CSS (a waited-for toast was sometimes already fading: opacity 0, nothing to measure).
+      if (mode === 'game') await page.waitForFunction(() => document.getElementById('toast').textContent.length > 0, null, { timeout: 8000 }).catch(() => null);
+      const t = await page.evaluate((txt) => { const e = document.getElementById('toast'); if (txt) e.textContent = txt; e.classList.add('on'); const r = e.getBoundingClientRect(); return getComputedStyle(e).display === 'none' || !r.width || !e.textContent ? null : { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, mode === 'journal' ? LONG : '');
+      const txt = await page.evaluate(() => document.getElementById('toast').textContent);
       const acts = await page.evaluate(() => [...document.querySelectorAll('#acts button')].filter((b) => !b.hidden && b.offsetParent).map((b) => { const r = b.getBoundingClientRect(); return { id: b.id, x: r.left, y: r.top, r: r.right, b: r.bottom }; }).filter((r) => r.r > r.x && r.x < innerWidth));
       const what = mode === 'game' ? `the game's own toast ("${txt}")` : 'a journal line';
       check(tag + what + ' is fully inside the screen (was: bottom at y 328 of 284 for the journal line at 160x284)', !!t && t.h > 0 && t.x >= 0 && t.y >= 0 && t.r <= w + 0.5 && t.b <= h + 0.5, J({ t, w, h }));
@@ -53,7 +54,7 @@ const LONG = 'New in your journal: Scarlet Macaw (rare)!'; // the shape of isles
       if (known) { console.log('INFO ' + tag + 'journal line vs action button overlap (pre-existing, unresolved): ' + J(acts.filter((b) => hit(t, b)).map((b) => b.id))); check(tag + what + ' is not on the how-to card or the HUD', !!t && !hit(t, card) && !hit(t, hud), J({ t, card, hud })); }
       else check(tag + what + ' is not on the how-to card, the HUD or an action-row button', !!t && !hit(t, card) && !hit(t, hud) && acts.every((b) => !hit(t, b)), J({ t, card, hud, acts }));
       if (h <= 300) check(tag + what + ': sits at the bottom edge at the full width (8 px gutters), text not clipped', !!t && Math.abs(t.x - 8) <= 1 && Math.abs(t.r - (w - 8)) <= 1 && h - t.b <= 8 && await page.evaluate(() => { const e = document.getElementById('toast'); return e.scrollHeight <= e.clientHeight + 1 && e.scrollWidth <= e.clientWidth + 1; }), J(t));
-      if (SHOTS && (h <= 300 || mode === 'journal')) await page.screenshot({ path: `${SHOTS}/cyc14-lead-isles-toast-${w}x${h}-${mode}.jpg`, type: 'jpeg', quality: 78 });
+      if (SHOTS && (h <= 300 || mode === 'journal')) { await page.evaluate(() => { const e = document.getElementById('toast'); e.style.transition = 'none'; e.classList.add('on'); }); await page.screenshot({ path: `${SHOTS}/cyc14-lead-isles-toast-${w}x${h}-${mode}.jpg`, type: 'jpeg', quality: 78 }); }
     }
     check(tag + 'the toast is see-through to taps (pointer-events none) and the page does not scroll', await page.evaluate(() => getComputedStyle(document.getElementById('toast')).pointerEvents === 'none' && document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight), '');
     check(tag + 'no page errors, 0 database attempts', errors.length === 0 && db.count() === 0, J([errors, db.count()]));
