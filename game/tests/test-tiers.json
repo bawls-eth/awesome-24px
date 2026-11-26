@@ -2630,6 +2630,11 @@
     "tier": "full",
     "timeoutSec": 360
   },
+  "cyc14-ui.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
+  },
   "cyc13-lead-town-cull-far.test.js": {
     "class": "browser",
     "tier": "full"

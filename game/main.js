@@ -7511,9 +7511,50 @@ class TownScene extends Phaser.Scene {
       if (time >= h.until || !s.scene) { h.heart.destroy(); hs.splice(i, 1); continue; }
       const k = (time - h.t0) / ANIMAL_HELLO_HEART_MS;
       const bob = h.still ? 0 : -Math.round(Math.abs(Math.sin(k * Math.PI * 3)) * 5); // three small hops
-      h.heart.setPosition(Math.round(s.x), Math.round(s.y - s.displayHeight / 2 - 4 + bob));
+      // cyc14-ui: the DOM HUD (bag bar, Menu, A / C, panels) lies over the canvas, so a heart above an animal near the top of a phone
+      // screen was drawn under the bag bar (195x422). Every 120 ms the heart checks its spot on screen and moves to the first side of the
+      // animal that nothing covers: above (default), below, right, left; it keeps its side while that stays clear (no flicker).
+      if (!h.sideAt || time - h.sideAt >= 120) { h.sideAt = time; h.side = this.animalHelloHeartSide(h, s); }
+      const p = this.animalHelloHeartSpot(h.side, s, h.heart);
+      h.heart.setPosition(Math.round(p.x), Math.round(p.y + bob));
       if (!h.still) h.heart.setAlpha(k > 0.75 ? Math.max(0, (1 - k) * 4) : 1);
     }
+  }
+
+  // cyc14-ui: where the heart goes for a side (world coordinates of its bottom-centre origin).
+  animalHelloHeartSpot(side, s, heart) {
+    const hw = heart.displayWidth, hh = heart.displayHeight, sw = s.displayWidth / 2, sh = s.displayHeight / 2;
+    if (side === 'down') return { x: s.x, y: s.y + sh + 4 + hh };
+    if (side === 'right') return { x: s.x + sw + 4 + hw / 2, y: s.y + hh / 2 };
+    if (side === 'left') return { x: s.x - sw - 4 - hw / 2, y: s.y + hh / 2 };
+    return { x: s.x, y: s.y - sh - 4 };
+  }
+
+  // cyc14-ui: how many of 5 points of the heart at that spot are on screen and on top (the game canvas is the top element at its centre
+  // and at four inset corners, so no DOM HUD element covers it); 5 = clear.
+  animalHelloHeartClear(side, s, heart) {
+    const cam = this.cameras.main, cv = this.game.canvas;
+    if (!cam || !cv || typeof document.elementFromPoint !== 'function') return 5;
+    const cr = cv.getBoundingClientRect(), z = cam.zoom || 1;
+    const sx = cr.width / ((this.scale && this.scale.width) || cv.width || cr.width || 1); // CSS px per game px
+    const p = this.animalHelloHeartSpot(side, s, heart);
+    const w = heart.displayWidth * z * sx, hgt = heart.displayHeight * z * sx;
+    const cx = cr.left + (p.x - cam.worldView.x) * z * sx, by = cr.top + (p.y - cam.worldView.y) * z * sx;
+    const L = cx - w / 2, T = by - hgt;
+    if (L < 0 || T < 0 || L + w > innerWidth || by > innerHeight) return 0;
+    const pts = [[cx, by - hgt / 2], [L + 2, T + 2], [L + w - 2, T + 2], [L + 2, by - 2], [L + w - 2, by - 2]];
+    return pts.filter(([x, y]) => document.elementFromPoint(x, y) === cv).length;
+  }
+
+  // Above when clear; else the side it already has while that stays clear; else the first clear side; when every side is (partly)
+  // covered, the least covered one (ties: above first).
+  animalHelloHeartSide(h, s) {
+    const up = this.animalHelloHeartClear('up', s, h.heart);
+    if (up === 5) return 'up';
+    if (h.side && h.side !== 'up' && this.animalHelloHeartClear(h.side, s, h.heart) === 5) return h.side;
+    let best = 'up', bestN = up;
+    for (const side of ['down', 'right', 'left']) { const n = this.animalHelloHeartClear(side, s, h.heart); if (n === 5) return side; if (n > bestN) { best = side; bestN = n; } }
+    return best;
   }
 
   // The one line: only when #achievement-toast is free (no achievement / note showing, What's-new, welcome-back and the gate chip down), at most once
