@@ -104,8 +104,9 @@ async function sample(browser, q) {
     && on.grid.fox && on.grid.fox.cls === 'ff-strip-thumb' && on.grid.fox.nw === 48, JSON.stringify([on.grid.honeybee, on.grid.fox]));
   // cycle 11: + hawk (strip) and hummingbird / snail / dragonfly (code) = 12; cycle 12: + frog / snake / trout / catfish (T13 strips) = 16,
   // cycle 13: + crab / hedgehog / bat / spider (code) = 20, 18 of them still locked here (honeybee + fox logged; the logged heron is an SVG species)
-  check('Museum grid: every strip / code species (20) uses the thumbnail, locked ones too (silhouette); the heron keeps its SVG',
-    on.grid.thumbs === 20 && on.grid.lockedThumbs === 18 && on.grid.heron && on.grid.heron.svg, JSON.stringify(on.grid));
+  // cycle 14: + firefly / grasshopper / praying mantis (code) = 23, 21 locked (cyc14-art-forest-insects.test.js)
+  check('Museum grid: every strip / code species (23) uses the thumbnail, locked ones too (silhouette); the heron keeps its SVG',
+    on.grid.thumbs === 23 && on.grid.lockedThumbs === 21 && on.grid.heron && on.grid.heron.svg, JSON.stringify(on.grid));
   check('?ffstrips=0: the insects are the old SVG Images and the grid uses SVGs only', off.st && off.st.on === false
     && ids.every((id) => off.sp[id].length > 0 && off.sp[id].every((p) => p.type === 'Image' && !p.strip)) && off.grid.thumbs === 0 && off.grid.honeybee && off.grid.honeybee.svg,
     JSON.stringify([off.sp.honeybee[0], off.grid]));

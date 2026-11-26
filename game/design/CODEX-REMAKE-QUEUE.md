@@ -1030,3 +1030,21 @@ What this means for the T14 ask:
 3. T14 `leafcutter_ant` (hedgehog / bat / spider optional, see above).
 4. T17-hawk-v3.
 5. T10 garden bugs (bee, ladybug, snail and hummingbird have code art).
+
+## UPDATE 2026-11-26 (cycle 14, Claude G): no new Codex commits; firefly / grasshopper / praying mantis are now code art
+`git fetch origin`: **no new `codex/*` commits since the cycle 11 review**. The newest head is still `codex/t17-hawk` 1c9f2b6
+(2026-11-25 09:55 -0800). Nothing to accept or redo this cycle. The cycle 12 / 13 items (T13 nits 1-4, T17-hawk-v3, T14 ant) stay open.
+
+What changed on the Claude side (so Codex does not draw it twice):
+- **Firefly** (14 px), **grasshopper** (16 px) and **praying mantis** (16 px) are original code pixel art in
+  `game/shared/mm-town-fauna.js` (idle + move, profile + true front view; the firefly lantern blinks in idle). The SVG stays as the
+  `?ffstrips=0` fallback. Bar to beat: `beta/img/cyc14-art-town-insects-desktop-zoom.jpg`, `beta/img/cyc14-art-code-sheet.png`.
+- So from T10, `firefly` and `grasshopper` are now **optional** (no T10 item is still an SVG in the Town), and from T11
+  `praying_mantis` is optional. Still SVG in the Town: `daddy_longlegs`, `salamander` (T11), `tarantula`, `leafcutter_ant` (T14).
+
+**Priority (updated):**
+1. `howler_monkey` to finish T17.
+2. T13 nits 1-3 (`caught_down` and `class` keys first, so the batch can be audited).
+3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
+4. T17-hawk-v3.
+5. T10 / T11 items that have code art now: optional.

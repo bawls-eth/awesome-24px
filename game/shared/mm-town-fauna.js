@@ -46,6 +46,10 @@
     hedgehog: { code: true, cell: 16, fps: { idle: 2, move: 6 } },
     bat: { code: true, cell: 16, fps: { idle: 4, move: 10 } },
     spider: { code: true, cell: 14, fps: { idle: 2, move: 8 } },
+    // Cycle 14 art (G): the meadow-edge insects that were still 14 px pixelized-SVG specks; sizes = W-06 SVG size (14) or +2.
+    firefly: { code: true, cell: 14, fps: { idle: 2, move: 10 } },
+    grasshopper: { code: true, cell: 16, fps: { idle: 2, move: 6 } },
+    praying_mantis: { code: true, cell: 16, fps: { idle: 1, move: 4 } },
   };
   // Cycle 9 art (G, original code pixel art): in-village species redrawn at the hero's density (one char = one pixel, '.' clear;
   // light top-left, dark colour-matched rim). Right view only: left = flipX, the down / caught poses reuse the profile frames.
@@ -228,6 +232,66 @@
       move_down: [
         ['..............', '.....oooo.....', '....oAAAAo....', '...oAawwaao.l.', '...oaawwaaol..', '...oawaawal...', '..lowaaaawl...', '.l.laaaaado...', '..lllaaaao....', '....ohhhhllll.', '....ohkkhll...', '...llohhl..l..', '..ll..oo.l....', '.........l....'],
         ['..............', '.....oooo.....', '....oAAAAo....', '.l.oAawwaao...', '..loaawwaao...', '...lawaawao...', '...lwaaaawol..', '...odaaaaal.l.', '....oaaaalll..', '.llllhhhho....', '...llhkkho....', '..l..lhholl...', '....l.oo..ll..', '....l.........'],
+      ],
+    },
+    // Cycle 14 art (G): original code art for the meadow-edge insects (hand-placed pixel maps, rendered and checked at 8x / 1x).
+    // Firefly 14 px: dark elytra with a pale margin, pink-orange pronotum shield with a dark spot, lantern at the abdomen tip that
+    // is dim in idle f0 and lit in f1 / flight; flight raises the elytra and beats the wings. Front: shield, two eyes, spread cases.
+    // Grasshopper 16 px: big hind femur and rust tibia, eye with a glint, hop frame with the legs off the ground and a tan wing.
+    // Praying mantis 16 px: long abdomen, raised thorax, triangular head on top with the big eye, folded raptorial forelegs;
+    // front: wide triangular head with an eye at each corner, folded forelegs either side of the thorax.
+    firefly: { pal: {'o': '#22181a', 'e': '#3e3238', 'E': '#66545a', 'm': '#c89a52', 'P': '#e88a5c', 'p': '#b0563a', 's': '#2c1c1c', 'k': '#141218', 'a': '#4a3a32', 'D': '#a8a462', 'L': '#e4f06a', 'G': '#f8ffd0', 'w': '#b8c8d4', 'W': '#e6eef4'},
+      idle_right: [
+        ['..............', '..............', '..............', '..............', '..............', '.............a', '...oooooooo..a', '..oEEEEEEmoooa', '.oeEeeeeemPPPo', 'oDeeeeeeemPsPo', 'oDDooooooopppo', '.oo.a.a.a.okpa', '...a..a..a..oa', '..............'],
+        ['..............', '..............', '..............', '..............', '..............', '............a.', '...oooooooo..a', '..oEEEEEEmoooa', '.oeEeeeeemPPPo', 'oLeeeeeeemPsPo', 'oGLooooooopppo', '.oo.a.a.a.okpa', '...a..a..a..oa', '..............'],
+      ],
+      move_right: [
+        ['..............', '....oo........', '...oEEo.......', '...oeEEo......', '....oeEEo.ww..', '..wwwoemowWw.a', '.wWWWWomooww.a', '..wwwoeemoooa.', '..ooeeeemPPPo.', '.oLeeeeemPsPo.', 'oGLoooooopppo.', '.oo.a.a.aokpa.', '..............', '..............'],
+        ['..............', '..............', '..............', '..............', '......oooo....', '.....oEEEEo..a', '..ooooeeEmoo.a', '.oeEEEEemoooa.', '.oeeeeeemPPPo.', 'oLwwwwweemPsPo', 'oGWWWWWwoopppo', '.owwwwwo.okpa.', '..a..a..a..o..', '..............'],
+      ],
+      idle_down: [
+        ['..............', '..............', '..............', '..............', '......oo......', '....ooPPoo....', '...oPPssPPo...', '..oePPPPPPeo..', '.oeEopppPoEeo.', '.oeeokppkoeeo.', '.omeooppooemo.', '..oDoa..aoDo..', '..a.a....a.a..', '..............'],
+        ['..............', '..............', '..............', '..............', '......oo......', '....ooPPoo....', '...oPPssPPo...', '..oePPPPPPeo..', '.oeEopppPoEeo.', '.oeeokppkoeeo.', '.omeooppooemo.', '..oLoa..aoLo..', '..a.a....a.a..', '..............'],
+      ],
+      move_down: [
+        ['..............', '..oo......oo..', '.oEeo....oeEo.', '.oeEeo..oeEeo.', '..oeeoooomeo..', 'w..omoPPomo..w', 'Wwwo.PssPo.wwW', 'WWooPPPPPPooWW', '.wwoopppPooww.', '....okppko....', '....ooppoo....', '.....oLLo.....', '.....a..a.....', '..............'],
+        ['..............', '..............', '..............', '..............', '......oo......', '.oo.ooPPoo.oo.', 'oEeoPPssPPoeEo', 'oeEoPPPPPPoEeo', '.oeoopppPooeo.', 'wWwookppkoowWw', 'WWwwooppoowwWW', '.ww..oLLo..ww.', '.....a..a.....', '..............'],
+      ],
+    },
+    grasshopper: { pal: {'o': '#1e2a14', 'g': '#5a9a3a', 'G': '#8ac85a', 'd': '#3a6a28', 'y': '#cfdc7a', 'k': '#141218', 'l': '#3a5222', 'r': '#a8603a', 'w': '#c4b483', 'W': '#e8dcb0'},
+      idle_right: [
+        ['................', '................', '................', '..............l.', '.............l..', '.ooo........loo.', 'oGGGoo....ooGGgo', 'orGGGGoo.oGGGGgo', 'or.odGGgooGgWkgo', '.r..oddgGoggkkyo', '..ooooooggggggyo', '.oGGGgggggggyyo.', '.odddddddddyyo..', '..ooooooooooooo.', '.r.....l..l..l..', '................'],
+        ['................', '................', '................', '...............l', '..............l.', '.ooo........loo.', 'oGGGoo....ooGGgo', 'orGGGGoo.oGGGGgo', 'or.odGGgooGgWkgo', '.r..oddgGoggkkyo', '..ooooooggggggyo', '.oGGGgggggggyyo.', '.odddddddddyyo..', '..ooooooooooooo.', '.r.....l..l...l.', '................'],
+      ],
+      move_right: [
+        ['................', '................', '................', '..............l.', '.............l..', '.ooo........loo.', 'oGGGoo....ooGGgo', 'orGGGGoo.oGGGGgo', 'or.odGGgooGgWkgo', '.r..oddgGoggkkyo', '..ooooooggggggyo', '.oGGGgggggggyyo.', '.odddddddddyyo..', '..ooooooooooooo.', '..r....l.l..l...', '................'],
+        ['................', '..............l.', '.............l..', '..owwwwwww..loo.', '.oWWWWWWWwwooGgo', 'oGGGGGGgwwoGGGgo', 'oddddGGggooGgWko', '.ooooddgGoggkkyo', '...rooooggggggyo', '..r..oGgggggyyo.', '.r...odddddyyo..', 'r.....oooooooo..', '........l...l...', '................', '................', '................'],
+      ],
+      idle_down: [
+        ['................', '................', '................', '.....l....l.....', '......l..l......', '.oo...oooo...oo.', 'oGGo.oGGGGo.oGGo', 'orgo.okGGko.ogro', 'or.oooGggGooo.ro', '.r.oggyyyyggo.r.', '.r.oGgyyyygGo.r.', '..roggyyyyggor..', '...ooddddddoo...', '..l..oooooo..l..', '.l..l......l..l.', '................'],
+        ['................', '................', '................', '....l......l....', '.....l....l.....', '.oo...oooo...oo.', 'oGGo.oGGGGo.oGGo', 'orgo.okGGko.ogro', 'or.oooGggGooo.ro', '.r.oggyyyyggo.r.', '.r.oGgyyyygGo.r.', '..roggyyyyggor..', '...ooddddddoo...', '..l..oooooo..l..', '.l..l......l..l.', '................'],
+      ],
+      move_down: [
+        ['................', '................', '................', '.....l....l.....', '......l..l......', '.oo...oooo...oo.', 'oGGo.oGGGGo.oGGo', 'orgo.okGGko.ogro', 'or.oooGggGooo.ro', '.r.oggyyyyggo.r.', '.r.oGgyyyygGo.r.', '..roggyyyyggor..', '...ooddddddoo...', '...l.oooooo.l...', '..l..l....l..l..', '................'],
+        ['................', '................', '.....l....l.....', '......l..l......', '......oooo......', '.ooo.oGGGGo.ooo.', 'oGGgooGGGGoogGGo', 'orddookGGkooddro', '.rooggGggGggoor.', '..r.oggyyyggo.r.', '...roGyyyygGor..', '....oggyyyggo...', '....oddddddoo...', '.....oooooo.....', '....l......l....', '................'],
+      ],
+    },
+    praying_mantis: { pal: {'o': '#1a2a16', 'g': '#6aae44', 'G': '#9ad868', 'd': '#447a2c', 'y': '#d4e48a', 'k': '#141218', 'l': '#3e6026', 'b': '#c8dc9a', 'e': '#b8d050', 'w': '#a8c878'},
+      idle_right: [
+        ['................', '................', '................', '...........oo...', '..........oGGo..', '.........oGkeGo.', '.........ogGGyo.', '........oGgoyo..', '.......oGgo.oo..', '..ooooogdoooGo..', '.owGGGGGggoGgo..', 'owwgggggggodgo..', '.oddddddoooyo...', '..o.l..l..lo....', '...l..l..l......', '................'],
+        ['................', '................', '................', '............oo..', '...........oGGo.', '..........oGkeGo', '.........oogGGyo', '........oGgoyyo.', '.......oGgo.oo..', '..ooooogdoooGo..', '.owGGGGGggoGgo..', 'owwgggggggodgo..', '.oddddddoooyo...', '..o.l..l..lo....', '...l..l..l......', '................'],
+      ],
+      move_right: [
+        ['................', '................', '................', '...........oo...', '..........oGGo..', '.........oGkeGo.', '.........ogGGyo.', '........oGgoyo..', '.......oGgo.oo..', '..ooooogdoooGo..', '.owGGGGGggoGgo..', 'owwgggggggodgo..', '.oddddddoooyo...', '...l.l...l.o....', '..l...l.l..l....', '................'],
+        ['................', '................', '................', '...........oo...', '..........oGGo..', '.........oGkeGo.', '.........ogGGyo.', '........oGgoyo..', '.......oGgo.oo..', '..ooooogdoooGo..', '.owGGGGGggoGgo..', 'owwgggggggodgo..', '.oddddddoooyo...', '..l...l..l.o....', '..l..l....l.l...', '................'],
+      ],
+      idle_down: [
+        ['................', '................', '..ooo......ooo..', '.oeGGoooooGGeo..', '.okGGGGGGGGGko..', '..oGgggggggGo...', '...oggyyyggo....', '....oogyyoo.....', '...oGgoyyoggo...', '..oGgoogooogGo..', '..ogo.oGgo.ogo..', '..ooGooggooGoo..', '...oyoogdooyo...', '....o.oddo.o....', '....l.oooo.l....', '...l........l...'],
+        ['................', '................', '...ooo......ooo.', '..oeGGoooooGGeo.', '..okGGGGGGGGGko.', '...oGgggggggGo..', '....oggyyyggo...', '.....oogyyoo....', '...oGgoyyoggo...', '..oGgoogooogGo..', '..ogo.oGgo.ogo..', '..ooGooggooGoo..', '...oyoogdooyo...', '....o.oddo.o....', '....l.oooo.l....', '...l........l...'],
+      ],
+      move_down: [
+        ['................', '................', '..ooo......ooo..', '.oeGGoooooGGeo..', '.okGGGGGGGGGko..', '..oGgggggggGo...', '...oggyyyggo....', '....oogyyoo.....', '...oGgoyyoggo...', '..oGgoogooogGo..', '..ogo.oGgo.ogo..', '..ooGooggooGoo..', '...oyoogdooyo...', '....o.oddo.o....', '...l..oooo..l...', '..l..........l..'],
+        ['................', '................', '..ooo......ooo..', '.oeGGoooooGGeo..', '.okGGGGGGGGGko..', '..oGgggggggGo...', '...oggyyyggo....', '....oogyyoo.....', '...oGgoyyoggo...', '..oGgoogooogGo..', '..ogo.oGgo.ogo..', '..ooGooggooGoo..', '...oyoogdooyo...', '....o.oddo.o....', '.....loooo.l....', '....l.......l...'],
       ],
     },
   };
