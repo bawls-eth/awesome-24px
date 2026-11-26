@@ -317,3 +317,24 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
   body.touch #mini { width: 40px; height: 40px; }
   body.touch #btn-map { right: calc(8px + 44px + 4px + env(safe-area-inset-right)); }
 }
+/* cyc12-ui (cycle-11 L note "Isles at 160x284: the action column overlaps the HUD and Pack"), measured at 160x284 first: HUD y 76-159,
+   the action column (Decor / Sail / Soothe stacked above Attack) ran from y 42 to 178 over the HUD and the Pack button, the 88 px stick
+   (x 8-96) and the 76 px Attack (x 76-152) covered each other, and the compact how-to column (y 166-264) sat on the stick. A 284 px tall
+   screen cannot hold a 136 px column, so under 190 px: the HUD sits right under the top row (y 60), the action buttons are ONE row under
+   it (scrolls sideways when more than three show), the stick is 64 px and Attack 56 px (both still >= 44), and the how-to card is a
+   row (Tips, close) at the left end of the action row, which then starts right of it. */
+@media (max-width: 189px) and (orientation: portrait) {
+  body.touch #hud, body.touch.mm-nav-on #hud { top: calc(60px + env(safe-area-inset-top)); }
+  body.touch #stick { width: 64px; height: 64px; bottom: calc(12px + env(safe-area-inset-bottom)); }
+  body.touch #knob { left: 15px; top: 15px; width: 30px; height: 30px; }
+  body.touch #touch-btns { bottom: calc(12px + env(safe-area-inset-bottom)); }
+  body.touch #btn-fire { width: 56px; height: 56px; font-size: 12px; }
+  body.touch #acts, body.touch.abil-on #acts { left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); bottom: calc(12px + 64px + 8px + env(safe-area-inset-bottom));
+    flex-direction: row; flex-wrap: nowrap; justify-content: flex-start; align-items: stretch; gap: 2px; max-width: none; overflow-x: auto; scrollbar-width: none; }
+  body.touch #acts::-webkit-scrollbar { display: none; }
+  body.touch #acts button { flex: 0 0 auto; min-width: 44px; min-height: 44px; max-width: none; padding: 0 3px; font-size: 12px; letter-spacing: 0; }
+  body.touch #acts button .ico { display: none; }
+  .howto.compact { top: auto; bottom: calc(12px + 64px + 8px + env(safe-area-inset-bottom)); flex-direction: row; }
+  body.touch:has(#howto.compact:not([hidden])) #acts { left: calc(8px + 98px + 2px + env(safe-area-inset-left)); }
+  body.touch.one-thumb #touch #btn-ability { bottom: calc(12px + 64px + 8px + 44px + 4px + env(safe-area-inset-bottom)); }
+}

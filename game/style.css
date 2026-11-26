@@ -3263,4 +3263,33 @@ body.town-phone-nav #where-to-btn { display: none !important; }
 #museum-overlay .museum-tab-count { font-size: 12px; }
 @media (min-width: 300px) {
   body.a11y-hud-scaled #museum-overlay .museum-card { zoom: var(--hud-scale); max-width: calc((100vw - 24px) / var(--hud-scale)); max-height: calc(88vh / var(--hud-scale)); max-height: calc(88dvh / var(--hud-scale)); }
+
+/* cyc12-ui (cycle-11 U notes), measured at 195x422 and 390x844 first:
+   - the Museum tabs were 29 px tall (under the 44 px target);
+   - the ✕ is absolutely placed inside the scrolling card, so after a scroll it sat at y -366 (195) / -340 (390), off screen;
+   - the corner Menu (#mm-nav-btn, z 9000: shared/mm-nav.css loads after style.css, so the Town's --mm-nav-z: 19 never applies) drew
+     over the card's top-left corner and the stuck tab bar (the "Fossils" tab at 195 px).
+   On phones (<= 480 px) the tabs are 44 px, the ✕ is sticky in the tab-bar row (6 px from the card's top edge, right end; the bar's
+   scroll box ends 4 px left of it, its colour carried on by a box-shadow, so a scrolled tab never slides under the ✕), and the corner Menu is hidden while the Museum (a modal dialog) is open. */
+@media (max-width: 480px) {
+  #museum-overlay .museum-tab { min-height: 44px; }
+  #museum-overlay #museum-close-btn {
+    position: sticky !important; top: -14px !important; right: auto !important;
+    align-self: flex-end; flex-shrink: 0; margin: -14px -10px -44px 0; z-index: 3;
+  }
+  #museum-overlay .museum-tabs { margin-right: 38px; padding-right: 8px; box-shadow: 54px 0 0 #232c3a; }
+  #museum-overlay .museum-card { scroll-padding-top: 64px; }
+  body:has(#museum-overlay:not(.hidden)) #mm-nav-btn { visibility: hidden; }
+}
+@media (max-width: 300px) {
+  #museum-overlay .museum-tabs { padding-right: 4px; }
+  #museum-overlay .museum-card { scroll-padding-top: 56px; }
+}
+/* cyc12-ui (cycle-11 L note "solid black ~190x265 block on the phone Town"), measured at 390x844: the What's-new banner is a scroller
+   (max-height 32vh, overflow-y auto) with an opaque background, so Chromium composites its scrolling; over the WebGL game canvas that
+   layer came out as a black box mirrored top-to-bottom (y = 844 - 16 - 270 = 558..825, x = the banner's), in screenshots AND in the
+   compositor's screencast frames, so it is what the compositor draws, not a capture quirk. Any opaque scroller over the canvas does it
+   (a test div at y 300 gave a block at y 444). A 1 % see-through background keeps the banner off composited scrolling: no block. */
+@media (max-width: 720px) {
+  #whats-new-banner { background-color: color-mix(in srgb, var(--ac-sky-tint) 99%, transparent); }
 }
