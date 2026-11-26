@@ -94,3 +94,14 @@ Open: ID-09 Town wiring (badge, toast, 4 keys, Backup, index.html script tag; to
 - S: ID-65 persistent "Not saved" chip (Town and Realm), ID-66 workbench goal steps, ID-62 treat bubble, ID-63 Isles callback (additive key `islesTameSeen`).
 - Integration: merged all five; hello heart side is now decided after each render (fresh camera view) after `cyc13-s-animal-hello` failed intermittently; save-merge-fuzz fake arena stubs `_syncSaveWarn`; cache tags bumped. No threshold changed, no test weakened.
 - Open: cull window runs out after ~20-25 more converted animal sprites (past ~215 sprites the pin test cannot pass whatever the code does: needs a decision); other `loadSave()` pay-once readers (fishlog claimed, weedsPulled, bugoff, home visitor bonus) unaudited, shared helper proposed; Realm "Not saved" chip at 195x422 sits far from Leave; Isles 195x422 4-line toast reaches Soothe; ID-62/66 not run at 390x844; the two `noHello` carve-outs can go after a green stamp; ID-64 build and ID-68..70 still to implement; remaining SVG animals: daddy longlegs, salamander, tarantula, leafcutter ant.
+
+## Cycle 15 (stamp 660/660 on bdaf8f1)
+**Changed**
+- L: pay-once readers behind `payOnceRecord` (fixed Bug-Off repeat Bronze, daily neighbor hello +2 hearts repeat, Mocha errand wood repeat); ID-70/ID-68 reports (ID-70 conditions: OR into `mercy`, hold creatures still, no new attack starts, keep cyc0-isles-leash green). World-label cull not done.
+- U: Realm Not-saved chip slot (above Leave at 195x422; in More tray at 160x284 with amber "!" badge), hello heart at whole-number scale, Isles `placeToast()`, goal card wrap at 390x844.
+- G: salamander code art on, daddy longlegs staged behind `?ffstaged=1`, treat bubble art (flower/fruit).
+- D: ID-64 build spec (B quick dash x0.90 ships, A long dash solo-only), ideas ID-71..73, coach text fixes (Q/E/R/F keys, Nexus step).
+- S: ID-69 Isles hint, ID-68 Shore first-level floor (`?lvfloor=0`), `noHello` carve-outs removed.
+- Integration: cache-bust tags bumped.
+**Tested**: stamp 1 659/660 (cyc2-art-isles-field 3 ms timing check, passed 5/5 solo, nothing in cycle touches grass gen); stamp 2 648/660 first pass, 12 load flakes all passed solo, final 660/660.
+**Queued**: coach card height at 195x422; 4-line Isles toast at 195x422; cull sprite floor vs cap needs a decision on the pin test (daddy longlegs stays flagged off); whole-key save writes (fishlog, home, weedsPulled, birthdays); ID-64 build, ID-70 bot measurement, ID-71..73 review; SVG animals left: tarantula, leafcutter ant.
