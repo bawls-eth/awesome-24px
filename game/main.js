@@ -7660,6 +7660,9 @@ class TownScene extends Phaser.Scene {
     const still = reduceMotion || document.body.classList.contains('a11y-reduce-motion');
     const heart = makeAnimalHelloHeart(this, sprite.x, sprite.y - sprite.displayHeight / 2 - 4).setDepth(99996);
     const h = { heart, spec, until: time + ANIMAL_HELLO_HEART_MS, still, t0: time };
+    // choose a clear side and stand there at once (not on the next frame), so the heart is never seen under the HUD for a frame
+    h.sideAt = time; h.side = this.animalHelloHeartSide(h, sprite);
+    { const p0 = this.animalHelloHeartSpot(h.side, sprite, heart); heart.setPosition(Math.round(p0.x), Math.round(p0.y)); }
     this.animalHelloHearts = this.animalHelloHearts || [];
     this.animalHelloHearts.push(h);
     return h;
