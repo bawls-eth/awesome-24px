@@ -86,8 +86,11 @@ const st = (page) => page.evaluate(() => {
     await page.evaluate(() => { window.__mm.arena.setHeroLevelSource(() => ({ cls: 'ranger', level: 20 })); });
     await openShop(tap);
     const offers = await page.evaluate(() => Array.from(document.querySelectorAll('#realm-shop-body button[data-buy]')).map((b) => [b.dataset.buy, Number(b.dataset.r)]));
-    const wpn = offers.filter((o) => /^wpn_/.test(o[0])); const base = offers.filter((o) => !/^wpn_/.test(o[0]));
+    const wpn = offers.filter((o) => /^wpn_/.test(o[0])); const arm = offers.filter((o) => /^arm_/.test(o[0])); const base = offers.filter((o) => !/^wpn_/.test(o[0]) && !/^arm_/.test(o[0]));
     check('3: a level-20 ranger sees all three rarities of the base items and of its bow family (21 base + 12 bows)', base.length === 21 && wpn.length === 12 && wpn.every((o) => /^wpn_bow_/.test(o[0])), JSON.stringify({ base: base.length, wpn: wpn.map((o) => o[0] + ':' + o[1]) }));
+    check('3: and its armour family (a ranger wears Light): the tier-1 Scout Jerkin at all three rarities', arm.length === 3 && arm.every((o) => o[0] === 'arm_light_scout') && [0, 1, 2].every((r) => arm.some((o) => o[1] === r)), JSON.stringify(arm));
+    const bought = await page.evaluate(() => { const a = window.__mm.arena; const ok = a.buy('arm_light_scout', 1); const it = a.save.items.find((x) => x.id === 'arm_light_scout'); const out = { ok, t: it && it.t, r: it && it.r }; a.save.items = []; a.save.shards = 100000; a.save.nextUid = 20; a.displayShards = 100000; a.onSave(a.save); a.renderShop(); return out; });
+    check('3: buying the shop armour stores it as a tier-1 piece (so it counts when worn)', bought.ok === true && bought.t === 1 && bought.r === 1, JSON.stringify(bought));
     const pick = wpn.concat(base.filter((o, i) => i % 2 === 0 || i === 1).slice(0, 12)); // 24 = the backpack size; base: every other row, all rarities
     const bad = [];
     for (const [id, r] of pick) {

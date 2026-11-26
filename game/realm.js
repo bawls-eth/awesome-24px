@@ -3628,6 +3628,10 @@ class RealmArena {
       const rs = []; out.forEach((o) => { if (rs.indexOf(o.r) < 0) rs.push(o.r); });
       rs.forEach((r) => RM_WPN_ITEMS.forEach((def) => { if (def.family === fam) out.push({ id: def.id, r, price: RM_RARITIES[r].sell * RM_SHOP_MULT }); }));
     }
+    // Armour: the hero's armour family, its first (tier 1) piece at the unlocked rarities (never Epic), same price rule. Tier 1 is bought as t:1.
+    const af = RM_GEAR_ON && this.heroClass() && MMGear.armorFamilyOf ? MMGear.armorFamilyOf(this.heroClass()) : null;
+    const aid = af && MMGear.ARMOR_IDS && MMGear.ARMOR_IDS[af] ? MMGear.ARMOR_IDS[af][0] : null;
+    if (aid && RM_ITEM_BY_ID[aid]) { const rs = []; out.forEach((o) => { if (rs.indexOf(o.r) < 0) rs.push(o.r); }); rs.forEach((r) => out.push({ id: aid, r, price: RM_RARITIES[r].sell * RM_SHOP_MULT, t: 1 })); }
     return out;
   }
 
@@ -3637,7 +3641,7 @@ class RealmArena {
     if (!this.shopStock().some((o) => o.id === id && o.r === r)) return false;
     const price = RM_RARITIES[r].sell * RM_SHOP_MULT;
     if (sv.shards < price || sv.items.length >= RM_BACKPACK) return false;
-    sv.shards -= price; sv.items.push(rmTagged({ n: sv.nextUid++, id, r }));
+    sv.shards -= price; sv.items.push(rmTagged(RM_ITEM_BY_ID[id].arm ? { n: sv.nextUid++, id, r, t: 1 } : { n: sv.nextUid++, id, r }));
     if (rmShopPinGet() === `${id}:${r}`) { rmShopPinSet(null); this._pinKey = ''; } // ID-56: the goal is bought, the pin clears silently
     this.displayShards = sv.shards;
     this._snd('pickup');
@@ -3717,7 +3721,7 @@ class RealmArena {
       const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
       const why = full ? 'backpack full' : can ? '' : `need ${o.price - sv.shards} more shards`; // not `disabled`: a dead button swallows the tap, this one answers it
       const star = `<button type="button" class="rm-pin" data-pin="${pid}" aria-pressed="${on}" aria-label="${on ? 'Stop saving for' : 'Save for'} ${rar.name} ${def.name}">${on ? '★' : '☆'}</button>`;
-      html += `<li${on ? ' class="rm-pinned"' : ''}><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span>${star}<button type="button" class="eq${can ? '' : ' off'}" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' aria-disabled="true"'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards${why ? ` (${why})` : ''}">Buy ${o.price}💎</button></li>`;
+      html += `<li${on ? ' class="rm-pinned"' : ''}><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(o.t ? { id: o.id, r: o.r, t: o.t } : { id: o.id, r: o.r })}</span>${star}<button type="button" class="eq${can ? '' : ' off'}" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' aria-disabled="true"'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards${why ? ` (${why})` : ''}">Buy ${o.price}💎</button></li>`;
     });
     let foot = '';
     if (this._worldCopy()) { const nr = RM_SHOP_UNLOCK_LV.findIndex((l, r) => sv.level < l && sv.bestWave < RM_SHOP_UNLOCK[r]); if (nr > 0) foot = `Reach level ${RM_SHOP_UNLOCK_LV[nr]} to unlock ${RM_RARITIES[nr].name} gear.`; } else {
