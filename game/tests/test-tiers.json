@@ -2629,5 +2629,19 @@
   "cyc13-lead-town-cull-far.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc14-design-id64-economy.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc14-design-refused-claims.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
+  },
+  "cyc14-design-polyroll-stake.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
   }
 }

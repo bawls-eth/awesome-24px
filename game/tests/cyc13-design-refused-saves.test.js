@@ -50,10 +50,13 @@ const toastTxt = (page) => page.evaluate(() => (document.getElementById('achieve
     await page.waitForTimeout(300);
     await T(page, (s) => s.openPolyroll());
     check(`${tag} Polyroll opens`, await page.evaluate(() => !document.getElementById('polyroll-overlay').classList.contains('hidden')));
+    // cyc14: a refused stake pauses the roll (see cyc14-design-polyroll-stake.test.js); the "not saved yet" line is for a payout that
+    // is refused after the stake landed: take the stake with storage working, then refuse the write for the payout.
+    await T(page, (s) => { s._tk = s.polyrollTakeStake(1); });
     await quota(page, true);
-    await page.click('#polyroll-play-btn'); await page.waitForTimeout(250);
+    await T(page, (s) => s.resolvePolyroll('🎲 rolled 3', true, 5)); await page.waitForTimeout(250);
     const pr = await page.evaluate(() => document.getElementById('polyroll-result').textContent);
-    check(`${tag} [PR] refused save: the Polyroll result says not saved yet`, WARN.test(pr) && /rolled|landed/.test(pr), pr);
+    check(`${tag} [PR] refused payout save: the Polyroll result says not saved yet`, WARN.test(pr) && /rolled|landed/.test(pr), pr);
     if (SHOTS) await page.screenshot({ path: SHOTS + `/cyc13-design-polyroll-unsaved-${vp.tag}.jpg`, type: 'jpeg', quality: 65 }).catch(() => null);
     await quota(page, false);
     await T(page, (s) => { s.incrementStat('sparkles'); });
