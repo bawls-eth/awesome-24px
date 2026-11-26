@@ -317,6 +317,12 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
 @media (max-width: 300px) and (max-height: 300px) {
   body:has(#howto.compact:not([hidden])) #toast { top: auto; bottom: calc(4px + env(safe-area-inset-bottom)); left: 8px; right: 8px; }
 }
+/* cyc15-ui: the same without the how-to card. At 160x284 the default top: 22% put a journal toast at y 62-121, on the HUD (y 60-143) and the
+   Pack button; the column has no band tall enough between the HUD, the action row and the stick, so it takes the bottom edge here too
+   (see-through to taps, over the stick for its 2.2 s). */
+@media (max-width: 300px) and (max-height: 300px) {
+  #toast { top: auto; bottom: calc(4px + env(safe-area-inset-bottom)); left: 8px; right: 8px; }
+}
 /* cyc11 L (a11y sweep at 160x284 = a 320 px phone at 200% zoom): the Map toggle sat left of the 68 px mini-map at x 34-78, under the
    48 px Menu button (x 8-56). Under 190 px the top row cannot hold Menu + Map + a 68 px map (188 px), so the mini-map is 40 px there
    (44 with its frame) and the toggle sits between the Menu and the map: Menu 8-56, Map 60-104, mini-map 108-152 on a 160 px screen. */

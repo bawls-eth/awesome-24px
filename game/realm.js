@@ -5582,35 +5582,73 @@ class RealmArena {
         if (e.key !== 'Escape' || note.classList.contains('hidden')) return;
         e.preventDefault(); e.stopImmediatePropagation(); closeNote();
       }, true);
+      // cyc15-ui: the <= 190 px More tray opening / closing (body class) moves the chip in / out of the tray at once
+      if (typeof MutationObserver !== 'undefined') new MutationObserver(() => {
+        if ((document.body.classList.contains('rw-more-open') ? 1 : 0) !== this._saveWarnTray && !chip.hidden) this._syncSaveWarn(true);
+      }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     }
     if (chip.hidden === show) chip.hidden = !show;
-    if (!show) { const n = document.getElementById('realm-save-warn-note'); if (n) n.classList.add('hidden'); return; }
+    if (!show) {
+      const n = document.getElementById('realm-save-warn-note'); if (n) n.classList.add('hidden');
+      document.body.classList.remove('rm-sw-on'); const mb = document.getElementById('rw-more-btn'); if (mb) this._moreWarn(mb, false);
+      return;
+    }
     const t = Date.now();
-    if (!now && t - (this._saveWarnPlacedAt || 0) < 300) return;
+    const trayKey = document.body.classList.contains('rw-more-open') ? 1 : 0; // cyc15-ui: the tray opening / closing re-places the chip at once
+    if (!now && trayKey === this._saveWarnTray && t - (this._saveWarnPlacedAt || 0) < 300) return;
+    this._saveWarnTray = trayKey;
     this._saveWarnPlacedAt = t;
     this._placeSaveWarn(chip);
   }
 
+  // cyc15-ui: the More button carries the warning while the <= 190 px tray is closed (amber ring + "!" badge, named in its label).
+  _moreWarn(mb, on) {
+    mb.classList.toggle('rw-more-warn', !!on);
+    const base = 'More: backpack, board, settings, daily, leave';
+    const want = on ? base + '. Progress not saved' : base;
+    if (mb.getAttribute('aria-label') !== want) mb.setAttribute('aria-label', want);
+  }
+
+  // cyc14 S, slots re-chosen in cyc15-ui. <= 300 px the chip is a fixed 44 x 44 two-line "⚠ Not / saved" placed next to Leave:
+  //   - <= 190 px (More tray): it lives in the tray. Closed: the chip is tucked and the More button shows the warning. Open: the free
+  //     48 x 44 cell of the left column under the zone line, one column from Leave (it sat on the aim stick and under Daily before).
+  //   - 195 px: right above Leave (body.rm-sw-on nudges Board / Menu 10 px left to free the cell; it was 166 px under Leave, between the sticks).
+  //   - anything else: the old walk down from under Leave, sticks now counted as obstacles.
   _placeSaveWarn(chip) {
     const narrow = window.innerWidth <= 300;
     chip.classList.toggle('rm-save-warn-fixed', narrow);
-    if (!narrow) { if (chip.style.left) { chip.style.left = ''; chip.style.top = ''; } return; }
+    const mb = document.getElementById('rw-more-btn');
     const vis = (e) => { if (!e || e === chip || e.hidden || e.classList.contains('hidden')) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return null; const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && r.bottom > 0 && r.top < innerHeight ? r : null; };
+    const tray = narrow && vis(mb);
+    if (mb) this._moreWarn(mb, !!tray && !document.body.classList.contains('rw-more-open'));
+    chip.classList.toggle('rm-save-warn-tucked', !!tray && !document.body.classList.contains('rw-more-open'));
+    if (!narrow) { document.body.classList.remove('rm-sw-on'); if (chip.style.left) { chip.style.left = ''; chip.style.top = ''; } return; }
+    if (tray && !document.body.classList.contains('rw-more-open')) { document.body.classList.remove('rm-sw-on'); return; }
+    if (!tray) document.body.classList.add('rm-sw-on'); else document.body.classList.remove('rm-sw-on');
     const leave = vis(document.getElementById('realm-leave-btn'));
     const w = chip.offsetWidth || 44, h = chip.offsetHeight || 44;
+    const root = document.getElementById('realm-overlay') || document.body;
+    const obstacles = [...root.querySelectorAll('button, a[href], [role=button], [role=application]:not(#realm-canvas-wrap), .realm-stick, #realm-hp, #realm-xp, #realm-info, #realm-boss, #realm-partner, #rw-minimap, #rw-zone, #mm-nav-btn, #mm-gear-btn')]
+      .filter((e) => !chip.contains(e)).map(vis).filter((r) => r && r.width * r.height < 0.5 * innerWidth * innerHeight);
+    for (const id of ['mm-nav-btn', 'mm-gear-btn', 'mm-daily-btn']) { const r = vis(document.getElementById(id)); if (r) obstacles.push(r); }
+    const free = (l, t) => l >= 2 && t >= 2 && l + w <= innerWidth - 1 && t + h <= innerHeight - 1 && !obstacles.some((r) => r.left < l + w - 2 && r.right > l + 2 && r.top < t + h - 2 && r.bottom > t + 2);
+    const put = (l, t) => { chip.style.left = Math.round(l) + 'px'; chip.style.top = Math.round(t) + 'px'; };
+    const cands = [];
+    if (tray) { const z = vis(document.getElementById('rw-zone')); if (z) cands.push([z.left, z.bottom]); }
+    if (leave) {
+      cands.push([Math.min(innerWidth - w - 2, leave.left + 4), leave.top - h - 4], [Math.min(innerWidth - w - 2, leave.left), leave.top - h - 4]); // above Leave
+      cands.push([leave.left - w - 4, leave.top]); // left of Leave
+    }
+    for (const [l, t] of cands) if (free(l, t)) { put(l, t); return; }
     let left = leave ? Math.round(Math.max(4, Math.min(innerWidth - w - 4, leave.right - w))) : Math.max(4, innerWidth - w - 8);
     let top = leave ? Math.round(leave.bottom + 4) : 56;
-    const root = document.getElementById('realm-overlay') || document.body;
-    const obstacles = [...root.querySelectorAll('button, a[href], [role=button], [role=application]:not(#realm-canvas-wrap), #realm-hp, #realm-xp, #realm-info, #realm-boss, #realm-partner, #rw-minimap, #mm-nav-btn, #mm-gear-btn')]
-      .filter((e) => !chip.contains(e)).map(vis).filter((r) => r && r.width * r.height < 0.5 * innerWidth * innerHeight);
-    const navb = vis(document.getElementById('mm-nav-btn')); if (navb) obstacles.push(navb);
     for (let k = 0; k < 16; k++) {
       const hit = obstacles.find((r) => r.left < left + w - 1 && r.right > left + 1 && r.top < top + h - 1 && r.bottom > top + 1);
       if (!hit) break;
       top = Math.round(hit.bottom + 4);
     }
     if (top + h > innerHeight) top = leave ? Math.round(leave.bottom + 4) : 56;
-    chip.style.left = left + 'px'; chip.style.top = top + 'px';
+    put(left, top);
   }
 
   _syncHud(force) {

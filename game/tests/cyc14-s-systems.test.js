@@ -173,8 +173,12 @@ const chipState = (page, id) => page.evaluate((cid) => {
       const lr = await page.evaluate(() => { const i = document.getElementById('realm-info').getBoundingClientRect(), w = document.getElementById('realm-save-warn').getBoundingClientRect(); return { sameRow: Math.abs((i.top + i.bottom) / 2 - (w.top + w.bottom) / 2) < 30, left: w.right <= i.left + 1, it: i.top, wt: w.top }; });
       check(`[65R ${tag}] > 300 px: in the HUD, left of #realm-info (or on the button row above a wrapped info line)`, lr.left || !lr.sameRow, JSON.stringify(lr));
     } else {
-      const ul = await page.evaluate(() => { const l = document.getElementById('realm-leave-btn').getBoundingClientRect(), w = document.getElementById('realm-save-warn').getBoundingClientRect(); return { below: w.top >= l.bottom + 3, lt: l.bottom, wt: w.top }; });
-      check(`[65R ${tag}] <= 300 px: under the Leave button`, ul.below, JSON.stringify(ul));
+      // cyc15-ui: "under the Leave button" was met 166 px under it (y 312, over the aim stick top); the slot is now right next to Leave
+      // (above it at 195x422), so the check is the stricter edge gap <= 8 px and no overlap with Leave
+      const ul = await page.evaluate(() => { const l = document.getElementById('realm-leave-btn').getBoundingClientRect(), w = document.getElementById('realm-save-warn').getBoundingClientRect();
+        const gx = Math.max(0, Math.max(l.left, w.left) - Math.min(l.right, w.right)), gy = Math.max(0, Math.max(l.top, w.top) - Math.min(l.bottom, w.bottom));
+        return { next: gx + gy <= 8 && (gx > 0 || gy > 0), gx, gy, lt: l.top, wt: w.top }; });
+      check(`[65R ${tag}] <= 300 px: right next to the Leave button (edge gap <= 8 px, not on it)`, ul.next, JSON.stringify(ul));
     }
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/cyc14-systems-savewarn-realm-${tag}.jpg`, type: 'jpeg', quality: 75 });
     const r0 = await page.evaluate(() => window.__mm.arena.saveWarnRetries || 0);
@@ -211,7 +215,7 @@ const chipState = (page, id) => page.evaluate((cid) => {
   });
   const pressE = async (page, vp) => { if (vp.touch) await page.tap('#interact-btn'); else await page.keyboard.press('e'); await page.waitForTimeout(250); };
   const stand = (page, x, y) => page.evaluate(([px, py]) => { const s = window.__g.scene.getScene('Town'); s.localBody.setPosition(px, py); if (s.localBody.body) s.localBody.body.setVelocity(0, 0); }, [x, y]);
-  if (want('66')) for (const vp of [VPS[0], VPS[2]]) {
+  if (want('66')) for (const vp of [VPS[0], VPS[1], VPS[2]]) { // cyc15-ui: + 390x844 (cycle 14 open: not run there)
     const tag = tagOf(vp);
     const ctx = await ctxFor(browser, vp);
     const db = await offlineStub(ctx);
@@ -326,7 +330,7 @@ const chipState = (page, id) => page.evaluate((cid) => {
       flowers: s.resources.flowers || 0, fruit: s.resources.fruit || 0, hearts: (s.animalHelloHearts || []).map((h) => h.spec.id), given: (s.treatGiven || []).slice(), toast: vis(t) ? t.textContent : '', ov, deal,
       inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight };
   });
-  if (want('62')) for (const vp of [VPS[0], VPS[2]]) {
+  if (want('62')) for (const vp of [VPS[0], VPS[1], VPS[2]]) { // cyc15-ui: + 390x844 (cycle 14 open: not run there)
     const tag = tagOf(vp);
     const ctx = await ctxFor(browser, vp);
     const db = await offlineStub(ctx);
