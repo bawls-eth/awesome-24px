@@ -303,13 +303,21 @@ function writeSaveMerged(fn) {
 
 // Counters: stored + (mine - base) per key, clamped to 0..cap. Keys only storage has are kept (additive);
 // a tab that missed another tab's write adds only its OWN change, never its stale total.
-function townMergeCounts(stored, mine, base, cap) {
+// cyc13-lead: lifetimeStats keys that are a "best so far", not a counter. Two tabs merge them as max(stored, mine); adding this tab's
+// increase on top of another tab's best (6 + (5 - 3) = 8) invented a record nobody reached.
+const TOWN_BEST_STATS = ['bestSellStreak', 'homeCozyBest', 'fishSpecies'];
+function townMergeCounts(stored, mine, base, cap, best) {
   const s = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
   const b = base && typeof base === 'object' ? base : null;
   const out = { ...s };
   const lim = cap || 1e9;
   Object.keys(mine || {}).forEach((k) => {
     const m = Number(mine[k]) || 0;
+    if (best && best.includes(k)) { // a best value: the higher one wins; with nothing of this tab's own (mine === base) storage stays
+      const own = b ? m !== (Number(b[k]) || 0) : true;
+      out[k] = Math.min(lim, own ? Math.max(cleanCount(s[k]), cleanCount(m)) : cleanCount(s[k]));
+      return;
+    }
     const delta = b ? m - (Number(b[k]) || 0) : m - (cleanCount(s[k]));
     out[k] = Math.min(lim, cleanCount(cleanCount(s[k]) + delta));
   });
@@ -4721,7 +4729,7 @@ class TownScene extends Phaser.Scene {
     // Beta S-02: stats are stored + this tab's own increase, unlocks are the union, so another tab's progress is kept.
     const base = this._statsBase || null;
     const p = writeSaveMerged((stored) => ({
-      lifetimeStats: townMergeCounts(stored.lifetimeStats, this.lifetimeStats, base),
+      lifetimeStats: townMergeCounts(stored.lifetimeStats, this.lifetimeStats, base, 0, TOWN_BEST_STATS),
       achievementsUnlocked: townUnion(stored.achievementsUnlocked, [...this.achievementsUnlocked]),
     }));
     if (!p) return;
@@ -5007,7 +5015,8 @@ class TownScene extends Phaser.Scene {
       Object.keys(st).forEach((k) => { next[k] = cleanCount(st[k]); });
       Object.keys(this.lifetimeStats).forEach((k) => {
         const d = (Number(this.lifetimeStats[k]) || 0) - (Number(base[k]) || 0);
-        if (d !== 0) next[k] = cleanCount(cleanCount(st[k]) + d); // this tab's own unsaved increase
+        // this tab's own unsaved change: a counter adds it to what storage holds, a best value keeps the higher of the two (cyc13-lead)
+        if (d !== 0) next[k] = TOWN_BEST_STATS.includes(k) ? Math.max(cleanCount(st[k]), cleanCount(this.lifetimeStats[k])) : cleanCount(cleanCount(st[k]) + d);
         if (!(k in next)) delete this.lifetimeStats[k];
       });
       Object.keys(next).forEach((k) => { this.lifetimeStats[k] = next[k]; });
