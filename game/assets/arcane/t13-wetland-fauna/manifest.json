@@ -14,7 +14,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_frog"
     },
     {
       "id": "ff_frog_move",
@@ -28,7 +29,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_frog"
     },
     {
       "id": "ff_frog_caught",
@@ -42,7 +44,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 0,
-      "loop": false
+      "loop": false,
+      "class": "ff_frog"
     },
     {
       "id": "ff_frog_idle_down",
@@ -56,7 +59,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_frog"
     },
     {
       "id": "ff_frog_move_down",
@@ -70,7 +74,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_frog"
     },
     {
       "id": "ff_poison_dart_frog_idle",
@@ -84,7 +89,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_poison_dart_frog"
     },
     {
       "id": "ff_poison_dart_frog_move",
@@ -98,7 +104,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_poison_dart_frog"
     },
     {
       "id": "ff_poison_dart_frog_caught",
@@ -112,7 +119,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 0,
-      "loop": false
+      "loop": false,
+      "class": "ff_poison_dart_frog"
     },
     {
       "id": "ff_poison_dart_frog_idle_down",
@@ -126,7 +134,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_poison_dart_frog"
     },
     {
       "id": "ff_poison_dart_frog_move_down",
@@ -140,7 +149,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_poison_dart_frog"
     },
     {
       "id": "ff_dragonfly_idle",
@@ -154,7 +164,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_dragonfly"
     },
     {
       "id": "ff_dragonfly_move",
@@ -168,7 +179,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_dragonfly"
     },
     {
       "id": "ff_dragonfly_caught",
@@ -182,7 +194,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 0,
-      "loop": false
+      "loop": false,
+      "class": "ff_dragonfly"
     },
     {
       "id": "ff_dragonfly_idle_down",
@@ -196,7 +209,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_dragonfly"
     },
     {
       "id": "ff_dragonfly_move_down",
@@ -210,7 +224,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_dragonfly"
     },
     {
       "id": "ff_butterfly_idle",
@@ -224,7 +239,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_butterfly"
     },
     {
       "id": "ff_butterfly_move",
@@ -238,7 +254,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_butterfly"
     },
     {
       "id": "ff_butterfly_caught",
@@ -252,7 +269,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 0,
-      "loop": false
+      "loop": false,
+      "class": "ff_butterfly"
     },
     {
       "id": "ff_butterfly_idle_down",
@@ -266,7 +284,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_butterfly"
     },
     {
       "id": "ff_butterfly_move_down",
@@ -280,7 +299,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_butterfly"
     },
     {
       "id": "ff_trout_idle",
@@ -294,7 +314,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_trout"
     },
     {
       "id": "ff_trout_move",
@@ -308,7 +329,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_trout"
     },
     {
       "id": "ff_trout_caught",
@@ -322,7 +344,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 0,
-      "loop": false
+      "loop": false,
+      "class": "ff_trout"
     },
     {
       "id": "ff_trout_idle_down",
@@ -336,7 +359,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_trout"
     },
     {
       "id": "ff_trout_move_down",
@@ -350,7 +374,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_trout"
     },
     {
       "id": "ff_catfish_idle",
@@ -364,7 +389,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_catfish"
     },
     {
       "id": "ff_catfish_move",
@@ -378,7 +404,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_catfish"
     },
     {
       "id": "ff_catfish_caught",
@@ -392,7 +419,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 0,
-      "loop": false
+      "loop": false,
+      "class": "ff_catfish"
     },
     {
       "id": "ff_catfish_idle_down",
@@ -406,7 +434,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_catfish"
     },
     {
       "id": "ff_catfish_move_down",
@@ -420,7 +449,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_catfish"
     },
     {
       "id": "ff_snake_idle",
@@ -434,7 +464,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_snake"
     },
     {
       "id": "ff_snake_move",
@@ -448,7 +479,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_snake"
     },
     {
       "id": "ff_snake_caught",
@@ -462,7 +494,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 0,
-      "loop": false
+      "loop": false,
+      "class": "ff_snake"
     },
     {
       "id": "ff_snake_idle_down",
@@ -476,7 +509,8 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 2,
-      "loop": true
+      "loop": true,
+      "class": "ff_snake"
     },
     {
       "id": "ff_snake_move_down",
@@ -490,7 +524,113 @@
       "frame_w": 128,
       "frame_h": 128,
       "fps": 8,
-      "loop": true
+      "loop": true,
+      "class": "ff_snake"
+    },
+    {
+      "id": "ff_frog_caught_down",
+      "path": "fauna/ff_frog_caught_down.png",
+      "category": "fauna",
+      "species": "frog",
+      "native_cell": 32,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 0,
+      "loop": false,
+      "class": "ff_frog"
+    },
+    {
+      "id": "ff_poison_dart_frog_caught_down",
+      "path": "fauna/ff_poison_dart_frog_caught_down.png",
+      "category": "fauna",
+      "species": "poison_dart_frog",
+      "native_cell": 32,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 0,
+      "loop": false,
+      "class": "ff_poison_dart_frog"
+    },
+    {
+      "id": "ff_dragonfly_caught_down",
+      "path": "fauna/ff_dragonfly_caught_down.png",
+      "category": "fauna",
+      "species": "dragonfly",
+      "native_cell": 32,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 0,
+      "loop": false,
+      "class": "ff_dragonfly"
+    },
+    {
+      "id": "ff_butterfly_caught_down",
+      "path": "fauna/ff_butterfly_caught_down.png",
+      "category": "fauna",
+      "species": "butterfly",
+      "native_cell": 32,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 0,
+      "loop": false,
+      "class": "ff_butterfly"
+    },
+    {
+      "id": "ff_trout_caught_down",
+      "path": "fauna/ff_trout_caught_down.png",
+      "category": "fauna",
+      "species": "trout",
+      "native_cell": 32,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 0,
+      "loop": false,
+      "class": "ff_trout"
+    },
+    {
+      "id": "ff_catfish_caught_down",
+      "path": "fauna/ff_catfish_caught_down.png",
+      "category": "fauna",
+      "species": "catfish",
+      "native_cell": 32,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 0,
+      "loop": false,
+      "class": "ff_catfish"
+    },
+    {
+      "id": "ff_snake_caught_down",
+      "path": "fauna/ff_snake_caught_down.png",
+      "category": "fauna",
+      "species": "snake",
+      "native_cell": 32,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 0,
+      "loop": false,
+      "class": "ff_snake"
     }
   ]
 }
