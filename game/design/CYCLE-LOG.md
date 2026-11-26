@@ -76,3 +76,12 @@ Open: ID-09 Town wiring (badge, toast, 4 keys, Backup, index.html script tag; to
 - **Integration (me):** merge left two unbalanced `@media` blocks in style.css (fixed); L and U both rewrote the Museum CSS, kept L's, U's close-button check made mechanism-neutral; cyc11-ui bar limit 44-48 px.
 - **Load flakes passed solo:** a11y-viewport-sweep, beta-r4-b08-passive-2min, cyc1-art-isles-hitflash, cyc4-town-cull-alloc, dungeon-pickups, realm-access2, realm-playthrough, smoke-journey.
 - **Open:** 8 Realm World overlaps at 160x284 (sweep skips unless OVERLAP160_ALL=1); fix `#rw-jit` id; `adoptSave` best-stat merge; home placement duplicate window on refused save; Polyroll/Museum donation/Scavenger/mailbox refused-save audit; compass z-index (mm-nav.css overrides --mm-nav-z) on other Town dialogs; Museum ✕ scrolls on desktop; HUD behind Museum not inert; `mm-shop-pin` not in Backup export; ID-59, ID-62..64, ID-65..67 pending; crab/hedgehog/bat/spider still SVG; no real-device play.
+
+## Cycle 13 (stamp green, 645/645)
+- S: ID-59 first-visit animal hello (additive save key `animalHello`), `mm-shop-pin` carried by Backup.
+- D: refused-save fixes (mailbox free re-collect, Museum donation, Polyroll, Scavenger warn "Not saved yet"); home placement flush hooks; ideas ID-68..70.
+- G: heart emote (`fft_heart`), crab/hedgehog/bat/spider code art.
+- U: Museum desktop bar flush, tab scroll cues, Isles hint show-then-tuck, idea reviews.
+- L: 160 px Realm More tray, `#rw-jit`->`#rw-jhint`, best-stats max merge, compass z-index + Museum inert, Town cull `_cf` fix.
+- Integration: heart wiring, test registrations, `noHello` carve-outs in town-isles-sign and beta-retest-b14 (hello's own save write).
+- Open: cull budget thin (~212/215); make `animalHello` hold its write until the player acts; Isles toast at 160x284; Museum right cue covers first tab count at 195 px; Polyroll reroll via reload while storage refuses; remaining SVG forest animals (grasshopper, firefly, mantis, tarantula, daddy longlegs, salamander, leafcutter ant).
