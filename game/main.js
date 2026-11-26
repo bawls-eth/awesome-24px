@@ -850,6 +850,51 @@ const FF_ASSETS = [
   { id: 'bluebell', w: 16, h: 20, zone: 'meadow', name: 'Common Bluebell', kind: 'flora' },
   { id: 'lavender', w: 18, h: 22, zone: 'meadow', name: 'Lavender', kind: 'flora' },
 ];
+// ID-59 first-visit animal hello (cycle 13 S, spec U cycle 11 in design/IDEAS.md). The first time the hero walks within
+// ANIMAL_HELLO_RADIUS of a Town wild animal of a species it has not greeted yet, that animal turns to the hero (strip species only)
+// and shows a small heart; one line in #achievement-toast names the species when the toast is free. No reward, no timer.
+// Save: additive Town-save key `animalHello`, a bitmask over the FAUNA order of FF_ASSETS (bit i = the i-th fauna entry). There are
+// more fauna (57) than a JS number holds exactly as bits, so the mask is stored as an array of 30-bit integer words (word w holds fauna
+// w*30 .. w*30+29). Unknown bits / extra words are kept; a write ORs with what storage holds, so the mask never goes down.
+const ANIMAL_HELLO_RADIUS = 160;
+const ANIMAL_HELLO_HEART_MS = 1200;
+const ANIMAL_HELLO_LINE_GAP_MS = 30000;
+const ANIMAL_HELLO_LINE_MS = 4000;
+const ANIMAL_HELLO_WORD = 30;
+const ANIMAL_HELLO_MAX_WORDS = 8;
+const FF_FAUNA_INDEX = (() => { const m = {}; let n = 0; FF_ASSETS.forEach((a) => { if (a.kind === 'fauna') m[a.id] = n++; }); return m; })();
+// Anything stored that is not an array of 0 .. 2^30-1 integers counts as "no hellos yet" (bad words become 0, extra words beyond 8 dropped).
+function cleanAnimalHello(v) {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, ANIMAL_HELLO_MAX_WORDS).map((w) => (Number.isInteger(w) && w >= 0 && w < 2 ** ANIMAL_HELLO_WORD ? w : 0));
+}
+function animalHelloOr(a, b) {
+  const x = cleanAnimalHello(a), y = cleanAnimalHello(b), out = [];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) out.push(((x[i] || 0) | (y[i] || 0)) >>> 0);
+  return out;
+}
+function animalHelloHas(mask, idx) { const w = mask[Math.floor(idx / ANIMAL_HELLO_WORD)] || 0; return ((w >>> (idx % ANIMAL_HELLO_WORD)) & 1) === 1; }
+function animalHelloSet(mask, idx) {
+  const out = cleanAnimalHello(mask), wi = Math.floor(idx / ANIMAL_HELLO_WORD);
+  while (out.length <= wi) out.push(0);
+  out[wi] = (out[wi] | (1 << (idx % ANIMAL_HELLO_WORD))) >>> 0;
+  return out;
+}
+// The heart over a greeted animal. ONE function, so G's heart emote (branch cyc13-art) can replace the placeholder here: it must
+// return a Phaser display object centred on (x, y). Placeholder: a code-drawn 7 x 6 pixel heart (original art), drawn at 3x, crisp.
+const ANIMAL_HELLO_HEART_ROWS = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+function makeAnimalHelloHeart(scene, x, y) {
+  const key = 'animal-hello-heart';
+  if (!scene.textures.exists(key)) {
+    const cv = document.createElement('canvas'); cv.width = 7; cv.height = 6;
+    const c = cv.getContext('2d'); c.fillStyle = '#ff5c8a';
+    ANIMAL_HELLO_HEART_ROWS.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) if (row[rx] === '#') c.fillRect(rx, ry, 1, 1); });
+    c.fillStyle = '#ffd0dc'; c.fillRect(1, 1, 1, 1); // one highlight pixel
+    scene.textures.addCanvas(key, cv);
+    try { scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST); } catch (e) { /* pixelArt game config already nearest */ }
+  }
+  return scene.add.image(x, y, key).setScale(3).setOrigin(0.5, 1);
+}
 // y/range: the legacy mooncats' walk over the water (?legacyart=1). bank: where the stone hero statues stand instead, on dry land
 // along the main pond's north-west bank (outside MAIN_POND's rim, clear of the shells, the heron, the dock and the bridge).
 const POND_CATS = [
@@ -1920,6 +1965,7 @@ class TownScene extends Phaser.Scene {
     this.updateFishHint();
     this.updateGiftHint();
     this.updateFloraFaunaHint();
+    this.updateAnimalHello(time);
   }
 
   // ---------- movement ----------
@@ -3408,7 +3454,7 @@ class TownScene extends Phaser.Scene {
     const toast = document.getElementById('achievement-toast');
     if (toast) {
       toast.textContent = text;
-      toast.classList.remove('hidden');
+      toast.classList.remove('toast-hello', 'hidden');
       clearTimeout(this.achievementToastTimer);
       this.achievementToastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
     }
@@ -4765,6 +4811,7 @@ class TownScene extends Phaser.Scene {
   showAchievementToast(text) {
     const toast = document.getElementById('achievement-toast');
     if (!toast) return;
+    toast.classList.remove('toast-hello'); // ID-59: only the animal hello line uses the compact narrow layout
     toast.textContent = text;
     toast.classList.remove('hidden');
     clearTimeout(this.achievementToastTimer);
@@ -7298,6 +7345,84 @@ class TownScene extends Phaser.Scene {
     } else {
       this.ffHint.setVisible(false);
     }
+  }
+
+  // ID-59: a few times a second, greet the first not-yet-greeted wild animal within ANIMAL_HELLO_RADIUS (see the constants above).
+  updateAnimalHello(time) {
+    if (!this.ffNear || !this.localBody || this.inRealm || this.inUnderground || this.realmEmbed) return;
+    this.updateAnimalHelloHearts(time);
+    if (time - (this._animalHelloAt || 0) < 200) return;
+    this._animalHelloAt = time;
+    if (!this.animalHello) this.animalHello = cleanAnimalHello(loadSave().animalHello);
+    const px = this.localBody.x, py = this.localBody.y;
+    let best = null, bestD = ANIMAL_HELLO_RADIUS;
+    for (const spec of this.ffNear) {
+      const idx = FF_FAUNA_INDEX[spec.id];
+      if (idx === undefined || animalHelloHas(this.animalHello, idx)) continue;
+      const d = Math.hypot(spec.sprite.x - px, spec.sprite.y - py);
+      if (d < bestD) { best = spec; bestD = d; }
+    }
+    if (best) this.animalHelloGreet(best, time);
+  }
+
+  animalHelloGreet(spec, time) {
+    const idx = FF_FAUNA_INDEX[spec.id];
+    this.animalHello = animalHelloSet(this.animalHello, idx);
+    const mine = this.animalHello;
+    // Merged write: ORs with what storage holds now (another tab's hellos are kept). Refused = kept in memory, carried by the next hello.
+    writeSaveMerged((stored) => ({ animalHello: animalHelloOr(stored.animalHello, mine) }));
+    this.animalHelloLog = this.animalHelloLog || [];
+    this.animalHelloLog.push(spec.id);
+    const sprite = spec.sprite;
+    // Turn toward the hero: only species with side / down frames (strips), and only while standing (a walk tween owns the frame).
+    if (spec.strip && !spec.walking && window.MMTownFauna) {
+      const dx = this.localBody.x - sprite.x, dy = this.localBody.y - sprite.y;
+      sprite.ffDir = MMTownFauna.pick(dx, dy);
+      sprite.setFlipX(sprite.ffDir !== 'down' && dx < 0);
+      MMTownFauna.play(sprite, spec.id, 'idle', sprite.ffDir);
+      if (reduceMotion && sprite.anims) sprite.anims.pause();
+    }
+    const still = reduceMotion || document.body.classList.contains('a11y-reduce-motion');
+    const heart = makeAnimalHelloHeart(this, sprite.x, sprite.y - sprite.displayHeight / 2 - 4).setDepth(99996);
+    const h = { heart, spec, until: time + ANIMAL_HELLO_HEART_MS, still, t0: time };
+    this.animalHelloHearts = this.animalHelloHearts || [];
+    this.animalHelloHearts.push(h);
+    this.animalHelloLine(spec);
+  }
+
+  // Hearts follow their animal; a small bob unless motion is reduced (then it just appears and disappears, no bounce, no fade).
+  updateAnimalHelloHearts(time) {
+    const hs = this.animalHelloHearts;
+    if (!hs || !hs.length) return;
+    for (let i = hs.length - 1; i >= 0; i--) {
+      const h = hs[i], s = h.spec.sprite;
+      if (time >= h.until || !s.scene) { h.heart.destroy(); hs.splice(i, 1); continue; }
+      const k = (time - h.t0) / ANIMAL_HELLO_HEART_MS;
+      const bob = h.still ? 0 : -Math.round(Math.abs(Math.sin(k * Math.PI * 3)) * 5); // three small hops
+      h.heart.setPosition(Math.round(s.x), Math.round(s.y - s.displayHeight / 2 - 4 + bob));
+      if (!h.still) h.heart.setAlpha(k > 0.75 ? Math.max(0, (1 - k) * 4) : 1);
+    }
+  }
+
+  // The one line: only when #achievement-toast is free (no achievement / note showing, What's-new and welcome-back down), at most once
+  // per 30 s, and never while a panel, shop, the Museum, the map, the nav sheet or the bag is open. Otherwise skipped (the heart still shows).
+  animalHelloLine(spec) {
+    const now = Date.now();
+    if (this._animalHelloLineAt && now - this._animalHelloLineAt < ANIMAL_HELLO_LINE_GAP_MS) return false;
+    const up = (id) => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden') && getComputedStyle(e).display !== 'none'; };
+    if (up('achievement-toast') || up('whats-new-banner') || up('town-welcome')) return false;
+    const bag = document.getElementById('inventory-panel');
+    if (!this.canAct() || (bag && bag.classList.contains('bag-open')) || this.buildMode) return false;
+    const toast = document.getElementById('achievement-toast');
+    if (!toast) return false;
+    this._animalHelloLineAt = now;
+    toast.textContent = `${/^[AEIOU]/i.test(spec.name) ? 'An' : 'A'} ${spec.name} noticed you 💛`;
+    toast.classList.add('toast-hello'); // <= 300 px: compact, above the bag bar (style.css)
+    toast.classList.remove('hidden');
+    clearTimeout(this.achievementToastTimer);
+    this.achievementToastTimer = setTimeout(() => toast.classList.add('hidden'), ANIMAL_HELLO_LINE_MS);
+    this.animalHelloLines = (this.animalHelloLines || 0) + 1;
+    return true;
   }
 
   // ---------- Wild fauna/flora log (folded into the Museum) ----------

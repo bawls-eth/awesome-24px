@@ -2586,5 +2586,14 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc13-s-animal-hello.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "cyc13-s-backup-shop-pin.test.js": {
+    "class": "node",
+    "tier": "full"
   }
 }
