@@ -436,3 +436,21 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
   html body.world-mode.rw-has-more.touch-device #rw-zone > * { line-height: 13px; }
   html body.world-mode.rw-has-more.touch-device #rw-zone .rw-zname { order: 5; flex: 0 0 100%; max-width: 100%; letter-spacing: -0.3px; }
 }
+
+/* cyc14-systems: ID-65 persistent "Not saved" chip (Realm). > 300 px a flex item left of #realm-info; <= 300 px fixed, placed by realm.js _placeSaveWarn(). */
+.rm-save-warn-wrap { display: contents; }
+html body #realm-hud .rm-save-warn {
+  order: 2; flex: none; box-sizing: border-box; min-width: 44px; width: auto; min-height: 44px; height: 44px; margin: 0; padding: 0 8px; pointer-events: auto;
+  border: 2px solid #7a4a00; border-radius: 10px; background: #ffc857; color: #2b1a00; font: 800 12px/1.1 system-ui, sans-serif; white-space: nowrap; cursor: pointer;
+}
+html body #realm-hud .rm-save-warn[hidden] { display: none; }
+html body #realm-hud .rm-save-warn.rm-save-warn-fixed { position: fixed; z-index: 60; }
+html body #realm-hud .rm-save-warn:focus-visible { outline: 3px solid #ffe14d; outline-offset: 2px; }
+.rm-save-warn-note {
+  position: fixed; z-index: 9050; left: 50%; transform: translateX(-50%); top: calc(8px + env(safe-area-inset-top, 0px)); display: flex; align-items: flex-start; gap: 8px;
+  box-sizing: border-box; width: max-content; max-width: min(92vw, 420px); padding: 8px 4px 8px 12px; background: #1d1830; color: #fff; border: 2px solid #ffc857; border-radius: 12px;
+  font: 12px/1.35 system-ui, sans-serif; pointer-events: auto; overflow-wrap: normal; word-break: normal;
+}
+.rm-save-warn-note.hidden { display: none; }
+.rm-save-warn-note button { flex: 0 0 44px; width: 44px; height: 44px; margin: -4px 0; padding: 0; border: none; border-radius: 50%; background: transparent; color: inherit; font-size: 15px; cursor: pointer; }
+/* end cyc14-systems */

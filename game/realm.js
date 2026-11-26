@@ -665,6 +665,7 @@ class RealmArena {
       if (ok) { this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); }
     }
     this.saveOk = ok;
+    this._syncSaveWarn(true); // ID-65 (cyc14 S): the persistent chip follows this flag
     if (!ok) {
       this.saveFails = (this.saveFails || 0) + 1;
       const now = Date.now();
@@ -2633,6 +2634,7 @@ class RealmArena {
   stop() {
     this.flushSave(); // review F16: a pending kill save is written before the run ends (exit, leave, team end)
     this.active = false; this._focusHud(true);
+    this._syncSaveWarn(true); // ID-65: the chip goes with the run
     if (this.team) { this.team.close(); this.team = null; this.role = 'solo'; }
     const pe = document.getElementById('realm-partner'); if (pe) pe.classList.add('hidden');
     this.keys = {};
@@ -5544,7 +5546,75 @@ class RealmArena {
     }
   }
 
+  // ---------- ID-65 (cyc14 S, spec U cycle 13): persistent "Not saved" chip ----------
+  // Shown while this.saveOk is false (the last write did not land), removed by the first write that lands. No timer, no toast, no sound,
+  // no save key. > 300 px: a flex item of the HUD row just left of #realm-info; <= 300 px: fixed under the Leave button, pushed down past
+  // any HUD control or bar it would cover. A tap opens a short note (✕ 44 px, Esc closes, captured) and retries the save once.
+  _syncSaveWarn(now) {
+    if (typeof document === 'undefined') return;
+    const hud = document.getElementById('realm-hud');
+    if (!hud) return;
+    let chip = document.getElementById('realm-save-warn');
+    const show = this.saveOk === false && this.active !== false;
+    if (!chip) {
+      if (!show) return;
+      const wrap = document.createElement('span'); wrap.id = 'realm-save-warn-wrap'; wrap.setAttribute('role', 'status'); wrap.className = 'rm-save-warn-wrap';
+      chip = document.createElement('button'); chip.type = 'button'; chip.id = 'realm-save-warn'; chip.className = 'save-warn rm-save-warn'; chip.hidden = true;
+      chip.textContent = '⚠ Not saved';
+      chip.setAttribute('aria-label', 'Your progress is not being saved: browser storage refused it. Tap for details');
+      wrap.appendChild(chip);
+      const info = document.getElementById('realm-info');
+      if (info && info.parentNode === hud) hud.insertBefore(wrap, info); else hud.appendChild(wrap);
+      const note = document.createElement('div'); note.id = 'realm-save-warn-note'; note.className = 'rm-save-warn-note hidden'; note.setAttribute('role', 'dialog'); note.setAttribute('aria-labelledby', 'realm-save-warn-note-text');
+      const txt = document.createElement('span'); txt.id = 'realm-save-warn-note-text';
+      txt.textContent = 'This browser refused to save (storage full or blocked, for example in a private window). Free some space or leave private mode; the game keeps trying on every change.';
+      const x = document.createElement('button'); x.type = 'button'; x.id = 'realm-save-warn-note-close'; x.textContent = '✕'; x.setAttribute('aria-label', 'Close the note');
+      note.appendChild(txt); note.appendChild(x);
+      (document.getElementById('realm-overlay') || document.body).appendChild(note);
+      const closeNote = () => { if (note.classList.contains('hidden')) return; note.classList.add('hidden'); if (!chip.hidden) chip.focus(); };
+      x.addEventListener('click', closeNote);
+      chip.addEventListener('click', () => {
+        this.saveWarnRetries = (this.saveWarnRetries || 0) + 1;
+        note.classList.remove('hidden'); x.focus();
+        try { this.onSave(this.save); } catch (e) { /* stays not saved */ }
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || note.classList.contains('hidden')) return;
+        e.preventDefault(); e.stopImmediatePropagation(); closeNote();
+      }, true);
+    }
+    if (chip.hidden === show) chip.hidden = !show;
+    if (!show) { const n = document.getElementById('realm-save-warn-note'); if (n) n.classList.add('hidden'); return; }
+    const t = Date.now();
+    if (!now && t - (this._saveWarnPlacedAt || 0) < 300) return;
+    this._saveWarnPlacedAt = t;
+    this._placeSaveWarn(chip);
+  }
+
+  _placeSaveWarn(chip) {
+    const narrow = window.innerWidth <= 300;
+    chip.classList.toggle('rm-save-warn-fixed', narrow);
+    if (!narrow) { if (chip.style.left) { chip.style.left = ''; chip.style.top = ''; } return; }
+    const vis = (e) => { if (!e || e === chip || e.hidden || e.classList.contains('hidden')) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return null; const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && r.bottom > 0 && r.top < innerHeight ? r : null; };
+    const leave = vis(document.getElementById('realm-leave-btn'));
+    const w = chip.offsetWidth || 44, h = chip.offsetHeight || 44;
+    let left = leave ? Math.round(Math.max(4, Math.min(innerWidth - w - 4, leave.right - w))) : Math.max(4, innerWidth - w - 8);
+    let top = leave ? Math.round(leave.bottom + 4) : 56;
+    const root = document.getElementById('realm-overlay') || document.body;
+    const obstacles = [...root.querySelectorAll('button, a[href], [role=button], [role=application]:not(#realm-canvas-wrap), #realm-hp, #realm-xp, #realm-info, #realm-boss, #realm-partner, #rw-minimap, #mm-nav-btn, #mm-gear-btn')]
+      .filter((e) => !chip.contains(e)).map(vis).filter((r) => r && r.width * r.height < 0.5 * innerWidth * innerHeight);
+    const navb = vis(document.getElementById('mm-nav-btn')); if (navb) obstacles.push(navb);
+    for (let k = 0; k < 16; k++) {
+      const hit = obstacles.find((r) => r.left < left + w - 1 && r.right > left + 1 && r.top < top + h - 1 && r.bottom > top + 1);
+      if (!hit) break;
+      top = Math.round(hit.bottom + 4);
+    }
+    if (top + h > innerHeight) top = leave ? Math.round(leave.bottom + 4) : 56;
+    chip.style.left = left + 'px'; chip.style.top = top + 'px';
+  }
+
   _syncHud(force) {
+    if (this.saveOk === false || document.getElementById('realm-save-warn')) this._syncSaveWarn(false);
     const hp = document.getElementById('realm-hp-fill');
     if (hp) hp.style.width = `${Math.max(0, this.player.hp) / this.stats.maxHp * 100}%`;
     const hpText = document.getElementById('realm-hp-text');
