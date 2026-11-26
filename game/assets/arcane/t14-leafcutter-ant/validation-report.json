@@ -1,0 +1,15 @@
+{
+  "status": "WIP",
+  "strips": 6,
+  "total_frames": 14,
+  "original_palette_count": 10,
+  "source_native_grid": true,
+  "no_edge_contact": true,
+  "distinct_native": true,
+  "distinct_default_mode_bake": true,
+  "repository_audit": "not run",
+  "repository_tests": "not run",
+  "live_game_review": "not run",
+  "anchor": "no explicit anchor; T13 fauna convention",
+  "preview": "preview.png"
+}
