@@ -452,5 +452,17 @@ html body #realm-hud .rm-save-warn:focus-visible { outline: 3px solid #ffe14d; o
   font: 12px/1.35 system-ui, sans-serif; pointer-events: auto; overflow-wrap: normal; word-break: normal;
 }
 .rm-save-warn-note.hidden { display: none; }
+/* cyc15-ui: <= 300 px the chip is a 44 x 44 two-line "⚠ Not / saved" next to Leave (realm.js _placeSaveWarn): above Leave at 195 px
+   (Board / Menu nudged left while it shows), in the More tray's left cell at <= 190 px; while the tray is closed the More button carries it. */
+html body #realm-hud .rm-save-warn.rm-save-warn-fixed { width: 44px; min-width: 44px; max-width: 44px; height: 44px; padding: 0 1px; white-space: normal; text-align: center;
+  font: 800 12px/13px system-ui, sans-serif; letter-spacing: -0.3px; overflow: hidden; border-radius: 8px; }
+html body #realm-hud .rm-save-warn.rm-save-warn-tucked { display: none; }
+@media (max-width: 260px) {
+  html body.rm-sw-on #realm-overlay #realm-board-btn { translate: -8px 0; }
+  html body.rm-sw-on #realm-overlay #realm-menu-btn { translate: -12px 0; }
+}
+html body #rw-more-btn.rw-more-warn { border-color: #ffc857; }
+html body #rw-more-btn.rw-more-warn::after { content: '!'; position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; border-radius: 50%; background: #ffc857; color: #2b1a00;
+  border: 1px solid #7a4a00; font: 900 12px/16px system-ui, sans-serif; text-align: center; pointer-events: none; }
 .rm-save-warn-note button { flex: 0 0 44px; width: 44px; height: 44px; margin: -4px 0; padding: 0; border: none; border-radius: 50%; background: transparent; color: inherit; font-size: 15px; cursor: pointer; }
 /* end cyc14-systems */

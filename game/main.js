@@ -912,9 +912,18 @@ function animalHelloSet(mask, idx) {
 // The heart over a greeted animal. ONE function, so G's heart emote (branch cyc13-art) can replace the placeholder here: it must
 // return a Phaser display object centred on (x, y). Placeholder: a code-drawn 7 x 6 pixel heart (original art), drawn at 3x, crisp.
 const ANIMAL_HELLO_HEART_ROWS = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+// cyc15-ui: the heart's size. It was drawn at 3x (27 x 24 world px over 14-24 px animals: bigger than the animal). Now it is on the
+// animals' own pixel grid: 1:1 (G's 9 x 8 heart, as MMTownFauna.showHeart draws it), or 2x only where 1:1 would be under 10 CSS px tall
+// on screen (the phone camera zoom 1.2: 1:1 = 9.6 px; 2x = 19 px). Integer scales only, so the pixels stay square.
+const ANIMAL_HELLO_HEART_MIN_CSS = 10;
+function animalHelloHeartScale(scene, texH) {
+  let k = 1;
+  try { const cam = scene.cameras.main, cv = scene.game.canvas; k = (cam.zoom || 1) * (cv.getBoundingClientRect().width / ((scene.scale && scene.scale.width) || cv.width || 1)); } catch (e) { k = 1; }
+  return texH * k >= ANIMAL_HELLO_HEART_MIN_CSS || !(k > 0) ? 1 : 2;
+}
 function makeAnimalHelloHeart(scene, x, y) {
   // cycle 13 integration: G's baked heart (mm-town-fauna.js bake, frame heart_1 = the full heart) when it exists; the code-drawn placeholder below stays as the fallback.
-  if (scene.textures.exists('fft_heart')) return scene.add.image(x, y, 'fft_heart', 'heart_1').setScale(3).setOrigin(0.5, 1);
+  if (scene.textures.exists('fft_heart')) return scene.add.image(x, y, 'fft_heart', 'heart_1').setScale(animalHelloHeartScale(scene, 8)).setOrigin(0.5, 1);
   const key = 'animal-hello-heart';
   if (!scene.textures.exists(key)) {
     const cv = document.createElement('canvas'); cv.width = 7; cv.height = 6;
@@ -924,7 +933,7 @@ function makeAnimalHelloHeart(scene, x, y) {
     scene.textures.addCanvas(key, cv);
     try { scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST); } catch (e) { /* pixelArt game config already nearest */ }
   }
-  return scene.add.image(x, y, key).setScale(3).setOrigin(0.5, 1);
+  return scene.add.image(x, y, key).setScale(animalHelloHeartScale(scene, 6)).setOrigin(0.5, 1);
 }
 // ID-62 treat bubble (cyc14 S): constants and the code-drawn bubble (original art; G may replace makeTreatBubble, same contract:
 // a Phaser display object whose bottom-left tail sits at (x, y)). 16 x 15 px canvas drawn at 2x: a white bubble, 1 px ink outline,

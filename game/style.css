@@ -3358,3 +3358,11 @@ body:has([id$="-overlay"][role="dialog"][aria-modal="true"]:not(.hidden):not([hi
 #save-warn-note.hidden { display: none; }
 #save-warn-note-close { flex: 0 0 44px; width: 44px; height: 44px; margin: -4px 0; padding: 0; border: none; border-radius: 50%; background: transparent; color: inherit; font-size: 15px; cursor: pointer; }
 /* end cyc14-systems */
+/* cyc15-ui (cycle 14 open: ID-66 not run at 390x844). At 390x844 "Goal: Craft a Plank Stack at the workbench ↗ ✕" is ~420 px on one
+   no-wrap line, centred: it ran off both edges (the "G" and the ✕ cut). Above 300 px the card is never wider than the screen less 8 px
+   gutters; a longer line wraps (2 lines at 390 px) instead. width: max-content keeps the short lines (Realm Gate) one line wide. */
+@media (min-width: 301px) {
+  #gate-pointer { width: max-content; max-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); }
+  #gate-pointer-text { min-width: 0; white-space: normal; overflow-wrap: normal; line-height: 1.25; padding: 3px 0; }
+}
+/* end cyc15-ui */

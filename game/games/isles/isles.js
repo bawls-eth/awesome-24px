@@ -3541,7 +3541,27 @@
     return def.name + ' is shy. Walk up slowly and do not attack.';
   }
   let toastT = 0;
-  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); document.body.classList.add('toast-on'); clearTimeout(toastT); toastT = setTimeout(() => { el.classList.remove('on'); document.body.classList.remove('toast-on'); }, 2200); } // cyc5-ui: toast-on lets the phone hint line wait (staggered)
+  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); document.body.classList.add('toast-on'); placeToast(el); clearTimeout(toastT); toastT = setTimeout(() => { el.classList.remove('on'); document.body.classList.remove('toast-on'); }, 2200); } // cyc5-ui: toast-on lets the phone hint line wait (staggered)
+  // cyc15-ui: the CSS place of the toast is fixed, but its height is not (a journal line is 4 lines at 195 px) and the action column
+  // grows upward with each button it shows, so at 195x422 a journal toast under the hero reached Soothe. When the toast in its CSS place
+  // lies on the HUD, the how-to card or a control, it moves (vertically only, same left / right) into the free band of its column that
+  // is nearest to that place; when no band is tall enough it stays where the CSS put it (160x284: the bottom edge, see isles.css).
+  function placeToast(el) {
+    el.style.top = ''; el.style.bottom = '';
+    if (typeof el.getBoundingClientRect !== 'function') return;
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+    const vis = (e) => { if (!e || e.hidden) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return null; const q = e.getBoundingClientRect(); return q.width > 1 && q.height > 1 ? q : null; };
+    const obs = [...document.querySelectorAll('#hud, #howto, #mini, #btn-map, #mm-nav-btn, #stick, #acts button, #touch-btns button, #touch-btns, .boss-bar')].map(vis)
+      .filter((q) => q && q.left < r.right - 1 && q.right > r.left + 1);
+    const on = (t) => obs.some((q) => q.top < t + r.height - 1 && q.bottom > t + 1);
+    if (!on(r.top)) return;
+    const edges = [4, ...obs.map((q) => q.bottom + 4)].filter((t) => t >= 4 && t + r.height <= innerHeight - 4);
+    const ups = obs.map((q) => q.top - 4 - r.height).filter((t) => t >= 4);
+    const best = [...edges, ...ups].filter((t) => !on(t)).sort((a, b) => Math.abs(a - r.top) - Math.abs(b - r.top))[0];
+    if (best === undefined) return;
+    const op = el.offsetParent && el.offsetParent !== document.body ? el.offsetParent.getBoundingClientRect().top : 0;
+    el.style.top = Math.round(best - op) + 'px'; el.style.bottom = 'auto';
+  }
 
   // ---------- save (own key, throttled) ----------
   let dirty = true, saveT = 0;
@@ -3845,6 +3865,7 @@
       sounds: () => SOUNDS.slice(), settings: () => (SET ? { open: SET.isOpen() } : null), feedLabel: () => btn.feed.textContent, // BB
       world: world, pack: PACK_ID, isle: ISLE, seed: SEED, tile: TILE, art: ART, low: LOW, hero: snap, heroInfo: () => Object.assign({}, HERO), packSpecies: PACK_SPECIES.slice(),
       clock: clock,
+      toast: (m) => { toast(String(m)); return true; }, // cyc15-ui: the game's own toast path (placement included), for the toast-place tests
       verify: () => O.verify(world),
       pause: (p) => { paused = p !== false; return paused; },
       god: (on) => { god = on !== false; return god; },
