@@ -7660,9 +7660,17 @@ class TownScene extends Phaser.Scene {
     const still = reduceMotion || document.body.classList.contains('a11y-reduce-motion');
     const heart = makeAnimalHelloHeart(this, sprite.x, sprite.y - sprite.displayHeight / 2 - 4).setDepth(99996);
     const h = { heart, spec, until: time + ANIMAL_HELLO_HEART_MS, still, t0: time };
-    // choose a clear side and stand there at once (not on the next frame), so the heart is never seen under the HUD for a frame
-    h.sideAt = time; h.side = this.animalHelloHeartSide(h, sprite);
-    { const p0 = this.animalHelloHeartSpot(h.side, sprite, heart); heart.setPosition(Math.round(p0.x), Math.round(p0.y)); }
+    // The side is decided after each frame is rendered (game 'postrender'): the camera's view is only brought up to date while rendering, so
+    // deciding inside update used a view one frame old, and while the camera catches up with the hero (after a jump) the heart stood on the
+    // wrong side. update() only applies the side decided here (and the bob); the heart is never left on a stale side between frames.
+    if (this.game && this.game.events) {
+      const decide = () => {
+        if (!h.heart.scene || !h.spec.sprite.scene) { this.game.events.off('postrender', decide); return; }
+        h.side = this.animalHelloHeartSide(h, h.spec.sprite);
+        const p0 = this.animalHelloHeartSpot(h.side, h.spec.sprite, h.heart); h.heart.setPosition(Math.round(p0.x), Math.round(p0.y + (h.bob || 0)));
+      };
+      this.game.events.on('postrender', decide);
+    }
     this.animalHelloHearts = this.animalHelloHearts || [];
     this.animalHelloHearts.push(h);
     return h;
@@ -7680,8 +7688,8 @@ class TownScene extends Phaser.Scene {
       // cyc14-ui: the DOM HUD (bag bar, Menu, A / C, panels) lies over the canvas, so a heart above an animal near the top of a phone
       // screen was drawn under the bag bar (195x422). Every 120 ms the heart checks its spot on screen and moves to the first side of the
       // animal that nothing covers: above (default), below, right, left; it keeps its side while that stays clear (no flicker).
-      if (!h.sideAt || time - h.sideAt >= 120) { h.sideAt = time; h.side = this.animalHelloHeartSide(h, s); }
-      const p = this.animalHelloHeartSpot(h.side, s, h.heart);
+      h.bob = bob; // the side itself is decided after each render (see animalHeart)
+      const p = this.animalHelloHeartSpot(h.side || 'up', s, h.heart);
       h.heart.setPosition(Math.round(p.x), Math.round(p.y + bob));
       if (!h.still) h.heart.setAlpha(k > 0.75 ? Math.max(0, (1 - k) * 4) : 1);
     }
@@ -7707,9 +7715,10 @@ class TownScene extends Phaser.Scene {
     const w = heart.displayWidth * z * sx, hgt = heart.displayHeight * z * sx;
     const cx = cr.left + (p.x - cam.worldView.x) * z * sx, by = cr.top + (p.y - cam.worldView.y) * z * sx;
     const L = cx - w / 2, T = by - hgt;
-    if (L < 0 || T < 0 || L + w > innerWidth || by > innerHeight) return 0;
+    // Only a DOM control can cover the heart: a point outside the window counts as clear (the camera, which has not caught up with the hero for a
+    // frame after a jump, brings the animal back; deciding from that stale view used to push the heart off to a side for no reason).
     const pts = [[cx, by - hgt / 2], [L + 2, T + 2], [L + w - 2, T + 2], [L + 2, by - 2], [L + w - 2, by - 2]];
-    return pts.filter(([x, y]) => document.elementFromPoint(x, y) === cv).length;
+    return pts.filter(([x, y]) => x < 0 || y < 0 || x >= innerWidth || y >= innerHeight || document.elementFromPoint(x, y) === cv).length;
   }
 
   // Above when clear; else the side it already has while that stays clear; else the first clear side; when every side is (partly)

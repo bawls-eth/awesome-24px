@@ -400,7 +400,7 @@ function runOne(seed, trace) {
   const body = realmSrc.slice(mStart + head.length, mEnd);
   const persistFn = vm.runInContext("(function (rmReadStoredRealm, rmGpOf) { return function (sv) {" + body + "\n}; })", sandbox, { filename: 'realm.js#_persist' })(sandbox.__R.rmReadStoredRealm, sandbox.__R.rmGpOf);
   const fake = (ret) => ({ save: rmCleanSave({ shards: 5, dust: 7, gp: { b: 2, d: 1 } }), _baseShards: 0, _baseDust: 0, _baseGp: { b: 0, d: 0 }, _known: new Set([9]), active: false,
-    resyncSave() { return false; }, _onSave() { return ret; }, _syncBase() { throw new Error('no storage here'); } });
+    resyncSave() { return false; }, _syncSaveWarn() {}, _onSave() { return ret; }, _syncBase() { throw new Error('no storage here'); } });
   const f = fake(false); const okF = persistFn.call(f, f.save);
   check('C fixed: a failed write with no stored realm keeps the shard / dust / pity bases (the unsaved delta survives)', okF === false && f._baseShards === 0 && f._baseDust === 0 && f._baseGp.b === 0 && f._baseGp.d === 0 && f._known.size === 0 && f.saveFails === 1, JSON.stringify([okF, f._baseShards, f._baseDust, f._baseGp]));
   const g = fake(true); const okG = persistFn.call(g, g.save);
