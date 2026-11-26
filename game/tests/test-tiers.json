@@ -2547,5 +2547,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 600
+  },
+  "cyc12-design-town-shops.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
   }
 }

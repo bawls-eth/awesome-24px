@@ -242,14 +242,26 @@ function loadBackupModules() {
 // writers report the failure (null) so their base stays put, and SAVE_OK lets the shops tell the player it is not saved yet.
 let SAVE_OK = true;
 let SAVE_PENDING = null;
+// Cycle 12 D: turnip bundles this tab bought that storage has not taken yet ({day, n}). A refused whole-key turnipBuys value used to be
+// kept in SAVE_PENDING, so it overrode (live read) and then overwrote (flush) what ANOTHER tab stored in the meantime, and the day's cap
+// could slip. Now only the count of OWN unsaved bundles is kept, and it is added on top of whatever storage holds when it is written.
+let TURNIP_UNSAVED = null;
+// SAVE_PENDING plus the turnip count rebuilt on the stored value (stored may be any object loadSave gave).
+function pendingOn(stored) {
+  if (!TURNIP_UNSAVED) return SAVE_PENDING || {};
+  const r = stored && stored.turnipBuys;
+  const have = r && r.day === TURNIP_UNSAVED.day ? (Number(r.bundles) || 0) : 0;
+  return { ...(SAVE_PENDING || {}), turnipBuys: { day: TURNIP_UNSAVED.day, bundles: have + TURNIP_UNSAVED.n } };
+}
 // What storage holds plus what this tab could not write yet: for "already bought today" checks while storage refuses writes.
-function loadSaveLive() { return SAVE_PENDING ? { ...loadSave(), ...SAVE_PENDING } : loadSave(); }
+function loadSaveLive() { const st = loadSave(); return SAVE_PENDING || TURNIP_UNSAVED ? { ...st, ...pendingOn(st) } : st; }
 
 function writeSave(partial) {
   if (SAVE_RESTORING) return false;
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...(SAVE_PENDING || {}), ...partial }));
-    SAVE_PENDING = null; SAVE_OK = true;
+    const stored = loadSave();
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...pendingOn(stored), ...partial }));
+    SAVE_PENDING = null; TURNIP_UNSAVED = null; SAVE_OK = true;
     return true;
   } catch (e) {
     SAVE_PENDING = { ...(SAVE_PENDING || {}), ...partial }; SAVE_OK = false; // kept for this visit; the next write that lands carries it
@@ -268,8 +280,8 @@ function writeSaveMerged(fn) {
   try { partial = fn(stored); } catch (e) { partial = null; }
   if (!partial || typeof partial !== 'object') return null;
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...(SAVE_PENDING || {}), ...partial }));
-    SAVE_PENDING = null; SAVE_OK = true;
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...pendingOn(stored), ...partial }));
+    SAVE_PENDING = null; TURNIP_UNSAVED = null; SAVE_OK = true;
   } catch (e) { SAVE_OK = false; return null; }
   return partial;
 }
@@ -3353,7 +3365,9 @@ class TownScene extends Phaser.Scene {
       this.stallNote('Sold out for today. Come back tomorrow.');
       return;
     }
-    writeSave({ turnipBuys: { day: this.questDayBucket(), bundles: boughtToday + 1 } });
+    const today = this.questDayBucket();
+    TURNIP_UNSAVED = { day: today, n: (TURNIP_UNSAVED && TURNIP_UNSAVED.day === today ? TURNIP_UNSAVED.n : 0) + 1 };
+    writeSave({}); // writes stored + my unsaved bundles; kept (TURNIP_UNSAVED) when storage refuses
     this.resources.turnips = (this.resources.turnips || 0) + TURNIP_BUNDLE;
     this.updateInventoryHUD();
     this.saveResources();
@@ -8015,7 +8029,7 @@ class TownScene extends Phaser.Scene {
       this.saveHome();
       if (bonus > 0) {
         this.awardPoint(bonus, `🏡 visitors admire your home! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 40, 'sell');
-        note.textContent = `Visitors admired your home today: +${bonus} ⭐`;
+        note.textContent = `Visitors admired your home today: +${bonus} ⭐` + (SAVE_OK ? '' : ' Not saved yet: browser storage is full or blocked.');
       }
     }
     this.renderHome();
@@ -8120,6 +8134,8 @@ class TownScene extends Phaser.Scene {
     this.updateInventoryHUD();
     this.renderHomeSprites();
     this.renderHome();
+    const hn = document.getElementById('home-note');
+    if (hn && !SAVE_OK) hn.textContent = 'Not saved yet: browser storage is full or blocked, so the change is kept for this visit until a save works.';
     if (id) {
       this.incrementStat('homePlaced');
       if (this.home.slots.every(Boolean)) this.incrementStat('homeFullPlots');
@@ -8417,7 +8433,7 @@ class TownScene extends Phaser.Scene {
     this.saveResources();
     this.updatePickBadge();
     this.incrementStat('pickCrafted');
-    if (note) note.textContent = `Crafted the ${r.label}! It lasts ${PICK_DUR[tier]} blocks.`;
+    if (note) note.textContent = `Crafted the ${r.label}! It lasts ${PICK_DUR[tier]} blocks.` + (SAVE_OK ? '' : ' Not saved yet: browser storage is full or blocked, so it is kept for this visit until a save works.');
     if (this.underground) this.underground.onHotbarChange(this.underground.getHotbarState());
     this.renderWorkbench();
     return true;

@@ -458,3 +458,16 @@ Counter-proposal for D (re-propose as a new ID if wanted, only after ID-59 ships
    - A seeded save with `lastVisitDate` 2 days ago shows the line once at 1280x720, 390x844 and 195x422 (inside the screen, no overlap with the controls above, ✕ >= 44).
    - The same day shows nothing, a save without `lastVisitDate` shows nothing, and Esc does not open the menu.
    - The ID-09 visit count still increments exactly once. 0 DB attempts (offline ADMIN bot).
+
+## Cycle 12 additions (D; all `proposed`; grounded in the cycle 11 first-ten bot numbers and the cycle 12 Town shop audit; no web retention data was available, so the grounding is measured bot data, not player data)
+
+| ID | Idea | Size | Risk | Status |
+|---|---|---|---|---|
+| ID-65 | Persistent "Not saved" chip: while browser storage refuses writes (`SAVE_OK` false in Town, the same flag in Realm), a small chip stays on the HUD ("Not saved: storage full") until a write lands. Today the warning is a 3.5 s toast at the moment of a buy, so a player who keeps playing for ten minutes on a full or blocked store loses all of it and was told once | S | low | proposed |
+| ID-66 | First workbench step in the first-visit goal chain: after "chop wood" the goal card names "craft a Plank Stack at the workbench", then "place it at your home". Pure text on the existing goal card, no reward beyond what the goods sell for; ties the Town shops (workbench, home plots) into the first session | S | low | proposed |
+| ID-67 | Lv 5-8 pace smoothing in the first session: the bot measured Lv 5 at 64-99 s but Lv 8 at 140-246 s (a 106 s spread for the same three levels); a small additive XP bonus for a profile below Lv 8 (for example x1.2, shown as "Rookie bonus" on the level bar) narrows the slow seeds. Needs an economy sim and a test that late-game XP is unchanged | M | medium | proposed |
+
+- ID-65: found in the cycle 12 Town shop audit (`design/beta/cycle12-design.md`): every Town shop now says "not saved yet" at the moment of a buy, but nothing says it afterwards. The flag already exists (`SAVE_OK`); U decides placement at 195x422.
+- ID-66: the cycle 12 audit shows no test or quest points a new player at the workbench or the home plots; whether new players find them is unmeasured (no telemetry). Cheapest possible nudge first; measure by a bot that follows the goal card.
+- ID-67: data in `design/beta/cycle11-design.md` item 1 (Lv 2 at 11-15 s, Lv 5 at 64-99 s, Lv 8 at 140-246 s, Lv 11 at 318-382 s). A bot is not a human; the idea is only worth building if a human playtest shows the same long Lv 6-8 stretch.
+- Review of ID-62..64 build status (D, cycle 12): none built, none reviewed. U and L reviewed ID-56, 59, 60, 61 in cycle 11 and did not reach ID-62..64. ID-62 depends on ID-59, which is approved but not built (S order ID-61, ID-56, ID-59), so ID-62 and ID-63 cannot start before ID-59. ID-64 needs an economy check and a U card and is the largest; it stays last.
