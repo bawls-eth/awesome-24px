@@ -510,8 +510,28 @@
   const howtoStat = { auto: 0 };
   // cyc5-ui (b06-r3-04): at 195 px the action column (Decor / Soothe / Sail) grows up into the hint line. On the 0.5 s tick, a hint
   // that would touch a visible action button is lifted to sit just above the column (and dropped back when the column shrinks).
+  // cyc13-ui (cycle 12 U note): on a narrow portrait phone (< 300 px) there is no free strip for the hint: it lay UNDER the HUD
+  // (z 2 < 3), unreadable (160x284: y 53-108, fully covered; 195x422: y 135-174, one line peeking). There it now draws over the
+  // HUD's lower lines while it is new (HINT_SHOW_MS after its text changes) and then tucks away so the HUD is whole again; a new
+  // text brings it back. role=status still announces every change. Wider screens are unchanged.
+  const HINT_SHOW_MS = 6000; const hintSeen = { text: '', at: 0 };
+  function actsCue() { // cyc13-ui: the < 190 px one-row action bar shows a fade + arrow at the edge that has more buttons
+    const a = $('acts'); if (!a) return;
+    const max = a.scrollWidth - a.clientWidth, row = getComputedStyle(a).flexDirection === 'row';
+    // a few px of the last button's padding cut off is not "more buttons": the cue needs >= 8 px hidden at that edge
+    a.classList.toggle('cue-r', row && a.scrollLeft < max - 8);
+    a.classList.toggle('cue-l', row && a.scrollLeft > 8);
+    if (!a._cue) { a._cue = 1; a.addEventListener('scroll', actsCue, { passive: true }); }
+  }
   function fitHint() {
     const h = $('hint'); if (!h || !document.body.classList.contains('touch')) return;
+    actsCue();
+    const narrow = innerWidth < 300 && innerHeight > innerWidth, now = performance.now();
+    // the clock runs only while the hint can be seen (not hidden, not under the how-to / an open panel; tucking uses opacity)
+    // (closing a panel, which pauses the game and so this tick, also restarts the clock: see closePanel)
+    if (h.textContent !== hintSeen.text || h.hidden || getComputedStyle(h).visibility === 'hidden') { hintSeen.text = h.textContent; hintSeen.at = now; }
+    document.body.classList.toggle('hint-narrow', narrow);
+    document.body.classList.toggle('hint-tucked', narrow && now - hintSeen.at > HINT_SHOW_MS);
     if (h.style.bottom) h.style.bottom = '';
     if (h.hidden) return;
     const hr = h.getBoundingClientRect();
@@ -3013,6 +3033,7 @@
     const was = !panel.hidden;
     if (was) cue('ui_close');
     panel.hidden = true; panelKind = ''; paused = false; document.body.classList.remove('panel-open');
+    if (was) { hintSeen.at = performance.now(); document.body.classList.remove('hint-tucked'); } // cyc13-ui: the hint shows again after a panel
     if (window.MMNav && window.MMNav.backRelease) { try { window.MMNav.backRelease('isles-panel'); } catch (e) { /* ignore */ } }
     const back = panelOpener; panelOpener = null;
     if (was && viaKeys && back && back.focus && document.activeElement && (document.activeElement === document.body || panel.contains(document.activeElement)) && back.offsetParent !== null) { try { back.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }

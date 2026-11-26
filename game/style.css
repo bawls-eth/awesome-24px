@@ -3290,3 +3290,34 @@ html:root { --mm-nav-z: 19; }
    dialog with its own 44 px close button is open (never visible but covered). Cycle 12 hid the compass for the Museum on small
    screens; with the compass under the dialog now, it is hidden at every size while the Museum is open. */
 body:has(#museum-overlay:not(.hidden)) #mm-nav-btn { display: none; }
+
+/* cyc13-ui (cycle 12 U notes; adds to L's cyc12-lead Museum rules above, does not repeat them):
+   1. Desktop (> 480 px): the tab bar stuck at the card's content edge (top 0), 20 px under the card's top edge, so scrolled specimen
+      cards showed in a 20 px strip above the bar, between the bar and the stuck ✕ (measured at 1280x720: bar top - card top = 20 px).
+      It now sticks flush with the card's top edge like the phone bar (top = -padding-top), and focus parks a card under the 2-row bar.
+   2. Scroll cue: the one-row bar (phones; at 195x422 one tab fits beside the ✕) gets a fade with an arrow at the edge that has more
+      tabs (classes .cue-r / .cue-l set by Town.museumTabCue in main.js). Taps go through it (pointer-events none); a wrapped bar never
+      scrolls, so the desktop never shows it. Static: no animation. */
+@media (min-width: 481px) {
+  #museum-overlay .museum-tabs { top: -20px; }
+  #museum-overlay .museum-card { scroll-padding-top: 124px; }
+}
+#museum-overlay .museum-tabs.cue-r::after,
+#museum-overlay .museum-tabs.cue-l::before {
+  content: '\203A';
+  position: sticky;
+  z-index: 2;
+  flex: 0 0 24px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: #ffe066;
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+  pointer-events: none;
+}
+#museum-overlay .museum-tabs.cue-r::after { order: 99; right: 0; margin-left: -30px; /* -24 px - the 6 px flex gap: the cue adds no scroll width */ background: linear-gradient(to right, rgba(35, 44, 58, 0), #232c3a 60%); }
+#museum-overlay .museum-tabs.cue-l::before { content: '\2039'; order: -1; left: 0; margin-right: -30px; justify-content: flex-start; background: linear-gradient(to left, rgba(35, 44, 58, 0), #232c3a 60%); }
+/* end cyc13-ui */

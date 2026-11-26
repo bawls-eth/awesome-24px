@@ -2620,5 +2620,10 @@
   "cyc13-lead-move-float-topsel.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "cyc13-ui.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 360
   }
 }
