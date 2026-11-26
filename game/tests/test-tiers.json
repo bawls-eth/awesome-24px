@@ -2260,6 +2260,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc15-art-forest-floor.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc11-art-realm-fonts.test.js": {
     "class": "browser",
     "tier": "full"

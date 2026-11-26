@@ -937,6 +937,8 @@ const TREAT_ICONS = {
 };
 const TREAT_COLORS = { p: '#ff7eb6', P: '#ffb3d4', '#': '#ff4f97', y: '#ffd23f', Y: '#fff08a', g: '#3fa34d', G: '#7fd36b', r: '#e8433a', R: '#ff8a73', W: '#ffe4dc', d: '#a8262a' };
 function makeTreatBubble(scene, kind) {
+  // cycle 15 G: the final bubble art from mm-town-fauna.js (same 16 x 15 size, scale and origin); the placeholder below stays the fallback.
+  if (window.MMTownFauna && MMTownFauna.bakeTreat) { try { return scene.add.image(0, 0, MMTownFauna.bakeTreat(scene, kind)).setScale(2).setOrigin(0.1, 1); } catch (e) { /* placeholder */ } }
   const key = 'treat-bubble-' + kind;
   if (!scene.textures.exists(key)) {
     const cv = document.createElement('canvas'); cv.width = 16; cv.height = 15;

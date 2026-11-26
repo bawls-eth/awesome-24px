@@ -334,7 +334,7 @@ const chipState = (page, id) => page.evaluate((cid) => {
     const { page, errors } = await openTown(ctx);
     const got = await nearFox(page);
     let t = await treat(page);
-    check(`[62 ${tag}] a liked fox near the hero shows ONE treat bubble next to it (above, or the first clear side when the HUD covers above)`, got && t.bubble && t.bubble.id === 'fox' && (t.bubble.above || t.bubble.side > 0) && t.bubble.vis && t.bubble.inView && t.count === 1 && /^treat-bubble-/.test(t.bubble.key), JSON.stringify(t));
+    check(`[62 ${tag}] a liked fox near the hero shows ONE treat bubble next to it (above, or the first clear side when the HUD covers above)`, got && t.bubble && t.bubble.id === 'fox' && (t.bubble.above || t.bubble.side > 0) && t.bubble.vis && t.bubble.inView && t.count === 1 && /^fft_treat_(flower|fruit)$/.test(t.bubble.key), JSON.stringify(t)); // cycle 15 G: the final art (mm-town-fauna bakeTreat) replaced the treat-bubble-* placeholder
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/cyc14-systems-treat-bubble-${tag}.jpg`, type: 'jpeg', quality: 75 });
     // U review: the bubble never sits under a HUD element (the 195 px bag bar): its 5 screen points hit the game canvas
     const clr = await page.evaluate(() => {

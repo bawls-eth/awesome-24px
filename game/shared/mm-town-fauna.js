@@ -50,6 +50,15 @@
     firefly: { code: true, cell: 14, fps: { idle: 2, move: 10 } },
     grasshopper: { code: true, cell: 16, fps: { idle: 2, move: 6 } },
     praying_mantis: { code: true, cell: 16, fps: { idle: 1, move: 4 } },
+    // Cycle 15 art (G): the two forest-floor animals that were still SVG (W-06 size 14). Spotted salamander 16 px (blue-black, two
+    // rows of yellow spots; profile low and long, front = seen from above walking toward the camera: head at the bottom, splayed legs,
+    // tail sway). Daddy longlegs 16 px (harvestman: one round body, an eye turret, four long arched legs a side; the body bobs in idle).
+    // Cull budget: each converted species turns its 5 resting Image specimens (settled, skipped by the cull) into 5 animated Sprites
+    // that every cull pass measures. Both together measured 203.8 per pass of 978 objects, over cyc14-lead-town-cull-rooted's 20.5%
+    // line (200.5); the salamander alone stays under it. So the daddy longlegs is STAGED: its art ships, but it is wired only with
+    // ?ffstaged=1 (review / owner decision on the cull budget); without it the species keeps its SVG as before.
+    salamander: { code: true, cell: 16, fps: { idle: 2, move: 6 } },
+    daddy_longlegs: { code: true, cell: 16, fps: { idle: 2, move: 6 }, staged: true },
   };
   // Cycle 9 art (G, original code pixel art): in-village species redrawn at the hero's density (one char = one pixel, '.' clear;
   // light top-left, dark colour-matched rim). Right view only: left = flipX, the down / caught poses reuse the profile frames.
@@ -294,6 +303,44 @@
         ['................', '................', '..ooo......ooo..', '.oeGGoooooGGeo..', '.okGGGGGGGGGko..', '..oGgggggggGo...', '...oggyyyggo....', '....oogyyoo.....', '...oGgoyyoggo...', '..oGgoogooogGo..', '..ogo.oGgo.ogo..', '..ooGooggooGoo..', '...oyoogdooyo...', '....o.oddo.o....', '.....loooo.l....', '....l.......l...'],
       ],
     },
+    // Cycle 15 art (G): original code art made with a small layout script (Bresenham leg arches for the harvestman, a mirrored
+    // half-map for the salamander's top-down front), pasted as literals and checked at 12-14x and 1x.
+    daddy_longlegs: { pal: {'o': '#2a1a12', 'b': '#8a5832', 'B': '#b8834e', 'h': '#e0b67c', 'k': '#141218', 'l': '#3e2a1e', 'L': '#7a6250', 'w': '#f2e6cc'},
+      idle_right: [
+        ['................', '...l.........l..', '...l.L.....L.l..', '...llL.....Lll..', '...llLL...LLll..', '..l..lL..okl.l..', '..l..loooBbl.l..', '..l..oBhBbbo.l..', '..l..LoooooL..l.', '..l.L......L..l.', '..l.L......L..l.', '..l.L......L..l.', '.l..L......L..l.', '.l..L......L..l.', '.l..L......L..l.', '.l..L......L..l.'],
+        ['................', '................', '...l.........l..', '...l.L.....L.l..', '...llL.....Lll..', '...llLL...LLll..', '..l..lL..okl.l..', '..l..loooBbl.l..', '..l..oBhBbbo.l..', '..l.L.oooooL..l.', '..l.L......L..l.', '..l.L......L..l.', '.l..L......L..l.', '.l..L......L..l.', '.l..L......L..l.', '.l..L......L..l.'],
+      ],
+      move_right: [
+        ['................', '...l.........l..', '...l.L.....L.l..', '...llL.....Lll..', '..l.lLL...LLll..', '..l..lL..okl..l.', '..l..loooBbl..l.', '..l..oBhBbbo..l.', '.l...LoooooL..l.', '.l...L....L...l.', '.l...L....L...l.', '.l...L....L...l.', '.l...L....L....l', 'l....L....L....l', 'l....L....L....l', 'l....L....L....l'],
+        ['................', '................', '...l.........l..', '...llL.....Lll..', '...llL.....Lll..', '...l.lL..okl.l..', '...lLloooBbl.l..', '...lLoBhBbbo.l..', '...lL.oooooL.l..', '..l.L.......Ll..', '..l.L.......Ll..', '..l.L.......Ll..', '..lL........Ll..', '..lL........Ll..', '..lL........Ll..', '..lL........Ll..'],
+      ],
+      idle_down: [
+        ['................', '..l..........l..', '..ll.L....L.ll..', '..ll.L....L.ll..', '..l.looooool.l..', '.l..oBkhBkbo..l.', '.l..oooooooo..l.', '.l...ohBBbo...l.', '.l...LooooL...l.', '.l..L..bb..L..l.', '.l..L......L..l.', '.l..L......L..l.', 'l...L......L...l', 'l...L......L...l', 'l...L......L...l', 'l...L......L...l'],
+        ['................', '................', '..l..........l..', '..ll.L....L.ll..', '..ll.L....L.ll..', '..l.looooool.l..', '.l..oBkhBkbo..l.', '.l..oooooooo..l.', '.l...ohBBbo...l.', '.l..L.oooo.L..l.', '.l..L..bb..L..l.', '.l..L......L..l.', 'l...L......L...l', 'l...L......L...l', 'l...L......L...l', 'l...L......L...l'],
+      ],
+      move_down: [
+        ['................', '..l.............', '..ll.L.......l..', '..ll.L....L.ll..', '..l.looooool.l..', '..l.oBkhBkbo.l..', '..l.oooooooo..l.', '..l.LohBBboL..l.', '.l..L.oooo.L..l.', '.l..L..bb..L..l.', '.l..L......L..l.', '.l..L......L..l.', '.l.L........L..l', '.l.L........L..l', '.l.L........L..l', '.l.L........L..l'],
+        ['................', '.............l..', '..l.......L.ll..', '..ll.L....L.ll..', '..l.looooool.l..', '..l.oBkhBkbo.l..', '.l..oooooooo.l..', '.l...ohBBbo..l..', '.l...LooooL...l.', '.l..L..bb..L..l.', '.l..L......L..l.', '.l..L......L..l.', 'l...L......L..l.', 'l...L......L..l.', 'l...L......L..l.', 'l...L......L..l.'],
+      ],
+    },
+    salamander: { pal: {'o': '#121824', 'b': '#2c3550', 'B': '#4a5a7e', 'd': '#1c2236', 'y': '#e8b828', 'Y': '#ffe070', 'k': '#141218', 'w': '#d8e2ee', 'p': '#3c4868'},
+      idle_right: [
+        ['................', '................', '................', '................', '................', '................', '................', '................', '................', '.....oooooooooo.', '..oooBYBBBBYBwko', 'oobbbbbbYbbbbbbo', '..oodddddddddoo.', '....op.....op...', '...opp....opp...', '................'],
+        ['................', '................', '................', '................', '................', '................', '................', '................', '................', '.....oooooooooo.', 'o.oooBYBBBBYBwko', '.obbbbbbYbbbbbbo', '..oodddddddddoo.', '....op.....op...', '...opp....opp...', '................'],
+      ],
+      move_right: [
+        ['................', '................', '................', '................', '................', '................', '................', '................', '................', '.....oooooooooo.', '..oooBYBBBBYBwko', 'oobbbbbbYbbbbbbo', '..oodddddddddoo.', '.....po....po...', '.....ppo....ppo.', '................'],
+        ['................', '................', '................', '................', '................', '................', '................', '................', '................', '.....oooooooooo.', 'o.oooBYBBBBYBwko', '.obbbbbbYbbbbbbo', '..oodddddddddoo.', '....opp...po....', '...opp.....ppo..', '................'],
+      ],
+      idle_down: [
+        ['................', '................', '.......oo.......', '......obbo......', '......oybo......', '.o...obbbbo...o.', '.pp..obbbbo..pp.', '..pppobbyboppp..', '.....obbbbo.....', '.....oybbbo.....', '.o...obbbbo...o.', '.pp..obbbyo..pp.', '..pppoybbboppp..', '....kwBBBBwk....', '....obBBBBbo....', '.....oooooo.....'],
+        ['................', '................', '........oo......', '.......obbo.....', '.......oybo.....', '.o...obbbbo...o.', '.pp..obbbbo..pp.', '..pppobbyboppp..', '.....obbbbo.....', '.....oybbbo.....', '.o...obbbbo...o.', '.pp..obbbyo..pp.', '..pppoybbboppp..', '....kwBBBBwk....', '....obBBBBbo....', '.....oooooo.....'],
+      ],
+      move_down: [
+        ['................', '................', '......oo........', '.....obbo.......', '.o...oybo.......', '.pp..obbbbo...o.', '..pp.obbbbo..pp.', '....pobbyboppp..', '.....obbbbo.....', '.....oybbbo...o.', '.o...obbbbo..pp.', '.pp..obbbyo.pp..', '..pppoybbbop....', '....kwBBBBwk....', '....obBBBBbo....', '.....oooooo.....'],
+        ['................', '................', '........oo......', '.......obbo.....', '.......oybo...o.', '.o...obbbbo..pp.', '.pp..obbbbo.pp..', '..pppobbybop....', '.....obbbbo.....', '.o...oybbbo.....', '.pp..obbbbo...o.', '..pp.obbbyo..pp.', '....poybbboppp..', '....kwBBBBwk....', '....obBBBBbo....', '.....oooooo.....'],
+      ],
+    },
   };
   // Cycle 13 art (G): ID-59 first-visit hello heart (original code art, U cycle 11 spec: drawn in code, G owns the look). A 7 x 7 px
   // heart (5 x 5 fill + outline) in a 9 x 8 cell: f0 small pop-in, f1 full, f2 full + white glint, f3 full. Baked to texture fft_heart
@@ -307,6 +354,43 @@
     ],
   };
 
+  // Cycle 15 art (G): ID-62 treat bubble, final look (original code art; S cycle 14 owns WHEN / logic, main.js makeTreatBubble keeps
+  // its contract: 16 x 15 px drawn at 2x, origin (0.1, 1) = the tail tip). A rounded white speech bubble with a soft grey inner
+  // shade, a 1 px ink outline and a tail at the bottom left; inside, a 10 x 10 icon with its own dark outline so it reads at 2x:
+  // flower = five pink petals round a yellow heart on a green stem with a leaf; fruit = a red apple with a highlight, stem and leaf.
+  // Baked to textures fft_treat_flower / fft_treat_fruit on every Town bake (also with ?ffstrips=0: not a species).
+  const TREAT = {
+    pal: {'o': '#2b2233', 'w': '#ffffff', 's': '#d8d4e4', 'q': '#b0305e', 'P': '#ffb0d0', 'p': '#ff6fa8', 'y': '#f6b81e', 'Y': '#fff09a',
+      'g': '#2f8a3e', 'G': '#7fd06a', 'd': '#7e1820', 'r': '#e0382e', 'R': '#ff8064', 'W': '#ffe8e0', 'c': '#b02222', 'n': '#6a4426'},
+    bubble: ['..oooooooooooo..', '.owwwwwwwwwwwwo.', 'owwwwwwwwwwwwwwo', 'owwwwwwwwwwwwwwo', 'owwwwwwwwwwwwwwo', 'owwwwwwwwwwwwwwo',
+      'owwwwwwwwwwwwwwo', 'owwwwwwwwwwwwwwo', 'owwwwwwwwwwwwwwo', 'owwwwwwwwwwwwwwo', 'owwwwwwwwwwwwwso', '.owwwwwwwwwwsso.',
+      '..owwooooooooo..', '..owo...........', '..oo............'],
+    icons: {
+      flower: ['....qq....', '...qPPq...', '.qqqPpqqq.', 'qPPqyyqPPq', 'qPpyYyypPq', '.qqqyyqqq.', '...qPpq.G.', '...qppqgG.', '....qqgg..', '.....g....'],
+      fruit: ['.....n.Gg.', '.....nGg..', '..dddnddd.', '.drWrrrrrd', 'drWWrrrrrd', 'drRrrrrrrd', 'drrrrrrrcd', '.drrrrrccd', '..drrrccd.', '...dddd...'],
+    },
+    ox: 3, oy: 1,
+  };
+  // The 16 x 15 RGBA rows of one treat bubble (shared by the bake and the tests).
+  function treatRows(kind) {
+    const icon = TREAT.icons[kind] || TREAT.icons.flower;
+    return TREAT.bubble.map((row, y) => row.split('').map((c, x) => {
+      const iy = y - TREAT.oy, ix = x - TREAT.ox, ic = icon[iy] && icon[iy][ix];
+      return ic && ic !== '.' ? ic : c;
+    }).join(''));
+  }
+  function bakeTreat(scene, kind) {
+    const key = `fft_treat_${TREAT.icons[kind] ? kind : 'flower'}`;
+    if (scene.textures.exists(key)) return key;
+    const W = 16, H = 15, rows = treatRows(kind);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const data = new Uint8ClampedArray(W * H * 4);
+    rows.forEach((row, y) => { for (let x = 0; x < W; x++) { const h = TREAT.pal[row[x]]; if (!h) continue; const d = (y * W + x) * 4; data[d] = parseInt(h.slice(1, 3), 16); data[d + 1] = parseInt(h.slice(3, 5), 16); data[d + 2] = parseInt(h.slice(5, 7), 16); data[d + 3] = 255; } });
+    cv.getContext('2d').putImageData(new ImageData(data, W, H), 0, 0);
+    scene.textures.addCanvas(key, cv);
+    return key;
+  }
+
   const STRIPS = [
     { action: 'idle', dir: 'right', file: 'idle' }, { action: 'idle', dir: 'down', file: 'idle_down' },
     { action: 'move', dir: 'right', file: 'move' }, { action: 'move', dir: 'down', file: 'move_down' },
@@ -315,6 +399,8 @@
   // Cycle 12: the strips a species must load (T13 has no caught_down; its front caught frame aliases the profile one).
   const stripsFor = (id) => STRIPS.filter((s) => !(SPECS[id].noCaughtDown && s.file === 'caught_down'));
   const enabled = () => { try { return !/[?&]ffstrips=0(&|$)/.test(root.location.search); } catch (e) { return true; } };
+  // Cycle 15: a staged species (art done, not wired for the cull budget) bakes only with ?ffstaged=1.
+  const stagedOn = () => { try { return /[?&]ffstaged=1(&|$)/.test(root.location.search); } catch (e) { return false; } };
   const srcKey = (id, file) => `ffsrc_${id}_${file}`;
   const url = (id, file) => `${BASE}${SPECS[id].batch}/fauna/ff_${id}_${file}.png`;
   const lum = (r, g, b) => r * 0.3 + g * 0.59 + b * 0.11;
@@ -444,10 +530,12 @@
     bake(scene) {
       const st = scene.ffStrips = { on: enabled(), ids: [], cells: {}, ms: 0, caughtUrl: {}, thumbUrl: {} };
       try { st.heart = bakeHeart(scene); } catch (e) { st.heart = false; } // cycle 13: ID-59 heart, also with ?ffstrips=0
+      try { st.treat = ['flower', 'fruit'].map((k) => bakeTreat(scene, k)); } catch (e) { st.treat = false; } // cycle 15: ID-62 bubble art
       if (!st.on) return st;
       const t0 = performance.now();
       Object.keys(SPECS).forEach((id) => {
         try {
+          if (SPECS[id].staged && !stagedOn()) return; // cycle 15: keeps its SVG art
           if (SPECS[id].code) { bakeCode(scene, st, id); return; }
           if (!stripsFor(id).every((s) => scene.textures.exists(srcKey(id, s.file)))) return;
           const half = SPECS[id].cell >> 1;
@@ -513,6 +601,10 @@
     // ---- Cycle 13 (G): ID-59 first-visit hello. Art + presentation only; S owns WHEN (radius, once per animal, save bit, toast). ----
     HEART,
     bakeHeart,
+    // ---- Cycle 15 (G): ID-62 treat bubble art (see TREAT). bakeTreat(scene, 'flower' | 'fruit') -> texture key (16 x 15).
+    TREAT,
+    treatRows,
+    bakeTreat,
     // True when the species has its own side + front frames (strip or code art), so it can turn toward the hero (U spec point 2).
     canTurn(scene, id) { return this.has(scene, id); },
     // Turn a strip / code specimen toward a point (the hero): front view when the hero is below it, else the profile, flipped when
