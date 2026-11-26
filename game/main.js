@@ -7827,6 +7827,7 @@ class TownScene extends Phaser.Scene {
         const statue = this.add.sprite(bank.x, bank.y, 'mooncats', frame).setDepth(bank.y + 12);
         statue.htStill = true;
         statue.pondStatue = true;
+        statue._cstill = 1; // cull: a statue never moves (see cullOffscreen)
         return;
       }
       const startX = (range[0] + range[1]) / 2;
@@ -8997,6 +8998,7 @@ class TownScene extends Phaser.Scene {
     const tex = this.textures.exists('mooncats') && !MMTownHeroes.legacyArt() ? { key: 'mooncats', frame: 0 } : this.safeTexture(MMTownHeroes.heroKey('warrior'), 0);
     const hero = this.add.sprite(x, y - 30, tex.key, tex.frame).setDepth(y);
     hero.htStill = true; hero.founderStatue = true;
+    hero._cstill = 1; // cull: a statue never moves (see cullOffscreen)
     if (tex.key !== 'mooncats') hero.setTint(0xb8b4bc); // legacy-art fallback: a grey hero, still no ape
     this.founderStatue = hero;
     this.add.text(x, y - 52, "🦸 Founder's Statue", {
@@ -10284,7 +10286,7 @@ class TownScene extends Phaser.Scene {
 
   drawPunkRocks() {
     PUNK_ROCKS.forEach(([x, y, frame]) => {
-      this.add.sprite(x, y, 'punkrocks', frame).setDepth(-1);
+      this.add.sprite(x, y, 'punkrocks', frame).setDepth(-1)._cstill = 1; // cull: decor that never moves (see cullOffscreen)
     });
   }
 

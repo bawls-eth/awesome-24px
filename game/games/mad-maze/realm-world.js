@@ -3043,8 +3043,9 @@
     function jhHits() { // the named HUD strips plus EVERY visible control (button / link / role=button, e.g. the Daily and gear buttons) except its own
       const hr = jhEl.getBoundingClientRect(); const ctl = Array.prototype.filter.call(document.querySelectorAll('button, a[href], [role="button"]'), (e) => !jhEl.contains(e));
       for (const e of [zoneEl, goalEl, mini, document.getElementById('realm-hud'), document.getElementById('realm-xp'), document.getElementById('realm-abilities'), document.getElementById('realm-stick-move'), document.getElementById('realm-stick-aim')].concat(ctl)) { if (!e || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden' || !jhVisible(e)) continue; const r = e.getBoundingClientRect(); if (r.left < hr.right && r.right > hr.left && r.top < hr.bottom && r.bottom > hr.top) return true; } return hr.left < -0.5 || hr.top < -0.5 || hr.right > innerWidth + 0.5 || hr.bottom > innerHeight + 0.5; }
-    function jhHide(why) { if (!jh.on) return; jh.on = false; jh.why = why; jhEl.classList.add('hidden'); jhUnGoal(); jh.slot = ''; jh.log.push({ verb: jh.verb, why }); jh.t = 0; }
+    function jhHide(why) { if (!jh.on) return; jh.on = false; window.removeEventListener('keydown', onHintKey, true); jh.why = why; jhEl.classList.add('hidden'); jhUnGoal(); jh.slot = ''; jh.log.push({ verb: jh.verb, why }); jh.t = 0; }
     function jhShow(p) {
+      window.addEventListener('keydown', onHintKey, true); // cycle 12 L: only while the hint shows (it was on the window for the whole visit); jhHide removes it
       jh.on = true; jh.verb = p.verb; jh.used[p.verb] = 1; jh.shown++; jh.life = JH_LIFE; jh.why = '';
       const narrow = ov.getBoundingClientRect().width < 300;
       jhTxt.textContent = '💡 ' + (narrow && p.short ? p.short : p.text); jhEl.classList.remove('hidden'); jhPlace();
@@ -3078,7 +3079,6 @@
     // Esc closes the hint. With the Menu hint up ("Press Esc to open the Menu") the key also goes through, so the Menu opens as the text says
     // (L review, cycle 10); for the other verbs it is swallowed so dismissing a tip never opens the Menu by surprise.
     function onHintKey(ev) { if (ev.key !== 'Escape' || !jh.on) return; if (jh.verb === 'menu') { jhHide('esc-menu'); return; } ev.preventDefault(); ev.stopImmediatePropagation(); jhHide('esc'); }
-    if (JH_ON && typeof window !== 'undefined') window.addEventListener('keydown', onHintKey, true);
 
     // ---------- cycle 10 S, ID-55: first-session ending card (L + U review conditions) ----------
     // The first-ever Realm session (this tab: the hero was Lv <= 3 at the first world load and realm.firstEndSeen is absent) that reaches FE_SEC
@@ -3097,7 +3097,11 @@
     const FE_LV = 5; const FE_MIN = 6; const FE_RETRY = 2; const FE_COOL = 10;
     let feVis = 0; let feRe = false; let feReN = 0; let feCool = 0;
     let feOpen = false; let feDone = false; let feSec = 1; let feCard = null; let feBack = null; let feWhy = ''; let feGoal = null;
-    function feDeep() { try { const o = JSON.parse(localStorage.getItem('pixeltown-deep-v1') || 'null'); const f = o && o.f && typeof o.f === 'object' ? o.f : {}; return Object.keys(f).filter((k) => Number.isInteger(f[k]) && f[k] > 0).length; } catch (e) { return 0; } }
+    // cycle 12 L: feTick asks once a second (up to 480 s). The save is parsed only when its text changed since the last look (the string
+    // read stays: a dungeon clear is written by another page, and a test writes it in this one, so the text is the only sure signal).
+    let feDeepRaw; let feDeepN = 0; let feDeepParses = 0;
+    function feDeep() { try { const raw = localStorage.getItem('pixeltown-deep-v1'); if (raw === feDeepRaw) return feDeepN; feDeepRaw = raw; feDeepParses++; feDeepN = feDeepCount(raw); return feDeepN; } catch (e) { return 0; } }
+    function feDeepCount(raw) { try { const o = JSON.parse(raw || 'null'); const f = o && o.f && typeof o.f === 'object' ? o.f : {}; return Object.keys(f).filter((k) => Number.isInteger(f[k]) && f[k] > 0).length; } catch (e) { return 0; } }
     function feTames() { try { const o = JSON.parse(localStorage.getItem('pixeltown-tames-v1') || 'null'); return o && Array.isArray(o.roster) ? o.roster.length : 0; } catch (e) { return 0; } }
     const fe = (() => { // per-tab session: {ok, t (game seconds), d (dungeon clears at the start)}
       let s = null; try { s = JSON.parse(sessionStorage.getItem(FE_KEY) || 'null'); } catch (e) { s = null; }
@@ -3106,7 +3110,8 @@
       return s;
     })();
     function feStore() { try { sessionStorage.setItem(FE_KEY, JSON.stringify(fe)); } catch (e) { /* session storage blocked: the clock restarts on a reload */ } }
-    if (FE_ON) { feStore(); if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { if (fe.ok === 1) feStore(); }); }
+    function fePageHide() { if (fe.ok === 1) feStore(); }
+    if (FE_ON) { feStore(); if (fe.ok === 1) window.addEventListener('pagehide', fePageHide); } // cycle 12 L: only for a session that can still get the card; removed when it shows
     let feStoreN = 0;
     const feEl = document.createElement('section'); feEl.id = 'rw-firstend'; feEl.hidden = true; feEl.setAttribute('role', 'dialog'); feEl.setAttribute('aria-labelledby', 'rw-fe-head');
     if (FE_ON) ov.appendChild(feEl);
@@ -3129,7 +3134,7 @@
       return { kind: 'zone', label: nx.name, text: lv >= (nx.recLv | 0) ? `Next goal: head inland to the ${nx.name}` : `Next goal: reach Lv ${nx.recLv}, then head inland to the ${nx.name}`, url: '' };
     }
     function feClose(why) {
-      if (!feOpen) return; feOpen = false; feWhy = why; feEl.hidden = true;
+      if (!feOpen) return; feOpen = false; feWhy = why; feEl.hidden = true; window.removeEventListener('keydown', onFeKey, true);
       if (why === 'danger' && feVis < FE_MIN && feReN < FE_RETRY) { feReN++; feRe = true; feCool = FE_COOL; } // closed by the world before it could be read: once more at the next quiet moment
       if (feBack) { try { feBack.stop(); } catch (e) { /* nav hook */ } feBack = null; }
       const cw = document.getElementById('realm-canvas-wrap'); if (cw) { try { cw.focus({ preventScroll: true }); } catch (e) { cw.focus(); } }
@@ -3149,9 +3154,9 @@
       feCard = K.panel(feEl, vm, { again: () => feGo(), more: [() => feClose('later')], keyReady: () => false, holdMs: 600 });
       if (!feCard) return; // not built: not marked seen (L review, cycle 10)
       try { sv.firstEndSeen = 1; arena.onSave(sv); } catch (e) { /* storage blocked: shown once this visit anyway */ }
-      fe.ok = 0; feStore();
+      fe.ok = 0; feStore(); window.removeEventListener('pagehide', fePageHide);
       feCard.again.textContent = 'Go: ' + feGoal.label;
-      feEl.hidden = false; feOpen = true; feWhy = '';
+      feEl.hidden = false; feOpen = true; feWhy = ''; window.addEventListener('keydown', onFeKey, true); // cycle 12 L: only while the card is open; feClose removes it
       if (jh.on) jhHide('card');
       if (!feBack && window.MMNav && MMNav.backWatch) { try { feBack = MMNav.backWatch(feEl, () => feClose('back'), 'rw-firstend'); } catch (e) { feBack = null; } }
       const later = feCard.more[0]; try { later.focus({ preventScroll: true }); } catch (e) { later.focus(); }
@@ -3176,7 +3181,6 @@
       feShow();
     }
     function onFeKey(ev) { if (feOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); feClose('esc'); } }
-    if (FE_ON && typeof window !== 'undefined') window.addEventListener('keydown', onFeKey, true);
 
     const hooks = {
       onStart() {
@@ -3338,7 +3342,7 @@
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
       // cycle 10 S: ID-53 just-in-time hint and ID-55 first-session ending card (test hooks, read-only state)
       jitHint: { on: JH_ON, sec: JH_SEC, max: JH_MAX, state: () => ({ on: jh.on, t: jh.t, shown: jh.shown, verb: jh.verb, why: jh.why, moved: jh.moved, block: jhBlock(), text: jhTxt.textContent, slot: jh.slot || '', log: jh.log.slice() }), showNow: () => { if (jh.on) return true; const pk = jhPick(); if (pk) jhShow(pk); return jh.on; } },
-      firstEnd: { on: FE_ON, sec: FE_SEC, state: () => ({ open: feOpen, done: feDone, re: feRe, reN: feReN, vis: feVis, lv: FE_LV, ok: fe.ok, t: fe.t, d: fe.d, why: feWhy, goal: feGoal ? Object.assign({}, feGoal) : null }), go: feGo, close: feClose }, lastFirstEndUrl: null,
+      firstEnd: { on: FE_ON, sec: FE_SEC, state: () => ({ open: feOpen, done: feDone, re: feRe, reN: feReN, vis: feVis, lv: FE_LV, ok: fe.ok, t: fe.t, d: fe.d, why: feWhy, deepParses: feDeepParses, goal: feGoal ? Object.assign({}, feGoal) : null }), go: feGo, close: feClose }, lastFirstEndUrl: null,
     };
     return { api, hooks };
   }

@@ -62,7 +62,7 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
   }));
   check('[1] sprites are measured in their own helper: once per visible world sprite per pass, and nothing else goes through it', one.helper && one.passes >= 6 && one.sprites >= 60 && one.missed === 0 && one.notSprite === 0 && Math.abs(one.calls - one.passes * one.sprites) <= one.sprites, JSON.stringify(one));
 
-  check('[1] only flower-bed and rock decor sprites are declared still; all of them are settled and none goes through the walkers\' helper', one.helper && one.still >= 30 && one.stillKinds === 'rocks,tulips' && one.stillSettled === one.still && one.stillInHelper === 0, JSON.stringify(one));
+  check('[1] only decor sprites that never move (flower beds, rocks; cycle 12: statues and punk rocks) are declared still; all of them are settled and none goes through the walkers\' helper', one.helper && one.still >= 38 && one.stillKinds === 'mooncats,punkrocks,rocks,tulips' && one.stillSettled === one.still && one.stillInHelper === 0, JSON.stringify(one));
 
   // [2] the stored box equals the old rule's box for every sprite, also after a move / scale / rotation / origin change
   const box = await page.evaluate(() => new Promise((res) => {

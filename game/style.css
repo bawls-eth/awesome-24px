@@ -3218,4 +3218,49 @@ body.town-phone-nav #where-to-btn { display: none !important; }
 /* <= 300 px: the 12 px floor and tighter padding (the text is 283 px wide at 13 px; beside a 44 px close button it needs 3 short lines) */
 @media (max-width: 300px) {
   #town-welcome { font-size: 12px; line-height: 1.3; padding: 2px 2px 2px 8px; gap: 4px; }
+
+/* cyc12-lead (cycle 11 U notes, measured first at 195x422 and 160x284 with the Museum open):
+   1. the ✕ was absolutely placed inside the scrolling card, so it scrolled away with the page (at 195x422 it was 810 px above the
+      screen at the end of the list). It is sticky now: same resting place, top right, and it stays there while the card scrolls. It
+      takes no room in the column (its negative margins add up to its height).
+   2. the stuck tab bar would run under the stuck ✕, so the bar keeps its right end free: a border in the bar's own colour, which is
+      outside the bar's scroll box, so a tab scrolled sideways is cut off before the ✕ instead of sliding under it.
+   3. tabs were 29 px tall and the ✕ 28 px above 600 px (also on a 768 px tablet): both are 44 px at every size now.
+   4. the top-left compass (Menu, z 9000) lay on the card's corner and on the first tab at 195x422: while the Museum dialog is open
+      on a narrow or short screen the compass is hidden (the dialog is modal and has its own ✕; Esc and the backdrop also close it). */
+#museum-overlay #museum-close-btn {
+  position: sticky;
+  width: 44px;
+  height: 44px;
+  top: -14px;
+  right: auto !important; /* a sticky right inset would push it inwards */
+  z-index: 3;
+  flex: none;
+  align-self: flex-end;
+  margin: -14px -10px -30px auto;
+}
+#museum-overlay .museum-tabs { border-right: 54px solid #232c3a; }
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
+  #museum-overlay #museum-close-btn { top: -14px !important; } /* the shared phone rule sets top: 6px !important, which as a sticky inset would park it lower */
+}
+#museum-overlay .museum-tab { min-height: 44px; display: inline-flex; align-items: center; gap: 4px; }
+/* the bar grew with its tabs (29 -> 44 px): scroll-padding follows it so a focused specimen card still parks under the bar, and
+   below 300 px the bar's own padding shrinks to 2 px so it costs 48 px of the card, not 52. */
+@media (max-width: 480px) { #museum-overlay .museum-card { scroll-padding-top: 64px; } }
+@media (max-width: 300px) {
+  #museum-overlay .museum-tabs { padding-top: 2px; padding-bottom: 2px; }
+  #museum-overlay .museum-card { scroll-padding-top: 52px; }
+}
+@media (max-width: 600px), (max-height: 500px) {
+  body:has(#museum-overlay:not(.hidden)) #mm-nav-btn { display: none; }
+}
+/* cyc12-lead, found by the sweep once it opened the Museum (all 9 viewports): "Overall collection" was #9aa7bb on the cream card
+   (2.34:1) and its count #ffe066 on cream (1.25:1, close to invisible): both colours were made for a dark card. The tab count was 11 px.
+   Text size (Settings, hudScale): the card ignored it; from 300 px wide it is zoomed like the HUD panels, and its size limits are
+   divided by the scale so the zoomed card still fits the screen. */
+#museum-overlay .museum-progress-label { color: var(--ac-text-muted); }
+#museum-overlay .museum-progress-label b { color: var(--ac-text); }
+#museum-overlay .museum-tab-count { font-size: 12px; }
+@media (min-width: 300px) {
+  body.a11y-hud-scaled #museum-overlay .museum-card { zoom: var(--hud-scale); max-width: calc((100vw - 24px) / var(--hud-scale)); max-height: calc(88vh / var(--hud-scale)); max-height: calc(88dvh / var(--hud-scale)); }
 }

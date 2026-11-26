@@ -42,6 +42,9 @@ const PAGES = [
   { id: 'hub-home', lane: 'hub', url: ORIGIN + '/game/hub/index.html', primary: /^(play|continue|▶)/i },
   { id: 'hub-map', lane: 'hub', url: ORIGIN + '/game/hub/index.html?map=1', primary: /play|enter|go|visit|open/i },
   { id: 'town', lane: 'town', url: ORIGIN + '/game/index.html', town: true },
+  // cyc12-lead: the Town with the Museum dialog open (cycle 11 U: tabs 29 px, the compass on the card at 195x422; none of it was seen
+  // because the sweep never opened a Town panel). Same offline entry as 'town', then the scene's own openMuseum().
+  { id: 'town-museum', lane: 'town', url: ORIGIN + '/game/index.html', town: true, open: 'openMuseum', dialog: '#museum-overlay' },
   { id: 'realm-world', lane: 'realm', url: G('mad-maze/index.html?mode=world&test=1&seed=12345'), primary: /start|play|enter|begin|go|continue|ready/i },
   { id: 'realm-dungeon', lane: 'realm', url: G('mad-maze/index.html?mode=dungeon&test=1&seed=5'), primary: /start|play|enter|begin|go|continue|ready/i },
   { id: 'isles', lane: 'isles', url: G('isles/index.html?isle=reef'), primary: /start|play|set sail|sail|enter|begin|go|explore|launch|continue/i },
@@ -103,7 +106,17 @@ const AUDIT = () => {
   if (!nav) add('menu', 'missing', 'no #mm-nav-btn (or Town #where-to-btn) on the page');
   else {
     const r = nav.getBoundingClientRect(), cs = getComputedStyle(nav);
-    if (r.width === 0 || cs.display === 'none' || cs.visibility === 'hidden') add('menu', 'hidden', 'Menu button not visible');
+    if (r.width === 0 || cs.display === 'none' || cs.visibility === 'hidden') {
+      // cyc12-lead: a page may hide the Menu only while a modal dialog is open (the Museum on a phone: the compass lay on the card),
+      // and then the dialog must offer its own way out: a close button that is on screen, at least 44 px, and on top at its centre.
+      const dlg = [...document.querySelectorAll('[role=dialog][aria-modal="true"]')].find(shown);
+      const x = dlg && [...dlg.querySelectorAll('button[aria-label="Close"],button[id$="close-btn"]')].find(shown);
+      if (!x) add('menu', 'hidden', 'Menu button not visible' + (dlg ? ' and the open dialog ' + sel(dlg) + ' has no close button' : ''));
+      else {
+        const b = x.getBoundingClientRect(), t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+        if (b.left < 0 || b.top < 0 || b.right > vw || b.bottom > vh || b.width < 43.5 || b.height < 43.5 || !(t === x || x.contains(t))) add('menu', 'hidden-dialog-close', `Menu hidden under ${sel(dlg)} and its close button is ${Math.round(b.width)}x${Math.round(b.height)} at ${Math.round(b.left)},${Math.round(b.top)}${t === x || x.contains(t) ? '' : ', covered'}`);
+      }
+    }
     else {
       if (r.left < 0 || r.top < 0 || r.right > vw || r.bottom > vh) add('menu', 'offscreen', `rect ${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} outside ${vw}x${vh}`);
       const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -262,7 +275,12 @@ const OVERLAP = () => {
     return R - x > 2 && B - y > 2 ? { x, y, R, B } : null;
   };
   const Q = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link],[role=tab],[role=checkbox],[role=switch],[role=application],[tabindex]:not([tabindex="-1"])';
-  const els = [...document.querySelectorAll(Q)].filter((e) => !e.disabled && !hidden(e))
+  // cyc12-lead: while a modal dialog is open, a control outside it whose centre is covered by that dialog (its scrim or its card) cannot
+  // be tapped and is not a competing target; the controls inside the dialog are checked against each other and against anything the
+  // dialog does not cover (the Museum view: the people chip and the "more" button lie under the scrim).
+  const modal = [...document.querySelectorAll('[role=dialog][aria-modal="true"]')].find((d) => !hidden(d) && d.getBoundingClientRect().width > 0);
+  const underModal = (e) => { if (!modal || modal.contains(e)) return false; const r = e.getBoundingClientRect(); const t = document.elementFromPoint(Math.min(vw - 1, Math.max(0, r.left + r.width / 2)), Math.min(vh - 1, Math.max(0, r.top + r.height / 2))); return !!t && modal.contains(t); };
+  const els = [...document.querySelectorAll(Q)].filter((e) => !e.disabled && !hidden(e) && !underModal(e))
     .filter((e) => { if (e.tagName !== 'CANVAS' && e.getAttribute('role') !== 'application') return true; const r = e.getBoundingClientRect(); return r.width * r.height < 0.5 * vw * vh; })
     .map((e) => ({ e, r: clipRect(e) })).filter((o) => o.r);
   const out = [];
@@ -303,7 +321,14 @@ async function openPage(browser, page, vp, extraSeed, mediaOpts) {
   p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource.*(firebase|gstatic)|net::ERR_FAILED/.test(m.text())) errors.push('console: ' + m.text()); });
   if (page.town) await p.route('**/main.js*', async (route) => { const resp = await route.fetch(); route.fulfill({ response: resp, body: (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);') }); });
   await p.goto(page.url, { waitUntil: 'load', timeout: 30000 });
-  if (page.town) await enterTown(p);
+  if (page.town) {
+    await enterTown(p);
+    if (page.open) { // cyc12-lead: a Town panel view
+      await p.evaluate((fn) => window.__g.scene.getScene('Town')[fn](), page.open);
+      await p.waitForSelector(page.dialog + ':not(.hidden)', { timeout: 5000 });
+      await p.waitForTimeout(500);
+    }
+  }
   else await p.waitForTimeout(1500);
   return { ctx, p, db, errors };
 }
@@ -485,7 +510,7 @@ async function keyboardPass(p, page, vpId) {
   stale.forEach((k) => check(`allow-list entry no longer occurs (delete it: the allow-list only shrinks) ${k}`, false, ''));
   check(`no new accessibility offenders beyond the allow-list (${Object.keys(allow).length} allowed, ${all.size} seen)`, fresh.length === 0);
   check('allow-list has no stale entries', stale.length === 0);
-  check('every one of the 16 page views produced an audit', !full || summary.length >= PAGES.length * VIEWPORTS.length * 0.9, summary.length + ' audits');
+  check('every one of the 17 page views produced an audit', !full || summary.length >= PAGES.length * VIEWPORTS.length * 0.9, summary.length + ' audits');
 
   if (process.env.A11Y_REPORT === '1' && full) writeReport();
   done();
