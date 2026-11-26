@@ -280,6 +280,15 @@ function pendingOn(stored) {
 }
 // What storage holds plus what this tab could not write yet: for "already bought today" checks while storage refuses writes.
 function loadSaveLive() { const st = loadSave(); return SAVE_PENDING || TURNIP_UNSAVED ? { ...st, ...pendingOn(st) } : st; }
+// Cycle 15 L: the ONE reader for a pay-once record (a save key that answers "was this already paid / claimed / counted today?").
+// It reads live (storage plus what this tab could not write yet), so a refused write can never make a claim look unpaid again:
+// cycle 13 mailbox, cycle 14 chores bonus and bounty, cycle 15 Bug-Off prizes and the daily hello were all that one bug.
+// Every key in PAY_ONCE_KEYS must be read through here; game/tests/cyc15-lead-pay-once-guard.test.js fails on a storage-only
+// read (loadSave().<key>) of any of them, so add a new claim key to the list and read it with payOnceRecord(key).
+const PAY_ONCE_KEYS = ['mail', 'dailies', 'bounty', 'merchantGiftBoxDay', 'turnipBuys', 'bugoff', 'fishlog', 'weedsPulled', 'home',
+  'villagerTalkDay', 'villagerAffinity', 'birthdays', 'questClaimedBucket', 'triviaAnsweredBucket', 'tournamentBonusBucket',
+  'kkEnjoyedWindow', 'errand'];
+function payOnceRecord(key) { return loadSaveLive()[key]; }
 
 function writeSave(partial) {
   if (SAVE_RESTORING) return false;
@@ -1935,7 +1944,7 @@ class TownScene extends Phaser.Scene {
     this.setupDayNight();
     this.setupSeason();
     this.time.addEvent({ delay: 60 * 60 * 1000, loop: true, callback: () => this.updateSeason() });
-    this.kkEnjoyedWindow = loadSave().kkEnjoyedWindow || null;
+    this.kkEnjoyedWindow = payOnceRecord('kkEnjoyedWindow') || null;
     this.setupWeather();
     this.setupActivities();
     this.setupBuilding();
@@ -3512,7 +3521,7 @@ class TownScene extends Phaser.Scene {
   }
 
   turnipBundlesBoughtToday() {
-    const rec = loadSaveLive().turnipBuys; // Live: the cap also counts buys storage has not taken yet
+    const rec = payOnceRecord('turnipBuys'); // Live: the cap also counts buys storage has not taken yet
     return rec && rec.day === this.questDayBucket() ? (Number(rec.bundles) || 0) : 0;
   }
 
@@ -4665,7 +4674,7 @@ class TownScene extends Phaser.Scene {
 
   // Today's saved progress; anything malformed or from another day is empty.
   bugOffRecord() {
-    const rec = loadSave().bugoff;
+    const rec = payOnceRecord('bugoff'); // cyc15 L: live read (a refused count stayed at the stored value, so every catch at 'need - 1' paid the medal again)
     const day = this.questDayBucket();
     const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
     return {
@@ -4749,6 +4758,7 @@ class TownScene extends Phaser.Scene {
       this.incrementStat('bugOffTiers');
       if (t.name === 'Gold') this.incrementStat('bugOffGold');
     });
+    if (earned.length) this.unsavedNote('Bug-Off prize'); // cyc15 L
     this.refreshBugOffSign();
   }
 
@@ -5300,6 +5310,7 @@ class TownScene extends Phaser.Scene {
     if (this.lifetimeStats && this.achievementsUnlocked) this.saveAchievements();
     if (this.museumCollection) this.saveFossils();
     this.saveStars();
+    if (this._errandUnsaved) this.saveErrand(this._errandUnsaved);
   }
 
   setupSaveBackup() {
@@ -6336,7 +6347,7 @@ class TownScene extends Phaser.Scene {
 
   // Sanitised: known species ids, finite non-negative integer counts/records.
   loadFishLog() {
-    const rec = loadSave().fishlog;
+    const rec = payOnceRecord('fishlog');
     const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
     const caught = {};
     if (ok && rec.caught && typeof rec.caught === 'object' && !Array.isArray(rec.caught)) {
@@ -6425,6 +6436,7 @@ class TownScene extends Phaser.Scene {
     this.fishlog.claimed.push(id);
     this.saveFishLog(); // before paying
     this.awardPoint(m.reward, `📖 ${m.need} species logged! +${m.reward} ⭐`, this.localBody.x, this.localBody.y - 40, 'achievement');
+    this.unsavedNote('Milestone claimed'); // cyc15 L: a refused save used to be silent here
     this.renderJournal();
     return true;
   }
@@ -6493,7 +6505,7 @@ class TownScene extends Phaser.Scene {
   }
 
   setupFishTournament() {
-    this.tournamentBonusBucket = Number(loadSave().tournamentBonusBucket) || -1;
+    this.tournamentBonusBucket = Number(payOnceRecord('tournamentBonusBucket')) || -1;
     const { x, y } = FISH_TOURNAMENT_SIGN_POS;
     const g = this.bakedGfx(y - 1);
     g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
@@ -8575,12 +8587,22 @@ class TownScene extends Phaser.Scene {
   errandRealm() { try { const o = JSON.parse(localStorage.getItem('pixeltown-realm-v1') || 'null'); return o && typeof o === 'object' ? o.errand : null; } catch (e) { return null; } }
   saveErrand(next) {
     const E = window.MMErrands;
-    writeSaveMerged((stored) => { const a = E.cleanTown(stored.errand); const b = E.cleanTown(next); return { errand: a.s > b.s ? a : b }; }); // never steps back
+    // cyc15 L: a refused step is kept for this visit (errandTown reads it) and tried again on the next step, talk or pending flush;
+    // it used to vanish, so Mocha took the wood again on every talk while storage refused.
+    const want = E.cleanTown(this._errandUnsaved).s > E.cleanTown(next).s ? this._errandUnsaved : next;
+    const p = writeSaveMerged((stored) => { const a = E.cleanTown(stored.errand); const b = E.cleanTown(want); return { errand: a.s > b.s ? a : b }; }); // never steps back
+    this._errandUnsaved = p ? null : E.cleanTown(want);
+  }
+  // The Town errand step, live: what storage holds or the step this tab could not write yet, whichever is further on.
+  errandTown() {
+    const E = window.MMErrands; const a = E.cleanTown(payOnceRecord('errand')); const b = E.cleanTown(this._errandUnsaved);
+    return b.s > a.s ? b : a;
   }
   // Mocha's errand line for this talk (and the step it makes), or null to chat as usual
   errandTalk() {
     if (!this.errandsOn()) return null;
-    const E = window.MMErrands; const town = loadSave().errand; const realm = this.errandRealm();
+    const E = window.MMErrands; if (this._errandUnsaved) this.saveErrand(this._errandUnsaved);
+    const town = this.errandTown(); const realm = this.errandRealm();
     const st = E.stage(town, realm);
     const say = (txt, col) => { if (this.localBody) this.showFloatingText(this.localBody.x, this.localBody.y - 46, txt, col); };
     if (st === 'offer') {
@@ -8589,7 +8611,7 @@ class TownScene extends Phaser.Scene {
       if (!r.ok) return E.LINES.offerShort;
       this.resources.wood = Math.max(0, (this.resources.wood || 0) - r.spend.wood);
       this.updateInventoryHUD(); this.saveResources(); this.saveErrand(r.town);
-      say('-' + r.spend.wood + ' wood: parcel packed 📦');
+      say('-' + r.spend.wood + ' wood: parcel packed 📦'); this.unsavedNote('Parcel packed');
       return 'All packed! ' + E.LINES.carry;
     }
     if (st === 'return') {
@@ -8601,7 +8623,7 @@ class TownScene extends Phaser.Scene {
     if (st === 'carry' || st === 'hunt') return E.LINES[st];
     return null; // done: the usual chat
   }
-  errandDone() { return !!window.MMErrands && window.MMErrands.cleanTown(loadSave().errand).s === 2; }
+  errandDone() { return !!window.MMErrands && this.errandTown().s === 2; }
   // The reward: an original code-drawn Realm lantern beside the home plot (a post, a dark iron frame, a teal Realm-crystal flame).
   renderErrandDecor() {
     if (this.errandDecor || !this.errandDone()) return;
@@ -8623,7 +8645,7 @@ class TownScene extends Phaser.Scene {
 
   // Sanitised: slot ids must be real recipe ids; everything else is dropped.
   loadHome() {
-    const rec = loadSave().home;
+    const rec = payOnceRecord('home');
     const slots = new Array(HOME_SLOTS).fill(null);
     if (rec && typeof rec === 'object' && !Array.isArray(rec) && Array.isArray(rec.slots)) {
       for (let i = 0; i < HOME_SLOTS; i++) {
@@ -8849,7 +8871,7 @@ class TownScene extends Phaser.Scene {
 
   // Today's claimed ids from the save; anything malformed or from another day is empty.
   claimedLetters() {
-    const rec = loadSaveLive().mail; // cycle 13 D: a refused claim is in SAVE_PENDING; reading storage only let every letter be collected again
+    const rec = payOnceRecord('mail'); // cycle 13 D: a refused claim is in SAVE_PENDING; reading storage only let every letter be collected again
     const day = this.questDayBucket();
     if (!rec || typeof rec !== 'object' || rec.day !== day || !Array.isArray(rec.claimed)) return new Set();
     return new Set(rec.claimed.filter((x) => typeof x === 'string'));
@@ -8952,7 +8974,7 @@ class TownScene extends Phaser.Scene {
     const letter = this.lettersForDay(day, this.mailTiers()).find((l) => l.id === id);
     if (!letter) return false;
     claimed.add(id);
-    const prev = loadSaveLive().mail;
+    const prev = payOnceRecord('mail');
     const lifetime = prev && typeof prev === 'object' ? cleanCount(prev.lifetime) : 0;
     // Save the claim BEFORE paying out so a crash/reload can never double-pay.
     writeSave({ mail: { day, claimed: [...claimed], lifetime: lifetime + 1 } });
@@ -9427,7 +9449,7 @@ class TownScene extends Phaser.Scene {
     if (day === this.weedDay) return;
     this.weedDay = day;
     this.weedSpots = this.weedSpotsForDay(day);
-    const rec = loadSave().weedsPulled;
+    const rec = payOnceRecord('weedsPulled');
     const ids = rec && typeof rec === 'object' && rec.day === day && Array.isArray(rec.ids) ? rec.ids : [];
     this.weedsPulledToday = new Set(ids.filter((v) => Number.isInteger(v) && v >= 0 && v < WEED_COUNT));
     this.weedSprites.forEach((sp, i) => {
@@ -9479,6 +9501,7 @@ class TownScene extends Phaser.Scene {
     if (this.weedsLeft() === 0 && this.weedSpots.length > 0) {
       this.awardPoint(WEED_SPOTLESS_BONUS, `✨ Spotless town! +${WEED_SPOTLESS_BONUS} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
       this.incrementStat('spotlessDays');
+      this.unsavedNote('Spotless bonus'); // cyc15 L: once a day at most (not on every weed: the "Not saved" chip covers those)
     }
     return true;
   }
@@ -9751,7 +9774,7 @@ class TownScene extends Phaser.Scene {
   // (affinity only, no tier-up star bonus, so it can't pay for itself).
   buyMerchantGiftBox() {
     const today = this.questDayBucket();
-    if (Number(loadSaveLive().merchantGiftBoxDay) === today) {
+    if (Number(payOnceRecord('merchantGiftBoxDay')) === today) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, "already sent today's gift boxes");
       return;
     }
@@ -9797,8 +9820,8 @@ class TownScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: 150 },
     }).setOrigin(0.5, 1).setDepth(y + 1); // cyc3 U: bottom-anchored above the name (centred at ly - 46 it covered the name by 7 px)
-    this.questClaimedBucket = Number(loadSave().questClaimedBucket) || -1;
-    this.triviaAnsweredBucket = Number(loadSave().triviaAnsweredBucket) || -1;
+    this.questClaimedBucket = Number(payOnceRecord('questClaimedBucket')) || -1;
+    this.triviaAnsweredBucket = Number(payOnceRecord('triviaAnsweredBucket')) || -1;
     this.refreshNpcQuestSign();
     this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
   }
@@ -10034,7 +10057,7 @@ class TownScene extends Phaser.Scene {
   // once) so the per-frame heart indicator never re-parses localStorage.
   villagerAffinity(id) {
     if (!this.villagerAffinityCache) {
-      const saved = loadSave().villagerAffinity;
+      const saved = payOnceRecord('villagerAffinity');
       this.villagerAffinityCache = (saved && typeof saved === 'object') ? { ...saved } : {};
     }
     return Math.max(0, Math.min(100, Number(this.villagerAffinityCache[id]) || 0));
@@ -10051,7 +10074,7 @@ class TownScene extends Phaser.Scene {
   bumpVillagerAffinity(id, amount) {
     const before = this.villagerAffinity(id);
     const after = Math.min(100, before + amount);
-    const map = { ...(loadSave().villagerAffinity || {}) };
+    const map = { ...(payOnceRecord('villagerAffinity') || {}) }; // cyc15 L: live (storage only dropped the other neighbors' unsaved hearts from the cache)
     map[id] = after;
     this.villagerAffinityCache = { ...map };
     writeSave({ villagerAffinity: map });
@@ -10260,7 +10283,7 @@ class TownScene extends Phaser.Scene {
     // First chat of the (local) day: a personal greeting and a small
     // affinity bump, capped at once per villager per day.
     const today = new Date().toISOString().slice(0, 10);
-    const talkDays = { ...(loadSave().villagerTalkDay || {}) };
+    const talkDays = { ...(payOnceRecord('villagerTalkDay') || {}) }; // cyc15 L: live read (a refused 'talked today' let every chat give the daily hearts again)
     let line;
     if (talkDays[v.id] !== today && !this.villagerIsAsleep()) {
       talkDays[v.id] = today;
@@ -10401,7 +10424,7 @@ class TownScene extends Phaser.Scene {
   }
 
   dailiesRecord() {
-    const rec = loadSaveLive().dailies; // cyc14 D: live read (a refused 'paid' sat in SAVE_PENDING, so every 20 s poll paid the bonus again)
+    const rec = payOnceRecord('dailies'); // cyc14 D: live read (a refused 'paid' sat in SAVE_PENDING, so every 20 s poll paid the bonus again)
     const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
     return { day: ok ? cleanCount(rec.day) : 0, paid: !!(ok && rec.day === this.questDayBucket() && rec.paid === true), days: ok ? cleanCount(rec.days) : 0 };
   }
@@ -10473,7 +10496,7 @@ class TownScene extends Phaser.Scene {
   }
 
   bountyRecord() {
-    return MMBounties.cleanTown(loadSaveLive().bounty, townUtcKey(), this.townBounties()); // cyc14 D: live read (a refused claim could be claimed again and again)
+    return MMBounties.cleanTown(payOnceRecord('bounty'), townUtcKey(), this.townBounties()); // cyc14 D: live read (a refused claim could be claimed again and again)
   }
 
   bountyEvent(type) {
@@ -10554,7 +10577,7 @@ class TownScene extends Phaser.Scene {
 
   // Sanitised: claimed ids are short strings (last 40 kept), guests real villager ids.
   loadBirthdays() {
-    const rec = loadSave().birthdays;
+    const rec = payOnceRecord('birthdays');
     const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
     this.birthdayClaimedIds = new Set(ok && Array.isArray(rec.claimed) ? rec.claimed.filter((x) => typeof x === 'string' && x.length < 40).slice(-40) : []);
     this.birthdayGuests = new Set(ok && Array.isArray(rec.guests) ? rec.guests.filter((id) => VILLAGERS.some((v) => v.id === id)) : []);

@@ -2670,5 +2670,14 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc15-lead-pay-once-guard.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc15-lead-refused-payonce.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
   }
 }
