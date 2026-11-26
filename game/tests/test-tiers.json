@@ -2586,5 +2586,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc13-ui.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 360
   }
 }

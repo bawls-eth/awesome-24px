@@ -338,3 +338,23 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
   body.touch:has(#howto.compact:not([hidden])) #acts { left: calc(8px + 98px + 2px + env(safe-area-inset-left)); }
   body.touch.one-thumb #touch #btn-ability { bottom: calc(12px + 64px + 8px + 44px + 4px + env(safe-area-inset-bottom)); }
 }
+/* cyc13-ui (cycle 12 U notes, measured on 1e6b3b6):
+   1. Hint under 300 px portrait: it lay under the HUD (z 2 < 3): at 160x284 fully covered (y 53-108), at 195x422 one line peeking
+      (y 135-174). No free strip exists at these sizes, so while the hint is new (isles.js fitHint, 6 s after its text changes or it
+      becomes visible) it draws over the HUD's lower lines, opaque, then tucks away (opacity 0) so the HUD is whole; a new text brings
+      it back. Under 190 px it sits right above the action row (bottom = row top + 4) with tighter padding.
+   2. Scroll cue: the under-190 px action row scrolls sideways (with the how-to up at 160x284 it shows one button of three); the edge
+      with more buttons gets a fade and an arrow (classes cue-r / cue-l from isles.js actsCue). Taps go through it. Static. */
+body.touch.hint-narrow .hint { z-index: 4; background: var(--px-panel); }
+body.touch.hint-narrow.hint-tucked .hint { opacity: 0; }
+@media (max-width: 189px) and (orientation: portrait) {
+  body.touch.hint-narrow .hint, body.touch.hint-narrow.abil-on .hint { left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); width: auto; max-width: none; transform: none;
+    bottom: calc(12px + 64px + 8px + 44px + 4px + env(safe-area-inset-bottom)); padding: 2px 4px; line-height: 1.2; }
+}
+body.touch #acts.cue-r::after, body.touch #acts.cue-l::before {
+  content: '\203A'; position: sticky; z-index: 1; flex: 0 0 18px; align-self: stretch; display: flex; align-items: center; justify-content: flex-end;
+  color: var(--px-accent, #ffa300); font-size: 20px; font-weight: bold; line-height: 1; pointer-events: none; text-shadow: 1px 1px 0 #000;
+}
+body.touch #acts.cue-r::after { order: 99; right: 0; margin-left: -20px; background: linear-gradient(to right, rgba(11, 13, 26, 0), var(--px-ink, #0b0d1a) 65%); }
+body.touch #acts.cue-l::before { content: '\2039'; order: -1; left: 0; margin-right: -20px; justify-content: flex-start; background: linear-gradient(to left, rgba(11, 13, 26, 0), var(--px-ink, #0b0d1a) 65%); }
+/* end cyc13-ui */

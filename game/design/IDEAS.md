@@ -393,9 +393,9 @@ Review of the cycle 9 proposals (D, for L/U to confirm):
 
 | ID | Idea | Size | Risk | Status |
 |---|---|---|---|---|
-| ID-62 | Animal treat bubble (Town): an animal that has liked the hero (ID-59) sometimes shows a small food icon when the hero is near; handing over a carried flower or berry gives a heart and a second line. No hunger, no penalty if ignored | S | low | proposed |
-| ID-63 | Isles tame callback in Town: after the first Isles tame the nearest Town animals turn to the new companion and one line mentions it | S | low | proposed |
-| ID-64 | First-build choice at the first Lv 5 level-up: a card offers 2 plainly worded options for ability 1; additive save key; needs an economy check and U for the card | M | medium | proposed |
+| ID-62 | Animal treat bubble (Town): an animal that has liked the hero (ID-59) sometimes shows a small food icon when the hero is near; handing over a carried flower or berry gives a heart and a second line. No hunger, no penalty if ignored | S | low | approved with conditions (U cycle 13: build only after ID-59 ships; spec in design/beta/cycle13-ui.md) |
+| ID-63 | Isles tame callback in Town: after the first Isles tame the nearest Town animals turn to the new companion and one line mentions it | S | low | approved, reduced (U cycle 13: the Town draws no Isles companion, so one line only, no turning; after ID-59; spec in design/beta/cycle13-ui.md) |
+| ID-64 | First-build choice at the first Lv 5 level-up: a card offers 2 plainly worded options for ability 1; additive save key; needs an economy check and U for the card | M | medium | card approved by U (cycle 13, spec in design/beta/cycle13-ui.md); build waits for the economy check (D/L) |
 
 - Sources and ranking of ID-56..61: `design/beta/cycle11-design.md`. D ranking by impact: ID-58, ID-59, ID-61, ID-56, ID-60, ID-57.
 - ID-55 tuned in cycle 11 (D): first session = Lv <= 5 at first world load; a card closed by danger within 6 s retries (max 2).
@@ -463,9 +463,9 @@ Counter-proposal for D (re-propose as a new ID if wanted, only after ID-59 ships
 
 | ID | Idea | Size | Risk | Status |
 |---|---|---|---|---|
-| ID-65 | Persistent "Not saved" chip: while browser storage refuses writes (`SAVE_OK` false in Town, the same flag in Realm), a small chip stays on the HUD ("Not saved: storage full") until a write lands. Today the warning is a 3.5 s toast at the moment of a buy, so a player who keeps playing for ten minutes on a full or blocked store loses all of it and was told once | S | low | proposed |
-| ID-66 | First workbench step in the first-visit goal chain: after "chop wood" the goal card names "craft a Plank Stack at the workbench", then "place it at your home". Pure text on the existing goal card, no reward beyond what the goods sell for; ties the Town shops (workbench, home plots) into the first session | S | low | proposed |
-| ID-67 | Lv 5-8 pace smoothing in the first session: the bot measured Lv 5 at 64-99 s but Lv 8 at 140-246 s (a 106 s spread for the same three levels); a small additive XP bonus for a profile below Lv 8 (for example x1.2, shown as "Rookie bonus" on the level bar) narrows the slow seeds. Needs an economy sim and a test that late-game XP is unchanged | M | medium | proposed |
+| ID-65 | Persistent "Not saved" chip: while browser storage refuses writes (`SAVE_OK` false in Town, the same flag in Realm), a small chip stays on the HUD ("Not saved: storage full") until a write lands. Today the warning is a 3.5 s toast at the moment of a buy, so a player who keeps playing for ten minutes on a full or blocked store loses all of it and was told once | S | low | approved (U cycle 13, spec in design/beta/cycle13-ui.md) |
+| ID-66 | First workbench step in the first-visit goal chain: after "chop wood" the goal card names "craft a Plank Stack at the workbench", then "place it at your home". Pure text on the existing goal card, no reward beyond what the goods sell for; ties the Town shops (workbench, home plots) into the first session | S | low | approved (U cycle 13, spec in design/beta/cycle13-ui.md) |
+| ID-67 | Lv 5-8 pace smoothing in the first session: the bot measured Lv 5 at 64-99 s but Lv 8 at 140-246 s (a 106 s spread for the same three levels); a small additive XP bonus for a profile below Lv 8 (for example x1.2, shown as "Rookie bonus" on the level bar) narrows the slow seeds. Needs an economy sim and a test that late-game XP is unchanged | M | medium | rejected for now (U cycle 13: bot data only, no human playtest; and a "Rookie bonus" label has no room in the 195 px Realm HUD; re-propose with human data) |
 
 - ID-65: found in the cycle 12 Town shop audit (`design/beta/cycle12-design.md`): every Town shop now says "not saved yet" at the moment of a buy, but nothing says it afterwards. The flag already exists (`SAVE_OK`); U decides placement at 195x422.
 - ID-66: the cycle 12 audit shows no test or quest points a new player at the workbench or the home plots; whether new players find them is unmeasured (no telemetry). Cheapest possible nudge first; measure by a bot that follows the goal card.

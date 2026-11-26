@@ -5281,6 +5281,7 @@ class TownScene extends Phaser.Scene {
     this.showMuseumWing();
     document.getElementById('museum-overlay').classList.remove('hidden');
     this.museumOpen = true;
+    this.museumTabCue(); // cyc13-ui: measured only once the dialog is shown (hidden, the bar has no width)
     // Species facts live in a separate ~50KB registry that most sessions
     // never need, so it's only fetched the first time the Museum is opened.
     this.loadSpeciesRegistry();
@@ -5329,6 +5330,25 @@ class TownScene extends Phaser.Scene {
       if (l < bar.scrollLeft || on.offsetWidth > bar.clientWidth - 16) bar.scrollLeft = l - 8; // a tab wider than the bar shows its start
       else if (r > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = r - bar.clientWidth + 8;
     }
+    this.museumTabCue();
+  }
+
+  // cyc13-ui (cycle 12 U note "at 195 px only one Museum tab fits beside the ✕"): when the one-row tab bar holds more tabs than it
+  // shows, it gets .cue-r (more to the right) / .cue-l (more to the left); style.css draws a fade with an arrow at that edge.
+  // A wrapped bar (desktop) never scrolls, so it never gets a cue. The listeners are attached once.
+  museumTabCue() {
+    const bar = document.querySelector('#museum-overlay .museum-tabs');
+    if (!bar) return;
+    if (!bar._cueUpd) {
+      bar._cueUpd = () => {
+        const max = bar.scrollWidth - bar.clientWidth;
+        bar.classList.toggle('cue-r', max > 2 && bar.scrollLeft < max - 2);
+        bar.classList.toggle('cue-l', max > 2 && bar.scrollLeft > 2);
+      };
+      bar.addEventListener('scroll', bar._cueUpd, { passive: true });
+      window.addEventListener('resize', bar._cueUpd);
+    }
+    bar._cueUpd();
   }
 
   hideMuseumDetail() {
