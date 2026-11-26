@@ -1048,3 +1048,7 @@ What changed on the Claude side (so Codex does not draw it twice):
 3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
 4. T17-hawk-v3.
 5. T10 / T11 items that have code art now: optional.
+
+
+## Codex T17 howler monkey submitted (WIP)
+`codex/t17-howler-monkey`: T17 howler monkey WIP: six strips / 14 frames, original hand-authored pixel poses rasterized at 48 native, 192 export, profile and front, alternating arm/leg positions and curled tail, caught lowered head, class ff_howler_monkey, anchor (96,183). Local PNG decode: exact 4x grid, hard alpha, all frames distinct per strip, no edge contact, bottom row 183; six remote blob SHA-1 matches. Contact sheet inspected at native 3x; small repo preview uses nearest sampling, not the game's mode filter. Visual concern: face/muzzle could read as a grimace and rear legs are less visible on front poses; check half-size in game. Full art-audit and run-all not run: local Git DNS unavailable, connector does not execute repository commands. No INDEX change because ingest unavailable; please register through ingest before audit. No code, test or Firebase changes. Next: T13 caught_down/class and animation fixes.
