@@ -48,6 +48,9 @@ const walkTo = (page, id) => page.evaluate(async (sid) => {
   for (let t = 0; t < 30 && (s.animalHelloLog || []).indexOf(sid) < 0; t++) await new Promise((r) => setTimeout(r, 100));
   return (s.animalHelloLog || []).indexOf(sid) >= 0;
 }, id);
+// cycle 14 (L): the hello is held in memory until the PLAYER acts; one real, short walk step (a key on desktop, the same input path
+// the joystick feeds) lets it be saved. The save checks below are the same as before, read after this step.
+const step = async (page) => { await page.keyboard.down('ArrowRight'); await page.waitForTimeout(120); await page.keyboard.up('ArrowRight'); await page.waitForTimeout(80); };
 const state = (page) => page.evaluate(() => {
   const s = window.__g.scene.getScene('Town');
   const t = document.getElementById('achievement-toast');
@@ -83,6 +86,8 @@ const state = (page) => page.evaluate(() => {
     check(`[${tag}] the line is inside the screen, no sideways scroll`, s.rect.l >= 0 && s.rect.t >= 0 && s.rect.r <= s.vw && s.rect.b <= s.vh && s.sw <= s.vw, JSON.stringify([s.rect, s.vw, s.vh, s.sw]));
     check(`[${tag}] the line covers none of A, C, the bag bar, the joystick`, s.overlaps.length === 0, s.overlaps.join(','));
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/cyc13-systems-hello-${tag}.jpg`, type: 'jpeg', quality: 75 });
+    await step(page);
+    s = await state(page);
     const a = s.raw.animalHello;
     check(`[${tag}] save: animalHello gained the fox bit, other bits and the unknown word kept`, Array.isArray(a) && a[0] === W0 + 1 && a[1] === W1 && a[2] === W2, JSON.stringify(a));
     check(`[${tag}] save: every other seeded field unchanged (additive)`, JSON.stringify(s.raw.futureKey) === '{"keep":1}' && JSON.stringify(s.raw.resources) === '{"wood":3}' && s.raw.name === 'ADMINah' && s.raw.lastSeenVersion === VERSION, JSON.stringify(s.raw).slice(0, 300));
@@ -94,6 +99,7 @@ const state = (page) => page.evaluate(() => {
     check(`[${tag}] the deer within 30 s: heart, but no second line`, s.log.join() === 'fox,deer' && s.hearts.length === 1 && s.hearts[0].id === 'deer' && s.lines === 1 && !/Deer/.test(s.toast), JSON.stringify([s.log, s.lines, s.toast]));
     const other = await page.evaluate(() => { const s2 = window.__g.scene.getScene('Town'); const t = document.getElementById('achievement-toast'); const had = t.classList.contains('toast-hello'); s2.showAchievementToast('ADMIN test toast'); const a1 = t.classList.contains('toast-hello'); t.classList.add('toast-hello'); s2.stallNote('ADMIN test note'); return { had, a1, a2: t.classList.contains('toast-hello') }; });
     check(`[${tag}] the compact hello layout belongs to the hello line only (achievement toast and shop note drop it)`, other.had && !other.a1 && !other.a2, JSON.stringify(other));
+    await step(page); // the player walks on: the deer's hello is saved too
     // reload: the same profile never greets the fox or the deer again
     await page.close();
     ({ page, errors: errors } = await open(ctx, null));

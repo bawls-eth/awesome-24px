@@ -2022,6 +2022,7 @@ class TownScene extends Phaser.Scene {
     // Normalise so diagonals aren't ~41% faster; analog (tilt) input under
     // 1 keeps its partial magnitude.
     const mag = Math.hypot(vx, vy);
+    if (mag > 0 && this._animalHelloUnsaved) this.flushAnimalHello(); // ID-59: the player walked, so the held hello may be saved now
     if (mag > 1) {
       vx /= mag;
       vy /= mag;
@@ -2418,7 +2419,13 @@ class TownScene extends Phaser.Scene {
           if (full || o._cs !== 4 || l < o._cl || t < o._ct || r2 > o._cr || b > o._cb) { const pd = o._cpad; o._cl = l - pd; o._ct = t - pd; o._cr = r2 + pd; o._cb = b + pd; o._cs = 4; o._cv = pass - (i & 7); }
           else if (pass - o._cv >= 8) o._cv = pass;
         }
-        else if (l === o._cl && t === o._ct && r2 === o._cr && b === o._cb) { if (o._cs < 3) { o._cs = (o._cs | 0) + 1; o._cv = o._cs === 3 ? pass - (i & 7) : pass; } else o._cv = pass; }
+        // cycle 14 (L, headroom): something ROOTED (a tree, its fruit, a plant or other specimen that never walks: 78 + 116 of the
+        // ~700 settled images) declares it (o._cfix). Its settled box was read again every 8th pass like any image that might be
+        // moved, about 24 of the ~212 measures of a pass, for things that have no code path that moves them. Once such a box is the
+        // same again it is kept for 64 passes instead of 8 (its "last read" stamp is set 56 passes ahead, so the test above stays
+        // as it is). It still settles by 3 equal reads first, and hiding it, uncull() or a forced pass read it at once as before.
+        // The 4 px bob / 3 degree sway of a plant in view never moves its box off the 320 px cull line.
+        else if (l === o._cl && t === o._ct && r2 === o._cr && b === o._cb) { if (o._cs < 3) { o._cs = (o._cs | 0) + 1; o._cv = o._cs === 3 ? pass - (i & 7) : pass; } else o._cv = pass; if (o._cfix && o._cs === 3) o._cv += 56; }
         else { o._cl = l; o._ct = t; o._cr = r2; o._cb = b; o._cs = 0; o._cv = pass; }
         mv = o._cs < 3; // measured and not settled, not pinned (_cs 4)
       }
@@ -7244,6 +7251,7 @@ class TownScene extends Phaser.Scene {
       walking: false, // cyc10 coord: declared up front (the strip animals set it on their first walk; pool-shape rule)
     };
     if (!move || move === 'still') {
+      if (!strip) sprite._cfix = 1; // cull: rooted, it only sways / bobs on its spot (see cullOffscreen)
       // Rooted plants sway, water-bound ones (and sessile sea life) bob.
       // Created paused; refreshFloraFaunaNear() only runs them on screen.
       spec.idle = (s.pond || s.ocean)
@@ -7446,12 +7454,27 @@ class TownScene extends Phaser.Scene {
     if (best) this.animalHelloGreet(best, time);
   }
 
+  // cycle 14 (L): write the hellos held in memory; called only from the player's own walk input (updateLocalMovement), never
+  // from a timer or from E / A (a test or a player reading a prompt next to an animal must see an untouched save). Merged write: ORs with what storage holds now (another tab's hellos are kept). Refused (or a restore in progress) =
+  // stays unsaved and is tried again on a later action, at most once every 2 s (walking calls this every frame).
+  flushAnimalHello() {
+    if (!this._animalHelloUnsaved || !this.animalHello) return false;
+    const now = Date.now();
+    if (this._animalHelloTryAt && now - this._animalHelloTryAt < 2000) return false;
+    const mine = this.animalHello;
+    if (writeSaveMerged((stored) => ({ animalHello: animalHelloOr(stored.animalHello, mine) }))) { this._animalHelloUnsaved = false; this._animalHelloTryAt = 0; return true; }
+    this._animalHelloTryAt = now;
+    return false;
+  }
+
   animalHelloGreet(spec, time) {
     const idx = FF_FAUNA_INDEX[spec.id];
     this.animalHello = animalHelloSet(this.animalHello, idx);
-    const mine = this.animalHello;
-    // Merged write: ORs with what storage holds now (another tab's hellos are kept). Refused = kept in memory, carried by the next hello.
-    writeSaveMerged((stored) => ({ animalHello: animalHelloOr(stored.animalHello, mine) }));
+    // cycle 14 (L): the hello used to write the save the moment an animal came within reach, at any time, with no input from the
+    // player (an animal wandering up to a hero who stands still, or a hero standing next to one at join). Now it is only marked
+    // unsaved here and written by flushAnimalHello() once the PLAYER acts: a real walk input (keys, joystick, tilt, gamepad). A hello
+    // that is never followed by a step is simply not kept (that species says hello again next visit).
+    this._animalHelloUnsaved = true;
     this.animalHelloLog = this.animalHelloLog || [];
     this.animalHelloLog.push(spec.id);
     const sprite = spec.sprite;
@@ -10475,6 +10498,7 @@ class TownScene extends Phaser.Scene {
     const variant = Math.floor(worldHash(x, y, 91) * 3);
     const g = this.add.image(x, y, `tree_${variant}`).setOrigin(ox, oy);
     g.setDepth(y);
+    g._cfix = 1; // cull: rooted, never moves (see cullOffscreen)
     this.addObstacleRect({ x: x - 5, y: y - 3, width: 10, height: 12 });
     this.treeGraphics.push(g);
 
@@ -10482,6 +10506,7 @@ class TownScene extends Phaser.Scene {
     if (index % FRUIT_TREE_EVERY === 0) {
       const fruit = this.add.image(x, y, 'tree_fruit').setOrigin(ox, oy);
       fruit.setDepth(y + 0.5);
+      fruit._cfix = 1; // cull: rooted like its tree
       this.treeFruit[index] = fruit;
     }
   }

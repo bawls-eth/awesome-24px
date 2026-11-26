@@ -2629,5 +2629,18 @@
   "cyc13-lead-town-cull-far.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc14-lead-animal-hello-hold.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc14-lead-town-cull-rooted.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc14-lead-small-screens.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
   }
 }
