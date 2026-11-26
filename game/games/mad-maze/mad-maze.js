@@ -986,6 +986,7 @@
     // Escape closes the open tray only (capture + stop: the game's own Escape would also open the pause menu)
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('rw-more-open')) { set(false); e.stopImmediatePropagation(); e.preventDefault(); } }, true);
     ov.appendChild(b);
+    document.body.classList.add('rw-has-more'); // realm-ui.css folds the five controls only when this button exists (a cached old script keeps the old layout)
   })();
 
   if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null, team: (realmWorld && realmWorld.team) || null };

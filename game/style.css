@@ -3274,3 +3274,9 @@ body.town-phone-nav #where-to-btn { display: none !important; }
 @media (max-width: 720px) {
   #whats-new-banner { background-color: color-mix(in srgb, var(--ac-sky-tint) 99%, transparent); }
 }
+
+/* cyc13-lead: the cycle 7 rule `:root { --mm-nav-z: 19 }` above never applied: shared/mm-nav.css loads AFTER this file and sets
+   `:root { --mm-nav-z: 9000 }` (same specificity, later wins), so the Town compass lay on top of every Town dialog (the Museum hid it
+   by hand in cycle 12). `html:root` outranks the shared default wherever the two files are loaded, so the compass sits at 19, under
+   the Town overlays (z 20+) and above the HUD it belongs to. The "Where to?" sheet keeps its own layer (--mm-nav-sheet-z). */
+html:root { --mm-nav-z: 19; }

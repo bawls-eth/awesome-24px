@@ -2,7 +2,7 @@
 // the Board / Menu buttons, gear / Daily / Leave / mini-map on each other). At <= 190 px the five secondary controls fold into the
 // "More" tray (mad-maze.js moreTray + realm-ui.css). This test checks, closed and open: no two controls (or sticks) cover each other,
 // every control is >= 44 px and inside the screen; the tray items still do their job; and at 195x422 / 390x844 nothing is folded.
-// DB-safe: blockDb, the world page never joins. Run: BASE=http://localhost:9131/game/index.html node game/tests/cyc13-lead-realm-160.test.js
+// DB-safe: blockDb, the world page never joins. SHOTS=<dir> saves the two 160 px screenshots. Run: BASE=http://localhost:9131/game/index.html node game/tests/cyc13-lead-realm-160.test.js
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
@@ -86,7 +86,7 @@ const shown = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s
     } else check(`${L} the backpack closes with Escape (needed for the tray Escape check)`, false);
     check(`${L} no page error`, errors.length === 0, errors.join(' | ').slice(0, 200));
     check(`${L} no database request attempted`, db.attempts() === 0, String(db.attempts()));
-    if (w === 160) { await p.screenshot({ path: 'game/design/beta/img/cyc13-lead-realm-160-closed.jpg', type: 'jpeg', quality: 85 }); await p.tap('#rw-more-btn'); await p.waitForTimeout(200); await p.screenshot({ path: 'game/design/beta/img/cyc13-lead-realm-160-open.jpg', type: 'jpeg', quality: 85 }); }
+    if (w === 160 && process.env.SHOTS) { await p.screenshot({ path: process.env.SHOTS + '/cyc13-lead-realm-160-closed.jpg', type: 'jpeg', quality: 85 }); await p.tap('#rw-more-btn'); await p.waitForTimeout(200); await p.screenshot({ path: process.env.SHOTS + '/cyc13-lead-realm-160-open.jpg', type: 'jpeg', quality: 85 }); }
     await ctx.close();
   }
   // wider screens: nothing folded, no More button

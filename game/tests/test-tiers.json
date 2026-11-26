@@ -2586,5 +2586,21 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc13-lead-realm-160.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc13-lead-best-stats.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc13-lead-town-compass-z.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc13-lead-move-float-topsel.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

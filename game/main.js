@@ -5290,13 +5290,34 @@ class TownScene extends Phaser.Scene {
     this.showMuseumWing();
     document.getElementById('museum-overlay').classList.remove('hidden');
     this.museumOpen = true;
+    this.setModalInert(document.getElementById('museum-overlay'), true);
     // Species facts live in a separate ~50KB registry that most sessions
     // never need, so it's only fetched the first time the Museum is opened.
     this.loadSpeciesRegistry();
   }
 
+  // cyc13-lead: while a modal Town dialog is open, everything outside it is `inert` (no focus, no taps, hidden from screen readers):
+  // the siblings of the dialog and of each of its ancestors up to <body>. Text-only live regions (toasts, status lines) stay readable, and an
+  // element that was already inert is not touched, so closing removes exactly what opening set.
+  setModalInert(dialog, on) {
+    if (!dialog) return;
+    if (!on) { (dialog._inertSet || []).forEach((e) => e.removeAttribute('inert')); dialog._inertSet = null; return; }
+    if (dialog._inertSet) return;
+    const set = [];
+    for (let n = dialog; n && n !== document.body && n.parentElement; n = n.parentElement) {
+      [...n.parentElement.children].forEach((sib) => {
+        if (sib === n || /^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(sib.tagName) || sib.hasAttribute('inert')) return;
+        const live = sib.hasAttribute('aria-live') || /^(status|alert|log)$/.test(sib.getAttribute('role') || '');
+        if (live && !sib.querySelector('a[href], button, input, select, textarea, [tabindex]')) return; // a text-only live region stays readable
+        sib.setAttribute('inert', ''); set.push(sib);
+      });
+    }
+    dialog._inertSet = set;
+  }
+
   closeMuseum() {
     document.getElementById('museum-overlay').classList.add('hidden');
+    this.setModalInert(document.getElementById('museum-overlay'), false);
     this.hideMuseumDetail();
     this.museumOpen = false;
   }
