@@ -2610,6 +2610,11 @@
     "tier": "full",
     "timeoutSec": 900
   },
+  "cyc15-s-systems.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 900
+  },
   "cyc13-s-backup-shop-pin.test.js": {
     "class": "node",
     "tier": "smoke"

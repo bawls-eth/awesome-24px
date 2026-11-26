@@ -7,7 +7,6 @@
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/beta-retest-b14.test.js
 const { chromium } = require('playwright');
 // cycle 13 (ID-59): a wild animal near the hero writes its own additive `animalHello` key on its first hello at any moment; that write is not the restore's.
-const noHello = (r) => { try { const o = JSON.parse(r); delete o.animalHello; return JSON.stringify(o); } catch (e) { return r; } };
 const { check, done, twoTabs, offlineStub, exposeGame, joinOffline } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SK = 'pixeltown-save-v1';
@@ -50,7 +49,7 @@ async function restoreFile(page, obj) {
       for (const [label, file] of cases) {
         await fresh();
         await restoreFile(page, file);
-        check('b14-03: restoring ' + label + ' leaves pixeltown-save-v1 byte-identical (apart from a nearby animal\'s own first-visit hello key)', noHello(await raw(page)) === noHello(before), String(await raw(page)).slice(0, 120));
+        check('b14-03: restoring ' + label + ' leaves pixeltown-save-v1 byte-identical', (await raw(page)) === before, String(await raw(page)).slice(0, 120));
       }
       // Lantern bundle (tester's exact file shape): the town save inside it must become the town save
       const innerTown = { name: 'ADMINqaBundle', species: 'coolcats', frame: 1, resources: { wood: 12, stone: 7 }, achievementsUnlocked: ['craft1', 'fish1'], lifetimeStats: { wood: 40 } };

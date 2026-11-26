@@ -12,7 +12,6 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SAVE_KEY = 'pixeltown-save-v1';
 // cycle 13 (ID-59): walking up to the sign can also bring the hero within 160 px of a wild animal, whose first-visit hello writes its own additive
 // `animalHello` key. That write is the animal's, not the sign's; every OTHER byte of the save must stay as it was, so only that key is dropped from the comparison.
-const noHello = (raw) => { try { const o = JSON.parse(raw); delete o.animalHello; return JSON.stringify(o); } catch (e) { return raw; } };
 const SIGN = { x: 505, y: 560 };
 const DOCK = { x: 445, y: 604 }; // centre of the dock planks (drawDock: x 410-480, y 585-623)
 const ISLES_NAV = JSON.stringify({ v: 1, last: { id: 'isles', sub: 'Coral Reef', url: 'game/games/isles/index.html?isle=reef', t: 1 }, prev: null });
@@ -102,13 +101,13 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     for (const sel of ['#inventory-panel', '#player-list-panel', '#walkie-panel', '#chat-panel', '#joystick', '#action-buttons', '#gate-pointer', '#fish-hint-btn', '#gift-hint-btn', '#flora-fauna-hint', '#where-to-btn']) { if (overlap(pr, await rect(page, sel))) hits.push(sel); }
     check(L('the prompt overlaps no other HUD piece'), hits.length === 0, JSON.stringify(hits));
     if (touch) { const ib = await rect(page, '#interact-btn'); check(L('phone: the A button is at least 44 px'), ib && ib.w >= 44 && ib.h >= 44, JSON.stringify(ib)); }
-    check(L('showing the prompt wrote nothing to pixeltown-save-v1 (apart from a nearby animal\'s own first hello)'), noHello(await page.evaluate((k) => localStorage.getItem(k), SAVE_KEY)) === noHello(saveBefore));
+    check(L('showing the prompt wrote nothing to pixeltown-save-v1 (byte-identical)'), await page.evaluate((k) => localStorage.getItem(k), SAVE_KEY) === saveBefore);
 
     // ---- interact (A on the phone, E on desktop) navigates like the World map link ----
     const nav1 = page.waitForURL(/\/games\/isles\/index\.html\?from=town$/, { timeout: 8000 }).then(() => true, () => false);
     if (touch) await page.tap('#interact-btn'); else await page.keyboard.press('e');
     check(L(touch ? 'tapping A by the sign opens games/isles/index.html?from=town' : 'pressing E by the sign opens games/isles/index.html?from=town'), await nav1, page.url());
-    check(L('the stored town save is untouched by the sign (apart from a nearby animal\'s own first hello)'), noHello(await page.evaluate((k) => localStorage.getItem(k), SAVE_KEY)) === noHello(saveBefore));
+    check(L('the stored town save is untouched by the sign (byte-identical)'), await page.evaluate((k) => localStorage.getItem(k), SAVE_KEY) === saveBefore);
 
     // ---- coming back with ?from=isles: on the dock; then the prompt button itself sails too ----
     await page.goto(BASE + '?from=isles');
