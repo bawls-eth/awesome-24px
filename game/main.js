@@ -208,6 +208,21 @@ function townDayStep(saved, kind, today) {
   return { days: st.days, date: st.date, counted: st.counted, write: st.write || seeded };
 }
 
+// ID-61 (cycle 12 S, spec U cycle 11 in IDEAS.md): a returning profile gets one welcome-back line when the last saved visit day
+// (UTC 'YYYY-MM-DD', the ID-09 key) is 1 or more days before today. Never on a first-ever visit (no date), never twice on one day.
+function townWelcomeBackDue(last, today) {
+  const ok = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+  return ok(last) && ok(today) && last < today;
+}
+// The line itself: the realm level only (pixeltown-save-v1.realm.level). The Town cannot read a Realm zone without loading Realm
+// code, so no zone is named (spec: no guessing). No counts of missed days, no gift, no streak.
+function townWelcomeBackText(save) {
+  const r = save && save.realm;
+  const lv = r && typeof r === 'object' && !Array.isArray(r) ? Number(r.level) : NaN;
+  if (Number.isFinite(lv) && lv >= 1) return `Welcome back! Your hero is Lv ${Math.floor(Math.min(lv, 999))} in the Realm.`;
+  return 'Welcome back to Pixeltown!';
+}
+
 // Beta S-01: true from the moment a Restore writes the save until the page reloads, so no other writer (a timer, the
 // cross-tab listener, a late gather) can put the old in-memory state back over the restored file.
 let SAVE_RESTORING = false;
@@ -1839,6 +1854,7 @@ class TownScene extends Phaser.Scene {
     this.setupGiftHint();
     this.setupSaveBackup();
     this.setupWhatsNew();
+    this.setupWelcomeBack();
     this.setupTriviaKey();
     this.setupAchievementsUI();
     this.setupMuseumUI();
@@ -3847,7 +3863,7 @@ class TownScene extends Phaser.Scene {
     // One line of guidance at a time: the What's-new banner (returning players, 10 s) sits where the chip goes, so the chip waits.
     // The achievement toast uses the same top-centre spot.
     const up = (id) => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden') && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && Number(getComputedStyle(e).opacity) > 0.05; };
-    const newsUp = up('whats-new-banner') || up('achievement-toast');
+    const newsUp = up('whats-new-banner') || up('achievement-toast') || up('town-welcome'); // ID-61: the welcome-back line too
     const show = !st.dismissed && !st.reached && far && !newsUp && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode;
     if (el.classList.contains('hidden') === show) el.classList.toggle('hidden', !show);
     if (!show) return;
@@ -4880,6 +4896,65 @@ class TownScene extends Phaser.Scene {
     closeBtn.addEventListener('click', dismiss);
   }
 
+  // ID-61 (cycle 12 S): the welcome-back line #town-welcome (role=status). Waits while the What's-new banner is up, then shows
+  // once for this load; hides after 10 s, or 3 s after the hero first moves, whichever is first. A 44 px close button and Esc
+  // (captured on window, so the Esc menu does not open behind it) dismiss it.
+  setupWelcomeBack() {
+    if (!this._welcomeBackDue) return;
+    this._welcomeBackDue = false;
+    const el = document.getElementById('town-welcome');
+    const txt = document.getElementById('town-welcome-text');
+    const btn = document.getElementById('town-welcome-close');
+    if (!el || !txt || !btn) return;
+    const text = townWelcomeBackText(loadSave());
+    const timers = { wait: 0, hide: 0, move: 0, poll: 0 };
+    const up = () => !el.classList.contains('hidden') && el.getClientRects().length > 0; // #hud hidden (Realm, Underground) = not up
+    const hide = () => {
+      Object.keys(timers).forEach((k) => { clearTimeout(timers[k]); clearInterval(timers[k]); });
+      el.classList.add('hidden');
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', place);
+    };
+    const onKey = (e) => {
+      if (!up() || (e.key !== 'Escape' && e.key !== 'Esc')) return;
+      e.preventDefault(); e.stopImmediatePropagation(); hide();
+    };
+    // "Centred under the top HUD row": the top edge goes 8 px below the lowest top-HUD box (Menu, bag bar, player list) that
+    // shares the line's columns, measured at show time and on resize, so it never covers them at any width (195 px: under the bag bar).
+    const place = () => {
+      if (el.classList.contains('hidden')) return;
+      el.style.top = '';
+      const r = el.getBoundingClientRect();
+      let top = r.top;
+      ['mm-nav-btn', 'inventory-panel', 'player-list-panel'].forEach((id) => {
+        const o = document.getElementById(id); if (!o || !o.getClientRects().length) return;
+        const q = o.getBoundingClientRect();
+        if (q.width && q.top < 240 && q.left < r.right && q.right > r.left) top = Math.max(top, q.bottom + 8);
+      });
+      if (top > r.top) el.style.top = Math.round(top) + 'px';
+    };
+    const show = () => {
+      txt.textContent = text;
+      el.classList.remove('hidden');
+      place(); window.addEventListener('resize', place);
+      this.welcomeBackShown = (this.welcomeBackShown || 0) + 1;
+      window.addEventListener('keydown', onKey, true);
+      timers.hide = setTimeout(hide, 10000);
+      const b = this.localBody; const x0 = b ? b.x : 0, y0 = b ? b.y : 0;
+      timers.poll = setInterval(() => {
+        place(); // the HUD can still settle (bag bar wraps, player list fills) after the line appears
+        const lb = this.localBody; if (!lb || timers.move) return;
+        if (Math.hypot(lb.x - x0, lb.y - y0) > 4) timers.move = setTimeout(hide, 3000);
+      }, 200);
+    };
+    btn.addEventListener('click', hide);
+    const news = document.getElementById('whats-new-banner');
+    const newsUp = () => !!news && !news.classList.contains('hidden');
+    const tryShow = () => { if (newsUp()) { timers.wait = setTimeout(tryShow, 400); return; } show(); };
+    tryShow();
+    this.events.once('shutdown', hide);
+  }
+
   // Beta S-02: another tab (a second Town, the Lantern Restore, the Hub gift) changed pixeltown-save-v1. Re-read it and adopt the
   // counters / sets into memory (fields only, no scene rebuild), so this tab's next write builds on it instead of undoing it.
   // A changed or missing name means the save was replaced (a Restore): say so and reload.
@@ -5120,6 +5195,9 @@ class TownScene extends Phaser.Scene {
     const st = streakStep(saved.lastLoginDate, saved.loginStreak, today); // still written (rollback safe), no longer shown or paid on
     if (st.write) writeSave({ loginStreak: st.streak, lastLoginDate: st.date });
     this.loginStreak = st.streak;
+    // ID-61 (cycle 12 S): the welcome-back line needs the day of the LAST visit, so it is read here, BEFORE ID-09 rewrites
+    // lastVisitDate to today on this load (a same-day reload then reads today and shows nothing). No new key.
+    this._welcomeBackDue = townWelcomeBackDue(saved.lastVisitDate, townUtcKey());
     // ID-09: "Days in town N", a count that only goes up (a gap of any length is +1). Save first, then pay, so a reload never pays twice.
     const vd = townDayStep(saved, 'visit', townUtcKey());
     if (vd.write) writeSave({ visitDays: vd.days, lastVisitDate: vd.date });

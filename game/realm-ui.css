@@ -359,3 +359,25 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
 #realm-board .realm-bp-card { display: flex; flex-direction: column; overflow: hidden; }
 #realm-board .realm-bp-head, #realm-board #realm-board-hero { flex: none; }
 #realm-board #realm-board-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+
+/* ID-56 (cycle 12 S, spec U cycle 11): the shop "saving for" star. 44 x 44, pixel font, yellow 3 px focus ring (as the shop's close).
+   > 300 px: just left of Buy, on the Buy line. <= 300 px: the right end of the NAME line (the name keeps 48 px clear); Buy stays full width.
+   The pinned row has a 2 px yellow left border; the goal line sits in the sticky wallet header and wraps only at spaces. */
+#realm-shop #realm-bp-list li { position: relative; }
+#realm-shop #realm-bp-list li { grid-template-columns: minmax(0, 1fr) auto auto; }
+#realm-shop #realm-bp-list button.rm-pin { grid-column: 2; grid-row: 1 / span 3; align-self: center; width: 44px; height: 44px; min-width: 44px; padding: 0;
+  font-size: 18px; line-height: 1; border-radius: 0; border: 0; background: var(--px-ink, #0b0d1a); color: var(--px-10, #ffec27); box-shadow: 0 0 0 2px var(--px-5, #5f574f); cursor: pointer; }
+#realm-shop #realm-bp-list button.rm-pin[aria-pressed="true"] { background: var(--px-1, #1d2b53); box-shadow: 0 0 0 2px var(--px-10, #ffec27); }
+#realm-shop #realm-bp-list button.eq { grid-column: 3; }
+#realm-shop #realm-bp-list li.rm-pinned { border-left: 2px solid var(--px-10, #ffec27); }
+#realm-shop .rm-pin-goal { margin-top: 4px; font-size: 12px; color: var(--px-10, #ffec27); overflow-wrap: normal; word-break: normal; }
+#realm-shards.rm-pin-on { color: var(--px-10, #ffec27); }
+@media (max-width: 300px) {
+  #realm-shop #realm-bp-list li { grid-template-columns: minmax(0, 1fr); }
+  /* Deviation from the U spec (NAME line), measured at 195x422: icon 32 + gap 8 + star 48 leave 39 px of the 127 px name line, too little for
+     one word ("Quickfire" is 70 px: it would break mid-word), and moving the name under its icon fails cyc9-ui's "name centred on its icon".
+     So the star sits at the right end of the RARITY / STAT lines (rows 2-3), which keep 48 px clear; the name line is unchanged. */
+  #realm-shop #realm-bp-list .rar, #realm-shop #realm-bp-list .st { padding-right: 48px; }
+  #realm-shop #realm-bp-list button.rm-pin { grid-column: 1; grid-row: 2 / span 2; justify-self: end; align-self: center; }
+  #realm-shop #realm-bp-list button.eq { grid-column: 1; }
+}
