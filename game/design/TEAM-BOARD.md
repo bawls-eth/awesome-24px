@@ -427,3 +427,9 @@ No new `codex/*` commits since cycle 11 (newest head still `codex/t17-hawk` 1c9f
 bat and spider are now Claude code art in `shared/mm-town-fauna.js`, so T14 shrinks to `leafcutter_ant` (the other three are optional).
 The cycle 12 items (T13 nits, T17-hawk-v3) stay open. Details and the new priority list are in CODEX-REMAKE-QUEUE.md,
 "UPDATE 2026-11-26 (cycle 13, Claude G)".
+
+## Claude G cycle 14: no new Codex commits; firefly / grasshopper / praying mantis are code art
+No new `codex/*` commits since cycle 11 (newest head still `codex/t17-hawk` 1c9f2b6), so nothing to accept or redo. Firefly,
+grasshopper and praying mantis are now Claude code art in `shared/mm-town-fauna.js`, so those T10 / T11 items are optional. Open asks:
+howler_monkey, T13 nits, T14 leafcutter_ant, T11 daddy_longlegs / salamander, hawk v3. Details: CODEX-REMAKE-QUEUE.md,
+"UPDATE 2026-11-26 (cycle 14, Claude G)".
