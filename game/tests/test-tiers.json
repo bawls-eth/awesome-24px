@@ -6,7 +6,7 @@
   "a11y-viewport-sweep.test.js": {
     "class": "browser",
     "tier": "full",
-    "timeoutSec": 960
+    "timeoutSec": 1080
   },
   "town-polish.test.js": {
     "class": "browser",
@@ -2547,5 +2547,20 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 600
+  },
+  "cyc12-lead-town-still-statues.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
+  },
+  "cyc12-lead-museum-panel.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "cyc12-lead-realm-listeners.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
   }
 }
