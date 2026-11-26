@@ -1,9 +1,9 @@
 {
-  "sha": "d849c1a241b154d69bce8242335bc9fa58ee78bd",
-  "generated_utc": "2026-11-26T08:21:42Z",
+  "sha": "bbbfd15a9110f3c0aad1d044238616fc53a396bc",
+  "generated_utc": "2026-11-26T13:12:25Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 645,
-  "suites_total": 645,
-  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 634/645 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): a11y-viewport-sweep.test.js, beta-r4-b08-passive-2min.test.js, beta-s07-town-cull.test.js, cave-daynight.test.js, cyc10-s-jit-hint.test.js, cyc12-lead-realm-listeners.test.js, hero-pick.test.js, isles-tundra-mars.test.js, nav-town.test.js, realm-access2.test.js, world-gradient.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
+  "suites_passed": 654,
+  "suites_total": 654,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 646/654 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): archipelago-perf.test.js, art-six-heroes.test.js, beta-r4-b08-passive-2min.test.js, cyc5-ui-isles-compact.test.js, cyc6-art-realm-hit-cue.test.js, dungeon-pickups.test.js, isles-tundra-mars.test.js, smoke-journey.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }
