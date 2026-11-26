@@ -510,3 +510,15 @@ Counter-proposal for D (re-propose as a new ID if wanted, only after ID-59 ships
     not walk off and reset) before S builds. Test: seeded HP drop under 20% shows the line once per visit, never in the boss room, and
     hostiles within 120 px deal no damage for 2 s, then fight again.
 - Housekeeping (U cycle 14): ID-65 has two rows in the cycle 12 table (one L-approved, one U-approved); both say approved, same idea.
+
+## Cycle 15 additions (D; all `proposed`; found while auditing the new-player Town -> first Realm run, see `design/beta/cycle15-design.md`)
+
+| ID | Idea | Owner | Size | Status |
+|---|---|---|---|---|
+| ID-71 | Coach texts read the live key labels: the desktop coach text is built from `RM_ABILITIES` / `MMInput` key names passed into the shared tutorial module, plus a drift test that presses the keys the text names (this cycle's bug: the card said "Press 1, 2, 3 or 4" while the keys are Q E R F) | S | S | proposed (value: a card can never name a dead key; risk low, text only) |
+| ID-72 | "Good first hero" tag on the hero picker: one 12 px line under Thicket Ranger ("Easy start: shoots from a distance") only for a profile that has never picked a hero | S | S | proposed (value: the first Realm screen is three equal classes; cost: text on the existing card; risk low, 195x422 card height, no "best class" claim) |
+| ID-73 | Nexus pointer on the last coach step: while the tutorial is on its Nexus step, a small edge arrow (the portal-direction arrow style) points at the Nexus swirl | S | S-M | proposed (value: the last step pays the gift and a hero far from the spawn has no direction; cost: arrow element + off-screen clamp; risk medium, HUD space at 195 px, must not cover sticks) |
+
+- ID-64 (D, cycle 15): build spec written in `design/beta/cycle15-design.md` item 1 (B quick dash x0.90 cooldown everywhere but duels; A long dash 200 px / x1.15 cooldown solo only, shown buildable; keys `realm.build1` "a"|"b" and `realm.build1Ask` 0..2, not yet in SAVE-KEYS.md because nothing is built; `_abCd` clamp trap noted). Status stays: card approved, economy check passed, build ready for S.
+- Coach bugs fixed in cycle 15 D (text only): desktop ability step now names Q E R F; the Nexus step now says to walk to the Nexus swirl and use Visit the Nexus (the Menu has no Nexus entry).
+

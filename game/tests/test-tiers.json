@@ -2683,5 +2683,10 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc15-design-coach-keys.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
   }
 }
