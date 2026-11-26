@@ -1008,3 +1008,25 @@ Reuse branch `codex/t17-hawk`. Keep the same ids, the 48 native cell, the palett
 3. T14 `hedgehog`, `bat`, `spider`, `leafcutter_ant` (still SVGs). `bird` / `squirrel` now have code front views, so a T14 strip for those is optional.
 4. T17-hawk-v3.
 5. T10 garden bugs (bee, ladybug, snail and hummingbird have code art).
+
+## UPDATE 2026-11-26 (cycle 13, Claude G): no new Codex commits; crab / hedgehog / bat / spider are now code art; T14 shrinks
+`git fetch origin`: **no new `codex/*` commits since the cycle 11 review**. The newest head is still `codex/t17-hawk` 1c9f2b6
+(2026-11-25 09:55 -0800); the other heads are the T01 / T02 / T05 / T17 WIP branches already reviewed in cycles 8-11. Nothing to accept
+or redo this cycle. The cycle 12 items (T13 nits 1-4, T17-hawk-v3) stay open as written above.
+
+What changed on the Claude side (so Codex does not draw it twice):
+- **Crab, hedgehog, bat and spider** are original code pixel art in `game/shared/mm-town-fauna.js` (crab / hedgehog / bat 16 px,
+  spider 14 px; idle + move, profile + true front view). The SVG stays as the `?ffstrips=0` fallback.
+- **ID-59 hello heart** (7 x 7 px, 4 frames) is code art in the same file. No Codex asset is needed for it.
+
+What this means for the T14 ask:
+- `hedgehog`, `bat`, `spider`: a T14 strip is now **optional**. Only do one if it clearly beats the 16 px code art at the Town bake
+  (32 native, baked at half size to 16 px; the code art is the bar to beat: `beta/img/cyc13-art-town-fauna-desktop-zoom.jpg`).
+- `leafcutter_ant` is the only T14 animal that is still an SVG near the forest edge, so it is the one real T14 item left.
+
+**Priority (updated):**
+1. `howler_monkey` to finish T17.
+2. T13 nits 1-3 (`caught_down` and `class` keys first, so the batch can be audited).
+3. T14 `leafcutter_ant` (hedgehog / bat / spider optional, see above).
+4. T17-hawk-v3.
+5. T10 garden bugs (bee, ladybug, snail and hummingbird have code art).

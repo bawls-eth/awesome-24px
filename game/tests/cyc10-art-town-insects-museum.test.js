@@ -25,7 +25,7 @@ async function sample(browser, q) {
     const by = (id) => s.ffSpecimens.filter((p) => p.id === id);
     const desc = (id) => by(id).map((p) => ({ type: p.sprite.type, tex: p.sprite.texture.key, w: Math.round(p.sprite.displayWidth), strip: !!p.strip }));
     const out = { st: st ? { on: st.on, ids: st.ids.slice(), cells: Object.assign({}, st.cells), thumbs: Object.keys(st.thumbUrl || {}) } : null, sp: {}, px: {}, anims: {} };
-    Object.keys(BUGS).concat(['crab', 'hedgehog']).forEach((id) => { out.sp[id] = desc(id); });
+    Object.keys(BUGS).concat(['heron', 'toucan']).forEach((id) => { out.sp[id] = desc(id); });
     const grab = (id, frame) => {
       const tex = s.textures.get(`fft_${id}`); const fr = tex.get(frame); const cv = tex.getSourceImage();
       return { w: fr.cutWidth, h: fr.cutHeight, d: Array.from(cv.getContext('2d').getImageData(fr.cutX, fr.cutY, fr.cutWidth, fr.cutHeight).data) };
@@ -66,12 +66,12 @@ async function sample(browser, q) {
       for (let k = 0; k < 8; k++) { await new Promise((res) => setTimeout(res, 50)); out.squash = Math.max(out.squash, Math.abs(bf.sprite.scaleY - bf.baseScaleY)); }
       bf.active = false;
     }
-    // Museum grid: log honeybee + fox + crab (cycle 12: the frog is a T13 strip now), open the Wild Fauna wing
-    ['honeybee', 'fox', 'crab'].forEach((id) => s.ffDiscovered.add(id));
+    // Museum grid: log honeybee + fox + heron (cycle 12: the frog is a T13 strip now; cycle 13: the crab is code art), open the Wild Fauna wing
+    ['honeybee', 'fox', 'heron'].forEach((id) => s.ffDiscovered.add(id));
     s.openMuseum(); s.museumWing = 'wildfauna'; s.showMuseumWing();
     const cardImg = (id) => { const b = document.querySelector(`#museum-wildfauna-list [data-ff-id="${id}"] img`); return b ? { cls: b.className, src: b.src.slice(0, 15), svg: /\.svg/.test(b.src), nw: b.naturalWidth, rend: getComputedStyle(b).imageRendering, cw: Math.round(b.getBoundingClientRect().width) } : null; };
     await new Promise((res) => setTimeout(res, 300));
-    out.grid = { honeybee: cardImg('honeybee'), fox: cardImg('fox'), crab: cardImg('crab'),
+    out.grid = { honeybee: cardImg('honeybee'), fox: cardImg('fox'), heron: cardImg('heron'),
       thumbs: document.querySelectorAll('#museum-wildfauna-list img.ff-strip-thumb').length,
       lockedThumbs: document.querySelectorAll('#museum-wildfauna-list .museum-specimen.locked img.ff-strip-thumb').length };
     s.closeMuseum();
@@ -89,8 +89,9 @@ async function sample(browser, q) {
   check('honeybee / ladybug / butterfly are code art baked at 14 / 14 / 16 px', on.st && ids.every((id) => on.st.ids.includes(id) && on.st.cells[id] === BUGS[id]), JSON.stringify(on.st));
   check('every bee / ladybug / butterfly specimen (incl. in-village) is an animated Sprite on fft_<id> at its cell', ids.every((id) => on.sp[id].length >= 5
     && on.sp[id].every((p) => p.type === 'Sprite' && p.strip && p.tex === `fft_${id}` && p.w === BUGS[id])), JSON.stringify(ids.map((id) => [id, on.sp[id].length, on.sp[id][0]])));
-  // cycle 11: the snail became code art; cycle 12: frog / snake are T13 strips (cyc12-art-town-wetland.test.js), so crab + hedgehog are the SVG controls
-  check('crab and hedgehog stay SVG Images (untouched)', ['crab', 'hedgehog'].every((id) => on.sp[id].length > 0 && on.sp[id].every((p) => p.type === 'Image' && !p.strip)), JSON.stringify([on.sp.crab[0], on.sp.hedgehog[0]]));
+  // cycle 11: the snail became code art; cycle 12: frog / snake are T13 strips (cyc12-art-town-wetland.test.js); cycle 13: crab / hedgehog
+  // are code art (cyc13-art-heart-fauna.test.js), so heron + toucan are the SVG controls
+  check('heron and toucan stay SVG Images (untouched)', ['heron', 'toucan'].every((id) => on.sp[id].length > 0 && on.sp[id].every((p) => p.type === 'Image' && !p.strip)), JSON.stringify([on.sp.heron[0], on.sp.toucan[0]]));
   check('insect pixels read as a body, not a speck: >= 9 px tall and >= 11 px wide, >= 6 colours, hard alpha',
     ids.every((id) => on.px[id] && on.px[id].h >= 9 && on.px[id].wid >= 11 && on.px[id].colours >= 6 && on.px[id].semi === 0), JSON.stringify(on.px));
   check('idle 2 f + move 2 f (right + down) and the two move frames differ (a wing beat)', ids.every((id) => ['idle_right', 'idle_down', 'move_right', 'move_down'].every((k) => on.anims[`${id}_${k}`] === 2) && on.px[id].wingBeat),
@@ -102,9 +103,9 @@ async function sample(browser, q) {
     on.grid.honeybee && on.grid.honeybee.cls === 'ff-strip-thumb' && on.grid.honeybee.src === 'data:image/png;' && on.grid.honeybee.nw === 56 && on.grid.honeybee.rend === 'pixelated'
     && on.grid.fox && on.grid.fox.cls === 'ff-strip-thumb' && on.grid.fox.nw === 48, JSON.stringify([on.grid.honeybee, on.grid.fox]));
   // cycle 11: + hawk (strip) and hummingbird / snail / dragonfly (code) = 12; cycle 12: + frog / snake / trout / catfish (T13 strips) = 16,
-  // 14 of them still locked here (honeybee + fox logged; the logged crab is an SVG species)
-  check('Museum grid: every strip / code species (16) uses the thumbnail, locked ones too (silhouette); the crab keeps its SVG',
-    on.grid.thumbs === 16 && on.grid.lockedThumbs === 14 && on.grid.crab && on.grid.crab.svg, JSON.stringify(on.grid));
+  // cycle 13: + crab / hedgehog / bat / spider (code) = 20, 18 of them still locked here (honeybee + fox logged; the logged heron is an SVG species)
+  check('Museum grid: every strip / code species (20) uses the thumbnail, locked ones too (silhouette); the heron keeps its SVG',
+    on.grid.thumbs === 20 && on.grid.lockedThumbs === 18 && on.grid.heron && on.grid.heron.svg, JSON.stringify(on.grid));
   check('?ffstrips=0: the insects are the old SVG Images and the grid uses SVGs only', off.st && off.st.on === false
     && ids.every((id) => off.sp[id].length > 0 && off.sp[id].every((p) => p.type === 'Image' && !p.strip)) && off.grid.thumbs === 0 && off.grid.honeybee && off.grid.honeybee.svg,
     JSON.stringify([off.sp.honeybee[0], off.grid]));
