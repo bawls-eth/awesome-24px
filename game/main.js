@@ -917,6 +917,39 @@ function makeAnimalHelloHeart(scene, x, y) {
   }
   return scene.add.image(x, y, key).setScale(3).setOrigin(0.5, 1);
 }
+// ID-62 treat bubble (cyc14 S): constants and the code-drawn bubble (original art; G may replace makeTreatBubble, same contract:
+// a Phaser display object whose bottom-left tail sits at (x, y)). 16 x 15 px canvas drawn at 2x: a white bubble, 1 px ink outline,
+// a 10 x 10 flower (pink petals, yellow heart) or fruit (red, green leaf) inside, and a small tail at the bottom left.
+const TREAT_RADIUS = 96;
+const TREAT_GAP_MS = 90000;
+const TREAT_ICONS = {
+  flower: ['...pp.....', '..pPPp....', '.pp##pp...', 'pPPyyPPp..', 'pPyYYyPp..', '.pp##pp...', '..pPPp.g..', '...pp.gg..', '......g...', '.....gg...'],
+  fruit: ['.....g....', '....gG....', '..rrgrr...', '.rRRrrrr..', 'rRWrrrrrr.', 'rRrrrrrrr.', 'rrrrrrrrd.', '.rrrrrrd..', '..rrrrd...', '...ddd....'],
+};
+const TREAT_COLORS = { p: '#ff7eb6', P: '#ffb3d4', '#': '#ff4f97', y: '#ffd23f', Y: '#fff08a', g: '#3fa34d', G: '#7fd36b', r: '#e8433a', R: '#ff8a73', W: '#ffe4dc', d: '#a8262a' };
+function makeTreatBubble(scene, kind) {
+  const key = 'treat-bubble-' + kind;
+  if (!scene.textures.exists(key)) {
+    const cv = document.createElement('canvas'); cv.width = 16; cv.height = 15;
+    const c = cv.getContext('2d');
+    c.fillStyle = '#2b2233'; c.fillRect(1, 0, 14, 1); c.fillRect(1, 12, 14, 1); c.fillRect(0, 1, 1, 11); c.fillRect(15, 1, 1, 11);
+    c.fillStyle = '#ffffff'; c.fillRect(1, 1, 14, 11);
+    c.fillStyle = '#2b2233'; c.fillRect(2, 13, 2, 1); c.fillRect(2, 14, 1, 1); c.fillStyle = '#ffffff'; c.fillRect(3, 12, 2, 1);
+    (TREAT_ICONS[kind] || TREAT_ICONS.flower).forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const col = TREAT_COLORS[row[rx]]; if (col) { c.fillStyle = col; c.fillRect(3 + rx, 1 + ry, 1, 1); } } });
+    scene.textures.addCanvas(key, cv);
+    try { scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST); } catch (e) { /* pixelArt config is nearest already */ }
+  }
+  return scene.add.image(0, 0, key).setScale(2).setOrigin(0.1, 1);
+}
+// ID-63: does this browser hold an Isles tame? Read only: the stable roster, or any tamed count in the Isles log.
+function islesHasTame() {
+  const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+  const t = read('pixeltown-tames-v1');
+  if (t && Array.isArray(t.roster) && t.roster.length > 0) return true;
+  const a = read('pixeltown-archipelago-v1');
+  const tm = a && a.log && a.log.tamed;
+  return !!tm && typeof tm === 'object' && Object.keys(tm).some((k) => Number(tm[k]) > 0);
+}
 // y/range: the legacy mooncats' walk over the water (?legacyart=1). bank: where the stone hero statues stand instead, on dry land
 // along the main pond's north-west bank (outside MAIN_POND's rim, clear of the shells, the heron, the dock and the bridge).
 const POND_CATS = [
@@ -1943,6 +1976,7 @@ class TownScene extends Phaser.Scene {
     this.setupPanelCollapse();
     this.setupWhereTo();
     this.setupGatePointer();
+    this.setupSaveWarn(); // ID-65 (cyc14 S)
     this.setupSaveSync(); // beta S-02: follow saves made in another tab
     if (IS_TOUCH) {
       this.setupTouchControls();
@@ -1984,6 +2018,7 @@ class TownScene extends Phaser.Scene {
     this.updateIslesSignHint();
     this.updatePostcardHint();
     this.updateGatePointer(time);
+    this.updateSaveWarn(time);
     this.updateFishHint();
     this.updateGiftHint();
     this.updateFloraFaunaHint();
@@ -3129,6 +3164,8 @@ class TownScene extends Phaser.Scene {
       this.talkToVillager(villager);
       return;
     }
+    // ID-62: a treat bubble over a nearby liked animal + a flower / fruit in the bag = hand one over (nothing to give: carry on as before)
+    if (this.treatBubble && this.tryAnimalTreat()) return;
     // G-13 (b07-11): a visible beach item in pickup range wins over fish shadows and wildlife logging (villagers still first)
     const beachSpot = this.findNearestBeachItem();
     if (beachSpot) {
@@ -3901,6 +3938,33 @@ class TownScene extends Phaser.Scene {
     try { localStorage.setItem(GATE_POINTER_KEY, JSON.stringify(this.gatePointer)); } catch (e) { /* storage blocked: this session only */ }
   }
 
+  // ID-66 (cyc14 S, spec U cycle 13): the goal card's steps, derived from the save only (no new key). The Realm Gate stays the first step
+  // (today's goal is never blocked); after it, a player who has chopped wood is pointed at the workbench (Plank Stack), then home.
+  // A player who already placed something at home, or crafted and sold their goods, skips the chain. ✕ (dismissed) ends every step.
+  workbenchStep() {
+    const ls = this.lifetimeStats || {};
+    const slots = (this.home && Array.isArray(this.home.slots)) ? this.home.slots : [];
+    if ((ls.homePlaced || 0) > 0 || slots.some(Boolean)) return null;
+    const goods = this.craftedGoods || {};
+    if (RECIPES.some((r) => (goods[r.id] || 0) > 0)) return 'place';
+    if ((ls.crafted || 0) > 0) return null;
+    if ((ls.wood || 0) > 0 || ((this.resources && this.resources.wood) || 0) > 0) return 'craft';
+    return null;
+  }
+
+  goalStep() {
+    const st = this.gatePointer;
+    if (!st || st.dismissed) return null;
+    if (!st.reached) return { id: 'gate', label: '🌀 Realm Gate', close: 'Hide the Realm Gate pointer', x: REALM_GATE_POS.x, y: REALM_GATE_POS.y + 30, min: GATE_POINTER_MIN_DIST };
+    const w = this.workbenchStep();
+    // <= 300 px: the compact card (124 px, 12 px type) holds only about 13 characters a line next to "Goal:" and the arrow, so the short
+    // words keep every step in 2 lines (U rule: shorten the words, never the type; measured in cyc14-s-systems [66])
+    const narrow = window.matchMedia && window.matchMedia('(max-width: 300px)').matches;
+    if (w === 'craft') return { id: 'craft', label: narrow ? 'Use the workbench' : 'Craft a Plank Stack at the workbench', close: 'Hide the goal card', x: WORKBENCH_POS.x, y: WORKBENCH_POS.y, min: WORKBENCH_RADIUS };
+    if (w === 'place') return { id: 'place', label: narrow ? 'Place it at home' : 'Place it at your home', close: 'Hide the goal card', x: HOME_POS.x, y: HOME_POS.y, min: HOME_RADIUS };
+    return null;
+  }
+
   markGateReached() {
     if (this.gatePointer && !this.gatePointer.reached) this.saveGatePointer({ reached: true });
     this.flushQuietLines();
@@ -3940,14 +4004,24 @@ class TownScene extends Phaser.Scene {
     if (!el || !this.localBody || !this.gatePointer) return;
     this._gatePointerAt = time;
     const st = this.gatePointer;
-    const dx = REALM_GATE_POS.x - this.localBody.x;
-    const dy = (REALM_GATE_POS.y + 30) - this.localBody.y;
-    const far = Math.hypot(dx, dy) > GATE_POINTER_MIN_DIST;
+    // ID-66 (cyc14 S): after the gate step, the same card walks a player who has chopped wood to the workbench and then home.
+    const step = this.goalStep();
+    this._goalStep = step ? step.id : null;
+    const tx = step ? step.x : REALM_GATE_POS.x, ty = step ? step.y : REALM_GATE_POS.y + 30;
+    const dx = tx - this.localBody.x;
+    const dy = ty - this.localBody.y;
+    const far = Math.hypot(dx, dy) > (step ? step.min : GATE_POINTER_MIN_DIST);
     // One line of guidance at a time: the What's-new banner (returning players, 10 s) sits where the chip goes, so the chip waits.
     // The achievement toast uses the same top-centre spot.
     const up = (id) => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden') && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && Number(getComputedStyle(e).opacity) > 0.05; };
     const newsUp = up('whats-new-banner') || up('achievement-toast') || up('town-welcome'); // ID-61: the welcome-back line too
-    const show = !st.dismissed && !st.reached && far && !newsUp && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode;
+    const show = !!step && far && !newsUp && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode && (step.id === 'gate' || this.canAct());
+    if (step) {
+      const lab = document.getElementById('gate-pointer-label');
+      if (lab && lab.textContent !== step.label) lab.textContent = step.label;
+      const cl = document.getElementById('gate-pointer-close');
+      if (cl && cl.getAttribute('aria-label') !== step.close) cl.setAttribute('aria-label', step.close);
+    }
     if (el.classList.contains('hidden') === show) el.classList.toggle('hidden', !show);
     if (!show) return;
     // Screen and world share their axes, so the world direction is the arrow direction (8 ways).
@@ -3955,6 +4029,60 @@ class TownScene extends Phaser.Scene {
     const i = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
     const arrow = document.getElementById('gate-pointer-arrow');
     if (arrow && arrow.textContent !== ARROWS[i]) arrow.textContent = ARROWS[i];
+  }
+
+  // ---------- ID-65 (cyc14 S, spec U cycle 13): persistent "Not saved" chip ----------
+  // While storage refuses writes (SAVE_OK false) a small chip stays under the corner Menu until a write lands; no timer, no toast, no
+  // sound and no save key. A tap opens a short note and tries one save at once (writeSave({}) re-sends what is pending).
+  setupSaveWarn() {
+    this._saveWarnAt = 0;
+    const chip = document.getElementById('save-warn'), note = document.getElementById('save-warn-note'), x = document.getElementById('save-warn-note-close');
+    if (!chip || !note) return;
+    const closeNote = () => { if (note.classList.contains('hidden')) return; note.classList.add('hidden'); if (!chip.hidden) chip.focus(); };
+    chip.addEventListener('click', () => {
+      this.saveWarnRetries = (this.saveWarnRetries || 0) + 1;
+      writeSave({}); // one retry: a landed write clears SAVE_OK and flushes what was pending
+      note.classList.remove('hidden');
+      if (x) x.focus();
+      this.updateSaveWarn(Infinity);
+    });
+    if (x) x.addEventListener('click', closeNote);
+    // Esc closes the note first (captured, so it does not also close something behind it)
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || note.classList.contains('hidden')) return;
+      e.preventDefault(); e.stopImmediatePropagation(); closeNote();
+    }, true);
+  }
+
+  updateSaveWarn(time) {
+    if (time !== Infinity && time - (this._saveWarnAt || 0) < 250) return;
+    this._saveWarnAt = time === Infinity ? 0 : time;
+    const chip = this.hintEl('save-warn');
+    if (!chip) return;
+    const show = !SAVE_OK && !this.inRealm && !this.realmEmbed && !this.inUnderground; // the Realm shows its own chip
+    if (chip.hidden === show) chip.hidden = !show;
+    if (!show) { const n = this.hintEl('save-warn-note'); if (n && !n.classList.contains('hidden')) n.classList.add('hidden'); return; }
+    this.placeSaveWarn(chip);
+  }
+
+  // The first free 44 px slot in the left column: under the corner Menu, then below anything visible that would cover it there.
+  placeSaveWarn(chip) {
+    const vis = (e) => { if (!e || e === chip || e.hidden || e.classList.contains('hidden')) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return null; const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 ? r : null; };
+    const nav = vis(document.getElementById('mm-nav-btn'));
+    const w = chip.offsetWidth || 44, h = chip.offsetHeight || 44;
+    let left = nav ? Math.round(nav.left) : 8, top = nav ? Math.round(nav.bottom + 4) : 8;
+    // every visible control (as the a11y sweep's OVERLAP rule counts them) plus the HUD panels that hold text
+    const obstacles = [...document.querySelectorAll('button, a[href], select, [role=button], [role=application], [tabindex]:not([tabindex="-1"]), #bag-icon, #inventory-panel, #player-list-panel, #gate-pointer, #whats-new-banner, #town-welcome, #joystick, #interact-btn, #mobile-chat-btn')]
+      .filter((e) => !chip.contains(e)).map(vis).filter((r) => r && r.width * r.height < 0.5 * innerWidth * innerHeight);
+    for (let k = 0; k < 12; k++) {
+      const hit = obstacles.find((r) => r.left < left + w - 1 && r.right > left + 1 && r.top < top + h - 1 && r.bottom > top + 1);
+      if (!hit) break;
+      top = Math.round(hit.bottom + 4);
+    }
+    if (top + h > innerHeight) top = nav ? Math.round(nav.bottom + 4) : 8; // nothing free below: keep the first slot
+    const l = left + 'px', t = top + 'px';
+    if (chip.style.left !== l) chip.style.left = l;
+    if (chip.style.top !== t) chip.style.top = t;
   }
 
   // ---------- Realm gate menu, invites and team link ----------
@@ -7432,9 +7560,12 @@ class TownScene extends Phaser.Scene {
   updateAnimalHello(time) {
     if (!this.ffNear || !this.localBody || this.inRealm || this.inUnderground || this.realmEmbed) return;
     this.updateAnimalHelloHearts(time);
+    if (this.treatBubble) this.followTreatBubble();
     if (time - (this._animalHelloAt || 0) < 200) return;
     this._animalHelloAt = time;
     if (!this.animalHello) this.animalHello = cleanAnimalHello(loadSave().animalHello);
+    this.updateTreatBubble(time);
+    this.updateIslesTameLine();
     const px = this.localBody.x, py = this.localBody.y;
     let best = null, bestD = ANIMAL_HELLO_RADIUS;
     for (const spec of this.ffNear) {
@@ -7463,12 +7594,18 @@ class TownScene extends Phaser.Scene {
       MMTownFauna.play(sprite, spec.id, 'idle', sprite.ffDir);
       if (reduceMotion && sprite.anims) sprite.anims.pause();
     }
+    this.animalHeart(spec, time);
+    this.animalHelloLine(spec);
+  }
+
+  animalHeart(spec, time) {
+    const sprite = spec.sprite;
     const still = reduceMotion || document.body.classList.contains('a11y-reduce-motion');
     const heart = makeAnimalHelloHeart(this, sprite.x, sprite.y - sprite.displayHeight / 2 - 4).setDepth(99996);
     const h = { heart, spec, until: time + ANIMAL_HELLO_HEART_MS, still, t0: time };
     this.animalHelloHearts = this.animalHelloHearts || [];
     this.animalHelloHearts.push(h);
-    this.animalHelloLine(spec);
+    return h;
   }
 
   // Hearts follow their animal; a small bob unless motion is reduced (then it just appears and disappears, no bounce, no fade).
@@ -7488,24 +7625,119 @@ class TownScene extends Phaser.Scene {
   // The one line: only when #achievement-toast is free (no achievement / note showing, What's-new, welcome-back and the gate chip down), at most once
   // per 30 s, and never while a panel, shop, the Museum, the map, the nav sheet or the bag is open. Otherwise skipped (the heart still shows).
   animalHelloLine(spec) {
+    return this.animalLine(`${/^[AEIOU]/i.test(spec.name) ? 'An' : 'A'} ${spec.name} noticed you 💛`);
+  }
+
+  // No dialog, shop, Museum, map, nav sheet, bag or build mode in front (ID-59 rules; ID-62's bubble uses the same test).
+  animalCalm() {
+    const bag = document.getElementById('inventory-panel');
+    return this.canAct() && !(bag && bag.classList.contains('bag-open')) && !this.buildMode;
+  }
+
+  // The one animal line slot shared by ID-59 (hello), ID-62 (treat) and ID-63 (Isles callback): the ID-59 rules above.
+  animalLine(text) {
     const now = Date.now();
     if (this._animalHelloLineAt && now - this._animalHelloLineAt < ANIMAL_HELLO_LINE_GAP_MS) return false;
     const up = (id) => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden') && getComputedStyle(e).display !== 'none'; };
     if (up('achievement-toast') || up('whats-new-banner') || up('town-welcome')) return false;
     // First-minute rule: while the Realm Gate chip guides a new player it is the one line of guidance (and it hides while the toast is up).
-    if (up('gate-pointer') || this._quietLines) return false;
-    const bag = document.getElementById('inventory-panel');
-    if (!this.canAct() || (bag && bag.classList.contains('bag-open')) || this.buildMode) return false;
+    // cyc14 S: only the gate step counts; the ID-66 workbench steps on the same card do not hold the animal lines back.
+    if ((up('gate-pointer') && this._goalStep === 'gate') || this._quietLines) return false;
+    if (!this.animalCalm()) return false;
     const toast = document.getElementById('achievement-toast');
     if (!toast) return false;
     this._animalHelloLineAt = now;
-    toast.textContent = `${/^[AEIOU]/i.test(spec.name) ? 'An' : 'A'} ${spec.name} noticed you 💛`;
+    toast.textContent = text;
     toast.classList.add('toast-hello'); // <= 300 px: compact, above the bag bar (style.css)
     toast.classList.remove('hidden');
     clearTimeout(this.achievementToastTimer);
     this.achievementToastTimer = setTimeout(() => toast.classList.add('hidden'), ANIMAL_HELLO_LINE_MS);
     this.animalHelloLines = (this.animalHelloLines || 0) + 1;
     return true;
+  }
+
+  // ---------- ID-62 (cyc14 S, spec U cycle 13): animal treat bubble ----------
+  // An animal that already liked the hero (its animalHello bit is set) sometimes shows a small flower or fruit in a speech bubble while
+  // the hero is within TREAT_RADIUS: at most one bubble in the Town, at most one every TREAT_GAP_MS. The usual interact (E / A) with a
+  // flower or fruit in the bag gives ONE (lowest value first: today's deal item last), shows the ID-59 heart and one line. Nothing to give:
+  // the interact does what it did before and the bubble goes. No hunger, no counter, no reward, no save key (the bubble is memory only).
+  updateTreatBubble(time) {
+    const b = this.treatBubble;
+    if (b) {
+      const s = b.spec.sprite;
+      const d = s && s.scene ? Math.hypot(s.x - this.localBody.x, s.y - this.localBody.y) : Infinity;
+      if (d > TREAT_RADIUS || !this.animalCalm()) this.clearTreatBubble(false);
+      return;
+    }
+    if (this._treatAt !== undefined && time - this._treatAt < TREAT_GAP_MS) return;
+    if (!this.animalCalm()) return;
+    const busy = new Set((this.animalHelloHearts || []).map((h) => h.spec));
+    const metNow = new Set(this.animalHelloLog || []); // greeted on THIS visit: the hello was its moment, a treat waits for a later visit
+    let best = null, bestD = TREAT_RADIUS;
+    for (const spec of this.ffNear) {
+      const idx = FF_FAUNA_INDEX[spec.id];
+      if (idx === undefined || !animalHelloHas(this.animalHello, idx) || metNow.has(spec.id) || busy.has(spec) || !spec.sprite || !spec.sprite.scene) continue;
+      const d = Math.hypot(spec.sprite.x - this.localBody.x, spec.sprite.y - this.localBody.y);
+      if (d <= bestD) { best = spec; bestD = d; }
+    }
+    if (!best) return;
+    this._treatAt = time;
+    const kind = FF_FAUNA_INDEX[best.id] % 2 ? 'fruit' : 'flower';
+    const img = makeTreatBubble(this, kind).setDepth(99995);
+    this.treatBubble = { spec: best, img, kind };
+    this.treatBubbles = (this.treatBubbles || 0) + 1;
+    this.followTreatBubble();
+  }
+
+  followTreatBubble() {
+    const b = this.treatBubble, s = b.spec.sprite;
+    if (!s || !s.scene) { this.clearTreatBubble(false); return; }
+    b.img.setPosition(Math.round(s.x + 10), Math.round(s.y - s.displayHeight / 2 - 2));
+  }
+
+  // fade: a short fade out (never with reduced motion: then it just goes)
+  clearTreatBubble(fade) {
+    const b = this.treatBubble;
+    if (!b) return;
+    this.treatBubble = null;
+    const still = reduceMotion || document.body.classList.contains('a11y-reduce-motion');
+    if (fade && !still) this.tweens.add({ targets: b.img, alpha: 0, duration: 250, onComplete: () => b.img.destroy() });
+    else b.img.destroy();
+  }
+
+  // Called by interact(): true = a treat was handed over (the interact is used up); false = the interact goes on as before.
+  tryAnimalTreat() {
+    const b = this.treatBubble;
+    if (!b) return false;
+    const s = b.spec.sprite;
+    if (!s || !s.scene || Math.hypot(s.x - this.localBody.x, s.y - this.localBody.y) > TREAT_RADIUS) return false;
+    let deal = null; try { deal = this.todaysDeal().key; } catch (e) { deal = null; }
+    const order = ['flowers', 'fruit'].filter((k) => (this.resources[k] || 0) > 0).sort((a, c) => (a === deal) - (c === deal));
+    if (!order.length) { this.clearTreatBubble(true); return false; }
+    const item = order[0];
+    this.resources[item] -= 1;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.clearTreatBubble(false);
+    this.animalHeart(b.spec, this.time.now);
+    this.treatGiven = (this.treatGiven || []).concat([item]);
+    this.animalLine(`The ${b.spec.name} loved the ${item === 'flowers' ? 'flower' : 'fruit'} 💛`);
+    return true;
+  }
+
+  // ---------- ID-63 (cyc14 S, reduced spec U cycle 13): Isles tame callback ----------
+  // Once per profile: if the Isles stable (pixeltown-tames-v1, read only) or the Isles log holds a tame and the additive Town key
+  // islesTameSeen is not set, one line through the shared animal line slot; when the slot is busy it is tried again this visit.
+  updateIslesTameLine() {
+    if (this._islesTameLine === undefined) {
+      this._islesTameLine = false;
+      try { if (!loadSave().islesTameSeen && islesHasTame()) this._islesTameLine = true; } catch (e) { this._islesTameLine = false; }
+    }
+    if (!this._islesTameLine) return;
+    if (!this.animalLine('The Town animals heard about your new friend from the Isles 💛')) return;
+    this._islesTameLine = false;
+    this.islesTameLines = (this.islesTameLines || 0) + 1;
+    writeSave({ islesTameSeen: 1 }); // refused = kept in SAVE_PENDING and written by the next write that lands
   }
 
   // ---------- Wild fauna/flora log (folded into the Museum) ----------

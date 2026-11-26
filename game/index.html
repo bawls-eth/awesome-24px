@@ -215,8 +215,14 @@
   <button id="build-undo-btn" type="button" class="hidden" title="Undo your last placed block (Z)">↩️ Undo</button>
 
   <div id="gate-pointer" class="hidden" role="status">
-    <span id="gate-pointer-text"><span class="gp-goal">Goal:</span> 🌀 Realm Gate <span id="gate-pointer-arrow" aria-hidden="true">↑</span></span>
+    <span id="gate-pointer-text"><span class="gp-goal">Goal:</span> <span id="gate-pointer-label">🌀 Realm Gate</span> <span id="gate-pointer-arrow" aria-hidden="true">↑</span></span>
     <button id="gate-pointer-close" type="button" aria-label="Hide the Realm Gate pointer">✕</button>
+  </div>
+  <!-- cyc14 S ID-65: persistent "Not saved" chip while storage refuses writes (SAVE_OK false); placed by main.js placeSaveWarn() -->
+  <div id="save-warn-wrap" role="status"><button id="save-warn" type="button" class="save-warn" hidden aria-label="Your progress is not being saved: browser storage refused it. Tap for details">⚠ Not saved</button></div>
+  <div id="save-warn-note" class="hidden" role="dialog" aria-modal="false" aria-labelledby="save-warn-note-text">
+    <span id="save-warn-note-text">This browser refused to save (storage full or blocked, for example in a private window). Free some space or leave private mode; the game keeps trying on every change.</span>
+    <button id="save-warn-note-close" type="button" aria-label="Close the note">✕</button>
   </div>
   <div id="realm-gate-hint" class="hidden">🌀 <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to enter the Realm</div>
   <button id="isles-sign-hint" class="hidden" type="button">⛵ Sail to Hearthvale Isles<span class="key-hint"> (E)</span></button>
