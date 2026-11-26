@@ -3288,8 +3288,23 @@ class TownScene extends Phaser.Scene {
     this.resolvePolyroll(`🪙 landed on ${flip}`, win, delta);
   }
 
+  // Offline stars persist: take the stake and save it first. false = storage refused it (stars and hooks restored, nothing rolled).
+  polyrollTakeStake(bet) {
+    this._polyStake = 0;
+    if (!this.starsPersist()) return true;
+    const prior = STARS_FLUSH;
+    this.localScore -= bet;
+    this.saveStars();
+    if (STARS_FLUSH && STARS_FLUSH !== prior) { this.localScore += bet; STARS_FLUSH = prior; this.updatePolyrollScoreLabel(); return false; }
+    this._polyStake = bet;
+    this.updatePolyrollScoreLabel();
+    return true;
+  }
+
   resolvePolyroll(rollText, win, delta) {
-    this.awardPoint(delta, `${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐`, this.localBody.x, this.localBody.y - 30);
+    // The stake (if taken up front) is already out of the wallet: a win pays stake + winnings, a loss pays nothing more.
+    const staked = this._polyStake || 0; this._polyStake = 0;
+    this.awardPoint(staked ? (win ? delta + staked : 0) : delta, `${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐`, this.localBody.x, this.localBody.y - 30, staked && !win ? 'deny' : undefined);
     const resultEl = document.getElementById('polyroll-result');
     resultEl.textContent = `${rollText} — you ${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐!`;
     resultEl.className = win ? 'win' : 'lose';
@@ -3348,6 +3363,14 @@ class TownScene extends Phaser.Scene {
       if (score <= 0 || bet < 1) {
         document.getElementById('polyroll-result').textContent = "you don't have any ⭐ to bet";
         document.getElementById('polyroll-result').className = 'lose';
+        return;
+      }
+      // Cycle 14 D: the stake is written BEFORE the roll. With storage refusing, a lost bet came back after a reload and the roll could be
+      // repeated for free (save-scumming); now no roll happens unless the stake landed in storage, and a refused stake is put back.
+      if (!this.polyrollTakeStake(bet)) {
+        const r = document.getElementById('polyroll-result');
+        r.textContent = 'Polyroll is paused: browser storage is full or blocked, so a bet could not be kept. Free some space and try again. Nothing was rolled or spent.';
+        r.className = 'lose';
         return;
       }
       if (this.polyrollMode === 'dice') this.playPolyrollDice(this.polyrollDicePick, bet);
@@ -10106,7 +10129,7 @@ class TownScene extends Phaser.Scene {
   }
 
   dailiesRecord() {
-    const rec = loadSave().dailies;
+    const rec = loadSaveLive().dailies; // cyc14 D: live read (a refused 'paid' sat in SAVE_PENDING, so every 20 s poll paid the bonus again)
     const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
     return { day: ok ? cleanCount(rec.day) : 0, paid: !!(ok && rec.day === this.questDayBucket() && rec.paid === true), days: ok ? cleanCount(rec.days) : 0 };
   }
@@ -10125,6 +10148,7 @@ class TownScene extends Phaser.Scene {
         this.awardPoint(DAILY_BONUS, `📋 All chores done! +${DAILY_BONUS} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
         this.addChatLine({ system: true, text: `📋 Every daily chore is done — +${DAILY_BONUS} ⭐ bonus!` });
         this.incrementStat('dailyAllDone');
+        this.unsavedNote('Chores bonus');
       }
     }
     if (this.dailiesOpen) this.renderDailies();
@@ -10177,7 +10201,7 @@ class TownScene extends Phaser.Scene {
   }
 
   bountyRecord() {
-    return MMBounties.cleanTown(loadSave().bounty, townUtcKey(), this.townBounties());
+    return MMBounties.cleanTown(loadSaveLive().bounty, townUtcKey(), this.townBounties()); // cyc14 D: live read (a refused claim could be claimed again and again)
   }
 
   bountyEvent(type) {
@@ -10203,6 +10227,7 @@ class TownScene extends Phaser.Scene {
     rec.s[id] = [r.state.count, 1];
     writeSave({ bounty: rec }); // save first, then pay, so a reload can never pay twice
     this.awardPoint(r.reward.stars, `📜 ${b.text}: +${r.reward.stars} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+    this.unsavedNote('Bounty claimed');
     if (this.dailiesOpen) this.renderDailies();
     return true;
   }
