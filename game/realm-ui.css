@@ -381,3 +381,44 @@ body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important
   #realm-shop #realm-bp-list button.rm-pin { grid-column: 1; grid-row: 2 / span 2; justify-self: end; align-self: center; }
   #realm-shop #realm-bp-list button.eq { grid-column: 1; }
 }
+
+/* cyc13-lead (the 8 Realm world overlaps at 160x284 the a11y sweep parked in cycle 12): at <= 190 px wide in portrait the world HUD is
+   laid out on a fixed 3-column grid of 44 px cells and the five secondary controls (backpack, board, gear, Daily, leave) fold into the
+   "More" tray (#rw-more-btn, mad-maze.js moreTray). Closed: compass, HP / focus / XP on top, aim toggle, Menu, More, mini-map, the 2x2
+   ability pad and two 64 px sticks, none covering another. Open: the tray takes the pad's place (the pad and both sticks are hidden
+   while it is open; a tap on an item closes it). Wider screens: the More button is not shown and nothing changes. Every rule needs body.rw-has-more, which moreTray sets when the
+   button exists, so this file with an older cached mad-maze.js cannot hide controls that have no tray. */
+#rw-more-btn { display: none; }
+@media (max-width: 190px) and (orientation: portrait) {
+  html body.world-mode.rw-has-more.touch-device #rw-more-btn { display: inline-flex; align-items: center; justify-content: center; position: fixed; z-index: 4; left: calc(108px + var(--sl)); top: calc(66px + var(--st));
+    width: 44px; height: 44px; padding: 0; box-sizing: border-box; font: 900 20px/1 system-ui, sans-serif; cursor: pointer;
+    background: linear-gradient(#2e241a, #17120e); border: 2px solid var(--cv-iron, #7a5a36); border-radius: 0; color: var(--cv-ember, #ffb347); box-shadow: 0 0 0 1px #000 inset, 0 2px 6px rgba(0, 0, 0, 0.55); }
+  html body.world-mode.rw-has-more.touch-device #rw-more-btn[aria-expanded="true"] { border-color: var(--cv-ember, #ffb347); background: #3a2c1c; }
+  html body.world-mode.rw-has-more.touch-device #rw-more-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  /* top: XP bar under the focus bar, then Menu + More; the aim toggle keeps its cyc3 spot under the compass */
+  html body.world-mode.rw-has-more.touch-device #realm-xp { position: fixed; left: calc(64px + var(--sl)); top: calc(44px + var(--st)); width: 88px; margin-left: 0; }
+  html body.world-mode.rw-has-more.touch-device #realm-overlay #realm-menu-btn { position: fixed; left: calc(60px + var(--sl)); top: calc(66px + var(--st)); width: 44px; height: 44px; }
+  /* left column: mini-map, Lv / shards (two lines), zone line */
+  html body.world-mode.rw-has-more.touch-device #rw-minimap:not(.big) { left: calc(8px + var(--sl)); right: auto; top: calc(110px + var(--st)); width: 44px; height: 44px; }
+  html body.world-mode.rw-has-more.touch-device #realm-overlay #realm-info { left: calc(8px + var(--sl)); top: calc(158px + var(--st)); width: 48px; max-width: 48px; height: 32px; line-height: 16px;
+    flex-direction: column; align-items: flex-start; gap: 0; }
+  html body.world-mode.rw-has-more.touch-device #rw-zone, html body.world-mode.rw-has-more.touch-device #rw-minimap.big + #rw-zone { top: calc(192px + var(--st)); max-width: 50px !important; overflow: hidden; } /* !important: also while the Resting chip shows (the cyc9 :has rule widens the strip to the screen) */
+  html body.world-mode.rw-has-more.touch-device #rw-zone .rw-rest { padding: 0 1px; }
+  /* the Next-goal text has no free spot beside the sticks: it is read in the open tray (full width under Daily, sticks hidden) */
+  html body.world-mode.rw-has-more.touch-device:not(.rw-more-open) #rw-goal { display: none !important; }
+  html body.world-mode.rw-has-more.touch-device.rw-more-open #rw-goal { left: calc(8px + var(--sl)) !important; top: calc(256px + var(--st)) !important; width: calc(100vw - 16px); max-width: calc(100vw - 16px) !important; max-height: calc(100vh - 256px - var(--st)); overflow: hidden; }
+  /* bottom: two 64 px sticks, the 2x2 pad right above the aim stick */
+  html body.world-mode.rw-has-more.touch-device .realm-stick { width: 64px; height: 64px; bottom: calc(8px + var(--sb)); }
+  html body.world-mode.rw-has-more.touch-device .realm-stick .knob { width: 32px; height: 32px; margin: -16px 0 0 -16px; }
+  html body.world-mode.rw-has-more.touch-device #realm-abilities { right: calc(8px + var(--sr)); left: auto; top: auto; bottom: calc(8px + 64px + 8px + var(--sb)); gap: 4px; }
+  /* the tray: folded while closed */
+  html body.world-mode.rw-has-more.touch-device:not(.rw-more-open) #realm-overlay #realm-bp-btn, html body.world-mode.rw-has-more.touch-device:not(.rw-more-open) #realm-overlay #realm-board-btn,
+  html body.world-mode.rw-has-more.touch-device:not(.rw-more-open) #realm-overlay #realm-leave-btn, html body.world-mode.rw-has-more.touch-device:not(.rw-more-open) #mm-gear-btn,
+  html body.world-mode.rw-has-more.touch-device:not(.rw-more-open) a#mm-daily-btn { display: none !important; }
+  html body.world-mode.rw-has-more.touch-device.rw-more-open #realm-abilities, html body.world-mode.rw-has-more.touch-device.rw-more-open .realm-stick { visibility: hidden; }
+  html body.world-mode.rw-has-more.touch-device.rw-more-open #realm-overlay #realm-bp-btn { position: fixed; left: calc(60px + var(--sl)); top: calc(114px + var(--st)); }
+  html body.world-mode.rw-has-more.touch-device.rw-more-open #realm-overlay #realm-board-btn { position: fixed; left: calc(108px + var(--sl)); top: calc(114px + var(--st)); }
+  html body.world-mode.rw-has-more.touch-device.rw-more-open #mm-gear-btn { position: fixed; left: calc(60px + var(--sl)); right: auto; bottom: auto; top: calc(162px + var(--st)); }
+  html body.world-mode.rw-has-more.touch-device.rw-more-open #realm-overlay #realm-leave-btn { position: fixed; left: calc(108px + var(--sl)); top: calc(162px + var(--st)); }
+  html body.world-mode.rw-has-more.touch-device.rw-more-open a#mm-daily-btn { position: fixed; left: calc(60px + env(safe-area-inset-left, 0px)); right: auto; bottom: auto; top: calc(210px + env(safe-area-inset-top, 0px)); width: 92px; padding: 0 4px; } /* a child of body: the --sl / --st variables of #realm-overlay do not reach it */
+}

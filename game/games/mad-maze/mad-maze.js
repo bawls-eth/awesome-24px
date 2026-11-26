@@ -965,6 +965,30 @@
     tick(); setInterval(sched, 500);
   })();
 
+  // cyc13-lead: the Realm world at <= 190 px wide (a 320 px phone at 200% zoom = 160 css px). Eleven 44 px controls plus two sticks do
+  // not fit that screen without covering each other (the 8 overlaps the a11y sweep parked in cycle 12), so the five secondary controls
+  // (backpack, board, settings gear, Daily, leave) fold into a "More" tray there. The button exists on every width but only the
+  // <= 190 px rule in realm-ui.css shows it; wider screens keep every control visible as before. Nothing is removed.
+  (function moreTray() {
+    if (dungeon || !document.body.classList.contains('world-mode')) return;
+    const ov = document.getElementById('realm-overlay'); if (!ov) return;
+    const b = document.createElement('button'); b.id = 'rw-more-btn'; b.type = 'button'; b.textContent = '\u22ef';
+    b.title = 'More'; b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-label', 'More: backpack, board, settings, daily, leave');
+    const set = (on) => { document.body.classList.toggle('rw-more-open', !!on); b.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+    b.addEventListener('click', (e) => { e.stopPropagation(); set(!document.body.classList.contains('rw-more-open')); });
+    // a tap on a tray item does its job and closes the tray
+    document.addEventListener('click', (e) => {
+      if (!document.body.classList.contains('rw-more-open')) return;
+      const t = e.target && e.target.closest ? e.target.closest('#realm-bp-btn, #realm-board-btn, #realm-leave-btn, #mm-gear-btn, #mm-daily-btn') : null;
+      if (t) set(false);
+    }, true);
+    // Escape closes the open tray only (capture + stop: the game's own Escape would also open the pause menu)
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('rw-more-open')) { set(false); e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    ov.appendChild(b);
+    document.body.classList.add('rw-has-more'); // realm-ui.css folds the five controls only when this button exists (a cached old script keeps the old layout)
+  })();
+
   if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null, team: (realmWorld && realmWorld.team) || null };
   arena.start();
   // A fresh world visit with several owned heroes opens the picker first (?heropick=0 skips it).

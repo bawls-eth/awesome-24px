@@ -11,7 +11,7 @@
   const MIN_W = 300; // at <= 300 px (200% zoom) the option is ignored: the fixed stick is clearer there
   const MAXR = 46;
   // Top HUD band: the zone / goal lines, the HP / info bar, the xp, boss and partner bars, the ID-53 hint and the mini-map.
-  const TOP_SEL = ['#realm-hud', '#realm-xp', '#realm-boss', '#realm-partner', '#rw-zone', '#rw-goal', '#rw-jit', '#rw-minimap'];
+  const TOP_SEL = ['#realm-hud', '#realm-xp', '#realm-boss', '#realm-partner', '#rw-zone', '#rw-goal', '#rw-jhint', '#rw-minimap']; // cyc13-lead: was '#rw-jit', an id nothing has
 
   function pref(storage) {
     try { const s = storage || root.localStorage; return !!s && s.getItem(KEY) === '1'; } catch (e) { return false; }
@@ -98,5 +98,5 @@
     return ctl;
   }
 
-  root.MMMoveFloat = { KEY: KEY, MIN_W: MIN_W, MAXR: MAXR, pref: pref, active: active, topBound: topBound, canStart: canStart, refresh: refresh, bindStick: bindStick };
+  root.MMMoveFloat = { KEY: KEY, MIN_W: MIN_W, MAXR: MAXR, TOP_SEL: TOP_SEL.slice(), pref: pref, active: active, topBound: topBound, canStart: canStart, refresh: refresh, bindStick: bindStick };
 })(typeof window !== 'undefined' ? window : globalThis);

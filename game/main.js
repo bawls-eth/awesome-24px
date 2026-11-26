@@ -315,13 +315,21 @@ function writeSaveMerged(fn) {
 
 // Counters: stored + (mine - base) per key, clamped to 0..cap. Keys only storage has are kept (additive);
 // a tab that missed another tab's write adds only its OWN change, never its stale total.
-function townMergeCounts(stored, mine, base, cap) {
+// cyc13-lead: lifetimeStats keys that are a "best so far", not a counter. Two tabs merge them as max(stored, mine); adding this tab's
+// increase on top of another tab's best (6 + (5 - 3) = 8) invented a record nobody reached.
+const TOWN_BEST_STATS = ['bestSellStreak', 'homeCozyBest', 'fishSpecies'];
+function townMergeCounts(stored, mine, base, cap, best) {
   const s = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
   const b = base && typeof base === 'object' ? base : null;
   const out = { ...s };
   const lim = cap || 1e9;
   Object.keys(mine || {}).forEach((k) => {
     const m = Number(mine[k]) || 0;
+    if (best && best.includes(k)) { // a best value: the higher one wins; with nothing of this tab's own (mine === base) storage stays
+      const own = b ? m !== (Number(b[k]) || 0) : true;
+      out[k] = Math.min(lim, own ? Math.max(cleanCount(s[k]), cleanCount(m)) : cleanCount(s[k]));
+      return;
+    }
     const delta = b ? m - (Number(b[k]) || 0) : m - (cleanCount(s[k]));
     out[k] = Math.min(lim, cleanCount(cleanCount(s[k]) + delta));
   });
@@ -4785,7 +4793,7 @@ class TownScene extends Phaser.Scene {
     // Beta S-02: stats are stored + this tab's own increase, unlocks are the union, so another tab's progress is kept.
     const base = this._statsBase || null;
     const p = writeSaveMerged((stored) => ({
-      lifetimeStats: townMergeCounts(stored.lifetimeStats, this.lifetimeStats, base),
+      lifetimeStats: townMergeCounts(stored.lifetimeStats, this.lifetimeStats, base, 0, TOWN_BEST_STATS),
       achievementsUnlocked: townUnion(stored.achievementsUnlocked, [...this.achievementsUnlocked]),
     }));
     if (!p) return;
@@ -5072,7 +5080,8 @@ class TownScene extends Phaser.Scene {
       Object.keys(st).forEach((k) => { next[k] = cleanCount(st[k]); });
       Object.keys(this.lifetimeStats).forEach((k) => {
         const d = (Number(this.lifetimeStats[k]) || 0) - (Number(base[k]) || 0);
-        if (d !== 0) next[k] = cleanCount(cleanCount(st[k]) + d); // this tab's own unsaved increase
+        // this tab's own unsaved change: a counter adds it to what storage holds, a best value keeps the higher of the two (cyc13-lead)
+        if (d !== 0) next[k] = TOWN_BEST_STATS.includes(k) ? Math.max(cleanCount(st[k]), cleanCount(this.lifetimeStats[k])) : cleanCount(cleanCount(st[k]) + d);
         if (!(k in next)) delete this.lifetimeStats[k];
       });
       Object.keys(next).forEach((k) => { this.lifetimeStats[k] = next[k]; });
@@ -5346,13 +5355,34 @@ class TownScene extends Phaser.Scene {
     this.showMuseumWing();
     document.getElementById('museum-overlay').classList.remove('hidden');
     this.museumOpen = true;
+    this.setModalInert(document.getElementById('museum-overlay'), true);
     // Species facts live in a separate ~50KB registry that most sessions
     // never need, so it's only fetched the first time the Museum is opened.
     this.loadSpeciesRegistry();
   }
 
+  // cyc13-lead: while a modal Town dialog is open, everything outside it is `inert` (no focus, no taps, hidden from screen readers):
+  // the siblings of the dialog and of each of its ancestors up to <body>. Text-only live regions (toasts, status lines) stay readable, and an
+  // element that was already inert is not touched, so closing removes exactly what opening set.
+  setModalInert(dialog, on) {
+    if (!dialog) return;
+    if (!on) { (dialog._inertSet || []).forEach((e) => e.removeAttribute('inert')); dialog._inertSet = null; return; }
+    if (dialog._inertSet) return;
+    const set = [];
+    for (let n = dialog; n && n !== document.body && n.parentElement; n = n.parentElement) {
+      [...n.parentElement.children].forEach((sib) => {
+        if (sib === n || /^(SCRIPT|STYLE|LINK|TEMPLATE|H[1-6])$/.test(sib.tagName) || sib.hasAttribute('inert')) return; // headings: the page keeps its (visually hidden) h1
+        const live = sib.hasAttribute('aria-live') || /^(status|alert|log)$/.test(sib.getAttribute('role') || '');
+        if (live && !sib.querySelector('a[href], button, input, select, textarea, [tabindex]')) return; // a text-only live region stays readable
+        sib.setAttribute('inert', ''); set.push(sib);
+      });
+    }
+    dialog._inertSet = set;
+  }
+
   closeMuseum() {
     document.getElementById('museum-overlay').classList.add('hidden');
+    this.setModalInert(document.getElementById('museum-overlay'), false);
     this.hideMuseumDetail();
     this.museumOpen = false;
   }
