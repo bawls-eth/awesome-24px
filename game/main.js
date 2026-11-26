@@ -5306,7 +5306,7 @@ class TownScene extends Phaser.Scene {
     const set = [];
     for (let n = dialog; n && n !== document.body && n.parentElement; n = n.parentElement) {
       [...n.parentElement.children].forEach((sib) => {
-        if (sib === n || /^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(sib.tagName) || sib.hasAttribute('inert')) return;
+        if (sib === n || /^(SCRIPT|STYLE|LINK|TEMPLATE|H[1-6])$/.test(sib.tagName) || sib.hasAttribute('inert')) return; // headings: the page keeps its (visually hidden) h1
         const live = sib.hasAttribute('aria-live') || /^(status|alert|log)$/.test(sib.getAttribute('role') || '');
         if (live && !sib.querySelector('a[href], button, input, select, textarea, [tabindex]')) return; // a text-only live region stays readable
         sib.setAttribute('inert', ''); set.push(sib);

@@ -44,6 +44,12 @@ test (`blockDb` / `offlineStub`, literal `db.attempts() === 0`). No new key in `
   each ancestor up to `<body>`; text-only live regions stay readable; an element that was already inert is left alone) and
   `closeMuseum()` removes exactly what it set.
 
+- Two regressions of my own, caught by the sweep and fixed: (a) `town-museum | landmark | no-h1` at every size: the Town's visually
+  hidden `<h1 id="town-h1">` is a child of `<body>` and went inert; `setModalInert` now leaves headings alone. (b) `town-museum | menu |
+  covered` at 1920x1080: the sweep's Menu rule is "on top, or hidden while a modal dialog with its own 44 px close button is open",
+  and the compass was now visible but under the Museum. The cycle 12 "hide the compass while the Museum is open" rule applies at
+  every size now (it was small screens only). For the other dialogs the compass stays visible under the backdrop.
+
 ### IDEAS.md (L approval)
 - ID-65 "Not saved" chip: **approved**, with conditions (existing flag, `role="status"`, no save key, must pass the overlap check at 195 and 160 px).
 - ID-66 workbench step in the first-visit goals: **approved**, with conditions (text only, derived from data the save already has, skipped for returning players).
@@ -66,7 +72,9 @@ test (`blockDb` / `offlineStub`, literal `db.attempts() === 0`). No new key in `
 | 2b | `cyc11-lead-town-stars.test.js` | - | ALL PASSED |
 | 3 | `cyc13-lead-town-compass-z.test.js` (new: 1280x720, 390x844, 195x422) | 58 FAILED | ALL PASSED |
 | 3 | `cyc12-lead-museum-panel`, `cyc7-ui-hud`, `nav-town`, `cyc2-ui-town-narrow` | - | ALL PASSED (each) |
-| all | `PAGES=town,town-museum,realm-world,realm-dungeon VPS=160x284,195x422,390x844,1920x1080 a11y-viewport-sweep` | - | SWEEP_RESULT |
+| all | `PAGES=town,town-museum,realm-world,realm-dungeon VPS=160x284,195x422,390x844,1920x1080 a11y-viewport-sweep` | - | first run: **3 FAILED**, 2 new offenders on `town-museum`, both caused by my item 3 (see below); town, realm-world, realm-dungeon 0 offenders |
+| 3 | `PAGES=town,town-museum a11y-viewport-sweep` (all 9 viewports + preference passes), after the two follow-up fixes | 2 offenders | ALL PASSED, 0 offenders (18 page views) |
+| 3 | `cyc13-lead-town-compass-z` and `cyc12-lead-museum-panel` again after the follow-up fixes | - | ALL PASSED (each) |
 
 Not run: the full suite (the coordinator's stamp), the full a11y sweep over all 17 page views, any real device.
 `cyc11-s-move-float`, `cyc11-lead-town-stars`, `nav-town`, `cyc2-ui-town-narrow`, `cyc12-lead-museum-panel` and `cyc7-ui-hud` ran before
@@ -93,8 +101,9 @@ New tests registered in `test-tiers.json`: `cyc13-lead-realm-160` (browser, full
   generic and each open / close pair needs two lines plus a test.
 - The compass fix is checked by showing each dialog (removing `hidden`), not by opening each one through its own game action, except
   the Museum.
-- The cycle 12 rule that hides the compass while the Museum is open on small screens is still there; with z 19 it is no longer needed
-  and could be deleted by U.
+- Only the Museum hides the compass; under the other 15 dialogs it is visible but covered. If the sweep ever opens those dialogs, its
+  Menu rule will flag that (it accepts hidden, not covered). Either hide the compass for every modal Town dialog or let the rule accept
+  "covered by a modal dialog that has its own close button": a U decision.
 - Not touched from the cycle 12 Open list: home placement duplicate window, the refused-save audit (Polyroll, Museum donation,
   Scavenger, mailbox), Museum close button scrolling on desktop, `mm-shop-pin` in Backup.
 

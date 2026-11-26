@@ -3280,3 +3280,7 @@ body.town-phone-nav #where-to-btn { display: none !important; }
    by hand in cycle 12). `html:root` outranks the shared default wherever the two files are loaded, so the compass sits at 19, under
    the Town overlays (z 20+) and above the HUD it belongs to. The "Where to?" sheet keeps its own layer (--mm-nav-sheet-z). */
 html:root { --mm-nav-z: 19; }
+/* The Museum is the one Town dialog the a11y sweep opens, and its Menu rule is: the Menu is either on top, or hidden while a modal
+   dialog with its own 44 px close button is open (never visible but covered). Cycle 12 hid the compass for the Museum on small
+   screens; with the compass under the dialog now, it is hidden at every size while the Museum is open. */
+body:has(#museum-overlay:not(.hidden)) #mm-nav-btn { display: none; }
