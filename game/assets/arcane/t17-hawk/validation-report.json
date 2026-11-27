@@ -354,5 +354,41 @@
       }
     ],
     "limitations": "T17 hawk v2: six strips / 14 frames redrawn, same IDs and 192px cells. Slim front silhouette (19 native px wide), compact brow, cream streaked chest, yellow legs and hooked bill, long rufous tail. Profile downstroke now drops below belly, flight f2/f3 body rises 4/5 native px with tucked feet, caught eyes are small eyelid lines. Local Pillow independent PNG decode, hard alpha, exact 4x grid, bounds, distinct frames and Git SHA comparison passed on all six. Airborne bottom rows intentionally 163–175 rather than 183. Added class ff_hawk. Visual inspection on grass completed. Full repository audit/tests unavailable: Git DNS failure. Owl comparison, old SVG comparison, half-native in-game review and updated committed preview pending; no code changes. WIP, do not merge before review."
+  },
+  "hawk_v3_partial": {
+    "status": "WIP_partial_target_not_met",
+    "strips": 3,
+    "frames": 7,
+    "revised_frames": 6,
+    "roundtrip": true,
+    "hard_alpha": true,
+    "exact_4x_grid": true,
+    "no_edge_contact": true,
+    "distinct_native": true,
+    "distinct_default_mode_bake": true,
+    "original_palette": true,
+    "owl_iou": [
+      {
+        "frame": 2,
+        "v2": 0.7,
+        "v3": 0.518,
+        "pass": true
+      },
+      {
+        "frame": 3,
+        "v2": 0.66,
+        "v3": 0.653,
+        "pass": false
+      },
+      {
+        "frame": 4,
+        "v2": 0.625,
+        "v3": 0.558,
+        "pass": false
+      }
+    ],
+    "repository_audit": "not run",
+    "repository_tests": "not run",
+    "live_game_review": "not run"
   }
 }
