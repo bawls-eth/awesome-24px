@@ -3630,10 +3630,15 @@ class RealmArena {
       const rs = []; out.forEach((o) => { if (rs.indexOf(o.r) < 0) rs.push(o.r); });
       rs.forEach((r) => RM_WPN_ITEMS.forEach((def) => { if (def.family === fam) out.push({ id: def.id, r, price: RM_RARITIES[r].sell * RM_SHOP_MULT }); }));
     }
-    // Armour: the hero's armour family, its first (tier 1) piece at the unlocked rarities (never Epic), same price rule. Tier 1 is bought as t:1.
+    // Armour: the hero's armour family. The tier follows the rarity unlock (Common t1, Uncommon t3, Rare t5 = bands 1/2/3, gates 1/4/8), never Epic,
+    // and a row shows only once the hero level meets that tier's gate, so a bought piece can always be worn. Same price rule as every other row.
     const af = RM_GEAR_ON && this.heroClass() && MMGear.armorFamilyOf ? MMGear.armorFamilyOf(this.heroClass()) : null;
-    const aid = af && MMGear.ARMOR_IDS && MMGear.ARMOR_IDS[af] ? MMGear.ARMOR_IDS[af][0] : null;
-    if (aid && RM_ITEM_BY_ID[aid]) { const rs = []; out.forEach((o) => { if (rs.indexOf(o.r) < 0) rs.push(o.r); }); rs.forEach((r) => out.push({ id: aid, r, price: RM_RARITIES[r].sell * RM_SHOP_MULT, t: 1 })); }
+    const ids = af && MMGear.ARMOR_IDS && MMGear.ARMOR_IDS[af] ? MMGear.ARMOR_IDS[af] : null;
+    if (ids) {
+      const rs = []; out.forEach((o) => { if (rs.indexOf(o.r) < 0) rs.push(o.r); });
+      const hl = this.heroGateLevel();
+      rs.forEach((r) => { const t = r * 2 + 1; const aid = ids[r]; const row = MMGear.TIERS && MMGear.TIERS[t - 1]; if (aid && RM_ITEM_BY_ID[aid] && row && hl >= row.gate) out.push({ id: aid, r, price: RM_RARITIES[r].sell * RM_SHOP_MULT, t }); });
+    }
     return out;
   }
 
@@ -3643,7 +3648,7 @@ class RealmArena {
     if (!this.shopStock().some((o) => o.id === id && o.r === r)) return false;
     const price = RM_RARITIES[r].sell * RM_SHOP_MULT;
     if (sv.shards < price || sv.items.length >= RM_BACKPACK) return false;
-    sv.shards -= price; sv.items.push(rmTagged(RM_ITEM_BY_ID[id].arm ? { n: sv.nextUid++, id, r, t: 1 } : { n: sv.nextUid++, id, r }));
+    sv.shards -= price; sv.items.push(rmTagged(RM_ITEM_BY_ID[id].arm ? { n: sv.nextUid++, id, r, t: r * 2 + 1 } : { n: sv.nextUid++, id, r }));
     if (rmShopPinGet() === `${id}:${r}`) { rmShopPinSet(null); this._pinKey = ''; } // ID-56: the goal is bought, the pin clears silently
     this.displayShards = sv.shards;
     this._snd('pickup');
