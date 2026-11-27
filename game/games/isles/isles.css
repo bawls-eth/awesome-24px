@@ -312,7 +312,7 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
   /* cyc16-ui: the toast beside the card is 123 px wide, so a journal line took 4 lines (74 px) and lay on the hero. Smaller type here; when
      a toast still cannot clear the hero (placeToast in isles.js adds body.toast-wide) the card's column turns see-through for the toast's 2.2 s (it still takes taps)
      (staggered, like the hint line) and the toast takes the full width: two lines, under the hero. */
-  body:has(#howto.compact:not([hidden])) #toast { font-size: 11px; line-height: 1.15; padding: 3px 6px; }
+  body:has(#howto.compact:not([hidden])) #toast { font-size: 12px; line-height: 1.08; padding: 3px 6px; }
   body.toast-wide:has(#howto.compact:not([hidden])) #toast { left: 8px; right: 8px; }
   body.toast-wide:has(#howto.compact:not([hidden])) .howto.compact { opacity: 0; } /* see-through, NOT visibility:hidden: Tips and Close still take a tap while the toast is up */
 }
