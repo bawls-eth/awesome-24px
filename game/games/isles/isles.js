@@ -3589,12 +3589,14 @@
   // grows upward with each button it shows, so at 195x422 a journal toast under the hero reached Soothe. When the toast in its CSS place
   // lies on the HUD, the how-to card or a control, it moves (vertically only, same left / right) into the free band of its column that
   // is nearest to that place; when no band is tall enough it stays where the CSS put it (160x284: the bottom edge, see isles.css).
+  // cyc16-ui: a tap on the see-through card (Tips / Close) first drops the wide toast, then the tap goes on to the button as usual
+  (function () { const h = $('howto'); if (h) h.addEventListener('pointerdown', () => { if (document.body.classList.contains('toast-wide')) { clearTimeout(toastT); const t = $('toast'); t.classList.remove('on'); document.body.classList.remove('toast-on', 'toast-wide'); } }, true); })();
   function placeToast(el, again) {
     if (!again) document.body.classList.remove('toast-wide');
     el.style.top = ''; el.style.bottom = '';
     if (typeof el.getBoundingClientRect !== 'function') return;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
-    const vis = (e) => { if (!e || e.hidden) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return null; const q = e.getBoundingClientRect(); return q.width > 1 && q.height > 1 ? q : null; };
+    const vis = (e) => { if (!e || e.hidden) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return null; const q = e.getBoundingClientRect(); return q.width > 1 && q.height > 1 ? q : null; };
     // cyc16-ui: the hero (the screen centre, +-20 px) is an obstacle too: a toast keeps off it when a free band exists
     const heroBox = { left: innerWidth / 2 - 20, right: innerWidth / 2 + 20, top: innerHeight / 2 - 20, bottom: innerHeight / 2 + 20 };
     const base = [...document.querySelectorAll('#hud, #howto, #mini, #btn-map, #mm-nav-btn, #stick, #acts button, #touch-btns button, #touch-btns, .boss-bar')].map(vis)

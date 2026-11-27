@@ -310,11 +310,11 @@ body.launching .hint, body.launching .howto, body.launching #acts, body.launchin
   .howto.compact .howto-more { margin: 0; min-width: 44px; padding: 0 4px; font-size: 12px; letter-spacing: 0; }
   body:has(#howto.compact:not([hidden])) #toast { top: calc(222px + env(safe-area-inset-top)); left: 64px; }
   /* cyc16-ui: the toast beside the card is 123 px wide, so a journal line took 4 lines (74 px) and lay on the hero. Smaller type here; when
-     a toast still cannot clear the hero (placeToast in isles.js adds body.toast-wide) the card's column steps aside for the toast's 2.2 s
+     a toast still cannot clear the hero (placeToast in isles.js adds body.toast-wide) the card's column turns see-through for the toast's 2.2 s (it still takes taps)
      (staggered, like the hint line) and the toast takes the full width: two lines, under the hero. */
   body:has(#howto.compact:not([hidden])) #toast { font-size: 11px; line-height: 1.15; padding: 3px 6px; }
   body.toast-wide:has(#howto.compact:not([hidden])) #toast { left: 8px; right: 8px; }
-  body.toast-wide:has(#howto.compact:not([hidden])) .howto.compact { visibility: hidden; }
+  body.toast-wide:has(#howto.compact:not([hidden])) .howto.compact { opacity: 0; } /* see-through, NOT visibility:hidden: Tips and Close still take a tap while the toast is up */
 }
 /* cyc14-lead: 160x284 (a small phone at 200% zoom). The rule above put the toast at y 222 beside a card that is a ROW here (y 148-200),
    88 px wide: "Medal: Verdant Jungle" ended at y 281 of 284 and a journal line at y 328, off the bottom. Up to 300 px tall the toast

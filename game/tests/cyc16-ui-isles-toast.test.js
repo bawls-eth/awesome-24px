@@ -33,7 +33,7 @@ const hit = (a, b) => !!a && !!b && a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < 
       document.getElementById('btn-soothe').hidden = false;
       const e = document.getElementById('toast'); e.style.transition = 'none';
       window.__isles.toast(txt);
-      const R = (s) => { const x = document.querySelector(s); if (!x) return null; const cs = getComputedStyle(x); if (cs.display === 'none' || cs.visibility === 'hidden') return null; const r = x.getBoundingClientRect(); return r.width > 1 ? { l: r.left, t: r.top, r: r.right, b: r.bottom } : null; };
+      const R = (s) => { const x = document.querySelector(s); if (!x) return null; const cs = getComputedStyle(x); if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return null; const r = x.getBoundingClientRect(); return r.width > 1 ? { l: r.left, t: r.top, r: r.right, b: r.bottom } : null; };
       const t = R('#toast'); const tt = e.getBoundingClientRect();
       const acts = [...document.querySelectorAll('#acts button, #touch-btns button')].map((b) => { const q = R('#' + b.id); return q; }).filter(Boolean);
       return { t, hud: R('#hud'), how: R('#howto'), acts, wide: document.body.classList.contains('toast-wide'), clip: e.scrollHeight > e.clientHeight + 1, lines: Math.round(tt.height),
@@ -47,6 +47,14 @@ const hit = (a, b) => !!a && !!b && a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < 
     if (SHOTS) await page.screenshot({ path: `${SHOTS}-${w}.jpg`, type: 'jpeg', quality: 70 });
     const back = await page.waitForFunction(() => { const e = document.getElementById('howto'); const cs = e && getComputedStyle(e); return !!e && !e.hidden && cs.visibility !== 'hidden' && !document.body.classList.contains('toast-on') && !document.body.classList.contains('toast-wide'); }, null, { timeout: 6000, polling: 50 }).then(() => true, () => false); // the toast lasts 2.2 s (a game toast can follow it: wait until none is on)
     check(`${L} after the toast the how-to card is back and toast-wide is gone`, back, await page.evaluate(() => document.body.className));
+    if (w === 195) { // the card is see-through (not hidden) while the wide toast is up: a real tap on Close still closes the how-to
+      await page.evaluate((txt) => window.__isles.toast(txt), LONG);
+      const st = await page.evaluate(() => document.body.classList.contains('toast-wide'));
+      const bb = await page.evaluate(() => { const r = document.querySelector('#howto .howto-x').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      await page.touchscreen.tap(bb.x, bb.y); await page.waitForTimeout(300);
+      const after = await page.evaluate(() => ({ open: document.body.classList.contains('howto-open'), wide: document.body.classList.contains('toast-wide'), hid: document.getElementById('howto').hidden }));
+      check(`${L} during toast-wide a tap on Close closes the how-to and drops the toast`, st && !after.open && !after.wide, JSON.stringify({ st, after }));
+    }
     check(`${L} no page errors, 0 database attempts`, errors.length === 0 && db.count() === 0, JSON.stringify([errors.slice(0, 3), db.count()]));
     await ctx.close();
   }
