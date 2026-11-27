@@ -2491,7 +2491,15 @@ class TownScene extends Phaser.Scene {
       if (o.scrollFactorX !== 1 || o.scrollFactorY !== 1 || o.type === 'Container' || o.type === 'Graphics' || o.type === 'Particles' || o.type === 'ParticleEmitter') continue;
       // Hidden objects draw nothing anyway; never leave them culled. A pooled object (sparkle star, firefly) is moved and shown
       // between two cull passes: with a stale cull bit from its old spot it would stay undrawn for up to 3 frames in view.
-      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; if (o._cs) o._cs = 0; if (o._cf) o._cf = 0; continue; }
+      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; if (o._cs) o._cs = 0; if (o._cf) o._cf = 0; if (o._cdv) o._cdv = 0; continue; }
+      // cycle 16 (L, clock-dependent stamp red): the catchable bugs (8, plus 8 more during the daily 2-hour Bug-Off, whose UTC start
+      // hour changes every day) are Text movers that flutter inside the village, so they are usually in view or inside the 320 px
+      // margin and were measured on EVERY pass: 5 to 11 measures, which put the standing-still Town over the cyc14 20.5% line only
+      // during that day's Bug-Off hours. They declare it (o._cdraw: slow, under ~130 px/s). One that was measured and found INSIDE
+      // the cull line (so drawn) keeps that bit and is read again on the 8th pass: a skipped object is never culled, so nothing in view
+      // can disappear; at worst one that drifted out is drawn a few frames longer. Found beyond the line it takes the far rules above
+      // and below exactly as before. Hiding it or a forced pass reads it at once.
+      if (!full && o._cdraw === 1 && o._cdv > 0 && pass >= o._cdv && pass - o._cdv < 8 && !(o.cameraFilter & bit)) continue;
       let l, t, r2, b;
       // cycle 13 (L, stamp fix): an image, shape or label that MOVES (a critter's shadow, an NPC's name: its box never settles) was
       // measured on every pass even while it was culled, 320 px or more beyond the view: about 12 of the ~100 non-sprite measures of a
@@ -2547,6 +2555,7 @@ class TownScene extends Phaser.Scene {
       const out = r2 < x0 || l > x1 || b < y0 || t > y1;
       if (mv && out) { if (o._cf !== 1) o._cf = 1; } else if (o._cf) o._cf = 0;
       if (out) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; } else if (o.cameraFilter & bit) o.cameraFilter &= ~bit;
+      if (o._cdraw === 1) o._cdv = out ? 0 : pass; // cycle 16: a slow ambient mover found inside the cull line (drawn) may skip re-reads, see above
     }
     this._cullMeasured = measured; // test hook: objects measured (not taken from the remembered box) on the last pass
     this._culled = culled;
@@ -4670,6 +4679,7 @@ class TownScene extends Phaser.Scene {
     this.bugs = [];
     for (let i = 0; i < BUG_COUNT; i++) {
       const sprite = this.add.text(0, 0, '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000);
+      sprite._cdraw = 1; sprite._cdv = 0; // cycle 16: a slow ambient mover for the cull (see cullOffscreen)
       const bug = { sprite, alive: true, extra: false, tween: null };
       this.bugs.push(bug);
       this.placeBug(bug);
@@ -4765,6 +4775,7 @@ class TownScene extends Phaser.Scene {
     // Hidden extras, created once; activated only during the window.
     for (let i = 0; i < BUGOFF_EXTRA_BUGS; i++) {
       const sprite = this.add.text(0, 0, this.isNightBugs ? '✨' : '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000).setVisible(false);
+      sprite._cdraw = 1; sprite._cdv = 0; // cycle 16: a slow ambient mover for the cull (see cullOffscreen)
       this.bugs.push({ sprite, alive: false, extra: true, tween: null }); // one field list for every bug record (cycle 9 pool-shape rule)
     }
     this.bugOffActive = false;

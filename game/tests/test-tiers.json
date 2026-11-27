@@ -2674,6 +2674,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "cyc16-lead-town-cull-bugs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cyc14-lead-small-screens.test.js": {
     "class": "browser",
     "tier": "full",

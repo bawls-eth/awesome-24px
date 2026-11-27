@@ -44,3 +44,19 @@ Proposals (need the coordinator's call, not done):
 ## Unresolved
 - Bolt splash still selects / falls off from `_er`. Proposal: select with `_hitR` but keep falloff from `_er` (needs an MMSplash `pick` option and a gear-splash-player oracle update, plus a balance OK).
 - Isles creatures and code-baked bosses not measured.
+
+## Follow-up (coordinator) - clock-dependent cyc14 [1] red
+Cause: the daily Bug-Off. Its UTC start hour is hashed from the day (`bugOffStartHour`, 2 hours long); while it is live, 8 extra bug Texts flutter in the village next to the 8 normal ones. Bugs sit in view or inside the 320 px margin, and every one was measured on every cull pass. That is 5 to 11 extra measures, so today the standing-still Town was over the 20.5% line only during that day's window (around 20:00-21:00 UTC). Rain is not involved (its drops are screen-space, scrollFactor 0, and the cull skips them). The night fireflies are the same bug objects.
+
+Fix (main.js `cullOffscreen`): the bugs declare themselves slow ambient movers (`_cdraw`). A bug found inside the cull line (so drawn) keeps its bit and is read again on the 8th pass. A skipped object is never culled, so nothing on screen can disappear. Beyond the line it takes the existing far rules unchanged. Hiding it or a forced pass reads it at once. Sprites, pinned images and the cyc13 marks are untouched.
+
+Measured per pass (clock probe: Date shifted, standing still, 80 passes; same numbers before and after except main.js):
+
+| Clock (UTC, 2026-11-27/28) | Before | After |
+|---|---|---|
+| 12:00 (day, no Bug-Off) | 200.2 | 194.8 |
+| 20:30 (night, Bug-Off live) | 206.5 | 196.5 |
+| 21:00 (night) | 196.5 | 195.3 |
+| 03:00 next day (night) | 200.3 | 195.2 |
+
+New test `cyc16-lead-town-cull-bugs.test.js` (Bug-Off forced live, independent of the clock): before 206.8 measured, 2 FAILED; after 197.6, ALL PASSED. It checks [1] under 20.5%, at least every sprite; [2] each bug inside the line measured at most 1 pass in 4; [3] never culled on screen; [4] moved far culled within 9 passes, hidden and shown measured next pass; [5] a walking Sprite is still measured every pass.
