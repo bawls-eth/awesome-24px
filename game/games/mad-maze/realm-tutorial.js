@@ -56,11 +56,17 @@
       if (!e || e.classList.contains('hidden')) return;
       e.style.top = ''; let r = e.getBoundingClientRect(); if (!(r.height > 0)) return;
       const ctl = Array.prototype.slice.call(document.querySelectorAll('.realm-stick, #realm-abilities')).map((c) => c.getBoundingClientRect()).filter((c) => c.width > 0 && c.height > 0);
+      // cyc16-ui: on a narrow phone (the compass is the 48 px corner button) the card also keeps off the hero (the camera centre, +-20 px)
+      // and never starts above the compass' bottom edge + 4, so neither hides the other nor the hero
+      const ovr = ov.getBoundingClientRect(); const narrow = ovr.width <= 260;
+      if (narrow) ctl.push({ left: ovr.left + ovr.width / 2 - 20, right: ovr.left + ovr.width / 2 + 20, top: ovr.top + ovr.height / 2 - 20, bottom: ovr.top + ovr.height / 2 + 20, width: 40, height: 40 });
       for (let k = 0; k < 3; k++) {
-        const o = ctl.filter((c) => hit(r, c)); if (!o.length) return;
-        const ovr = ov.getBoundingClientRect(); const top = Math.max(4, Math.min.apply(null, o.map((c) => c.top)) - 8 - r.height - ovr.top);
+        const o = ctl.filter((c) => hit(r, c)); if (!o.length) break;
+        const top = Math.max(4, Math.min.apply(null, o.map((c) => c.top)) - 8 - r.height - ovr.top);
         e.style.top = Math.round(top) + 'px'; r = e.getBoundingClientRect();
       }
+      const nav = document.getElementById('mm-nav-btn'); const nr = nav && nav.getBoundingClientRect();
+      if (narrow && nr && nr.width > 0 && e.id === 'mm-coach' && r.top < nr.bottom + 4 && r.left < nr.right) e.style.top = Math.round(nr.bottom + 4 - ovr.top) + 'px';
     }
     // G-15 (b08-04): the 'bag' step guarantees a bag within 6 tiles of the hero (one tutorial bag, dropped two tiles ahead) and says where it is
     function bagNear() {
