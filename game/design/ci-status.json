@@ -1,9 +1,9 @@
 {
-  "sha": "bdaf8f19ddbab0d09e3c866628f957d959ff5c6c",
-  "generated_utc": "2026-11-26T18:17:04Z",
-  "full_suite_green": true,
+  "sha": "48348c7161f1b5e1b5e5182d0f2960b8671de713",
+  "generated_utc": "2026-11-27T18:52:56Z",
+  "full_suite_green": false,
   "beta_green": null,
-  "suites_passed": 660,
-  "suites_total": 660,
-  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 648/660 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): a11y-viewport-sweep.test.js, archipelago-perf.test.js, arena-world-hooks.test.js, beta-r4-b08-passive-2min.test.js, boss-art.test.js, cyc13-lead-town-cull-far.test.js, cyc4-town-cull-alloc.test.js, dungeon-pickups.test.js, loot-bag-icons.test.js, realm-access2.test.js, realm-team.test.js, town-hint-lookups.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
+  "suites_passed": 667,
+  "suites_total": 669,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 658/669 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): beta-r4-b08-passive-2min.test.js, cyc15-s-systems.test.js, cyc3-art-isles-dissolve.test.js, cyc3-ui-landscape-audit.test.js, cyc5-hit-pause-play.test.js, cyc6-art-realm-hit-cue.test.js, deepdelve-bugbash.test.js, gear-dungeon-drops.test.js, isles-boss-depth.test.js. STILL RED after a solo rerun (real failures): a11y-viewport-sweep.test.js, cyc13-ui.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }
