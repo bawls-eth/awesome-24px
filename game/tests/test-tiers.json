@@ -2698,5 +2698,15 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc16-ui-coach-card.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
+  },
+  "cyc16-ui-isles-toast.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
   }
 }

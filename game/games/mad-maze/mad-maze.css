@@ -395,6 +395,13 @@ body.mm-low-gfx *, body.mm-low-gfx *::before, body.mm-low-gfx *::after { animati
   background: rgba(23, 18, 14, 0.92); border: 2px solid #6f8f4e; color: #eadcc0; font: 700 14px/1.3 system-ui, sans-serif; text-align: center; pointer-events: none;
 }
 @media (max-width: 560px) { #mm-coach { top: calc(env(safe-area-inset-top, 0px) + 134px); } }
+/* cyc16-ui: at a very narrow screen (195 px wide) the card was 91 px wide, so a long step grew to 69% of the height and sat on the hero. It is now
+   the full width, in a smaller type, with no step counter, and starts under the corner compass (realm-tutorial.js keepClear also keeps it off the hero). */
+@media (max-width: 260px) {
+  #mm-coach { top: calc(env(safe-area-inset-top, 0px) + 62px); left: calc(4px + env(safe-area-inset-left, 0px)); width: calc(100% - 8px - env(safe-area-inset-left, 0px)); padding: 3px 3px 3px 8px; gap: 4px; border-radius: 10px; font-size: 11px; line-height: 1.2; }
+  #mm-coach .mm-coach-prog { display: none; }
+  #mm-coach .mm-coach-skip { min-width: 44px; font-size: 12px; }
+}
 #mm-settings-x { border-radius: 10px; border: 2px solid #7a5a36; background: #231b14; color: #eadcc0; }
 
 /* ---------- FT2 (first ten minutes): readable phone HUD + a visible Daily link ----------

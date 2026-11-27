@@ -3574,24 +3574,37 @@
     return def.name + ' is shy. Walk up slowly and do not attack.';
   }
   let toastT = 0;
-  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); document.body.classList.add('toast-on'); placeToast(el); clearTimeout(toastT); toastT = setTimeout(() => { el.classList.remove('on'); document.body.classList.remove('toast-on'); }, 2200); } // cyc5-ui: toast-on lets the phone hint line wait (staggered)
+  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); document.body.classList.add('toast-on'); placeToast(el); clearTimeout(toastT); toastT = setTimeout(() => { el.classList.remove('on'); document.body.classList.remove('toast-on', 'toast-wide'); }, 2200); } // cyc5-ui: toast-on lets the phone hint line wait (staggered)
   // cyc15-ui: the CSS place of the toast is fixed, but its height is not (a journal line is 4 lines at 195 px) and the action column
   // grows upward with each button it shows, so at 195x422 a journal toast under the hero reached Soothe. When the toast in its CSS place
   // lies on the HUD, the how-to card or a control, it moves (vertically only, same left / right) into the free band of its column that
   // is nearest to that place; when no band is tall enough it stays where the CSS put it (160x284: the bottom edge, see isles.css).
-  function placeToast(el) {
+  function placeToast(el, again) {
+    if (!again) document.body.classList.remove('toast-wide');
     el.style.top = ''; el.style.bottom = '';
     if (typeof el.getBoundingClientRect !== 'function') return;
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
     const vis = (e) => { if (!e || e.hidden) return null; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return null; const q = e.getBoundingClientRect(); return q.width > 1 && q.height > 1 ? q : null; };
-    const obs = [...document.querySelectorAll('#hud, #howto, #mini, #btn-map, #mm-nav-btn, #stick, #acts button, #touch-btns button, #touch-btns, .boss-bar')].map(vis)
+    // cyc16-ui: the hero (the screen centre, +-20 px) is an obstacle too: a toast keeps off it when a free band exists
+    const heroBox = { left: innerWidth / 2 - 20, right: innerWidth / 2 + 20, top: innerHeight / 2 - 20, bottom: innerHeight / 2 + 20 };
+    const base = [...document.querySelectorAll('#hud, #howto, #mini, #btn-map, #mm-nav-btn, #stick, #acts button, #touch-btns button, #touch-btns, .boss-bar')].map(vis)
       .filter((q) => q && q.left < r.right - 1 && q.right > r.left + 1);
-    const on = (t) => obs.some((q) => q.top < t + r.height - 1 && q.bottom > t + 1);
-    if (!on(r.top)) return;
-    const edges = [4, ...obs.map((q) => q.bottom + 4)].filter((t) => t >= 4 && t + r.height <= innerHeight - 4);
-    const ups = obs.map((q) => q.top - 4 - r.height).filter((t) => t >= 4);
-    const best = [...edges, ...ups].filter((t) => !on(t)).sort((a, b) => Math.abs(a - r.top) - Math.abs(b - r.top))[0];
-    if (best === undefined) return;
+    const hroOn = heroBox.left < r.right - 1 && heroBox.right > r.left + 1;
+    const pick = (obs) => {
+      const on = (t) => obs.some((q) => q.top < t + r.height - 1 && q.bottom > t + 1);
+      if (!on(r.top)) return r.top;
+      const edges = [4, ...obs.map((q) => q.bottom + 4)].filter((t) => t >= 4 && t + r.height <= innerHeight - 4);
+      const ups = obs.map((q) => q.top - 4 - r.height).filter((t) => t >= 4);
+      return [...edges, ...ups].filter((t) => !on(t)).sort((a, b) => Math.abs(a - r.top) - Math.abs(b - r.top))[0];
+    };
+    let best = pick(hroOn ? base.concat([heroBox]) : base), onHero = false;
+    if (best === undefined) { best = pick(base); onHero = hroOn; } // no band clear of the hero too: the cyc15 place (off the HUD and controls)
+    // a narrow phone with the how-to card up and the toast still on the hero (4 lines in the 123 px column): the card's column steps aside
+    // for the toast's 2.2 s and the toast takes the full width (CSS .toast-wide), then it is placed again
+    if (!again && (best === undefined || (onHero && best + r.height > heroBox.top && best < heroBox.bottom)) && innerWidth <= 300 && innerHeight > 300 && vis($('howto'))) {
+      document.body.classList.add('toast-wide'); return placeToast(el, true);
+    }
+    if (best === undefined || best === r.top) return;
     const op = el.offsetParent && el.offsetParent !== document.body ? el.offsetParent.getBoundingClientRect().top : 0;
     el.style.top = Math.round(best - op) + 'px'; el.style.bottom = 'auto';
   }
