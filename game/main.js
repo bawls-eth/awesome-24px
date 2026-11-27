@@ -4351,6 +4351,11 @@ class TownScene extends Phaser.Scene {
       const av = MMTownHeroes.legacyArt() ? null : MMTownHeroes.avatarArgs(this.selfData.species, this.selfData.frame);
       this.realm.setAvatar(av ? av.url : `../i/${this.selfData.species}-strip.png`, av ? av.frame : this.selfData.frame || 0, FRAME_SIZE);
       this.setupRealmControls();
+      // cyc16 G: the Town's Realm shop / backpack showed emoji (the Mad Maze embed already attaches item art); same ItemSet, ?itemart=0 turns it off.
+      if (window.MMArt && MMArt.loadItems && new URLSearchParams(location.search).get('itemart') !== '0') {
+        const realm = this.realm;
+        MMArt.loadItems('assets/arcane/').then((set) => { if (set.ids().length) realm.setItemArt(set); }).catch(() => {});
+      }
     }
     if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name, opts.mode, opts.slot); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
     this.realm.start();
