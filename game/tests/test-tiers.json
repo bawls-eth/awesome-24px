@@ -2698,5 +2698,14 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc16-s-claim-merge-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc16-s-claim-merge-tabs.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 300
   }
 }

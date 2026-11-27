@@ -271,6 +271,66 @@ function flushResAfterWrite() {
   RES_FLUSHING = true;
   try { if (RES_FLUSH) RES_FLUSH(); if (STARS_FLUSH) STARS_FLUSH(); if (FOSS_FLUSH) FOSS_FLUSH(); } catch (e) { /* stays pending */ } finally { RES_FLUSHING = false; }
 }
+// Cycle 16 S: the pay-once claim keys fishlog, home, weedsPulled and birthdays were whole-key writes, so a second (stale) tab wrote its
+// older copy over a claim the first tab had just stored, and the same weed / milestone / birthday gift / home bonus paid again. Every
+// write (and the live read, and a refused pending write) now MERGES them with what is already there: sets are unions, counts and days are
+// the max, unknown fields of either side are kept (additive, forward compatible). A key not in the partial is never touched.
+const townIsObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const townClaimUnion = (a, b, ok) => { const out = []; const seen = new Set(); [a, b].forEach((l) => { (Array.isArray(l) ? l : []).forEach((x) => { if (ok(x) && !seen.has(x)) { seen.add(x); out.push(x); } }); }); return out; };
+function townMergeFishlog(a, b) {
+  if (!townIsObj(a) || !townIsObj(b)) return b;
+  const ca = townIsObj(a.caught) ? a.caught : {}, cb = townIsObj(b.caught) ? b.caught : {};
+  const caught = {};
+  new Set([...Object.keys(ca), ...Object.keys(cb)]).forEach((id) => {
+    const x = townIsObj(ca[id]) ? ca[id] : null, y = townIsObj(cb[id]) ? cb[id] : null;
+    if (!x || !y) { if (x || y) caught[id] = { ...(x || y) }; return; }
+    caught[id] = { ...x, ...y, n: Math.max(cleanCount(x.n), cleanCount(y.n)), best: Math.max(cleanCount(x.best), cleanCount(y.best)) };
+  });
+  return { ...a, ...b, caught, claimed: townClaimUnion(a.claimed, b.claimed, (v) => typeof v === 'string'), lastDay: Math.max(cleanCount(a.lastDay), cleanCount(b.lastDay)) };
+}
+function townMergeWeeds(a, b) {
+  if (!townIsObj(a) || !townIsObj(b)) return b;
+  const da = Number(a.day), db = Number(b.day);
+  if (da !== db) return (Number.isFinite(da) ? da : -Infinity) > (Number.isFinite(db) ? db : -Infinity) ? a : b; // a newer day wins whole
+  return { ...a, ...b, ids: townClaimUnion(a.ids, b.ids, (v) => Number.isInteger(v) && v >= 0) };
+}
+function townMergeBirthdays(a, b) {
+  if (!townIsObj(a) || !townIsObj(b)) return b;
+  const day = (id) => { const n = parseInt(String(id).split(':')[0], 10); return Number.isFinite(n) ? n : -1; };
+  const claimed = townClaimUnion(a.claimed, b.claimed, (v) => typeof v === 'string' && v.length < 40)
+    .map((id, i) => [id, i]).sort((x, y) => day(x[0]) - day(y[0]) || x[1] - y[1]).map((x) => x[0]).slice(-40); // the newest 40 kept, like before
+  return { ...a, ...b, claimed, guests: townClaimUnion(a.guests, b.guests, (v) => typeof v === 'string') };
+}
+// home: the claim is paidDay (max). slots / tank come from the writer (saveHome already rebuilt them per entry on what storage holds).
+function townMergeHome(a, b) {
+  if (!townIsObj(a) || !townIsObj(b)) return b;
+  return { ...a, ...b, paidDay: Math.max(cleanCount(a.paidDay), cleanCount(b.paidDay)) };
+}
+// mine / base / live are {slots, tank} arrays. Changed entries (mine !== base) win; the rest take live. A fish shows once in the tank:
+// a live entry repeating a fish this tab just placed is emptied (this tab's choice is the newer one).
+function townHomeEntries(mine, base, live) {
+  const pick = (k) => (mine[k] || []).map((id, i) => (!base || !Array.isArray(base[k]) || id !== base[k][i] ? { id, own: true } : { id: live[k] ? live[k][i] : id, own: false }));
+  const slots = pick('slots').map((x) => (x.id === undefined ? null : x.id));
+  const t = pick('tank');
+  const ownFish = new Set(t.filter((x) => x.own && x.id).map((x) => x.id));
+  const used = new Set();
+  const tank = t.map((x) => {
+    const id = x.id === undefined ? null : x.id;
+    if (!id) return null;
+    if ((!x.own && ownFish.has(id)) || used.has(id)) return null;
+    used.add(id); return id;
+  });
+  return { slots, tank, paidDay: cleanCount(live && live.paidDay) };
+}
+const TOWN_CLAIM_MERGE = { fishlog: townMergeFishlog, weedsPulled: townMergeWeeds, birthdays: townMergeBirthdays, home: townMergeHome };
+// base + over, the claim keys merged instead of replaced.
+function townLayerSave(base, over) {
+  const b = townIsObj(base) ? base : {};
+  const o = townIsObj(over) ? over : {};
+  const out = { ...b, ...o };
+  Object.keys(TOWN_CLAIM_MERGE).forEach((k) => { if (k in o && k in b) out[k] = TOWN_CLAIM_MERGE[k](b[k], o[k]); });
+  return out;
+}
 // SAVE_PENDING plus the turnip count rebuilt on the stored value (stored may be any object loadSave gave).
 function pendingOn(stored) {
   if (!TURNIP_UNSAVED) return SAVE_PENDING || {};
@@ -279,7 +339,7 @@ function pendingOn(stored) {
   return { ...(SAVE_PENDING || {}), turnipBuys: { day: TURNIP_UNSAVED.day, bundles: have + TURNIP_UNSAVED.n } };
 }
 // What storage holds plus what this tab could not write yet: for "already bought today" checks while storage refuses writes.
-function loadSaveLive() { const st = loadSave(); return SAVE_PENDING || TURNIP_UNSAVED ? { ...st, ...pendingOn(st) } : st; }
+function loadSaveLive() { const st = loadSave(); return SAVE_PENDING || TURNIP_UNSAVED ? townLayerSave(st, pendingOn(st)) : st; }
 // Cycle 15 L: the ONE reader for a pay-once record (a save key that answers "was this already paid / claimed / counted today?").
 // It reads live (storage plus what this tab could not write yet), so a refused write can never make a claim look unpaid again:
 // cycle 13 mailbox, cycle 14 chores bonus and bounty, cycle 15 Bug-Off prizes and the daily hello were all that one bug.
@@ -294,12 +354,12 @@ function writeSave(partial) {
   if (SAVE_RESTORING) return false;
   try {
     const stored = loadSave();
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...pendingOn(stored), ...partial }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(townLayerSave(townLayerSave(stored, pendingOn(stored)), partial)));
     SAVE_PENDING = null; TURNIP_UNSAVED = null; SAVE_OK = true;
     flushResAfterWrite();
     return true;
   } catch (e) {
-    SAVE_PENDING = { ...(SAVE_PENDING || {}), ...partial }; SAVE_OK = false; // kept for this visit; the next write that lands carries it
+    SAVE_PENDING = townLayerSave(SAVE_PENDING || {}, partial); SAVE_OK = false; // kept for this visit; the next write that lands carries it
     return false;
   }
 }
@@ -315,7 +375,7 @@ function writeSaveMerged(fn) {
   try { partial = fn(stored); } catch (e) { partial = null; }
   if (!partial || typeof partial !== 'object') return null;
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...pendingOn(stored), ...partial }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(townLayerSave(townLayerSave(stored, pendingOn(stored)), partial)));
     SAVE_PENDING = null; TURNIP_UNSAVED = null; SAVE_OK = true;
   } catch (e) { SAVE_OK = false; return null; }
   flushResAfterWrite();
@@ -6348,6 +6408,7 @@ class TownScene extends Phaser.Scene {
   // ---------- angler's journal ----------
   setupJournal() {
     this.fishlog = this.loadFishLog();
+    this._fishSeen = JSON.stringify(payOnceRecord('fishlog') || null);
     document.getElementById('journal-btn').addEventListener('click', () => { if (this.canAct()) this.openJournal(); });
     document.getElementById('journal-close-btn').addEventListener('click', () => this.closeJournal());
     const overlay = document.getElementById('journal-overlay');
@@ -6371,8 +6432,20 @@ class TownScene extends Phaser.Scene {
     return { caught, claimed: [...new Set(claimed)], lastDay: ok ? cleanCount(rec.lastDay) : 0 };
   }
 
+  // cyc16 S: when storage (or this tab's refused writes) moved since this tab last loaded / saved the log, another tab wrote it: take
+  // what this tab holds plus what is stored (max per species, union of claims). Unchanged storage leaves this tab's log as it is.
+  syncFishLog() {
+    const seen = JSON.stringify(payOnceRecord('fishlog') || null);
+    if (seen === this._fishSeen) return this.fishlog;
+    const m = townMergeFishlog(this.fishlog || { caught: {}, claimed: [], lastDay: 0 }, this.loadFishLog());
+    this.fishlog = { caught: m.caught, claimed: m.claimed, lastDay: m.lastDay };
+    this._fishSeen = seen;
+    return this.fishlog;
+  }
+
   saveFishLog() {
     writeSave({ fishlog: { caught: this.fishlog.caught, claimed: this.fishlog.claimed, lastDay: this.fishlog.lastDay } });
+    this._fishSeen = JSON.stringify(payOnceRecord('fishlog') || null);
   }
 
   fishSpeciesCount() {
@@ -6401,6 +6474,7 @@ class TownScene extends Phaser.Scene {
     const size = spot.shadow ? spot.shadow.size : Math.random();
     const species = this.rollFishSpecies(this.fishPondFor(spot), new Date().getHours(), this.currentSeason(), size);
     const sizeCm = Math.round(8 + (0.55 * size + 0.45 * Math.random()) * 72);
+    this.syncFishLog(); // cyc16 S: live (another tab may have logged this species first: no second first-catch bonus)
     const entry = this.fishlog.caught[species.id] || { n: 0, best: 0 };
     const isNew = entry.n === 0;
     entry.n += 1;
@@ -6443,6 +6517,7 @@ class TownScene extends Phaser.Scene {
 
   claimFishMilestone(id) {
     const m = FISH_MILESTONES.find((x) => x.id === id);
+    this.syncFishLog(); // cyc16 S: live (a milestone another tab claimed is not paid again)
     if (!m || this.fishlog.claimed.includes(id) || this.fishSpeciesCount() < m.need) return false;
     this.fishlog.claimed.push(id);
     this.saveFishLog(); // before paying
@@ -8585,6 +8660,8 @@ class TownScene extends Phaser.Scene {
     this.homeSprites = [];
     this.homeLabel = this.add.text(x, y - 66, '🏡 Home', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 60);
     this.home = this.loadHome();
+    this._homeBase = { slots: [...this.home.slots], tank: [...this.home.tank] };
+    this._homePaidSeen = this.home.paidDay;
     this.renderHomeSprites();
     this.renderErrandDecor();
   }
@@ -8718,6 +8795,9 @@ class TownScene extends Phaser.Scene {
     // First visit of the day: neighbors admire the place.
     const day = this.questDayBucket();
     const cozy = this.homeCozy();
+    // cyc16 S: live. A paid day ANOTHER tab stored since this tab last loaded / saved (storage moved past what this tab saw) counts here.
+    const livePaid = this.loadHome().paidDay;
+    if (livePaid !== this._homePaidSeen) { this.home.paidDay = Math.max(cleanCount(this.home.paidDay), livePaid); this._homePaidSeen = livePaid; }
     if (this.home.paidDay !== day) {
       const bonus = Math.min(HOME_BONUS_CAP, Math.floor(cozy / HOME_BONUS_PER));
       this.home.paidDay = day;
@@ -8736,7 +8816,14 @@ class TownScene extends Phaser.Scene {
   }
 
   saveHome() {
+    // cyc16 S: per entry on what storage holds now. A slot / tank spot this tab did not change since it last loaded or saved keeps the
+    // stored value, so a stale second tab no longer writes its old placement over the first tab's (the placed good was lost from both).
+    const next = townHomeEntries(this.home, this._homeBase, this.loadHome());
+    this.home.slots = next.slots; this.home.tank = next.tank;
+    if (next.paidDay !== this._homePaidSeen) this.home.paidDay = Math.max(cleanCount(this.home.paidDay), next.paidDay); // another tab's day
+    this._homeBase = { slots: [...next.slots], tank: [...next.tank] };
     writeSave({ home: { slots: this.home.slots, tank: this.home.tank, paidDay: this.home.paidDay } });
+    this._homePaidSeen = this.loadHome().paidDay;
     this.saveResources(); // beta S-02: crafted goods go through the delta merge, not a whole-object write
   }
 
@@ -9498,7 +9585,14 @@ class TownScene extends Phaser.Scene {
   }
 
   pullWeed(weed) {
-    if (this.weedsPulledToday.has(weed.index)) return false;
+    // cyc16 S: live (a weed another tab pulled today is hidden here too and pays nothing)
+    const rec = payOnceRecord('weedsPulled');
+    if (rec && typeof rec === 'object' && rec.day === this.weedDay && Array.isArray(rec.ids)) rec.ids.forEach((v) => { if (Number.isInteger(v) && v >= 0 && v < WEED_COUNT) this.weedsPulledToday.add(v); });
+    if (this.weedsPulledToday.has(weed.index)) {
+      const sp0 = this.weedSprites[weed.index]; if (sp0) sp0.setVisible(false);
+      this.updateTidiness();
+      return false;
+    }
     this.weedsPulledToday.add(weed.index);
     writeSave({ weedsPulled: { day: this.weedDay, ids: [...this.weedsPulledToday] } });
     const sp = this.weedSprites[weed.index];
@@ -10677,6 +10771,11 @@ class TownScene extends Phaser.Scene {
   giveNearestVillagerGift() {
     const v = this.findNearestVillager();
     if (!v) return;
+    { // cyc16 S: live (a birthday gift another tab already gave is not paid again): this tab's claims plus the stored ones
+      const mine = [...(this.birthdayClaimedIds || [])], guests = [...(this.birthdayGuests || [])];
+      this.loadBirthdays();
+      mine.forEach((id) => this.birthdayClaimedIds.add(id)); guests.forEach((id) => this.birthdayGuests.add(id));
+    }
     if (this.isBirthdayFor(v) && !this.birthdayClaimed(v) && this.giveBirthdayGift(v)) return;
     const likedKey = v.likes.find((key) => (this.resources[key] || 0) > 0);
     if (!likedKey) {
