@@ -1040,7 +1040,7 @@
       const b = bolts[i];
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       let gone = b.life <= 0 || solidAt(tileOf(b.x), tileOf(b.y)) && O.tileAt(world, tileOf(b.x), tileOf(b.y)) !== 0;
-      if (!gone && bz.st && bossAlive() && Math.hypot(bz.x - b.x, bz.y - 36 - b.y) < BOSS_RAD) { bossHit(BOLT_DMG, b.soothe, headAt(b.x)); gone = true; }
+      if (!gone && bz.st && bossAlive() && bossBodyHit(b.x, b.y)) { bossHit(BOLT_DMG, b.soothe, headAt(b.x)); gone = true; }
       if (!gone) for (let k = 0; k < creatures.length; k++) {
         const c = creatures[k];
         if (Math.hypot(c.x - b.x, c.y - 8 - b.y) < c.rad + 5) { hitCreature(c, BOLT_DMG, b.soothe ? 'soothe' : undefined); gone = true; break; }
@@ -1653,6 +1653,16 @@
     if (!ice || !ice.length || inSpring(x, y)) return false;
     for (let i = 0; i < ice.length; i++) if (BOSS.hitTest(ice[i].zone, x, y, 0)) return true;
     return false;
+  }
+  // cyc16: does a bolt at (x, y) strike the boss? The old 48 px circle at y - 36 still counts (the hit area never shrinks), and so does the
+  // drawn body: an ellipse over the strip's measured opaque rows (top .. feet) and widest opaque run (span). The tide hydra's heads reach
+  // ~100 px above its feet, outside the old circle, so bolts passed through them. Read-only: never changes the strip's action / dir.
+  function bossBodyHit(x, y) {
+    if (Math.hypot(bz.x - x, bz.y - 36 - y) < BOSS_RAD) return true;
+    const st = STRIPS && bz.sk && STRIPS.has(bz.sk) ? STRIPS.get(bz.sk, bz.act || 'idle', bz.dir) : null;
+    if (!st || !(st.ay > st.top) || !(st.span > 0)) return false;
+    const ry = (st.ay - st.top) / 2, rx = Math.max(8, st.span / 2), dx = (x - bz.x) / rx, dy = (y - (bz.y - ry)) / ry;
+    return dx * dx + dy * dy < 1;
   }
   // XB: which of the hydra's 3 heads a bolt at x struck (left / middle / right of the body); -1 for any other boss
   function headAt(x) { if (!bz.st || !bz.st.heads) return -1; const dx = x - bz.x; return dx < -16 ? 0 : dx > 16 ? 2 : 1; }

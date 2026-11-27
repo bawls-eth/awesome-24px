@@ -1938,7 +1938,7 @@ class RealmArena {
     const r = w.lob.radius;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
-      const rr = r + this._er(e);
+      const rr = r + this._hitR(e); // cyc16: the drawn body (as bolts), not the smaller _er
       if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg, b.cr === 1); }
     }
   }
@@ -4238,7 +4238,7 @@ class RealmArena {
     let dealt = 0;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
-      const er = this._er(e); const dx = e.x - x; const dy = e.y - y; const rr = r + er;
+      const er = this._hitR(e); const dx = e.x - x; const dy = e.y - y; const rr = r + er; // cyc16: drawn body
       if (dx * dx + dy * dy > rr * rr) continue;
       if (slow < 1) { e.slowT = Math.max(e.slowT || 0, slowSec); e.slowF = slow; }
       if (knock > 0 && e.type !== 'boss') {
@@ -4336,7 +4336,7 @@ class RealmArena {
       for (let i = 0; i < this.enemies.length; i++) {
         const e = this.enemies[i]; if (!e.active) continue;
         if (e.boneT > 0) { e.boneT -= dt; continue; }
-        const rr = this._er(e) + 8;
+        const rr = this._hitR(e) + 6; // cyc16: a bone (~6 px) touching the drawn body
         for (let k = 0; k < bn.n; k++) {
           const a = bn.a + k * Math.PI * 2 / bn.n; const bx = p.x + Math.cos(a) * s.radius; const by = p.y + Math.sin(a) * s.radius;
           if ((e.x - bx) * (e.x - bx) + (e.y - by) * (e.y - by) > rr * rr) continue;

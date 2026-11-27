@@ -1320,6 +1320,14 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-boss-hitbox.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-aoe-hitbox.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "isles-boss-depth.test.js": {
     "class": "browser",
     "tier": "full"
