@@ -1444,7 +1444,7 @@ const GUESTBOOK_POS = { x: 1750, y: 520 };
 // part goes through a Firebase transaction (first write wins).
 const SCAVENGER_SPOTS = [
   { x: 150, y: 950 }, { x: 2300, y: 300 }, { x: 1900, y: 1100 }, { x: 600, y: 250 },
-  { x: 2000, y: 900 }, { x: 100, y: 450 }, { x: 1300, y: 1050 }, { x: 700, y: 1150 },
+  { x: 2300, y: 650 }, { x: 100, y: 450 }, { x: 1300, y: 1050 }, { x: 700, y: 1150 },
 ];
 const SCAVENGER_RADIUS = 36;
 const SCAVENGER_REWARD = 20;
@@ -4411,10 +4411,10 @@ class TownScene extends Phaser.Scene {
       const av = MMTownHeroes.legacyArt() ? null : MMTownHeroes.avatarArgs(this.selfData.species, this.selfData.frame);
       this.realm.setAvatar(av ? av.url : `../i/${this.selfData.species}-strip.png`, av ? av.frame : this.selfData.frame || 0, FRAME_SIZE);
       this.setupRealmControls();
-      // cyc16 G: the Town's Realm shop / backpack showed emoji (the Mad Maze embed already attaches item art); same ItemSet, ?itemart=0 turns it off.
-      if (window.MMArt && MMArt.loadItems && new URLSearchParams(location.search).get('itemart') !== '0') {
+      // cyc16 G: the Town's Realm shop / backpack showed emoji (the Mad Maze embed already attaches item art); MMItemIcons (item icons only: the Town never loads the enemy-art module), ?itemart=0 turns it off.
+      if (window.MMItemIcons && new URLSearchParams(location.search).get('itemart') !== '0') {
         const realm = this.realm;
-        MMArt.loadItems('assets/arcane/').then((set) => { if (set.ids().length) realm.setItemArt(set); }).catch(() => {});
+        MMItemIcons.loadItems('assets/arcane/').then((set) => { if (set.ids().length) realm.setItemArt(set); }).catch(() => {});
       }
     }
     if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name, opts.mode, opts.slot); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');

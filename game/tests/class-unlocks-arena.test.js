@@ -67,12 +67,13 @@ const dash = (page) => page.evaluate(() => { const a = window.__mm.arena; a.abil
   // ---- (4) the shop lists the family styles at sell x 8 (never Epic) ----
   const shop = await A.page.evaluate(() => {
     const a = window.__mm.arena; const st = a.shopStock(); const w = st.filter((o) => /^wpn_/.test(o.id));
-    return { w, fam: w.every((o) => RM_ITEM_BY_ID[o.id].family === 'dagger'), ids: [...new Set(w.map((o) => o.id))].sort(), base: st.filter((o) => !/^wpn_/.test(o.id)).length,
+    return { w, fam: w.every((o) => RM_ITEM_BY_ID[o.id].family === 'dagger'), ids: [...new Set(w.map((o) => o.id))].sort(), base: st.filter((o) => !/^wpn_/.test(o.id) && !/^arm_/.test(o.id)).length, arm: st.filter((o) => /^arm_/.test(o.id)).map((o) => ({ id: o.id, r: o.r, t: o.t, fam: RM_ITEM_BY_ID[o.id].family })),
       price: w.every((o) => o.price === RM_RARITIES[o.r].sell * 8 && o.price === MMWeaponItems.shopPrice(o.r)), epic: st.some((o) => o.r === 3) };
   });
   check('the rogue shop lists both dagger styles', JSON.stringify(shop.ids) === JSON.stringify(['wpn_dagger_fan', 'wpn_dagger_venom']) && shop.fam, JSON.stringify(shop.ids));
   check('styled weapons cost sell x 8 at every unlocked rarity, never Epic', shop.price && shop.w.length === 6 && !shop.epic, JSON.stringify(shop.w));
   check('the classic stock is still all 7 items x 3 rarities', shop.base === 21, String(shop.base));
+  check('the hero armour family is stocked with tier following rarity (t = 2r+1), nothing else', shop.arm.length > 0 && shop.arm.every((o) => o.fam === shop.arm[0].fam && o.t === o.r * 2 + 1), JSON.stringify(shop.arm));
   const bought = await A.page.evaluate(() => { const a = window.__mm.arena; const s0 = a.save.shards; const ok = a.buy('wpn_dagger_fan', 1); return { ok, paid: s0 - a.save.shards, it: a.save.items[a.save.items.length - 1] }; });
   check('buying an Uncommon Dagger Fan costs 56 shards and lands in the backpack', bought.ok && bought.paid === 56 && bought.it.id === 'wpn_dagger_fan' && bought.it.r === 1, JSON.stringify(bought));
 

@@ -9,7 +9,7 @@
 // OFFLINE: helpers.offlineStub, literal db.attempts() === 0. Save format: additive only (no new key; the same keys are merged).
 // Run: BASE=http://localhost:9105/game/index.html NODE_PATH=$(npm root -g) node game/tests/cyc16-s-claim-merge-tabs.test.js   (SHOTS=<dir>)
 const { chromium } = require('playwright');
-const { check, done, twoTabs, joinOffline } = require('./helpers');
+const { check, done, twoTabs, joinOffline, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SHOTS = process.env.SHOTS || '';
 
@@ -25,6 +25,7 @@ const spy = (page) => T(page, (s) => { s.__aw = []; const o = s.awardPoint.bind(
   const browser = await chromium.launch();
   for (const vp of [{ w: 1280, h: 720, tag: '1280x720', touch: false }, { w: 390, h: 844, tag: '390x844', touch: true }]) {
     const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h }, hasTouch: vp.touch, isMobile: vp.touch });
+    const db0 = await offlineStub(ctx); // the database is blocked for the whole context before any page exists (twoTabs stubs it again)
     const { db, a, b, errors } = await twoTabs(ctx, BASE);
     const tag = `[${vp.tag}]`;
     const NAME = 'ADMINcyc16s' + (vp.touch ? 'P' : '');
@@ -120,7 +121,7 @@ const spy = (page) => T(page, (s) => { s.__aw = []; const o = s.awardPoint.bind(
     }
 
     check(`${tag} 0 page errors in both tabs`, errors.a.filter((e) => /pageerror/.test(e)).length === 0 && errors.b.filter((e) => /pageerror/.test(e)).length === 0, [...errors.a, ...errors.b].slice(0, 3).join(' | '));
-    check(`${tag} 0 database attempts`, db.attempts() === 0, 'attempts ' + db.attempts());
+    check(`${tag} 0 database attempts`, db.attempts() === 0 && db0.attempts() === 0, 'attempts ' + db.attempts() + '/' + db0.attempts());
     await ctx.close();
   }
   await browser.close();

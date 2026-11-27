@@ -39,6 +39,7 @@ async function sample(browser, q) {
     out.anims = ['idle_right', 'idle_down', 'move_right', 'move_down'].map((a) => !!s.anims.get(k + '_' + a));
     return out;
   });
+  check('0 database attempts (literal)', db.attempts() === 0, String(db.attempts()));
   return { r, errors, db: db.attempts(), page, ctx };
 }
 

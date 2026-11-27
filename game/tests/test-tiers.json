@@ -2733,5 +2733,9 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc16-item-icons-map.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

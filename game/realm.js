@@ -2410,7 +2410,7 @@ class RealmArena {
   // B7: an enemy's hit radius: its own e.rad (a big creature) or its type's.
   _er(e) { return e.rad > 0 ? e.rad : RM_ENEMIES[e.type].r; }
   // Radius a player bolt hits at: the art is drawn 2.8 x _er wide (half 1.4 x), so the old _er + 5 left the outer body of big enemies un-hittable.
-  _hitR(e) { return this._er(e) * 1.3 + 2; }
+  _hitR(e) { return Math.ceil(this._er(e) * 1.3) + 2; } // whole number: the hash insert would box every fractional radius (cyc7-lead-hash-alloc)
   // B7 public helper: damage one live enemy from outside the arena (a companion, a world effect). Clamped to 1e6; returns the damage passed on.
   damageEnemy(e, dmg, src) {
     if (!e || !e.active || this.enemies.indexOf(e) < 0) return 0;
