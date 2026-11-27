@@ -59,6 +59,8 @@
     // ?ffstaged=1 (review / owner decision on the cull budget); without it the species keeps its SVG as before.
     salamander: { code: true, cell: 16, fps: { idle: 2, move: 6 } },
     daddy_longlegs: { code: true, cell: 16, fps: { idle: 2, move: 6 }, staged: true },
+    // Cycle 16 art (G): the tarantula (5 land specimens, so +5 Sprites per cull pass like the daddy longlegs): staged the same way, wired only with ?ffstaged=1.
+    tarantula: { code: true, cell: 16, fps: { idle: 2, move: 6 }, staged: true },
   };
   // Cycle 9 art (G, original code pixel art): in-village species redrawn at the hero's density (one char = one pixel, '.' clear;
   // light top-left, dark colour-matched rim). Right view only: left = flipX, the down / caught poses reuse the profile frames.
@@ -321,6 +323,26 @@
       move_down: [
         ['................', '..l.............', '..ll.L.......l..', '..ll.L....L.ll..', '..l.looooool.l..', '..l.oBkhBkbo.l..', '..l.oooooooo..l.', '..l.LohBBboL..l.', '.l..L.oooo.L..l.', '.l..L..bb..L..l.', '.l..L......L..l.', '.l..L......L..l.', '.l.L........L..l', '.l.L........L..l', '.l.L........L..l', '.l.L........L..l'],
         ['................', '.............l..', '..l.......L.ll..', '..ll.L....L.ll..', '..l.looooool.l..', '..l.oBkhBkbo.l..', '.l..oooooooo.l..', '.l...ohBBbo..l..', '.l...LooooL...l.', '.l..L..bb..L..l.', '.l..L......L..l.', '.l..L......L..l.', 'l...L......L..l.', 'l...L......L..l.', 'l...L......L..l.', 'l...L......L..l.'],
+      ],
+    },
+    // Cycle 16 art (G): tarantula, original code art from a small layout script (Bresenham leg arches, outline pass), pasted as literals.
+    // Profile: low hairy abdomen with warm hair tips, round thorax, eyes and cream fangs at the front; front = seen from above walking toward the camera.
+    tarantula: { pal: {'o': '#2a1a12', 'b': '#5e402c', 'B': '#825e40', 'h': '#b08a5c', 'l': '#3a281c', 'L': '#6a4c36', 'k': '#141218', 'r': '#c4725a', 'w': '#f2e6cc'},
+      idle_right: [
+        ['................', '................', '......o.....o...', '...o.oloo..oloo.', '..oLolloLooLllLo', '.oLLlblLLooLllLo', 'oLohhhbLLBBLoLlL', 'oLhbLbLbLBhhLLlL', 'LobbbLLbBLBLkolL', 'LobbrLrbBLBLkolL', 'LolbbrLboLBLwolL', 'LoloobLo.oooLolL', 'Lolo.oLo..oLoolL', 'Lolo.oLo..oLoolL', 'Lolo.oLo..oLoolL', 'o.o...o....o..oo'],
+        ['................', '................', '......o.....o...', '...o.oloo..oloo.', '..oLolloLooLllLo', '.oLLlblLLooLllLo', 'oLohhhbLLBBLoLlL', 'oLhbLbLbLBhhLLlL', 'LobbbLLbBLBLkolL', 'LobbrLrbBLBLkolL', 'LolbbrLboLBLwolL', 'oLlooboLoooLoolL', 'oLlo.ooLo.oLoolL', 'oLlo..oLooLo.olL', 'oLo....o.oLo..oo', '.o........o.....'],
+      ],
+      move_right: [
+        ['................', '................', '......o.....o...', '...o.oloo..oloo.', '..oLolloLooLllLo', '.oLLlblLLooLllLo', 'oLohhhbLLBBLoLlL', 'oLhbLbLbLBhhLLlL', 'LobbbLLbBLBLkolL', 'LobbrLrbBLBLkolL', 'LolbbrLboLBLwolL', 'oLlooboLoooLoolL', 'oLlo.ooLo.oLoolL', 'oLlo..oLooLo.olL', 'oLo....o.oLo..oo', '.o........o.....'],
+        ['................', '................', '......o.....o...', '...o.oloo..oloo.', '..oLolloLooLllLo', '.oLLlblLLooLllLo', 'oLohhhbLLBBLoLlL', 'oLhbLbLbLBhhLLlL', 'LobbbLLbBLBLkolL', 'LobbrLrbBLBLkolL', 'LolbbrLboLBLwolL', 'LoloobLo.oooLolL', 'Lolo.oLo..oLoolL', 'Lolo.oLo..oLoolL', 'Lolo.oLo..oLoolL', 'o.o...o....o..oo'],
+      ],
+      idle_down: [
+        ['....o......o....', '.o.oLo.ooooLo.o.', 'oLoLo.obhbooLoLo', 'oLoLoobhbhboLoLo', 'oLooLbbhbbbbooLo', '.oLoobhbrhhboLo.', '.oLoobbrbrbboLo.', '..oLLobbrbbLLo..', '..oooLoBBBLooo..', '.oLLLLBBkBBLLLo.', 'oLoooBBkBkBBooLo', 'oLooLoBBBBBLooLo', 'oLoLo.oBBBooLoLo', '.oLo..owowo.oLo.', '.oLo...o.o..oLo.', '..o..........o..'],
+        ['................', '.o.oo..ooo.oo.o.', 'oLoLLoobhboLLoLo', 'oLoLoobhbhboLoLo', 'oLooLbbhbbbbooLo', 'oLo.obhbrhhbooLo', '.oLoobbrbrbboLo.', '..oLLobbrbbLLo..', '..oooLoBBBLooo..', '.oLLLLBBkBBLLLo.', 'oLoooBBkBkBBooLo', 'oLooLoBBBBBLooLo', '.ooLo.oBBBooLoo.', '.oLo..owowo.oLo.', '.oLo...o.o..oLo.', '..o..........o..'],
+      ],
+      move_down: [
+        ['................', '.o.oo..ooo.oo.o.', 'oLoLLoobhboLLoLo', 'oLoLoobhbhboLoLo', 'oLooLbbhbbbbooLo', 'oLo.obhbrhhbooLo', '.oLoobbrbrbboLo.', '..oLLobbrbbLLo..', '..oooLoBBBLooo..', '.oLLLLBBkBBLLLo.', 'oLoooBBkBkBBooLo', 'oLooLoBBBBBLooLo', '.ooLo.oBBBooLoo.', '.oLo..owowo.oLo.', '.oLo...o.o..oLo.', '..o..........o..'],
+        ['....o......o....', '.o.oLo.ooooLo.o.', 'oLoLo.obhbooLoLo', 'oLoLoobhbhboLoLo', 'oLooLbbhbbbbooLo', '.oLoobhbrhhboLo.', '.oLoobbrbrbboLo.', '..oLLobbrbbLLo..', '..oooLoBBBLooo..', '.oLLLLBBkBBLLLo.', 'oLoooBBkBkBBooLo', 'oLooLoBBBBBLooLo', 'oLoLo.oBBBooLoLo', '.oLo..owowo.oLo.', '.oLo...o.o..oLo.', '..o..........o..'],
       ],
     },
     salamander: { pal: {'o': '#121824', 'b': '#2c3550', 'B': '#4a5a7e', 'd': '#1c2236', 'y': '#e8b828', 'Y': '#ffe070', 'k': '#141218', 'w': '#d8e2ee', 'p': '#3c4868'},

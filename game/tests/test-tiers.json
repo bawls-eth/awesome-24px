@@ -2716,5 +2716,13 @@
     "class": "browser",
     "tier": "full",
     "timeoutSec": 300
+  },
+  "cyc16-art-town-realm-item-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc16-art-tarantula.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
