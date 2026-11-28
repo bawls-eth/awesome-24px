@@ -1048,3 +1048,7 @@ What changed on the Claude side (so Codex does not draw it twice):
 3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
 4. T17-hawk-v3.
 5. T10 / T11 items that have code art now: optional.
+
+
+## Codex t15-nudibranch submitted (WIP)
+Six strips / 14 frames; 32 native / 128 export. Lavender dorid sea slug with cream mantle edge, orange spots, two rhinophores and a retractable orange branchial plume; distinct crawling silhouettes and top-down camera-facing contour. Original manually authored native pixel shapes, not image-model art. Top gill plume looks broad at 16px; check anatomical distinction from rhinophores and mantle motion in game. Native bounds and frame uniqueness, simulated default 2x2 bake uniqueness passed. Centered T13 fauna convention, no explicit anchor. Full repository audit/tests/live game not run; no local checkout. No INDEX, code, tests or Firebase changes; preserve fallback/cull budget.

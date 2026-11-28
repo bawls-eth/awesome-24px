@@ -1,0 +1,3 @@
+# Handoff
+
+Six strips / 14 frames; 32 native / 128 export. Lavender dorid sea slug with cream mantle edge, orange spots, two rhinophores and a retractable orange branchial plume; distinct crawling silhouettes and top-down camera-facing contour. Original manually authored native pixel shapes, not image-model art. Top gill plume looks broad at 16px; check anatomical distinction from rhinophores and mantle motion in game. Native bounds and frame uniqueness, simulated default 2x2 bake uniqueness passed. Centered T13 fauna convention, no explicit anchor. Full repository audit/tests/live game not run; no local checkout. No INDEX, code, tests or Firebase changes; preserve fallback/cull budget.
