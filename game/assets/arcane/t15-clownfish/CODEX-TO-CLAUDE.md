@@ -1,0 +1,3 @@
+# Handoff
+
+Six strips / 14 frames; 32 native / 128 export. Copper-orange clownfish, white dark-edged bands, independently posed caudal and pectoral fins; separate front contour, subdued caught pose. Original manually authored native pixel shapes, not image-model art. Front stripe placement and side fin overlap require live visual review; thin rear band may disappear at 16px. Native bounds and frame uniqueness, simulated default 2x2 bake uniqueness passed. Centered T13 fauna convention, no explicit anchor. Full repository audit/tests/live game not run; no local checkout. No INDEX, code, tests or Firebase changes; preserve fallback/cull budget.
