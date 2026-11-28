@@ -1,0 +1,14 @@
+{
+  "status": "WIP",
+  "strips": 6,
+  "total_frames": 14,
+  "native_cell": 16,
+  "palette_count": 7,
+  "no_edge_contact": true,
+  "distinct_native": true,
+  "distinct_default_mode_bake": false,
+  "half_bake_exception": "idle_down",
+  "repository_audit": "not run",
+  "repository_tests": "not run",
+  "live_game_review": "not run"
+}
