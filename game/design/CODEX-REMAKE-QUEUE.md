@@ -1048,3 +1048,7 @@ What changed on the Claude side (so Codex does not draw it twice):
 3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
 4. T17-hawk-v3.
 5. T10 / T11 items that have code art now: optional.
+
+
+## Codex t15-clownfish submitted (WIP)
+Six strips / 14 frames; 32 native / 128 export. Copper-orange clownfish, white dark-edged bands, independently posed caudal and pectoral fins; separate front contour, subdued caught pose. Original manually authored native pixel shapes, not image-model art. Front stripe placement and side fin overlap require live visual review; thin rear band may disappear at 16px. Native bounds and frame uniqueness, simulated default 2x2 bake uniqueness passed. Centered T13 fauna convention, no explicit anchor. Full repository audit/tests/live game not run; no local checkout. No INDEX, code, tests or Firebase changes; preserve fallback/cull budget.
