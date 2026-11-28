@@ -1048,3 +1048,7 @@ What changed on the Claude side (so Codex does not draw it twice):
 3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
 4. T17-hawk-v3.
 5. T10 / T11 items that have code art now: optional.
+
+
+## Codex t16-desert-tortoise submitted (WIP)
+codex/t16-desert-tortoise: six strips / 14 frames, 32 native / 128 export. Tan domed shell and scute pattern, alternating feet, separate top-down head, tucked caught pose. Caught head still partially visible; inspect leg contacts. Original manually authored native pixel shapes (not image-model art). Source native frame uniqueness and no edge contact passed. All strips also distinct in approximate 2x2 mode preview (palette-index tie-break, not exact Town filter). Indexed PNG hard-alpha 4x export by construction; independent remote decode pending. Centered T13 fauna convention, no explicit anchor; verify integration. No full repository audit/tests/live review (no local checkout). No INDEX, code, tests or Firebase edits; preserve fallback and cull budget.
