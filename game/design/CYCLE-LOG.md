@@ -105,3 +105,19 @@ Open: ID-09 Town wiring (badge, toast, 4 keys, Backup, index.html script tag; to
 - Integration: cache-bust tags bumped.
 **Tested**: stamp 1 659/660 (cyc2-art-isles-field 3 ms timing check, passed 5/5 solo, nothing in cycle touches grass gen); stamp 2 648/660 first pass, 12 load flakes all passed solo, final 660/660.
 **Queued**: coach card height at 195x422; 4-line Isles toast at 195x422; cull sprite floor vs cap needs a decision on the pin test (daddy longlegs stays flagged off); whole-key save writes (fishlog, home, weedsPulled, birthdays); ID-64 build, ID-70 bot measurement, ID-71..73 review; SVG animals left: tarantula, leafcutter ant.
+
+## Cycle 16 (stamp 670/670 on b935f3b; usage-saving mode: 8 h cadence, no Fable, two items per role)
+**Changed**
+- Owner reports, fixed by the coordinator: Realm bolts now hit the enemy's drawn body (`_hitR` = ceil(1.3 x r) + 2, whole number so the hash does not box doubles); the Realm shop now stocks the hero's armour family with tier following rarity (Common t1, Uncommon t3, Rare t5, gated by hero level; D's economy numbers showed a Rare tier-1 piece is worse than a free tier-3 drop).
+- L: other hit paths audited (lob, signature AoE, bone orbit now use `_hitR`; Isles island boss gets `bossBodyHit`, the tide hydra's heads were un-hittable). Player hurt circle stays 15 (numbers in cycle16-lead.md; change only after a dodging-bot run). Bug-Off cull fix: its 8 extra bug Texts were measured every pass during the 2 h window (stamps failed ~20:00-21:00 UTC); they now declare themselves slow ambient movers.
+- U: coach card at 195x422 13% of the screen (was 30%); Isles wide toast no longer hides the how-to Close button (found by integration: cyc13-ui); toast 12 px (a11y minimum 11.95).
+- G: the Town's Realm shop/backpack showed emoji because the Town never loaded item art; new `shared/mm-item-icons.js` (item icons only: the Town must never load mm-art, four tests pin that); tarantula code art staged behind `?ffstaged=1`.
+- D: tier-1 armour economy numbers; ID-70 bot measurement (200 + 60x2 runs): leash safe, no measurable survival benefit, so not built.
+- S: fishlog / home / weedsPulled / birthdays are merge-safe across two tabs (union/max per entry), live read before paying.
+- Integration: scavenger spot (2000,900) sat between the arcade doors on its day (label overlap, shadowed Night Racer E): moved to (2300,650).
+**Tested**: stamps 27/28 killed by container restarts; stamp 29 657/668, 30 667/669, 31 668/669, 32 668/670, 33 669/670, 34 669/670 (real fixes between them: mm-item-icons, integer hit radius, class-unlocks-arena armour rows, run-all-tiers offline proof, scavenger spot, toast Close tap, toast 12 px, Bug-Off cull); stamp 35 670/670 (7 load flakes passed solo).
+**Open / queued**
+- cyc13-lead-town-cull-far [7] ("marks save >= 5 objects") is a stochastic check: solo savings 1.8 / 4.0 / 5.0 / 5.7 on identical code (wandering critters). It failed 2 stamps in a row and passed the next. Not edited. Needs a deterministic scene or a mechanism-based assertion (owner/coordinator call).
+- Cull sprite floor vs cap (pin rule measured >= sprites) still blocks settling far fauna; tarantula and daddy longlegs stay flagged off.
+- ID-64 dash build not started (S ran out of time); ID-70 not built; player hurt circle recommendation (keep 15).
+- cull budget has little headroom: measured ~195-197 of the 200.5 line.
