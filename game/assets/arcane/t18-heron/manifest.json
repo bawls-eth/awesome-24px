@@ -1,0 +1,119 @@
+{
+  "batch": "t18-heron",
+  "assets": [
+    {
+      "id": "ff_heron_idle",
+      "path": "fauna/ff_heron_idle.png",
+      "category": "fauna",
+      "species": "heron",
+      "class": "ff_heron",
+      "native_cell": 64,
+      "action": "idle",
+      "dir": "right",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 243
+      }
+    },
+    {
+      "id": "ff_heron_move",
+      "path": "fauna/ff_heron_move.png",
+      "category": "fauna",
+      "species": "heron",
+      "class": "ff_heron",
+      "native_cell": 64,
+      "action": "move",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 243
+      }
+    },
+    {
+      "id": "ff_heron_caught",
+      "path": "fauna/ff_heron_caught.png",
+      "category": "fauna",
+      "species": "heron",
+      "class": "ff_heron",
+      "native_cell": 64,
+      "action": "caught",
+      "dir": "right",
+      "frames": 1,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 243
+      }
+    },
+    {
+      "id": "ff_heron_idle_down",
+      "path": "fauna/ff_heron_idle_down.png",
+      "category": "fauna",
+      "species": "heron",
+      "class": "ff_heron",
+      "native_cell": 64,
+      "action": "idle",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 2,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 243
+      }
+    },
+    {
+      "id": "ff_heron_move_down",
+      "path": "fauna/ff_heron_move_down.png",
+      "category": "fauna",
+      "species": "heron",
+      "class": "ff_heron",
+      "native_cell": 64,
+      "action": "move",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 243
+      }
+    },
+    {
+      "id": "ff_heron_caught_down",
+      "path": "fauna/ff_heron_caught_down.png",
+      "category": "fauna",
+      "species": "heron",
+      "class": "ff_heron",
+      "native_cell": 64,
+      "action": "caught",
+      "dir": "down",
+      "frames": 1,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 243
+      }
+    }
+  ]
+}

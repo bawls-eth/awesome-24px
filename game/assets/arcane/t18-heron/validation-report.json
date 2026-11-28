@@ -1,0 +1,12 @@
+{
+  "status": "WIP",
+  "strips": 6,
+  "frames": 14,
+  "native_cell": 64,
+  "source_no_edge_contact": true,
+  "source_distinct": true,
+  "approximate_half_distinct": true,
+  "remote_decode": "pending",
+  "repository_audit": "not run",
+  "repository_tests": "not run"
+}
