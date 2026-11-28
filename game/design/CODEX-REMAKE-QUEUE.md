@@ -1048,3 +1048,7 @@ What changed on the Claude side (so Codex does not draw it twice):
 3. T14 `leafcutter_ant`, T11 `daddy_longlegs` / `salamander` (32 native; the Town bakes them at half size to 16 px).
 4. T17-hawk-v3.
 5. T10 / T11 items that have code art now: optional.
+
+
+## Codex t15-jellyfish submitted (WIP)
+Six strips / 14 frames; 32 native / 128 export. Lavender bell with four compression/relaxation poses, trailing tentacles, separate radial front contour and contracted caught pose. Original manually authored native pixel poses, not image-model generation. Front and profile are similar because the animal is radial; tentacle lines may look thick at 16px. Native bounds and frame uniqueness, simulated default 2x2 bake uniqueness passed. Centered T13 fauna convention, no explicit anchor. Full repository audit/tests/live game not run; no local checkout. No INDEX, code, tests or Firebase changes; preserve fallback/cull budget.
